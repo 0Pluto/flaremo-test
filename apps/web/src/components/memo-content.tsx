@@ -1,6 +1,7 @@
-import { memo, type ReactNode } from "react";
+import { type ImgHTMLAttributes, memo, type ReactNode, useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useI18n } from "@/i18n";
 import { createSlugger } from "@/lib/markdown-outline";
 import {
   isTimestampHref,
@@ -33,6 +34,38 @@ function nodeText(node: ReactNode): string {
 }
 
 type HeadingTag = "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+
+type MarkdownImageProps = Omit<ImgHTMLAttributes<HTMLImageElement>, "alt"> & {
+  alt?: string;
+  node?: unknown;
+};
+
+/**
+ * Body images degrade in place: a deleted attachment would otherwise render
+ * as a broken-image glyph, so a failed load swaps the element for a caption
+ * placeholder carrying the alt text.
+ */
+function MarkdownImage({ alt, node: _node, ...props }: MarkdownImageProps) {
+  const { t } = useI18n();
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return (
+      <span className="memo-image-broken">
+        {alt?.trim() ? alt : t("markdown.imageUnavailable")}
+      </span>
+    );
+  }
+  return (
+    <img
+      {...props}
+      alt={alt ?? ""}
+      decoding="async"
+      loading="lazy"
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 export const MemoContent = memo(function MemoContent({
   className,
@@ -122,11 +155,7 @@ export const MemoContent = memo(function MemoContent({
           h4: heading("h4"),
           h5: heading("h5"),
           h6: heading("h6"),
-          img({ node: _node, alt, ...props }) {
-            return (
-              <img {...props} alt={alt ?? ""} decoding="async" loading="lazy" />
-            );
-          },
+          img: MarkdownImage,
         }}
         remarkPlugins={[remarkGfm]}
         skipHtml

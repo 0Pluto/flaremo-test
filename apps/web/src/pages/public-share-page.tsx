@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/i18n";
+import { injectShareTokenIntoFileUrls } from "@/lib/attachment-refs";
 import { formatMemoTime } from "@/lib/memo";
 
 export function PublicSharePage({ token }: { token: string }) {
@@ -57,7 +58,10 @@ export function PublicSharePage({ token }: { token: string }) {
             <CardContent className="flex flex-col gap-5">
               <MemoReadingView
                 attachments={shareQuery.data.attachments}
-                content={shareQuery.data.memo.content}
+                content={injectShareTokenIntoFileUrls(
+                  shareQuery.data.memo.content,
+                  token,
+                )}
                 contentClassName="text-base"
               />
             </CardContent>

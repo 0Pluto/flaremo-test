@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/i18n";
+import { filterUnreferencedAttachments } from "@/lib/attachment-refs";
 import {
   extractTags,
   formatMemoRelativeTime,
@@ -103,6 +104,11 @@ export const MemoCard = memo(function MemoCard({
     : undefined;
   const tags = memo.payload.tags ?? extractTags(memo.content);
   const isTrashed = memo.state === "trashed";
+  // Body-referenced images render inline; the gallery keeps only the rest.
+  const galleryAttachments = filterUnreferencedAttachments(
+    attachments,
+    memo.content,
+  );
   // Long bodies (transcripts, articles) collapse so one memo cannot dominate
   // the timeline. Expanded state is per-card and resets on remount.
   const isCollapsible =
@@ -334,9 +340,9 @@ export const MemoCard = memo(function MemoCard({
           {searchQuery && (
             <MemoSearchExcerpt content={memo.content} query={searchQuery} />
           )}
-          {attachments.length > 0 && (
+          {galleryAttachments.length > 0 && (
             <div className="mt-3">
-              <AttachmentGallery attachments={attachments} />
+              <AttachmentGallery attachments={galleryAttachments} />
             </div>
           )}
           {share && shareUrl && (

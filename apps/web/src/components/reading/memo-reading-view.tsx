@@ -8,6 +8,7 @@ import {
   ReadingAudioProvider,
   useReadingAudio,
 } from "@/components/reading/reading-audio-provider";
+import { filterUnreferencedAttachments } from "@/lib/attachment-refs";
 import { cn } from "@/lib/utils";
 
 export type ReadingViewProps = {
@@ -107,8 +108,10 @@ function ArticleReadingView({
   const audio = useReadingAudio();
   useParagraphHighlight(bodyRef, Boolean(audio?.track));
 
-  // Audio rides in the sticky bar, so the gallery keeps only the other files.
+  // Audio rides in the sticky bar and body-referenced images render inline,
+  // so the gallery keeps only the files the body does not already show.
   const nonAudio = attachments.filter((item) => !isAudio(item));
+  const galleryAttachments = filterUnreferencedAttachments(nonAudio, content);
 
   return (
     <div className={cn("flex flex-col gap-4", className)}>
@@ -131,7 +134,9 @@ function ArticleReadingView({
             onTimestampClick={audio?.seek}
             withHeadingIds
           />
-          {nonAudio.length > 0 && <AttachmentGallery attachments={nonAudio} />}
+          {galleryAttachments.length > 0 && (
+            <AttachmentGallery attachments={galleryAttachments} />
+          )}
         </div>
       </div>
     </div>
@@ -145,10 +150,16 @@ function PlainReadingView({
   contentClassName,
 }: Required<Pick<ReadingViewProps, "attachments" | "content">> &
   Pick<ReadingViewProps, "className" | "contentClassName">) {
+  const galleryAttachments = filterUnreferencedAttachments(
+    attachments,
+    content,
+  );
   return (
     <div className={cn("flex flex-col gap-4", className)}>
       <LazyMemoContent className={contentClassName} content={content} />
-      <AttachmentGallery attachments={attachments} />
+      {galleryAttachments.length > 0 && (
+        <AttachmentGallery attachments={galleryAttachments} />
+      )}
     </div>
   );
 }

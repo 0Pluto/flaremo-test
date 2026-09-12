@@ -318,6 +318,11 @@
     @apply mt-2 text-center text-xs text-muted-foreground;
   }
 
+  /* A body image whose attachment is gone renders as a caption, not a broken glyph. */
+  .memo-image-broken {
+    @apply inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border/60 bg-muted/40 px-2.5 py-1 text-xs text-muted-foreground;
+  }
+
   .memo-markdown hr {
     @apply my-6 border-border/60;
   }
