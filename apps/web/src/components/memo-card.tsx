@@ -14,7 +14,9 @@ import {
   Trash2Icon,
 } from "lucide-react";
 import { memo, useState } from "react";
+import { toast } from "sonner";
 import type { Attachment, Memo, MemoState, MemoVisibility, Share } from "@/api";
+import { uploadAttachment } from "@/api";
 import { AttachmentGallery } from "@/components/attachment-gallery";
 import { LazyMemoContent } from "@/components/lazy-memo-content";
 import { MemoSearchExcerpt } from "@/components/memo-search-excerpt";
@@ -48,6 +50,11 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/i18n";
 import { filterUnreferencedAttachments } from "@/lib/attachment-refs";
+import {
+  extractImageFiles,
+  inlineImageMarkdown,
+  insertSnippetAt,
+} from "@/lib/image-insert";
 import {
   extractTags,
   formatMemoRelativeTime,
@@ -118,6 +125,34 @@ export const MemoCard = memo(function MemoCard({
   const collapsed = isCollapsible && !expanded;
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingInline, setIsUploadingInline] = useState(false);
+
+  // Editing an existing memo: pasted images upload bound to the memo right
+  // away, so a cancelled edit leaves nothing to clean up except an
+  // unreferenced (but owned) attachment in the gallery.
+  const insertInlineImages = async (files: File[], caret: number) => {
+    if (files.length === 0) return;
+    setIsUploadingInline(true);
+    try {
+      let content = draftContent;
+      let cursor = Math.min(Math.max(caret, 0), content.length);
+      for (const file of files) {
+        const attachment = await uploadAttachment({ file, memo: memo.name });
+        const next = insertSnippetAt(
+          content,
+          cursor,
+          inlineImageMarkdown(attachment.id, attachment.filename),
+        );
+        content = next.content;
+        cursor = next.caret;
+      }
+      setDraftContent(content);
+    } catch {
+      toast.error(t("composer.imageUploadFailed"));
+    } finally {
+      setIsUploadingInline(false);
+    }
+  };
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [draftContent, setDraftContent] = useState(memo.content);
   const [isShareOpen, setIsShareOpen] = useState(false);
@@ -278,12 +313,35 @@ export const MemoCard = memo(function MemoCard({
             onKeyDown={(event) => {
               if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
                 event.preventDefault();
-                void saveEditing();
+                if (!isUploadingInline) void saveEditing();
               }
               if (event.key === "Escape") {
                 event.preventDefault();
                 setIsEditing(false);
               }
+            }}
+            onDragOver={(event) => {
+              if (event.dataTransfer.types.includes("Files")) {
+                event.preventDefault();
+              }
+            }}
+            onDrop={(event) => {
+              const files = extractImageFiles(event.dataTransfer.files);
+              if (files.length === 0) return;
+              event.preventDefault();
+              void insertInlineImages(
+                files,
+                event.currentTarget.selectionStart ?? draftContent.length,
+              );
+            }}
+            onPaste={(event) => {
+              const files = extractImageFiles(event.clipboardData.files);
+              if (files.length === 0) return;
+              event.preventDefault();
+              void insertInlineImages(
+                files,
+                event.currentTarget.selectionStart ?? draftContent.length,
+              );
             }}
           />
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -297,7 +355,7 @@ export const MemoCard = memo(function MemoCard({
                 {t("common.cancel")}
               </Button>
               <Button
-                disabled={isSaving || !draftContent.trim()}
+                disabled={isSaving || isUploadingInline || !draftContent.trim()}
                 size="sm"
                 onClick={() => void saveEditing()}
               >

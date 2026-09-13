@@ -155,3 +155,115 @@ test("serves inline body images on the public share page", async ({
     .toBeGreaterThan(0);
   await anonymous.close();
 });
+
+const PNG_BASE64 =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+
+/**
+ * Pastes one PNG into the element matched by `selector` by constructing a real
+ * ClipboardEvent in the page — Playwright's dispatchEvent drops the
+ * clipboardData init property, so the event must be built here.
+ */
+async function pastePng(
+  page: import("@playwright/test").Page,
+  selector: string,
+  filename: string,
+) {
+  return page.evaluate(
+    ([sel, base64, name]) => {
+      const element = document.querySelector(sel);
+      if (!element) return false;
+      const binary = atob(base64 as string);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(
+        new File([bytes], name as string, { type: "image/png" }),
+      );
+      element.dispatchEvent(
+        new ClipboardEvent("paste", {
+          bubbles: true,
+          cancelable: true,
+          clipboardData: dataTransfer,
+        }),
+      );
+      return true;
+    },
+    [selector, PNG_BASE64, filename],
+  );
+}
+
+test("pasting an image into the composer inserts a reference and binds it on send", async ({
+  page,
+  request,
+}) => {
+  const marker = Date.now();
+  await page.goto("/");
+  const composer = page.getByRole("textbox", { name: /new note|新笔记/i });
+  await expect(composer).toBeVisible();
+
+  expect(
+    await pastePng(page, "#flaremo-composer-input", "pasted-shot.png"),
+  ).toBe(true);
+
+  // The upload completes before the reference appears in the draft.
+  await expect(composer).toHaveValue(/\/file\/attachments\//, {
+    timeout: 15_000,
+  });
+  await composer.pressSequentially(` Marker ${marker}`);
+  await page.getByRole("button", { name: /^(发送|Send)/ }).click();
+  await expect(composer).toHaveValue("", { timeout: 15_000 });
+
+  const listResponse = await request.get("/api/app/memos?page_size=50");
+  const list = (await listResponse.json()) as {
+    memos: { name: string; content: string }[];
+  };
+  const memo = list.memos.find((item) =>
+    item.content.includes(`Marker ${marker}`),
+  );
+  expect(memo).toBeDefined();
+  const memoId = (memo as { name: string }).name.split("/").at(-1) as string;
+
+  // The send flow claimed the pre-uploaded attachment: the memo owns exactly
+  // the pasted image, and the body renders it inline.
+  const contextResponse = await request.get(`/api/app/memos/${memoId}`);
+  const context = (await contextResponse.json()) as {
+    attachments: { filename: string }[];
+  };
+  expect(context.attachments).toHaveLength(1);
+  expect(context.attachments[0].filename).toBe("pasted-shot.png");
+
+  await page.goto(`/memo/${memoId}`);
+  await expect(page.locator("img[src*='/file/attachments/']")).toBeVisible();
+});
+
+test("pasting into the timeline editor uploads bound and saves inline", async ({
+  page,
+}) => {
+  const marker = Date.now();
+  const memoId = await createMemo(
+    page.request,
+    `Editor paste memo Marker ${marker}`,
+  );
+  await page.goto("/");
+  const card = page.locator("article").filter({ hasText: `Marker ${marker}` });
+  await expect(card).toBeVisible();
+
+  await card.getByRole("button", { name: /actions|操作/i }).click();
+  await page.getByRole("menuitem", { name: /edit|编辑/i }).click();
+
+  const editor = card.locator("textarea");
+  await editor.click();
+  expect(await pastePng(page, "article textarea", "edited-shot.png")).toBe(
+    true,
+  );
+  await expect(editor).toHaveValue(/\/file\/attachments\//, {
+    timeout: 15_000,
+  });
+
+  await page.getByRole("button", { name: /^(保存|Save)/ }).click();
+  await page.goto(`/memo/${memoId}`);
+  await expect(page.locator("img[src*='/file/attachments/']")).toBeVisible();
+});

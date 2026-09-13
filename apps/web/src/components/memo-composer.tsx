@@ -7,11 +7,18 @@ import {
   SendIcon,
   XIcon,
 } from "lucide-react";
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import { uploadAttachment } from "@/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/i18n";
+import {
+  extractImageFiles,
+  inlineImageMarkdown,
+  insertSnippetAt,
+} from "@/lib/image-insert";
 import type { MemoCaptureInput } from "@/lib/local-memo-capture";
 import { extractTags } from "@/lib/memo";
 
@@ -44,6 +51,58 @@ export function MemoComposer({
   const { t } = useI18n();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const canSubmit = Boolean(draft.content.trim() || draft.files.length > 0);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
+  // Uploads read the latest draft through a ref: the async chain would
+  // otherwise insert into a stale closure while the user keeps typing.
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+  const pendingUploadsRef = useRef(0);
+  const uploadChainRef = useRef<Promise<void>>(Promise.resolve());
+
+  // Pasted/dropped images upload immediately (unbound; the send flow claims
+  // them afterwards) and their references land at the recorded caret once the
+  // upload settles. Tasks chain so two rapid pastes never drift positions.
+  const enqueueInlineUploads = (files: File[], caret: number) => {
+    if (files.length === 0) return;
+    pendingUploadsRef.current += files.length;
+    setIsUploadingImages(true);
+    uploadChainRef.current = uploadChainRef.current.then(async () => {
+      let content = draftRef.current.content;
+      let cursor = Math.min(Math.max(caret, 0), content.length);
+      const names = [...(draftRef.current.preuploadedAttachmentNames ?? [])];
+      let insertedAny = false;
+
+      for (const file of files) {
+        try {
+          const attachment = await uploadAttachment({ file });
+          const snippet = inlineImageMarkdown(
+            attachment.id,
+            attachment.filename,
+          );
+          const next = insertSnippetAt(content, cursor, snippet);
+          content = next.content;
+          cursor = next.caret;
+          names.push(attachment.name);
+          insertedAny = true;
+        } catch {
+          toast.error(t("composer.imageUploadFailed"));
+          break;
+        } finally {
+          pendingUploadsRef.current -= 1;
+          setIsUploadingImages(pendingUploadsRef.current > 0);
+        }
+      }
+
+      if (insertedAny) {
+        onDraftChange({
+          ...draftRef.current,
+          content,
+          tags: extractTags(content),
+          preuploadedAttachmentNames: names,
+        });
+      }
+    });
+  };
 
   // The composer grows with the draft instead of scrolling, up to a cap.
   // biome-ignore lint/correctness/useExhaustiveDependencies: re-measure the height whenever the draft text changes.
@@ -66,7 +125,9 @@ export function MemoComposer({
     );
   };
   const submit = async () => {
-    if (!canSubmit) {
+    // Images still uploading have no reference in the content yet; sending
+    // now would lose them to the orphan GC.
+    if (!canSubmit || isUploadingImages) {
       return;
     }
     try {
@@ -101,13 +162,36 @@ export function MemoComposer({
             !event.nativeEvent.isComposing
           ) {
             event.preventDefault();
-            void submit();
+            if (!isUploadingImages) void submit();
             return;
           }
           if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
             event.preventDefault();
-            void submit();
+            if (!isUploadingImages) void submit();
           }
+        }}
+        onDragOver={(event) => {
+          if (event.dataTransfer.types.includes("Files")) {
+            event.preventDefault();
+          }
+        }}
+        onDrop={(event) => {
+          const files = extractImageFiles(event.dataTransfer.files);
+          if (files.length === 0) return;
+          event.preventDefault();
+          enqueueInlineUploads(
+            files,
+            event.currentTarget.selectionStart ?? draft.content.length,
+          );
+        }}
+        onPaste={(event) => {
+          const files = extractImageFiles(event.clipboardData.files);
+          if (files.length === 0) return;
+          event.preventDefault();
+          enqueueInlineUploads(
+            files,
+            event.currentTarget.selectionStart ?? draft.content.length,
+          );
         }}
       />
       {draft.files.length > 0 && (
@@ -188,7 +272,7 @@ export function MemoComposer({
         </div>
         <Button
           className="h-8 shrink-0 self-center px-3"
-          disabled={isPending || !canSubmit}
+          disabled={isPending || isUploadingImages || !canSubmit}
           type="submit"
           variant="brand"
         >

@@ -866,6 +866,18 @@ export async function uploadAttachment(input: {
   });
 }
 
+/**
+ * Replaces a memo's attachment binding list. Used to claim attachments that
+ * were uploaded before their memo existed (inline image paste). The web
+ * client's default legacy wire takes bare resource names here.
+ */
+export async function bindMemoAttachments(memo: string, names: string[]) {
+  return apiRequest<{ attachments: Attachment[] }>(
+    `/api/v1/memos/${encodeURIComponent(memo)}/attachments`,
+    { method: "PATCH", body: JSON.stringify({ attachments: names }) },
+  );
+}
+
 export async function createShare(memo: string) {
   return apiRequest<Share>(`/api/v1/memos/${encodeURIComponent(memo)}/shares`, {
     method: "POST",
