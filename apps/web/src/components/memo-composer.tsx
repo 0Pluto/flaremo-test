@@ -66,42 +66,46 @@ export function MemoComposer({
     if (files.length === 0) return;
     pendingUploadsRef.current += files.length;
     setIsUploadingImages(true);
-    uploadChainRef.current = uploadChainRef.current.then(async () => {
-      let content = draftRef.current.content;
-      let cursor = Math.min(Math.max(caret, 0), content.length);
-      const names = [...(draftRef.current.preuploadedAttachmentNames ?? [])];
-      let insertedAny = false;
-
-      for (const file of files) {
+    uploadChainRef.current = uploadChainRef.current
+      .catch(() => undefined)
+      .then(async () => {
+        let cursor = caret;
         try {
-          const attachment = await uploadAttachment({ file });
-          const snippet = inlineImageMarkdown(
-            attachment.id,
-            attachment.filename,
-          );
-          const next = insertSnippetAt(content, cursor, snippet);
-          content = next.content;
-          cursor = next.caret;
-          names.push(attachment.name);
-          insertedAny = true;
-        } catch {
-          toast.error(t("composer.imageUploadFailed"));
-          break;
+          for (const file of files) {
+            let attachment: Awaited<ReturnType<typeof uploadAttachment>>;
+            try {
+              attachment = await uploadAttachment({ file });
+            } catch {
+              toast.error(t("composer.imageUploadFailed"));
+              break;
+            }
+            // Read after the upload: the user may have kept typing while the
+            // network was pending. Never replace that text with an old draft.
+            const current = draftRef.current;
+            const next = insertSnippetAt(
+              current.content,
+              cursor,
+              inlineImageMarkdown(attachment.id, attachment.filename),
+            );
+            cursor = next.caret;
+            const nextDraft = {
+              ...current,
+              content: next.content,
+              tags: extractTags(next.content),
+              preuploadedAttachmentNames: [
+                ...(current.preuploadedAttachmentNames ?? []),
+                attachment.name,
+              ],
+            };
+            draftRef.current = nextDraft;
+            onDraftChange(nextDraft);
+          }
         } finally {
-          pendingUploadsRef.current -= 1;
+          // A failed batch also releases the files skipped after the failure.
+          pendingUploadsRef.current -= files.length;
           setIsUploadingImages(pendingUploadsRef.current > 0);
         }
-      }
-
-      if (insertedAny) {
-        onDraftChange({
-          ...draftRef.current,
-          content,
-          tags: extractTags(content),
-          preuploadedAttachmentNames: names,
-        });
-      }
-    });
+      });
   };
 
   // The composer grows with the draft instead of scrolling, up to a cap.
@@ -278,7 +282,10 @@ export function MemoComposer({
         >
           {isPending ? (
             <>
-              <Loader2Icon className="animate-spin" data-icon="inline-start" />
+              <Loader2Icon
+                className="motion-safe:animate-spin"
+                data-icon="inline-start"
+              />
               {t("composer.sending")}
             </>
           ) : (

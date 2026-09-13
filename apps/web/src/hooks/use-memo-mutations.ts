@@ -1,4 +1,5 @@
 import type { ListMemosResponse } from "@flaremo/contracts";
+import { parseMemoSearchQuery } from "@flaremo/contracts/search-query";
 import type {
   InfiniteData,
   QueryClient,
@@ -43,6 +44,7 @@ export function useMemoMutations() {
   const invalidateWorkspace = () =>
     Promise.all([
       queryClient.invalidateQueries({ queryKey: ["memos"] }),
+      queryClient.invalidateQueries({ queryKey: ["semantic-search"] }),
       queryClient.invalidateQueries({ queryKey: ["memo-stats"] }),
       queryClient.invalidateQueries({ queryKey: ["tag-hierarchy"] }),
       queryClient.invalidateQueries({ queryKey: ["memo-context"] }),
@@ -281,6 +283,8 @@ async function optimisticallyPatchMemo(
   for (const [queryKey, data] of snapshots) {
     if (!data) continue;
     const view = queryKey[1] as ViewMode | undefined;
+    const search = typeof queryKey[2] === "string" ? queryKey[2].trim() : "";
+    const scope = parseMemoSearchQuery(search).scope;
     queryClient.setQueryData<InfiniteData<ListMemosResponse>>(queryKey, {
       ...data,
       pages: data.pages.map((page) => ({
@@ -293,7 +297,18 @@ async function optimisticallyPatchMemo(
             ...patch,
             update_time: new Date().toISOString(),
           };
-          return view && next.state !== viewToMemoState(view) ? [] : [next];
+          // Search includes archived notes unless an explicit scope narrows
+          // it. Editing a result must not apply the plain timeline filter.
+          const matchesState = search
+            ? scope === "trash"
+              ? next.state === "trashed"
+              : scope === "archive"
+                ? next.state === "archived"
+                : scope === "timeline"
+                  ? next.state === "normal"
+                  : next.state === "normal" || next.state === "archived"
+            : !view || next.state === viewToMemoState(view);
+          return matchesState ? [next] : [];
         }),
       })),
     });

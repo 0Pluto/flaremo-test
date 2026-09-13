@@ -18,6 +18,9 @@ const messages = {
     "search.semanticPlaceholder": "找一找：用自然语言描述…",
     "search.semanticToggle": "语义搜索",
     "search.results": "搜索结果",
+    "search.clear": "清除搜索",
+    "filter.clearTag": "移除标签筛选：{tag}",
+    "filter.clearUntagged": "移除无标签筛选",
     "search.globalScope": "正在搜索时间线和归档",
     "search.semanticEmpty":
       "没有找到语义相近的记录，试试换个说法或先确认已建立语义索引。",
@@ -211,7 +214,18 @@ const messages = {
     "memo.stateTrashed": "回收站",
     "memo.stateDeleted": "已删除",
     "list.emptyTitle": "这里还空着",
-    "list.emptyDescription": "在上方写下第一条记录，或者调整筛选条件。",
+    "list.emptyDescription": "在上方写下第一条记录，让想法有处可寻。",
+    "list.filteredEmptyTitle": "没有找到相关记录",
+    "list.filteredEmptyDescription": "试试其他关键词，或清除筛选查看全部记录。",
+    "list.archiveEmptyTitle": "还没有归档记录",
+    "list.archiveEmptyDescription":
+      "将暂时用不到的记录归档，时间线更清爽，也能随时找回来。",
+    "list.trashEmptyTitle": "回收站是空的",
+    "list.trashEmptyDescription":
+      "移入回收站的记录会显示在这里，方便恢复或永久删除。",
+    "list.refreshError": "未能加载最新内容，已加载的记录仍可查看。",
+    "list.loadMoreError": "更多记录加载失败，已加载的内容已保留。",
+    "list.updating": "正在更新记录…",
     "list.errorTitle": "内容加载失败",
     "list.errorDescription": "网络恢复后再试一次。",
     "list.loadMore": "加载更多",
@@ -680,6 +694,9 @@ const messages = {
     "search.semanticPlaceholder": "Find: describe in natural language…",
     "search.semanticToggle": "Semantic search",
     "search.results": "Search results",
+    "search.clear": "Clear search",
+    "filter.clearTag": "Remove tag filter: {tag}",
+    "filter.clearUntagged": "Remove untagged filter",
     "search.globalScope": "Searching timeline and archive",
     "search.semanticEmpty":
       "No semantically similar notes found. Try rephrasing, or verify the semantic index is built.",
@@ -889,7 +906,21 @@ const messages = {
     "memo.stateDeleted": "Deleted",
     "list.emptyTitle": "Nothing here yet",
     "list.emptyDescription":
-      "Write your first note above, or adjust the filters.",
+      "Write your first note above to give your ideas a home.",
+    "list.filteredEmptyTitle": "No matching notes",
+    "list.filteredEmptyDescription":
+      "Try different keywords, or clear the filters to see all notes.",
+    "list.archiveEmptyTitle": "No archived notes yet",
+    "list.archiveEmptyDescription":
+      "Archive notes you do not need right now. You can find them here whenever you need them.",
+    "list.trashEmptyTitle": "The trash is empty",
+    "list.trashEmptyDescription":
+      "Notes moved to trash appear here. You can restore or permanently delete them.",
+    "list.refreshError":
+      "Could not load the latest notes. Previously loaded notes are still available.",
+    "list.loadMoreError":
+      "Could not load more notes. Previously loaded notes are still available.",
+    "list.updating": "Updating notes…",
     "list.errorTitle": "Could not load notes",
     "list.errorDescription": "Check your connection and try again.",
     "list.loadMore": "Load more",

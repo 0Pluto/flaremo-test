@@ -164,7 +164,10 @@ export class ApiError extends Error {
   }
 }
 
-export async function listMemos(params: ListMemoParams = {}) {
+export async function listMemos(
+  params: ListMemoParams = {},
+  signal?: AbortSignal,
+) {
   const query = new URLSearchParams();
   query.set("page_size", String(params.page_size ?? 30));
   query.set("order_by", "created_at desc");
@@ -175,15 +178,22 @@ export async function listMemos(params: ListMemoParams = {}) {
   if (params.include_deleted) query.set("include_deleted", "true");
   if (params.page_token) query.set("page_token", params.page_token);
 
-  return apiRequest<ListMemosResponse>(`/api/app/memos?${query.toString()}`);
+  return apiRequest<ListMemosResponse>(`/api/app/memos?${query.toString()}`, {
+    signal,
+  });
 }
 
-export async function semanticSearchMemos(query: string, limit = 10) {
+export async function semanticSearchMemos(
+  query: string,
+  limit = 10,
+  signal?: AbortSignal,
+) {
   const params = new URLSearchParams();
   params.set("q", query);
   params.set("limit", String(limit));
   return apiRequest<{ memos: MemoDto[]; degraded: boolean }>(
     `/api/app/search/semantic?${params.toString()}`,
+    { signal },
   );
 }
 

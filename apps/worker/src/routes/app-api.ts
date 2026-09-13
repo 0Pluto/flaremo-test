@@ -124,15 +124,17 @@ appApi.get("/memos", zValidator("query", listMemosQuerySchema), async (c) => {
     const result = await listMemos(db, user, c.req.valid("query"), {
       celScanLimit: memoFilterScanLimit,
     });
-    const creatorNames = await getFlaremoUserNames(
-      db,
-      result.memos.map((memo) => memo.userId),
-    );
-    const attachments = await listAttachmentsForMemos(
-      db,
-      user,
-      result.memos.map((memo) => memo.id),
-    );
+    const [creatorNames, attachments] = await Promise.all([
+      getFlaremoUserNames(
+        db,
+        result.memos.map((memo) => memo.userId),
+      ),
+      listAttachmentsForMemos(
+        db,
+        user,
+        result.memos.map((memo) => memo.id),
+      ),
+    ]);
     const attachmentsByMemo = new Map<string, (typeof attachments)[number][]>();
     for (const attachment of attachments) {
       if (!attachment.memoId) continue;
