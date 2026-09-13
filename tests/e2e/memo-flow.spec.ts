@@ -450,32 +450,34 @@ test("creates, follows, reads, and removes memo relations", async ({
       .locator("..")
       .getByRole("link", { name: new RegExp(targetContent) }),
   ).toBeVisible();
-  // The related-notes panel on the content tab ranks the linked note first.
-  await page.getByRole("tab", { name: /content|内容/i }).click();
-  const related = page.getByRole("heading", {
-    name: /related notes|相关记录/i,
-  });
+
+  // The review graph links the referenced note directly.
+  const graph = page.getByRole("heading", { name: /graph|关系图/i });
   await expect(
-    related
-      .locator("..")
-      .getByRole("link", { name: new RegExp(targetContent) }),
+    graph.locator("..").getByRole("link", { name: new RegExp(targetContent) }),
   ).toBeVisible();
+  await graph
+    .locator("..")
+    .getByRole("link", { name: new RegExp(targetContent) })
+    .click();
+  await expect(page).toHaveURL(new RegExp(target.id));
 
   await page.goto(`/memo/${target.id}`);
-  // The related-notes panel on the content tab ranks the directly linked
-  // note first.
+  await page.getByRole("tab", { name: /links|关联/i }).click();
+  // The referenced note sees the source under "referenced by".
+  const backlinked = page
+    .getByRole("heading", { name: /referenced by|被谁引用/i })
+    .locator("..");
+  await expect(
+    backlinked.getByRole("link", { name: new RegExp(sourceContent) }),
+  ).toBeVisible();
+
+  // The related-notes panel ranks the directly linked note first, and the
+  // relations tab keeps the link visible under "referenced by".
+  await page.getByRole("tab", { name: /content|内容/i }).click();
   await expect(
     page
       .getByRole("heading", { name: /related notes|相关记录/i })
-      .locator("..")
-      .getByRole("link", { name: new RegExp(sourceContent) }),
-  ).toBeVisible();
-  await page.getByRole("tab", { name: /links|关联/i }).click();
-  const backlinks = page.getByRole("heading", {
-    name: /referenced by|被谁引用/i,
-  });
-  await expect(
-    backlinks
       .locator("..")
       .getByRole("link", { name: new RegExp(sourceContent) }),
   ).toBeVisible();
