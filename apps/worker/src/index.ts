@@ -46,6 +46,7 @@ import { adminApi } from "./routes/admin-api";
 import { appApi } from "./routes/app-api";
 import { authApi } from "./routes/auth-api";
 import { brandingApi } from "./routes/branding-api";
+import { captureApi } from "./routes/capture-api";
 import { mcpApi, mcpStreamableApi } from "./routes/mcp";
 import { memoryApi } from "./routes/memory-api";
 import { memoryMcpApi } from "./routes/memory-mcp";
@@ -211,6 +212,7 @@ export function createFlareMoApp(
     return getFlareMoRuntime(c.env).auth.handler(c.req.raw);
   });
   app.route("/api/app/branding", brandingApi);
+  app.route("/api/app/capture", captureApi);
   app.route("/api/app/account", accountApi);
   app.route("/api/app/admin", adminApi);
   app.route("/api/app/memory", memoryApi);

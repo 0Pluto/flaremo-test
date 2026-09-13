@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
   ArchiveIcon,
@@ -9,6 +10,7 @@ import {
   FootprintsIcon,
   HashIcon,
   InboxIcon,
+  MicIcon,
   PencilIcon,
   Trash2Icon,
 } from "lucide-react";
@@ -20,7 +22,12 @@ import {
   useRef,
   useState,
 } from "react";
-import type { MemoStatsResponse, TagHierarchyNode } from "@/api";
+import {
+  getCaptureStatus,
+  type MemoStatsResponse,
+  type TagHierarchyNode,
+} from "@/api";
+import { authClient } from "@/auth-client";
 import { FlareMoLogo } from "@/components/flaremo-logo";
 import {
   MiniCalendarPanel,
@@ -90,6 +97,14 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
   onNavigate,
 }: FlareMoExplorerProps) {
   const { locale, t } = useI18n();
+  const session = authClient.useSession();
+  const captureStatus = useQuery({
+    queryKey: ["capture-status", session.data?.user.id],
+    queryFn: getCaptureStatus,
+    enabled: Boolean(session.data?.user),
+    staleTime: 30_000,
+    retry: false,
+  });
   const navItems = [
     {
       count: stats.counts.normal,
@@ -266,6 +281,16 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
           <FootprintsIcon />
           <span className="min-w-0 flex-1 truncate">{t("nav.randomWalk")}</span>
         </Link>
+        {captureStatus.data?.available && (
+          <Link
+            className="flex h-9 items-center gap-3 rounded-lg px-2.5 text-muted-foreground motion-safe:transition-[background-color,color,transform] motion-safe:duration-150 hover:bg-muted hover:text-foreground motion-safe:hover:translate-x-0.5"
+            onClick={onNavigate}
+            to="/capture"
+          >
+            <MicIcon />
+            <span className="min-w-0 flex-1 truncate">{t("nav.capture")}</span>
+          </Link>
+        )}
         <Link
           className="flex h-9 items-center gap-3 rounded-lg px-2.5 text-muted-foreground motion-safe:transition-[background-color,color,transform] motion-safe:duration-150 hover:bg-muted hover:text-foreground motion-safe:hover:translate-x-0.5"
           onClick={onNavigate}

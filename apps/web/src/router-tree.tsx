@@ -91,6 +91,11 @@ const CalendarPage = lazy(() =>
     default: module.CalendarPage,
   })),
 );
+const CapturePage = lazy(() =>
+  import("@/pages/capture-page").then((module) => ({
+    default: module.CapturePage,
+  })),
+);
 
 function PublicShareRoutePage() {
   const { token } = shareRoute.useParams();
@@ -357,10 +362,26 @@ function CalendarRoutePage() {
   );
 }
 
+function CaptureRoutePage() {
+  return (
+    <AuthenticatedRoute>
+      <Suspense fallback={<RouteLoading />}>
+        <CapturePage />
+      </Suspense>
+    </AuthenticatedRoute>
+  );
+}
+
 const calendarRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/calendar",
   component: CalendarRoutePage,
+});
+
+const captureRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/capture",
+  component: CaptureRoutePage,
 });
 
 const router = createRouter({
@@ -383,6 +404,7 @@ const router = createRouter({
     memoryRoute,
     projectsRoute,
     calendarRoute,
+    captureRoute,
   ]),
   scrollRestoration: true,
 });

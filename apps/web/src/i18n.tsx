@@ -46,6 +46,62 @@ const messages = {
     "nav.randomWalk": "随机漫步",
     "nav.memory": "记忆",
     "nav.projects": "项目",
+    "nav.capture": "语音记录",
+    "capture.title": "语音记录",
+    "capture.requestingPermission": "等待麦克风权限…",
+    "capture.connecting": "麦克风开启 · 正在连接识别服务，请稍候再说话…",
+    "capture.stopping": "麦克风已关闭 · 正在接收最后一句…",
+    "capture.foreground":
+      "请保持此页面在前台。切换页面或锁屏会停止录音；本功能不保存原始音频。",
+    "capture.leaveTitle": "离开语音记录？",
+    "capture.leaveRecording":
+      "当前正在录音。停止并离开后，未保存的文字仍会保存在此设备的本地草稿中。",
+    "capture.leaveUnsaved": "这份语音记录尚未保存。离开后可在此设备恢复。",
+    "capture.continueRecording": "继续录音",
+    "capture.stopAndLeave": "停止并离开",
+    "capture.leavePage": "离开页面",
+    "capture.draftUnavailable": "本地草稿不可用，请及时复制文字或保存记录。",
+    "capture.permissionDenied":
+      "麦克风权限被拒绝。请在浏览器的网站设置中允许麦克风后重试。",
+    "capture.noMicrophone": "未找到麦克风，请检查设备连接后重试。",
+    "capture.microphoneBusy": "麦克风无法使用，请关闭占用它的应用后重试。",
+    "capture.interrupted":
+      "录音已中断并关闭麦克风。请检查已识别的文字，末尾可能不完整。",
+    "capture.unavailable": "语音识别尚未配置或服务暂时不可用，请稍后重试。",
+    "capture.connectionFailed":
+      "无法连接识别服务，麦克风已关闭。已识别的文字可继续编辑和保存。",
+    "capture.finishFailed":
+      "未能确认最后一句已完整返回，麦克风已关闭。请检查逐字稿末尾。",
+    "capture.limitReached":
+      "本次记录已达到时长或文字上限，请保存后开始新记录。",
+    "capture.gap": "连接中断期间的语音可能缺失，请核对逐字稿。",
+    "capture.recovery": "发现未保存的语音记录",
+    "capture.restore": "恢复文字",
+    "capture.discard": "放弃记录",
+    "capture.discardConfirm": "放弃后将删除这份本地草稿，无法恢复。",
+    "capture.recordedAt": "记录时间",
+    "capture.duration": "时长",
+    "capture.transcript": "逐字稿",
+    "capture.tags": "标签（逗号分隔，自动包含 voice）",
+    "capture.visibility": "可见性",
+    "capture.private": "仅自己可见",
+    "capture.public": "公开",
+    "capture.saveFailed": "保存失败，文字仍在。请检查连接后重试。",
+    "capture.cleanupFailed":
+      "记录已保存到 FlareMo，但本地恢复副本未能清除。请重试清理。",
+    "capture.retryCleanup": "重试清理本地副本",
+    "capture.saving": "正在保存…",
+    "capture.recentSentences":
+      "这里显示最近 100 句，完整逐字稿将在停止后提供。",
+    "capture.empty": "开始后，识别的文字会出现在这里。",
+    "capture.description": "点击开始后，FlareMo 将使用麦克风实时生成逐字稿。",
+    "capture.start": "开始录音",
+    "capture.stop": "停止录音",
+    "capture.recording": "可以说话了 · 正在录音",
+    "capture.reconnecting": "麦克风开启 · 正在重新连接识别服务…",
+    "capture.review": "确认语音记录",
+    "capture.save": "保存到 FlareMo",
+    "capture.error": "无法使用麦克风或连接识别服务。",
     "nav.calendar": "日历",
     "calendar.title": "日历",
     "calendar.today": "回到今天",
@@ -652,6 +708,72 @@ const messages = {
     "nav.randomWalk": "Random Walk",
     "nav.memory": "Memory",
     "nav.projects": "Projects",
+    "nav.capture": "Voice capture",
+    "capture.title": "Voice capture",
+    "capture.requestingPermission": "Waiting for microphone permission…",
+    "capture.connecting":
+      "Microphone active · connecting transcription. Please wait to speak…",
+    "capture.stopping": "Microphone off · receiving the last sentence…",
+    "capture.foreground":
+      "Keep this page in the foreground. Switching tabs or locking the screen stops recording. Original audio is not saved.",
+    "capture.leaveTitle": "Leave voice capture?",
+    "capture.leaveRecording":
+      "Recording is active. Stopping and leaving keeps unsaved text in a local draft on this device.",
+    "capture.leaveUnsaved":
+      "This voice capture is not saved. You can restore it on this device after leaving.",
+    "capture.continueRecording": "Continue recording",
+    "capture.stopAndLeave": "Stop and leave",
+    "capture.leavePage": "Leave page",
+    "capture.draftUnavailable":
+      "Local drafts are unavailable. Copy your text or save the note promptly.",
+    "capture.permissionDenied":
+      "Microphone access was denied. Allow it in your browser’s site settings, then retry.",
+    "capture.noMicrophone":
+      "No microphone found. Check the device connection and retry.",
+    "capture.microphoneBusy":
+      "The microphone is unavailable. Close other apps using it and retry.",
+    "capture.interrupted":
+      "Recording was interrupted and the microphone is off. Review the captured text; the ending may be incomplete.",
+    "capture.unavailable":
+      "Transcription is not configured or is temporarily unavailable. Try again later.",
+    "capture.connectionFailed":
+      "Transcription could not connect. The microphone is off; captured text can still be edited and saved.",
+    "capture.finishFailed":
+      "The final sentence could not be confirmed. The microphone is off. Check the end of the transcript.",
+    "capture.limitReached":
+      "This capture reached its duration or text limit. Save it before starting a new one.",
+    "capture.gap":
+      "Speech during a connection interruption may be missing. Review the transcript.",
+    "capture.recovery": "Unsaved voice capture found",
+    "capture.restore": "Restore text",
+    "capture.discard": "Discard capture",
+    "capture.discardConfirm":
+      "Discarding deletes this local draft and cannot be undone.",
+    "capture.recordedAt": "Recorded at",
+    "capture.duration": "Duration",
+    "capture.transcript": "Transcript",
+    "capture.tags": "Tags (comma separated; voice is always included)",
+    "capture.visibility": "Visibility",
+    "capture.private": "Private",
+    "capture.public": "Public",
+    "capture.saveFailed":
+      "Save failed. Your text is retained. Check the connection and retry.",
+    "capture.cleanupFailed":
+      "The memo is saved in FlareMo, but its local recovery copy could not be removed. Retry cleanup.",
+    "capture.retryCleanup": "Retry local cleanup",
+    "capture.saving": "Saving…",
+    "capture.recentSentences":
+      "Showing the latest 100 sentences. The full transcript is available after stopping.",
+    "capture.empty": "Recognized speech will appear here after you start.",
+    "capture.description":
+      "FlareMo will use your microphone to transcribe after you start.",
+    "capture.start": "Start recording",
+    "capture.stop": "Stop recording",
+    "capture.recording": "You can speak · Recording",
+    "capture.reconnecting": "Microphone active · reconnecting transcription…",
+    "capture.review": "Review voice capture",
+    "capture.save": "Save to FlareMo",
+    "capture.error": "Unable to use the microphone or transcription service.",
     "nav.calendar": "Calendar",
     "calendar.title": "Calendar",
     "calendar.today": "Back to today",

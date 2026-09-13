@@ -508,6 +508,16 @@ export async function getLatestRelease(
   };
 }
 
+export type CaptureStatus = {
+  available: boolean;
+  provider: string | null;
+  streaming: boolean;
+};
+
+export async function getCaptureStatus() {
+  return apiRequest<CaptureStatus>("/api/app/capture/status");
+}
+
 export async function getBootstrapStatus() {
   return apiRequest<BootstrapStatus>(
     "/api/auth/flaremo/bootstrap/status",
