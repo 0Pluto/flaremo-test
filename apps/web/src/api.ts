@@ -847,6 +847,34 @@ export async function hardDeleteMemo(id: string) {
   );
 }
 
+/**
+ * Reads an audio file's playback duration via a detached metadata probe so
+ * uploads report it in the attachment payload and the reading player can show
+ * the real length immediately. Best effort: any failure resolves undefined.
+ */
+async function readAudioDuration(file: File): Promise<number | undefined> {
+  if (!file.type.toLowerCase().startsWith("audio/")) return undefined;
+  const url = URL.createObjectURL(file);
+  const audio = document.createElement("audio");
+  return new Promise((resolve) => {
+    const settle = (value: number | undefined) => {
+      URL.revokeObjectURL(url);
+      resolve(
+        typeof value === "number" && Number.isFinite(value) && value > 0
+          ? Math.round(value)
+          : undefined,
+      );
+    };
+    audio.preload = "metadata";
+    audio.addEventListener("loadedmetadata", () => settle(audio.duration), {
+      once: true,
+    });
+    audio.addEventListener("error", () => settle(undefined), { once: true });
+    window.setTimeout(() => settle(undefined), 3000);
+    audio.src = url;
+  });
+}
+
 export async function uploadAttachment(input: {
   file: File;
   memo?: string;
@@ -859,6 +887,10 @@ export async function uploadAttachment(input: {
   }
   if (input.clientId) {
     formData.set("client_id", input.clientId);
+  }
+  const duration = await readAudioDuration(input.file);
+  if (duration !== undefined) {
+    formData.set("duration", String(duration));
   }
   return apiRequest<Attachment>("/api/v1/attachments", {
     method: "POST",

@@ -40,6 +40,7 @@ import {
   markAttachmentDeleting,
   moveMemoToTrash,
   normalizeAttachmentClientId,
+  parseAttachmentDuration,
   replaceMemoRelations,
   restoreMemoRevision,
   revokeMemoShare,
@@ -353,6 +354,7 @@ memosApi.post("/attachments", async (c) => {
     const file = formData.get("file");
     const memo = formData.get("memo");
     const clientId = normalizeAttachmentClientId(formData.get("client_id"));
+    const payload = parseAttachmentDuration(formData.get("duration"));
     if (!(file instanceof File)) {
       return c.json({ error: { message: "file is required" } }, 400);
     }
@@ -388,6 +390,7 @@ memosApi.post("/attachments", async (c) => {
         r2Key: objectKey,
         etag: object.httpEtag,
         clientId,
+        ...(payload ? { payload } : {}),
       });
       if (attachment.r2Key !== objectKey) {
         await c.env.ATTACHMENTS.delete(objectKey).catch(() => undefined);

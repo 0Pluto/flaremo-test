@@ -552,6 +552,23 @@ export function normalizeAttachmentClientId(value: unknown) {
   return clientId && clientId.length <= 128 ? clientId : undefined;
 }
 
+/**
+ * Clients can report an audio file's playback duration at upload time; it
+ * lands in the free-form payload as `duration` (positive whole seconds). An
+ * invalid or absent value keeps the payload empty instead of failing the
+ * upload — duration is decoration, not a contract.
+ */
+export function parseAttachmentDuration(value: unknown) {
+  const seconds =
+    typeof value === "string" || typeof value === "number"
+      ? Number(value)
+      : Number.NaN;
+  if (!Number.isInteger(seconds) || seconds < 1 || seconds > 7 * 24 * 60 * 60) {
+    return undefined;
+  }
+  return { duration: seconds };
+}
+
 export async function bindMemoAttachments(
   db: FlareMoDb,
   user: UserRow,

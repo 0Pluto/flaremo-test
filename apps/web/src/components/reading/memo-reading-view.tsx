@@ -35,6 +35,10 @@ function MemoAudioTracks(attachments: Attachment[]) {
     src: attachment.preview_url,
     downloadUrl: attachment.download_url,
     sizeBytes: attachment.size,
+    durationSeconds:
+      typeof attachment.payload?.duration === "number"
+        ? attachment.payload.duration
+        : undefined,
     contentType: attachment.content_type,
   }));
 }

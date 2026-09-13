@@ -17,6 +17,8 @@ export type ReadingAudioTrack = {
   src: string;
   downloadUrl: string;
   sizeBytes: number;
+  /** Uploaded duration from the attachment payload; metadata refines it. */
+  durationSeconds?: number;
   contentType?: string | null;
 };
 
@@ -89,7 +91,8 @@ export function ReadingAudioProvider({
   );
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
+  // Seeded from the upload-time duration so the readout is real immediately.
+  const [duration, setDuration] = useState(tracks[0]?.durationSeconds ?? 0);
   const [rate, setRateState] = useState(1);
   const [follow, setFollow] = useState(true);
 
@@ -117,6 +120,7 @@ export function ReadingAudioProvider({
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !track) return;
+    setDuration(track.durationSeconds ?? 0);
     const saved = readSavedPosition(track.id);
     const apply = () => {
       if (saved > 0 && audio.duration > saved + 1) {

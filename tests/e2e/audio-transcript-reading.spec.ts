@@ -9,9 +9,9 @@ const E2E_COOKIE_MUTATION_OPTIONS = {
  * A one-second silent WAV. Kept inline so the fixture needs no binary file on
  * disk; the player only needs metadata to mount.
  */
-function silentWav() {
+function silentWav(seconds = 1) {
   const sampleRate = 8000;
-  const samples = sampleRate;
+  const samples = sampleRate * seconds;
   const buffer = Buffer.alloc(44 + samples * 2);
   buffer.write("RIFF", 0);
   buffer.writeUInt32LE(36 + samples * 2, 4);
@@ -297,4 +297,41 @@ test("serves the transcript audio on the public share page", async ({
     undefined,
     { timeout: 15_000 },
   );
+});
+
+test("seeds the player duration from the attachment payload", async ({
+  page,
+  request,
+}) => {
+  const marker = Date.now();
+  const content = [
+    "# Timed transcript",
+    "## Opening",
+    "[00:00:00] Welcome.",
+    `Marker ${marker}`,
+  ].join("\n\n");
+
+  const createResponse = await request.post("/api/app/memos", {
+    ...E2E_COOKIE_MUTATION_OPTIONS,
+    data: { content },
+  });
+  expect(createResponse.ok()).toBe(true);
+  const created = (await createResponse.json()) as { name: string };
+  const uploadResponse = await request.post("/api/v1/attachments", {
+    ...E2E_COOKIE_MUTATION_OPTIONS,
+    multipart: {
+      memo: created.name,
+      duration: "10",
+      file: {
+        name: "timed.wav",
+        mimeType: "audio/wav",
+        buffer: silentWav(10),
+      },
+    },
+  });
+  expect(uploadResponse.ok()).toBe(true);
+
+  await page.goto(`/memo/${created.name.split("/").at(-1) as string}`);
+  // The uploaded duration shows even before metadata loads; no 00:00 flash.
+  await expect(page.getByTestId("reading-time")).toContainText("/ 00:10");
 });
