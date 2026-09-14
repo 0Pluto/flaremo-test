@@ -86,6 +86,8 @@ type MemoCardProps = {
   /** Called when a tag chip is clicked to filter the timeline by that tag. */
   onTagClick?: (tag: string) => void;
   canManage?: boolean;
+  /** Lifecycle governance (archive/trash/restore) without content editing. */
+  canGovern?: boolean;
 };
 
 export const MemoCard = memo(function MemoCard({
@@ -103,6 +105,7 @@ export const MemoCard = memo(function MemoCard({
   index = 0,
   onTagClick,
   canManage = false,
+  canGovern = false,
 }: MemoCardProps) {
   const { locale, t } = useI18n();
   const id = getMemoResourceId(memo);
@@ -243,7 +246,7 @@ export const MemoCard = memo(function MemoCard({
           {memo.visibility !== "private" && (
             <VisibilityBadge visibility={memo.visibility} />
           )}
-          {canManage && (
+          {(canManage || canGovern) && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -259,42 +262,58 @@ export const MemoCard = memo(function MemoCard({
                 <DropdownMenuGroup>
                   {isTrashed ? (
                     <>
-                      <DropdownMenuItem onClick={() => onRestore(id)}>
-                        <RotateCcwIcon />
-                        {t("memo.restore")}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        variant="destructive"
-                        onSelect={() => setIsDeleteDialogOpen(true)}
-                      >
-                        <Trash2Icon />
-                        {t("memo.deleteForever")}
-                      </DropdownMenuItem>
+                      {canGovern && (
+                        <DropdownMenuItem onClick={() => onRestore(id)}>
+                          <RotateCcwIcon />
+                          {t("memo.restore")}
+                        </DropdownMenuItem>
+                      )}
+                      {canManage && (
+                        <DropdownMenuItem
+                          variant="destructive"
+                          onSelect={() => setIsDeleteDialogOpen(true)}
+                        >
+                          <Trash2Icon />
+                          {t("memo.deleteForever")}
+                        </DropdownMenuItem>
+                      )}
                     </>
                   ) : (
                     <>
-                      <DropdownMenuItem onClick={startEditing}>
-                        <Edit3Icon />
-                        {t("common.edit")}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onPin(id, !memo.pinned)}>
-                        <PinIcon />
-                        {memo.pinned ? t("memo.unpin") : t("memo.pin")}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onArchive(id)}>
-                        <ArchiveIcon />
-                        {memo.state === "archived"
-                          ? t("memo.moveToTimeline")
-                          : t("view.archive")}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={openShareDialog}>
-                        <Share2Icon />
-                        {t("memo.share")}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onTrash(id)}>
-                        <Trash2Icon />
-                        {t("memo.moveToTrash")}
-                      </DropdownMenuItem>
+                      {canManage && (
+                        <DropdownMenuItem onClick={startEditing}>
+                          <Edit3Icon />
+                          {t("common.edit")}
+                        </DropdownMenuItem>
+                      )}
+                      {canManage && (
+                        <DropdownMenuItem
+                          onClick={() => onPin(id, !memo.pinned)}
+                        >
+                          <PinIcon />
+                          {memo.pinned ? t("memo.unpin") : t("memo.pin")}
+                        </DropdownMenuItem>
+                      )}
+                      {canGovern && (
+                        <DropdownMenuItem onClick={() => onArchive(id)}>
+                          <ArchiveIcon />
+                          {memo.state === "archived"
+                            ? t("memo.moveToTimeline")
+                            : t("view.archive")}
+                        </DropdownMenuItem>
+                      )}
+                      {canManage && (
+                        <DropdownMenuItem onClick={openShareDialog}>
+                          <Share2Icon />
+                          {t("memo.share")}
+                        </DropdownMenuItem>
+                      )}
+                      {canGovern && (
+                        <DropdownMenuItem onClick={() => onTrash(id)}>
+                          <Trash2Icon />
+                          {t("memo.moveToTrash")}
+                        </DropdownMenuItem>
+                      )}
                     </>
                   )}
                 </DropdownMenuGroup>

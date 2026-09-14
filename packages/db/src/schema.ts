@@ -15,9 +15,6 @@ export const users = sqliteTable(
     email: text("email").notNull(),
     name: text("name").notNull(),
     avatarUrl: text("avatar_url"),
-    role: text("role", { enum: ["owner", "admin", "member"] })
-      .notNull()
-      .default("owner"),
     status: text("status", { enum: ["active", "removed"] })
       .notNull()
       .default("active"),
@@ -26,7 +23,7 @@ export const users = sqliteTable(
   },
   (table) => [
     uniqueIndex("users_email_idx").on(table.email),
-    index("users_role_status_idx").on(table.role, table.status),
+    index("users_status_idx").on(table.status),
   ],
 );
 
@@ -72,6 +69,10 @@ export const authSessions = sqliteTable(
     userId: text("user_id")
       .notNull()
       .references(() => authUsers.id, { onDelete: "cascade" }),
+    // Better Auth organization plugin field. FlareMo always resolves the
+    // deployment's default organization directly, so this stays advisory for
+    // the plugin's own client flows.
+    activeOrganizationId: text("active_organization_id"),
   },
   (table) => [
     uniqueIndex("auth_sessions_token_idx").on(table.token),
@@ -194,6 +195,70 @@ export const authBootstrap = sqliteTable("auth_bootstrap", {
   completedAt: authTimestamp("completed_at"),
 });
 
+// Better Auth organization plugin tables — the single source of truth for
+// team membership and roles. FlareMo keeps exactly one organization per
+// deployment (the default team created at bootstrap), so a user's team role
+// is the role of their row in `auth_members` for that organization.
+export const authOrganizations = sqliteTable(
+  "auth_organizations",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    slug: text("slug").notNull(),
+    logo: text("logo"),
+    metadata: text("metadata"),
+    createdAt: authTimestamp("created_at").notNull(),
+  },
+  (table) => [uniqueIndex("auth_organizations_slug_idx").on(table.slug)],
+);
+
+export const authMembers = sqliteTable(
+  "auth_members",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => authOrganizations.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    role: text("role", { enum: ["owner", "admin", "member"] }).notNull(),
+    createdAt: authTimestamp("created_at").notNull(),
+  },
+  (table) => [
+    index("auth_members_organization_id_idx").on(table.organizationId),
+    index("auth_members_user_id_idx").on(table.userId),
+    uniqueIndex("auth_members_org_user_idx").on(
+      table.organizationId,
+      table.userId,
+    ),
+  ],
+);
+
+export const authInvitations = sqliteTable(
+  "auth_invitations",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => authOrganizations.id, { onDelete: "cascade" }),
+    email: text("email").notNull(),
+    role: text("role").notNull(),
+    status: text("status", {
+      enum: ["pending", "accepted", "rejected", "canceled"],
+    })
+      .notNull()
+      .default("pending"),
+    teamId: text("team_id"),
+    inviterId: text("inviter_id").notNull(),
+    expiresAt: authTimestamp("expires_at").notNull(),
+    createdAt: authTimestamp("created_at").notNull(),
+  },
+  (table) => [
+    index("auth_invitations_organization_id_idx").on(table.organizationId),
+  ],
+);
+
 export const memos = sqliteTable(
   "memos",
   {
@@ -201,6 +266,13 @@ export const memos = sqliteTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    // The team this memo is published to, or NULL for a personal memo only
+    // its author can see. Team memos carry visibility "protected" (team
+    // members read) or "public" (everyone reads); "private" always means
+    // teamId NULL. See packages/domain/src/team-permissions.ts.
+    teamId: text("team_id").references(() => authOrganizations.id, {
+      onDelete: "restrict",
+    }),
     content: text("content").notNull(),
     visibility: text("visibility", { enum: ["private", "protected", "public"] })
       .notNull()
@@ -259,6 +331,11 @@ export const memos = sqliteTable(
     ),
     uniqueIndex("memos_user_client_id_idx").on(table.userId, table.clientId),
     index("memos_visibility_idx").on(table.visibility),
+    index("memos_team_visibility_status_idx").on(
+      table.teamId,
+      table.visibility,
+      table.status,
+    ),
   ],
 );
 

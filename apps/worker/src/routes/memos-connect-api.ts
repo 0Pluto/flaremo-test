@@ -36,7 +36,7 @@ import {
   getUserRegistrationAllowed,
   getUserWebhookSigningSecret,
   hardDeleteMemo,
-  isOwner,
+  isInstanceOwner,
   isTeamAdmin,
   listAttachmentsForMemosForViewer,
   listAttachmentsPage,
@@ -57,6 +57,7 @@ import {
   listUserWebhooks,
   markAttachmentDeleting,
   markMemoAttachmentsDeleting,
+  memosWireRole,
   type PlanLimits,
   replaceMemoRelations,
   revokeAuthSessionByToken,
@@ -693,7 +694,7 @@ async function connectUserMethod(
       return connectValue(c, dto, transport);
     }
     case "CreateUser": {
-      if (context.credential === "pat" || !isOwner(context.user)) {
+      if (context.credential === "pat" || !isInstanceOwner(context.user)) {
         return connectErrorForTransport(
           c,
           transport,
@@ -729,7 +730,7 @@ async function connectUserMethod(
       return connectValue(c, created.dto, transport);
     }
     case "DeleteUser": {
-      if (context.credential === "pat" || !isOwner(context.user)) {
+      if (context.credential === "pat" || !isInstanceOwner(context.user)) {
         return connectErrorForTransport(
           c,
           transport,
@@ -1225,7 +1226,7 @@ async function connectInstanceMethod(
       return connectValue(c, { settings }, transport);
     }
     case "UpdateInstanceSetting": {
-      if (context.credential === "pat" || !isOwner(context.user)) {
+      if (context.credential === "pat" || !isInstanceOwner(context.user)) {
         return connectErrorForTransport(
           c,
           transport,
@@ -2247,7 +2248,6 @@ function publicOwnerFallback(name: string | undefined): UserRow {
     email: "",
     name: name?.trim() || "Owner",
     avatarUrl: null,
-    role: "owner",
     status: "active",
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -2620,7 +2620,7 @@ function connectNotificationToDto(notification: UserNotificationDto) {
   const sender = notification.senderUser;
   const senderUser = {
     name: sender.id,
-    role: sender.role === "member" ? "USER" : "ADMIN",
+    role: memosWireRole(sender),
     username: notification.senderUsername ?? sender.id.replace(/^users\//u, ""),
     email: notification.senderEmail ?? sender.email,
     displayName: sender.name,

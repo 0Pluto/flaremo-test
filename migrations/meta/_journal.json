@@ -141,6 +141,13 @@
       "when": 1789401085948,
       "tag": "0019_sticky_adam_warlock",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1789403851044,
+      "tag": "0020_illegal_pandemic",
+      "breakpoints": true
     }
   ]
 }

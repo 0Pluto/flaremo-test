@@ -24,14 +24,16 @@ import { SELF_HOST_UNLIMITED, type UserPlanLimits } from "./limits";
 import { createMemory, type MemoryActor } from "./memory";
 import { createMemo, hardDeleteMemo, updateMemo } from "./memos";
 import { readMonthlyUsageTotal } from "./quotas";
+import type { TeamViewer } from "./team-permissions";
+import { ensureTeamOwner } from "./test-support";
 import { incrementUsageCounter } from "./usage";
-import { createFlaremoMember, ensureSingleUser } from "./users";
+import { createFlaremoMember } from "./users";
 
 const USER_ACTOR: MemoryActor = { type: "user" };
 
 let mf: Miniflare;
 let db: ReturnType<typeof createDb>;
-let user: UserRow;
+let user: TeamViewer;
 
 class FakeVectorIndex implements VectorIndex {
   store = new Map<string, VectorIndexVector>();
@@ -86,10 +88,7 @@ describe("embedding outbox", () => {
     const database = await mf.getD1Database("DB");
     db = createDb(database);
     await applyFlaremoMigrations(database);
-    user = await ensureSingleUser(db, {
-      email: "owner@example.com",
-      name: "Owner",
-    });
+    user = await ensureTeamOwner(db);
   });
 
   afterEach(async () => {

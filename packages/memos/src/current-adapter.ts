@@ -7,6 +7,7 @@ import type {
   ShortcutRow,
   UserRow,
 } from "@flaremo/db";
+import { memosWireRole } from "@flaremo/domain";
 
 type CurrentMemoRelationRow = {
   memoId: string;
@@ -183,7 +184,7 @@ export function currentRelationToDto(
 export function currentUserToDto(user: UserRow, authUser?: AuthUserRow | null) {
   return {
     name: user.id,
-    role: user.role === "member" ? "USER" : "ADMIN",
+    role: memosWireRole(user),
     username: authUser?.username ?? user.id.replace(/^users\//, ""),
     email: authUser?.email ?? user.email,
     displayName: user.name,
@@ -197,7 +198,7 @@ export function currentUserToDto(user: UserRow, authUser?: AuthUserRow | null) {
 export function publicUserToDto(user: UserRow, username?: string) {
   return {
     name: user.id,
-    role: user.role === "member" ? "USER" : "ADMIN",
+    role: memosWireRole(user),
     username: username ?? user.id.replace(/^users\//, ""),
     displayName: user.name,
     ...(user.avatarUrl ? { avatarUrl: user.avatarUrl } : {}),

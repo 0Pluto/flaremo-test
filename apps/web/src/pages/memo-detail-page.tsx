@@ -185,6 +185,7 @@ export function MemoDetailPage({ memoId }: { memoId: string }) {
             )}
             context={contextQuery.data}
             canManage={contextQuery.data.can_manage}
+            canGovern={contextQuery.data.can_govern}
             isSearching={relationCandidatesQuery.isFetching}
             locale={locale}
             related={relatedQuery.data?.memos ?? []}
@@ -235,6 +236,7 @@ export function MemoDetailPage({ memoId }: { memoId: string }) {
 
 function MemoDetail({
   canManage,
+  canGovern,
   candidates,
   context,
   isSearching,
@@ -255,6 +257,7 @@ function MemoDetail({
   sharePending,
 }: {
   canManage: boolean;
+  canGovern: boolean;
   candidates: Awaited<ReturnType<typeof listMemos>>["memos"];
   context: Awaited<ReturnType<typeof getMemoContext>>;
   isSearching: boolean;
@@ -313,7 +316,7 @@ function MemoDetail({
                 ? ` (${context.relations.length + context.backlinks.length})`
                 : ""}
             </TabsTrigger>
-            {canManage && (
+            {(canManage || canGovern) && (
               <TabsTrigger value="history">{t("detail.history")}</TabsTrigger>
             )}
             {canManage && (
@@ -438,7 +441,7 @@ function MemoDetail({
               relations={context.backlinks}
             />
           </TabsContent>
-          {canManage && (
+          {(canManage || canGovern) && (
             <TabsContent className="flex flex-col gap-2 pt-4" value="history">
               {context.revisions.length === 0 && (
                 <p className="text-sm text-muted-foreground">
@@ -458,15 +461,17 @@ function MemoDetail({
                       {revision.content}
                     </p>
                   </div>
-                  <Button
-                    disabled={restorePending}
-                    size="sm"
-                    variant="outline"
-                    onClick={() => onRestore(revision.name)}
-                  >
-                    <RotateCcwIcon data-icon="inline-start" />
-                    {t("detail.restoreRevision")}
-                  </Button>
+                  {canManage && (
+                    <Button
+                      disabled={restorePending}
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onRestore(revision.name)}
+                    >
+                      <RotateCcwIcon data-icon="inline-start" />
+                      {t("detail.restoreRevision")}
+                    </Button>
+                  )}
                 </div>
               ))}
             </TabsContent>

@@ -480,16 +480,7 @@ async function hydrateSocialMemos(
         (relation): relation is NonNullable<typeof relation> =>
           relation !== null,
       );
-      let creator = creators.get(memo.userId);
-      if (!creator) {
-        const resolved =
-          context.user?.id === memo.userId && context.user
-            ? context.user
-            : await getFlaremoUserCached(context.db, memo.userId);
-        if (!resolved) throw new Error("Memo creator not found");
-        creator = resolved;
-        creators.set(memo.userId, resolved);
-      }
+      const creator = await resolveMemoCreatorRow(context, creators, memo);
       return {
         ...currentMemoToDto(memo, creator, {
           attachments: attachments.get(memo.id) ?? [],
@@ -508,6 +499,30 @@ function shortcutToDto(value: ShortcutRow) {
   // The domain row retains a `shortcuts/<id>` storage id. The current adapter
   // strips that storage prefix before constructing the public resource name.
   return currentShortcutToDto(value);
+}
+
+/**
+ * Resolve the creator row for a hydrating memo, memoizing misses (null) so a
+ * deleted author row costs one lookup per memo. Self-mentions reuse the
+ * viewer's session row without a D1 round trip.
+ */
+async function resolveMemoCreatorRow(
+  context: Awaited<ReturnType<typeof getOptionalRequestContext>>,
+  creators: Map<string, UserRow | null>,
+  memo: MemoRow,
+): Promise<UserRow> {
+  const cached = creators.get(memo.userId);
+  if (cached) return cached;
+  const resolved =
+    context.user && context.user.id === memo.userId
+      ? context.user
+      : await getFlaremoUserCached(context.db, memo.userId);
+  if (!resolved) {
+    creators.set(memo.userId, null);
+    throw new Error("Memo creator not found");
+  }
+  creators.set(memo.userId, resolved);
+  return resolved;
 }
 
 function readPageOptions(c: Context<HonoBindings>): PageOptions;

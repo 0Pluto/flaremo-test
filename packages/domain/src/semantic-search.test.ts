@@ -13,11 +13,13 @@ import type {
 import { memoTeamNamespace, memoUserNamespace } from "./embedding";
 import { createMemo } from "./memos";
 import { semanticSearchMemos } from "./semantic-search";
-import { createFlaremoMember, ensureSingleUser } from "./users";
+import type { TeamViewer } from "./team-permissions";
+import { createTeamMember, ensureTeamOwner } from "./test-support";
+import { createFlaremoMember } from "./users";
 
 let mf: Miniflare;
 let db: ReturnType<typeof createDb>;
-let user: UserRow;
+let user: TeamViewer;
 
 class FakeVectorIndex implements VectorIndex {
   vectors = new Map<string, VectorIndexVector>();
@@ -71,10 +73,7 @@ describe("semanticSearchMemos", () => {
     const database = await mf.getD1Database("DB");
     db = createDb(database);
     await applyFlaremoMigrations(database);
-    user = await ensureSingleUser(db, {
-      email: "owner@example.com",
-      name: "Owner",
-    });
+    user = await ensureTeamOwner(db);
   });
 
   afterEach(async () => {
@@ -187,10 +186,7 @@ describe("semanticSearchMemos", () => {
   });
 
   it("returns team memos but never another member's private memo", async () => {
-    const member = await createFlaremoMember(db, {
-      email: "member@example.com",
-      name: "Member",
-    });
+    const member = await createTeamMember(db, "Member");
     const privateMemo = await createMemo(db, user, {
       content: "owner private",
       visibility: "private",

@@ -217,6 +217,7 @@ export const MemoList = memo(function MemoList({
           <MemoCard
             attachments={attachmentsByMemo.get(memo.name) ?? []}
             canManage={memo.can_manage === true}
+            canGovern={memo.can_govern === true}
             index={index}
             key={memo.name}
             memo={memo}

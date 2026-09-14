@@ -20,7 +20,7 @@ import {
   getMemosPersonalAccessToken,
   getPublicShareByToken,
   getUserRegistrationAllowed,
-  isOwner,
+  isInstanceOwner,
   listAttachments,
   listAttachmentsForMemosForViewer,
   listFlaremoUsers,
@@ -1172,7 +1172,7 @@ function assertSessionCredential(
 function assertOwnerUser(
   context: Awaited<ReturnType<typeof getRequestContext>>,
 ) {
-  if (context.credential === "pat" || !isOwner(context.user)) {
+  if (context.credential === "pat" || !isInstanceOwner(context.user)) {
     throw new ForbiddenCurrentError(
       "An owner session is required for user management",
     );

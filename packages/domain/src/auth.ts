@@ -1,6 +1,8 @@
 import {
   authApiKeys,
   authBootstrap,
+  authMembers,
+  authOrganizations,
   authSessions,
   authUserLinks,
   authUsers,
@@ -10,7 +12,13 @@ import {
 } from "@flaremo/db";
 import { and, desc, eq, gt } from "drizzle-orm";
 import { ConflictError } from "./errors";
-import { ensureSingleUser, type SingleUserConfig } from "./users";
+import type { TeamRole, TeamViewer } from "./team-permissions";
+import {
+  addTeamMember,
+  DEFAULT_TEAM_SLUG,
+  ensureSingleUser,
+  type SingleUserConfig,
+} from "./users";
 
 const OWNER_BOOTSTRAP_ID = "bootstrap/owner";
 export const OWNER_FLAREMO_USER_ID = "users/owner";
@@ -92,6 +100,7 @@ export async function completeOwnerBootstrap(
     flaremoUserId: user.id,
     createdAt: new Date(),
   });
+  await addTeamMember(db, { authUserId: input.authUserId, role: "owner" });
 
   await db
     .update(authBootstrap)
@@ -192,6 +201,7 @@ export async function reconcileOwnerBootstrap(db: FlareMoDb): Promise<UserRow> {
       })
       .onConflictDoNothing();
   }
+  await addTeamMember(db, { authUserId: authUser.id, role: "owner" });
 
   const completed = await db
     .update(authBootstrap)
@@ -245,20 +255,56 @@ export async function getOwnerAuthUserId(
   return bootstrap.authUserId;
 }
 
+/**
+ * Resolve the deployment team membership (role + organization id) for a
+ * Better Auth identity in one indexed query. Null when the deployment has no
+ * team or the identity is not a member.
+ */
+export async function getViewerTeamMembership(
+  db: FlareMoDb,
+  authUserId: string,
+): Promise<{ role: TeamRole; organizationId: string } | null> {
+  const row = await db
+    .select({
+      role: authMembers.role,
+      organizationId: authOrganizations.id,
+    })
+    .from(authMembers)
+    .innerJoin(
+      authOrganizations,
+      eq(authOrganizations.id, authMembers.organizationId),
+    )
+    .where(
+      and(
+        eq(authMembers.userId, authUserId),
+        eq(authOrganizations.slug, DEFAULT_TEAM_SLUG),
+      ),
+    )
+    .get();
+  if (!row) return null;
+  return { role: row.role as TeamRole, organizationId: row.organizationId };
+}
+
 export async function getFlaremoUserByAuthUserId(
   db: FlareMoDb,
   authUserId: string,
-): Promise<UserRow | null> {
+): Promise<TeamViewer | null> {
   const link = await db.query.authUserLinks.findFirst({
     where: eq(authUserLinks.authUserId, authUserId),
   });
   if (!link) return null;
 
-  return (
-    (await db.query.users.findFirst({
-      where: eq(users.id, link.flaremoUserId),
-    })) ?? null
-  );
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, link.flaremoUserId),
+  });
+  if (!user) return null;
+
+  const membership = await getViewerTeamMembership(db, authUserId);
+  return {
+    ...user,
+    teamRole: membership?.role ?? null,
+    teamOrganizationId: membership?.organizationId ?? null,
+  };
 }
 
 export async function getAuthUserIdByFlaremoUserId(

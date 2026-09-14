@@ -19,6 +19,7 @@ import type { FlareMoDb, MemoRow, UserRow } from "@flaremo/db";
 import {
   assertMonthlyQuota,
   canEditMemo,
+  canGovernMemo,
   createMemo,
   createMemoryFromMemo,
   createMemoryFromMemoInputToWrite,
@@ -33,6 +34,7 @@ import {
   getSemanticSearchMemos,
   getWalkNextMemo,
   incrementUsageCounter,
+  isInstanceOwner,
   listAttachmentsForMemos,
   listDailyReviewMemos,
   listMemos,
@@ -85,7 +87,8 @@ appApi.get("/me", async (c) => {
       authUser ?? (await getAuthUserCached(db, authUserId));
     return c.json({
       id: user.id,
-      role: user.role,
+      role: user.teamRole,
+      is_instance_owner: isInstanceOwner(user),
       status: user.status,
       name: user.name,
       email: resolvedAuthUser?.email ?? user.email,
@@ -243,6 +246,7 @@ appApi.get(
           // Same server-derived rule as list responses (canEditMemo), so
           // semantic results keep their manage affordances.
           can_manage: canEditMemo(user, memo),
+          can_govern: canGovernMemo(user, memo),
         })),
         degraded: false,
       });

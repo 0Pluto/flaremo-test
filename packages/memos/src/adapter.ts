@@ -14,7 +14,7 @@ import type {
   ShareRow,
   UserRow,
 } from "@flaremo/db";
-import { canEditMemo } from "@flaremo/domain";
+import { canEditMemo, canGovernMemo } from "@flaremo/domain";
 
 type MemoRelationRow = {
   memoId: string;
@@ -106,9 +106,12 @@ export function memosToListResponse(input: {
   return {
     memos: input.memos.map((memo) => ({
       ...memoToDto(memo, input.user, input.creatorNames?.get(memo.userId)),
-      // Single source of truth for the edit/manage rule (see canEditMemo);
-      // clients must not re-derive team permissions locally.
+      // Single source of truth for the edit/manage rules (see canEditMemo
+      // and canGovernMemo); clients must not re-derive team permissions
+      // locally. can_manage covers content edits and republishing, while
+      // can_govern covers archive/trash/restore lifecycle actions.
       can_manage: canEditMemo(input.user, memo),
+      can_govern: canGovernMemo(input.user, memo),
       ...(input.attachmentsByMemo
         ? {
             attachments: (input.attachmentsByMemo.get(memo.id) ?? []).map(

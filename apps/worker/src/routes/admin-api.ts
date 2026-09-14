@@ -1,3 +1,4 @@
+import type { FlareMoDb } from "@flaremo/db";
 import {
   assertMemberQuota,
   BRANDING_MARK_CONTENT_TYPES,
@@ -20,8 +21,10 @@ import {
   getFlaremoUserById,
   getMemberRemovalJob,
   getUserRegistrationAllowed,
-  isOwner,
+  getViewerTeamMembership,
+  isInstanceOwner,
   isTeamAdmin,
+  isTeamOwner,
   isValidBrandingContentType,
   listFlaremoUsers,
   listMemberRemovalJobs,
@@ -29,8 +32,8 @@ import {
   rebuildEmbeddingIndexes,
   setBrandingProductName,
   setUserRegistrationAllowed,
-  updateFlaremoUserRole,
   updateMemberRemovalJob,
+  updateTeamMemberRole,
   upsertBrandingMark,
   ValidationError,
 } from "@flaremo/domain";
@@ -70,10 +73,23 @@ async function teamAdminContext(
 
 async function ownerContext(c: Parameters<typeof getBrowserRequestContext>[0]) {
   const context = await getBrowserRequestContext(c);
-  if (!isOwner(context.user)) {
+  if (!isInstanceOwner(context.user)) {
     throw new ForbiddenError("Owner access is required.");
   }
   return context;
+}
+
+/**
+ * Resolve a member's team role through their Better Auth identity. Removed
+ * members have no membership row and surface with a null role.
+ */
+async function teamMemberRole(
+  db: FlareMoDb,
+  flaremoUserId: string,
+): Promise<"owner" | "admin" | "member" | null> {
+  const authUserId = await getAuthUserIdByFlaremoUserId(db, flaremoUserId);
+  if (!authUserId) return null;
+  return (await getViewerTeamMembership(db, authUserId))?.role ?? null;
 }
 
 // Kept as a compatibility endpoint for existing deployments and clients. The
@@ -219,7 +235,9 @@ adminApi.get("/users", async (c) => {
           email: authUser?.email ?? member.email,
           name: member.name,
           username: authUser?.username ?? member.id.replace(/^users\//, ""),
-          role: member.role,
+          role: authUserId
+            ? ((await getViewerTeamMembership(db, authUserId))?.role ?? null)
+            : null,
           status: member.status,
           created_at: member.createdAt,
         };
@@ -270,7 +288,7 @@ adminApi.post("/users", zValidator("json", createUserSchema), async (c) => {
         email,
         name: member.name,
         username,
-        role: member.role,
+        role: "member" as const,
         status: member.status,
         created_at: member.createdAt,
         activation_path: `/reset?token=${encodeURIComponent(activationToken)}`,
@@ -289,24 +307,38 @@ adminApi.patch(
   async (c) => {
     try {
       const context = await teamAdminContext(c);
-      const member = await updateFlaremoUserRole(
+      const id = c.req.param("id");
+      const authUserId = await getAuthUserIdByFlaremoUserId(context.db, id);
+      if (!authUserId) {
+        throw new NotFoundError("Active member not found");
+      }
+      // Only the team owner elevates or demotes members — administrators
+      // manage members but never change roles (peer-protection rule). The
+      // owner-target guard comes first so a non-owner administrator sees the
+      // same owner-immutability error the domain enforces.
+      const targetRole = await teamMemberRole(context.db, id);
+      if (targetRole === "owner") {
+        throw new ForbiddenError("The owner role cannot be changed.");
+      }
+      if (!isTeamOwner(context.user)) {
+        throw new ForbiddenError("Only the team owner can change roles.");
+      }
+      await updateTeamMemberRole(
         context.db,
-        c.req.param("id"),
+        authUserId,
         c.req.valid("json").role,
       );
-      const authUserId = await getAuthUserIdByFlaremoUserId(
-        context.db,
-        member.id,
-      );
-      const authUser = authUserId
-        ? await getAuthUserById(context.db, authUserId)
-        : null;
+      const member = await getFlaremoUserById(context.db, id);
+      if (!member) {
+        throw new NotFoundError("Active member not found");
+      }
+      const authUser = await getAuthUserById(context.db, authUserId);
       return c.json({
         id: member.id,
         email: authUser?.email ?? member.email,
         name: member.name,
         username: authUser?.username ?? member.id.replace(/^users\//, ""),
-        role: member.role,
+        role: c.req.valid("json").role,
         status: member.status,
         created_at: member.createdAt,
       });
@@ -326,6 +358,13 @@ adminApi.delete("/users/:id", async (c) => {
     }
     if (!/^users\//.test(id)) {
       throw new NotFoundError("Member not found");
+    }
+    // Peer protection: only the team owner removes administrators.
+    const targetRole = await teamMemberRole(context.db, id);
+    if (targetRole === "admin" && !isTeamOwner(context.user)) {
+      throw new ForbiddenError(
+        "Only the team owner can remove an administrator.",
+      );
     }
 
     const job = await createMemberRemovalJob(context.db, id, context.user.id);
@@ -450,14 +489,15 @@ adminApi.post("/users/:id/reset-password", async (c) => {
       throw new NotFoundError("Active member not found");
     }
     // A reset token mints a credential — apply the same takeover guard as
-    // role changes and member removal: admins cannot touch the owner, and
-    // only the owner can reset another admin.
+    // role changes and member removal: administrators cannot touch the owner
+    // or another administrator; only the owner can.
     if (id === "users/owner") {
       throw new ForbiddenError(
         "The owner password cannot be reset through the admin API.",
       );
     }
-    if (member.role === "admin" && !isOwner(context.user)) {
+    const targetRole = await teamMemberRole(context.db, id);
+    if (targetRole === "admin" && !isTeamOwner(context.user)) {
       throw new ForbiddenError(
         "Only the owner can reset another administrator's password.",
       );

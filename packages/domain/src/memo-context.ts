@@ -10,7 +10,12 @@ import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { parseResourceName } from "./ids";
 import { listMemoriesForMemo } from "./memory";
 import { getMemoById } from "./memos";
-import { canEditMemo, isTeamAdmin, memoReadScope } from "./team-permissions";
+import {
+  canEditMemo,
+  canGovernMemo,
+  isTeamAdmin,
+  memoReadScope,
+} from "./team-permissions";
 
 export async function getMemoContextData(
   db: FlareMoDb,
@@ -20,6 +25,7 @@ export async function getMemoContextData(
   const id = parseResourceName(memoId, "memos");
   const memo = await getMemoById(db, user, id, { includeDeleted: true });
   const canManage = canEditMemo(user, memo);
+  const canGovern = canGovernMemo(user, memo);
 
   const [attachmentRows, shareRows, relations, backlinks, revisionRows] =
     await db.batch([
@@ -77,6 +83,7 @@ export async function getMemoContextData(
   return {
     memo,
     canManage,
+    canGovern,
     attachments: attachmentRows,
     shares: canManage
       ? shareRows.filter(

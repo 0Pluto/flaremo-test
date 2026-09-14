@@ -16,6 +16,7 @@ export async function buildMemoContext(
   const {
     memo,
     canManage,
+    canGovern,
     attachments,
     shares,
     relations,
@@ -36,6 +37,7 @@ export async function buildMemoContext(
   return {
     memo: memoToDto(memo, user, creatorNames.get(memo.userId)),
     can_manage: canManage,
+    can_govern: canGovern,
     attachments: attachments.map(attachmentToDto),
     shares: shares.map(shareToDto),
     relations: relations.map(mapRelationContext),

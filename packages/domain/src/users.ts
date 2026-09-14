@@ -3,6 +3,8 @@ import {
   attachments,
   authAccounts,
   authApiKeys,
+  authMembers,
+  authOrganizations,
   authSessions,
   authUserLinks,
   authUsers,
@@ -31,7 +33,7 @@ import {
   usageCounters,
   users,
 } from "@flaremo/db";
-import { and, asc, count, eq, inArray, ne, or } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNotNull, ne, or } from "drizzle-orm";
 import {
   ConflictError,
   ForbiddenError,
@@ -40,6 +42,7 @@ import {
 } from "./errors";
 import type { PlanLimits } from "./limits";
 import { assertMemberQuota } from "./quotas";
+import type { TeamRole } from "./team-permissions";
 
 export type SingleUserConfig = {
   email: string;
@@ -50,6 +53,98 @@ export type NewMemberConfig = {
   email: string;
   name: string;
 };
+
+/** Every deployment has exactly one team under this fixed slug. */
+export const DEFAULT_TEAM_SLUG = "flaremo";
+
+export type TeamRow = typeof authOrganizations.$inferSelect;
+
+/**
+ * The deployment's team organization. Created lazily at bootstrap and by the
+ * schema migration for existing deployments; never created from HTTP.
+ */
+export async function getDefaultTeam(db: FlareMoDb): Promise<TeamRow | null> {
+  return (
+    (await db.query.authOrganizations.findFirst({
+      where: eq(authOrganizations.slug, DEFAULT_TEAM_SLUG),
+    })) ?? null
+  );
+}
+
+export async function ensureDefaultTeam(db: FlareMoDb): Promise<TeamRow> {
+  const existing = await getDefaultTeam(db);
+  if (existing) return existing;
+  const now = new Date();
+  await db
+    .insert(authOrganizations)
+    .values({
+      id: `orgs/${crypto.randomUUID()}`,
+      name: "FlareMo Team",
+      slug: DEFAULT_TEAM_SLUG,
+      logo: null,
+      metadata: null,
+      createdAt: now,
+    })
+    .onConflictDoNothing({ target: authOrganizations.slug });
+  return (
+    (await getDefaultTeam(db)) ??
+    (() => {
+      throw new ConflictError("Default team could not be created.");
+    })()
+  );
+}
+
+/** Add a user to the default team with the given role. Idempotent. */
+export async function addTeamMember(
+  db: FlareMoDb,
+  input: { authUserId: string; role: TeamRole },
+): Promise<void> {
+  const team = await ensureDefaultTeam(db);
+  await db
+    .insert(authMembers)
+    .values({
+      id: `members/${crypto.randomUUID()}`,
+      organizationId: team.id,
+      userId: input.authUserId,
+      role: input.role,
+      createdAt: new Date(),
+    })
+    .onConflictDoNothing({
+      target: [authMembers.organizationId, authMembers.userId],
+    });
+}
+
+/**
+ * Memos-compatible wire role. FlareMo never trusts the wire role for
+ * authorization, so only the instance owner and resolved team roles surface
+ * as ADMIN; viewers without a membership map to USER.
+ */
+export function memosWireRole(
+  user: UserRow,
+  teamRole?: TeamRole | null,
+): "USER" | "ADMIN" {
+  return user.id === "users/owner" ||
+    teamRole === "owner" ||
+    teamRole === "admin"
+    ? "ADMIN"
+    : "USER";
+}
+
+export async function removeTeamMember(
+  db: FlareMoDb,
+  authUserId: string,
+): Promise<void> {
+  const team = await getDefaultTeam(db);
+  if (!team) return;
+  await db
+    .delete(authMembers)
+    .where(
+      and(
+        eq(authMembers.organizationId, team.id),
+        eq(authMembers.userId, authUserId),
+      ),
+    );
+}
 
 export async function ensureSingleUser(
   db: FlareMoDb,
@@ -70,7 +165,6 @@ export async function ensureSingleUser(
     email: config.email,
     name: config.name,
     avatarUrl: null,
-    role: "owner" as const,
     status: "active" as const,
     createdAt: now,
     updatedAt: now,
@@ -104,7 +198,6 @@ export async function createFlaremoMember(
     email: config.email,
     name: config.name,
     avatarUrl: null,
-    role: "member" as const,
     status: "active" as const,
     createdAt: now,
     updatedAt: now,
@@ -117,9 +210,11 @@ export async function createFlaremoMember(
 /**
  * Create a member and bind it to an existing Better Auth identity in one
  * ownership boundary. Registration and admin creation both reach this path so
- * the auth-to-domain link is never written from an HTTP adapter. When a member
- * cap is supplied (hosted plans), the deployment-wide headcount is checked
- * first; bootstrap (`ensureSingleUser`) intentionally bypasses this.
+ * the auth-to-domain link is never written from an HTTP adapter. The member
+ * joins the deployment's team with the member role; role elevation is a
+ * separate, explicit admin action. When a member cap is supplied (hosted
+ * plans), the deployment-wide headcount is checked first; bootstrap
+ * (`ensureSingleUser`) intentionally bypasses this.
  */
 export async function createFlaremoMemberWithLink(
   db: FlareMoDb,
@@ -138,6 +233,7 @@ export async function createFlaremoMemberWithLink(
     flaremoUserId: user.id,
     createdAt: new Date(),
   });
+  await addTeamMember(db, { authUserId: input.authUserId, role: "member" });
   return user;
 }
 
@@ -163,42 +259,85 @@ export async function getFlaremoUserNames(
   return new Map(rows.map((row) => [row.id, row.name]));
 }
 
-export async function updateFlaremoUserRole(
+/**
+ * Change a team member's role. The bootstrap owner's role is immutable, and a
+ * demotion or removal must never leave the team without an active
+ * administrator. Role changes are owner-only — enforced by the admin API.
+ */
+export async function updateTeamMemberRole(
   db: FlareMoDb,
-  userId: string,
-  role: "admin" | "member",
-): Promise<UserRow> {
-  if (userId === "users/owner") {
+  authUserId: string,
+  role: TeamRole,
+): Promise<void> {
+  const team = await getDefaultTeam(db);
+  if (!team) throw new NotFoundError("Team not found");
+  if (authUserId === (await getOwnerAuthMemberUserId(db))) {
     throw new ForbiddenError("The owner role cannot be changed.");
   }
-  const user = await getFlaremoUserById(db, userId);
-  if (user?.status !== "active") {
+  const member = await db.query.authMembers.findFirst({
+    where: and(
+      eq(authMembers.organizationId, team.id),
+      eq(authMembers.userId, authUserId),
+    ),
+  });
+  if (!member) {
     throw new NotFoundError("Active member not found");
   }
-  if (user.role === "admin" && role === "member") {
-    await assertAnotherActiveAdmin(db, userId);
+  if (member.role !== "member" && role === "member") {
+    await assertAnotherActiveTeamAdmin(db, authUserId);
   }
-  const updatedAt = new Date().toISOString();
   await db
-    .update(users)
-    .set({ role, updatedAt })
-    .where(and(eq(users.id, userId), eq(users.status, "active")));
-  return (await getFlaremoUserById(db, userId)) ?? { ...user, role, updatedAt };
-}
-
-async function assertAnotherActiveAdmin(db: FlareMoDb, excludedUserId: string) {
-  const row = await db
-    .select({ value: count() })
-    .from(users)
+    .update(authMembers)
+    .set({ role })
     .where(
       and(
+        eq(authMembers.id, member.id),
+        eq(authMembers.organizationId, team.id),
+      ),
+    );
+}
+
+/**
+ * The bootstrap owner account's Better Auth identity, derived from the
+ * auth-to-domain link. Used for the immutable-owner guard, not for general
+ * role resolution.
+ */
+async function getOwnerAuthMemberUserId(db: FlareMoDb): Promise<string | null> {
+  const link = await db.query.authUserLinks.findFirst({
+    where: eq(authUserLinks.flaremoUserId, "users/owner"),
+  });
+  return link?.authUserId ?? null;
+}
+
+async function assertAnotherActiveTeamAdmin(
+  db: FlareMoDb,
+  excludedAuthUserId: string,
+) {
+  const team = await getDefaultTeam(db);
+  if (!team) {
+    throw new ForbiddenError(
+      "The last active administrator cannot be changed.",
+    );
+  }
+  // Only active members count: a removed owner's membership row must not
+  // satisfy the guard for a degraded deployment. Membership rows carry the
+  // Better Auth identity, so the domain user's status goes through the
+  // auth-to-domain link.
+  const rows = await db
+    .select({ value: count() })
+    .from(authMembers)
+    .innerJoin(authUserLinks, eq(authUserLinks.authUserId, authMembers.userId))
+    .innerJoin(users, eq(users.id, authUserLinks.flaremoUserId))
+    .where(
+      and(
+        eq(authMembers.organizationId, team.id),
+        inArray(authMembers.role, ["owner", "admin"]),
         eq(users.status, "active"),
-        inArray(users.role, ["owner", "admin"]),
-        ne(users.id, excludedUserId),
+        ne(authMembers.userId, excludedAuthUserId),
       ),
     )
     .get();
-  if ((row?.value ?? 0) < 1) {
+  if ((rows?.value ?? 0) < 1) {
     throw new ForbiddenError(
       "The last active administrator cannot be changed.",
     );
@@ -263,14 +402,27 @@ export async function beginFlaremoMemberRemoval(
   }
   const user = await getFlaremoUserById(db, userId);
   if (!user) throw new NotFoundError("Member not found");
-  if (user.status === "active" && user.role === "admin") {
-    await assertAnotherActiveAdmin(db, userId);
-  }
 
   const link = await db.query.authUserLinks.findFirst({
     where: eq(authUserLinks.flaremoUserId, userId),
   });
   const authUserId = link?.authUserId;
+  if (authUserId) {
+    // Removing an administrator must never leave the team leaderless.
+    const team = await getDefaultTeam(db);
+    const member = team
+      ? await db.query.authMembers.findFirst({
+          where: and(
+            eq(authMembers.organizationId, team.id),
+            eq(authMembers.userId, authUserId),
+          ),
+        })
+      : null;
+    if (member && member.role !== "member") {
+      await assertAnotherActiveTeamAdmin(db, authUserId);
+    }
+  }
+
   const removedEmail = `removed+${user.id.replace(/[^a-zA-Z0-9]/g, "-")}@flaremo.invalid`;
   await db
     .update(users)
@@ -286,6 +438,7 @@ export async function beginFlaremoMemberRemoval(
       db.delete(authSessions).where(eq(authSessions.userId, authUserId)),
       db.delete(authAccounts).where(eq(authAccounts.userId, authUserId)),
       db.delete(authUserLinks).where(eq(authUserLinks.authUserId, authUserId)),
+      db.delete(authMembers).where(eq(authMembers.userId, authUserId)),
       db.delete(authUsers).where(eq(authUsers.id, authUserId)),
     ]);
   }
@@ -322,8 +475,11 @@ export async function beginFlaremoMemberRemoval(
 }
 
 /**
- * Delete only a removed member's private and personal D1 data. Team/public
- * memos and their attachments stay attached to the historical author row.
+ * Delete only a removed member's private and personal D1 data. The removed
+ * member's team/public memos are adopted by the bootstrap owner so the team
+ * keeps one member who can edit, publish, or delete them; their identity
+ * fields (author tags, revisions, webhooks) keep pointing at the historical
+ * author row.
  */
 export async function finalizeFlaremoMemberRemoval(
   db: FlareMoDb,
@@ -422,6 +578,14 @@ export async function finalizeFlaremoMemberRemoval(
         eq(embeddingTasks.resourceType, "memory"),
       ),
     );
+
+  // Adopt the removed member's team/public memos. The client id is dropped
+  // with the old owner so the owner's `(user_id, client_id)` idempotency
+  // index can never conflict.
+  await db
+    .update(memos)
+    .set({ userId: "users/owner", clientId: null })
+    .where(and(eq(memos.userId, userId), isNotNull(memos.teamId)));
 }
 
 /**

@@ -7,6 +7,8 @@ import {
 import {
   type getAuthUserById,
   getFlaremoUserByAuthUserId,
+  memosWireRole,
+  type TeamViewer,
 } from "@flaremo/domain";
 import { and, eq, gt } from "drizzle-orm";
 import { getBetterAuthSecret } from "./auth";
@@ -52,7 +54,7 @@ export type MemosRefreshClaims = {
 export type MemosNativeIdentity = {
   authUserId: string;
   flaremoUserId: string;
-  user: UserRow;
+  user: TeamViewer;
   authUser: NonNullable<Awaited<ReturnType<typeof getAuthUserById>>>;
   subject: number;
 };
@@ -487,7 +489,7 @@ async function signAccessToken(input: {
     },
     {
       type: "access",
-      role: input.identity.user.role === "member" ? "USER" : "ADMIN",
+      role: memosWireRole(input.identity.user, input.identity.user.teamRole),
       status: "NORMAL",
       username:
         input.identity.authUser.username?.trim() ||

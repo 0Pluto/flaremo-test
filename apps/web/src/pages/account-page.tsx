@@ -347,7 +347,7 @@ export function AccountPage() {
                 emailCurrentPassword={emailCurrentPassword}
                 emailError={emailError}
                 emailVerificationPending={emailVerificationPending}
-                isOwner={meQuery.data?.role === "owner"}
+                isOwner={meQuery.data?.is_instance_owner === true}
                 newPassword={newPassword}
                 newPasswordConfirmation={newPasswordConfirmation}
                 passwordError={passwordError}
@@ -408,7 +408,7 @@ export function AccountPage() {
             <UsagePanel t={t} vectorUsageQuery={vectorUsageQuery} />
           </TabsContent>
 
-          {isTeamAdmin && (
+          {meQuery.data?.is_instance_owner && (
             <TabsContent value="branding" className="mt-4">
               <BrandingCard />
             </TabsContent>

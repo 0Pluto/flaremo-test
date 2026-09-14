@@ -19,6 +19,7 @@ import {
   createAdminUser,
   deleteAdminUser,
   getAdminBranding,
+  getCurrentFlareMoUser,
   listAdminUsers,
   requestAdminPasswordReset,
   updateAdminBrandingProductName,
@@ -78,6 +79,13 @@ export function AdminPanel() {
     queryFn: listAdminUsers,
     retry: false,
   });
+  const meQuery = useQuery({
+    queryKey: ["me"],
+    queryFn: getCurrentFlareMoUser,
+  });
+  // The role matrix the server enforces: only the team owner changes roles,
+  // and only the owner resets another administrator's password or removes one.
+  const isTeamOwner = meQuery.data?.role === "owner";
 
   const createUserMutation = useMutation({
     mutationFn: createAdminUser,
@@ -139,6 +147,7 @@ export function AdminPanel() {
   };
 
   const handleUpdateRole = async (user: AdminUser) => {
+    if (!isTeamOwner) return;
     try {
       await updateRoleMutation.mutateAsync({
         id: user.id,
@@ -257,20 +266,24 @@ export function AdminPanel() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() => void handleUpdateRole(user)}
-                              >
-                                <UserCogIcon />
-                                {user.role === "admin"
-                                  ? t("admin.makeMember")
-                                  : t("admin.makeAdmin")}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => void handleResetPassword(user)}
-                              >
-                                <KeyRoundIcon />
-                                {t("admin.resetPassword")}
-                              </DropdownMenuItem>
+                              {isTeamOwner && (
+                                <DropdownMenuItem
+                                  onClick={() => void handleUpdateRole(user)}
+                                >
+                                  <UserCogIcon />
+                                  {user.role === "admin"
+                                    ? t("admin.makeMember")
+                                    : t("admin.makeAdmin")}
+                                </DropdownMenuItem>
+                              )}
+                              {(isTeamOwner || user.role === "member") && (
+                                <DropdownMenuItem
+                                  onClick={() => void handleResetPassword(user)}
+                                >
+                                  <KeyRoundIcon />
+                                  {t("admin.resetPassword")}
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 variant="destructive"

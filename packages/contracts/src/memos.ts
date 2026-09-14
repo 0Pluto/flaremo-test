@@ -150,6 +150,10 @@ export const memoDtoSchema = z.object({
   // Server-computed edit/manage permission for the requesting user, so
   // clients never re-derive the team permission rules locally.
   can_manage: z.boolean().optional(),
+  // Lifecycle-governance permission (archive/trash/restore) for the
+  // requesting user; administrators hold it on other members' team memos
+  // even though they cannot edit them.
+  can_govern: z.boolean().optional(),
   attachments: z.array(attachmentDtoSchema).optional(),
 });
 
@@ -265,6 +269,7 @@ export const memoRelationContextResponseSchema = z.object({
 export const memoContextResponseSchema = z.object({
   memo: memoDtoSchema,
   can_manage: z.boolean(),
+  can_govern: z.boolean(),
   attachments: z.array(attachmentDtoSchema),
   shares: z.array(shareDtoSchema),
   relations: z.array(memoRelationContextSchema),

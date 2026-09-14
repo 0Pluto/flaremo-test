@@ -137,7 +137,8 @@ export type RegistrationStatus = {
 
 export type CurrentFlareMoUser = {
   id: string;
-  role: "owner" | "admin" | "member";
+  role: "owner" | "admin" | "member" | null;
+  is_instance_owner: boolean;
   status: "active" | "removed";
   name: string;
   email: string;
@@ -149,7 +150,7 @@ export type AdminUser = {
   email: string;
   name: string;
   username: string;
-  role: "owner" | "admin" | "member";
+  role: "owner" | "admin" | "member" | null;
   status: "active" | "removed";
   created_at: string;
 };

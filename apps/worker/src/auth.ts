@@ -3,6 +3,8 @@ import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import {
   authAccounts,
   authApiKeys,
+  authMembers,
+  authOrganizations,
   authSessions,
   authUsers,
   authVerifications,
@@ -10,7 +12,8 @@ import {
   type FlareMoDb,
 } from "@flaremo/db";
 import { betterAuth } from "better-auth";
-import { username } from "better-auth/plugins";
+import { organization, username } from "better-auth/plugins";
+import { createAccessControl } from "better-auth/plugins/access";
 import { eq } from "drizzle-orm";
 import type { FlareMoEnv } from "./env";
 
@@ -23,6 +26,35 @@ const authSchema = {
   account: authAccounts,
   verification: authVerifications,
   apikey: authApiKeys,
+  organization: authOrganizations,
+  member: authMembers,
+};
+
+/**
+ * The team permission matrix, expressed in Better Auth's access-control DSL.
+ * Verbs mirror the domain predicates in packages/domain/src/
+ * team-permissions.ts: team members read published memos, administrators
+ * additionally govern memo state and manage members, and only the owner
+ * edits or republishes another member's memo. The Better Auth organization
+ * endpoints guard themselves against these statements, so endpoints whose
+ * verbs the matrix omits (member:delete, member:update) fail closed for
+ * every role — FlareMo's admin API is the only member-management surface.
+ */
+const teamAccessControl = createAccessControl({
+  memo: ["read-others", "govern-others", "edit-others"],
+  member: ["invite", "update-role", "remove", "reset-password"],
+});
+
+const teamRoles = {
+  owner: teamAccessControl.newRole({
+    memo: ["read-others", "govern-others", "edit-others"],
+    member: ["invite", "update-role", "remove", "reset-password"],
+  }),
+  admin: teamAccessControl.newRole({
+    memo: ["read-others", "govern-others"],
+    member: ["invite", "remove", "reset-password"],
+  }),
+  member: teamAccessControl.newRole({ memo: [], member: [] }),
 };
 
 export class AuthConfigurationError extends Error {
@@ -250,6 +282,13 @@ export function createFlareMoAuth(
       username({
         minUsernameLength: 3,
         maxUsernameLength: 30,
+      }),
+      organization({
+        // The deployment's single team is created by the bootstrap code and
+        // the schema migration; members join it through FlareMo's admin API.
+        allowUserToCreateOrganization: false,
+        ac: teamAccessControl,
+        roles: teamRoles,
       }),
       apiKey({
         configId: MEMOS_PAT_CONFIG_ID,

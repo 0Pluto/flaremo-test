@@ -2698,10 +2698,12 @@ describe("FlareMo Worker API", () => {
     expect((await readAsOwner(privateMemo.id)).status).toBe(404);
     const retainedResponse = await readAsOwner(teamMemo.id);
     expect(retainedResponse.status).toBe(200);
+    // The removed member's team memo is adopted by the owner account, so the
+    // owner can keep managing it; the content itself is untouched.
     expect(
       (await retainedResponse.json<{ memo: { creator_name?: string } }>()).memo
         .creator_name,
-    ).toBe("Team Member");
+    ).toBe("Owner");
   });
 
   it("protects the last active administrator through the admin API", async () => {
@@ -2982,13 +2984,14 @@ describe("FlareMo Worker API", () => {
       .all<{ id: string; visibility: string; user_id: string }>();
     const retained = new Map(retainedRows.results.map((row) => [row.id, row]));
     expect(retained.has(`memos/${removedPrivateId}`)).toBe(false);
+    // Team and public content is adopted by the owner account after removal.
     expect(retained.get(`memos/${removedTeamId}`)).toMatchObject({
       visibility: "protected",
-      user_id: removed.id,
+      user_id: "users/owner",
     });
     expect(retained.get(`memos/${removedPublicId}`)).toMatchObject({
       visibility: "public",
-      user_id: removed.id,
+      user_id: "users/owner",
     });
     expect(retained.get(`memos/${spectatorTeamId}`)).toMatchObject({
       visibility: "protected",
@@ -2998,12 +3001,12 @@ describe("FlareMo Worker API", () => {
       user_id: "users/owner",
     });
 
-    // The retained team memo still renders with its historical author name.
+    // The retained team memo renders under its adopting owner.
     const teamRead = await json<{
       memo: { creator_name?: string; visibility: string };
     }>(await readMemo(removedTeamId));
     expect(teamRead.memo).toMatchObject({
-      creator_name: "Replay Removed",
+      creator_name: "Owner",
       visibility: "protected",
     });
     expect((await readMemo(removedPublicId)).status).toBe(200);
@@ -3111,7 +3114,6 @@ describe("FlareMo Worker API", () => {
       "attachments_cleanup_idx",
       "member_removal_jobs",
       "memos_user_created_id_idx",
-      "users_role_status_idx",
     ]);
   });
 

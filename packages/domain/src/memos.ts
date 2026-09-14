@@ -27,8 +27,10 @@ import { extractTags, normalizeMemoTags } from "./tags";
 import {
   assertCanDeleteMemo,
   assertCanEditMemo,
+  assertCanGovernMemo,
   isActiveTeamMember,
   memoReadScope,
+  type TeamViewer,
 } from "./team-permissions";
 
 export type MemoListResult = {
@@ -82,9 +84,28 @@ function assertMemoContentSize(content: string) {
   }
 }
 
+/**
+ * Resolve the owning team for a memo from its visibility. Personal memos
+ * ("private") carry no team; team/public memos are published into the
+ * viewer's team, which requires an actual team membership.
+ */
+export function resolveMemoTeamId(
+  viewer: TeamViewer,
+  visibility: MemoRow["visibility"],
+): string | null {
+  if (visibility === "private") return null;
+  const teamId = viewer.teamOrganizationId ?? null;
+  if (!teamId) {
+    throw new ValidationError(
+      "Team membership is required to publish a team memo.",
+    );
+  }
+  return teamId;
+}
+
 export async function createMemo(
   db: FlareMoDb,
-  user: UserRow,
+  user: TeamViewer,
   input: CreateMemoInput,
   scope?: QuotaScope,
 ): Promise<MemoRow> {
@@ -113,6 +134,7 @@ export async function createMemo(
   const row = {
     id: createResourceId("memos"),
     userId: user.id,
+    teamId: resolveMemoTeamId(user, input.visibility),
     content: input.content,
     visibility: input.visibility,
     status: "normal" as const,
@@ -198,7 +220,7 @@ export async function createMemo(
 
 export async function listMemos(
   db: FlareMoDb,
-  user: UserRow,
+  user: TeamViewer,
   query: ListMemosQuery,
   options: MemoFilterOptions = {},
 ): Promise<MemoListResult> {
@@ -219,7 +241,7 @@ export type MemoFilterOptions = {
  */
 export async function listMemosForViewer(
   db: FlareMoDb,
-  user: UserRow | null,
+  user: TeamViewer | null,
   query: ListMemosQuery,
   options: MemoFilterOptions = {},
 ): Promise<MemoListResult> {
@@ -523,7 +545,7 @@ export async function getMemoStats(
 
 export async function getMemoById(
   db: FlareMoDb,
-  user: UserRow,
+  user: TeamViewer,
   id: string,
   options: { includeDeleted?: boolean } = {},
 ): Promise<MemoRow> {
@@ -537,7 +559,7 @@ export async function getMemoById(
  */
 export async function getMemoByIdForViewer(
   db: FlareMoDb,
-  user: UserRow | null,
+  user: TeamViewer | null,
   id: string,
   options: { includeDeleted?: boolean } = {},
 ): Promise<MemoRow> {
@@ -573,12 +595,25 @@ async function getMemoByClientId(
 
 export async function updateMemo(
   db: FlareMoDb,
-  user: UserRow,
+  user: TeamViewer,
   id: string,
   input: UpdateMemoInput,
 ): Promise<MemoRow> {
   const existing = await getMemoById(db, user, id, { includeDeleted: true });
-  assertCanEditMemo(user, existing);
+  // Content edits and state governance are different powers with different
+  // holders: the author (and the team owner) edit, administrators govern.
+  // A patch touching both is only accepted for a viewer holding both rights.
+  if (
+    input.content !== undefined ||
+    input.payload !== undefined ||
+    input.pinned !== undefined ||
+    input.visibility !== undefined
+  ) {
+    assertCanEditMemo(user, existing);
+  }
+  if (input.status !== undefined) {
+    assertCanGovernMemo(user, existing);
+  }
   // Only the incoming content is re-validated; content inherited from the
   // persisted row is left untouched so legacy oversized rows stay updatable.
   if (input.content !== undefined) {
@@ -631,9 +666,17 @@ export async function updateMemo(
     ? createResourceId("revisions")
     : undefined;
   const nextVisibility = input.visibility ?? existing.visibility;
+  // Publishing into the team (or unpublishing to personal) follows the
+  // visibility transition. Moving another author's memo to personal keeps the
+  // author as owner of the now-personal memo.
+  const nextTeamId =
+    input.visibility !== undefined && input.visibility !== existing.visibility
+      ? resolveMemoTeamId(user, input.visibility)
+      : existing.teamId;
   const nextMemo = {
     ...existing,
     content: nextContent,
+    teamId: nextTeamId,
     visibility: nextVisibility,
     status: status ?? existing.status,
     pinned: input.pinned ?? existing.pinned,
@@ -672,6 +715,7 @@ export async function updateMemo(
   const patch = {
     ...(input.content !== undefined ? { content: input.content } : {}),
     ...(input.visibility !== undefined ? { visibility: input.visibility } : {}),
+    ...(nextTeamId !== existing.teamId ? { teamId: nextTeamId } : {}),
     ...(status !== undefined ? { status } : {}),
     ...(input.pinned !== undefined ? { pinned: input.pinned } : {}),
     ...(nextClientId !== existing.clientId ? { clientId: nextClientId } : {}),
@@ -802,7 +846,7 @@ export async function listExpiredTrashedMemos(
 
 export async function moveMemoToTrash(
   db: FlareMoDb,
-  user: UserRow,
+  user: TeamViewer,
   id: string,
 ): Promise<MemoRow> {
   return updateMemo(db, user, id, { status: "trashed" });
@@ -810,7 +854,7 @@ export async function moveMemoToTrash(
 
 export async function hardDeleteMemo(
   db: FlareMoDb,
-  user: UserRow,
+  user: TeamViewer,
   id: string,
 ): Promise<void> {
   const existing = await getMemoById(db, user, id, { includeDeleted: true });
