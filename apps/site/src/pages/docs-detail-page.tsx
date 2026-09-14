@@ -6,35 +6,36 @@ import remarkGfm from "remark-gfm";
 import { docPath, getDocNavGroups } from "@/content/docs-nav";
 import { getDoc, listDocs } from "@/lib/docs-source.generated";
 import "@/styles/prose.css";
-import type { Locale } from "@/lib/seo";
+import { getLocaleFromPath, getLocalizedPath } from "@/lib/seo";
 
 export function DocsDetailPage() {
   const { pathname } = useLocation();
   const { slug: routeSlug } = useParams({ strict: false }) as { slug?: string };
-  const locale: Locale = pathname.startsWith("/en") ? "en-US" : "zh-CN";
+  const locale = getLocaleFromPath(pathname);
+  const docLocale = locale === "zh" ? "zh-CN" : "en-US";
   const slug = routeSlug ?? "";
 
-  const doc = useMemo(() => getDoc(slug, locale), [slug, locale]);
-  const allDocs = useMemo(() => listDocs(locale), [locale]);
+  const doc = useMemo(() => getDoc(slug, docLocale), [slug, docLocale]);
+  const allDocs = useMemo(() => listDocs(docLocale), [docLocale]);
   const groups = useMemo(() => getDocNavGroups(locale), [locale]);
 
   if (!doc) {
     return (
       <main className="container-x py-16 text-center">
         <h1 className="text-2xl font-semibold tracking-tight">
-          {locale === "zh-CN" ? "文档不存在" : "Document not found"}
+          {locale === "zh" ? "文档不存在" : "Document not found"}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          {locale === "zh-CN"
+          {locale === "zh"
             ? "我们暂时没有这份文档。请查看文档总览。"
             : "We don't have that document. See the docs index."}
         </p>
         <Link
           className="mt-6 inline-flex items-center gap-1 text-sm font-medium text-flame-600 hover:text-flame-500"
-          to={locale === "zh-CN" ? "/docs" : "/en/docs"}
+          to={getLocalizedPath("/docs", locale)}
         >
           <ChevronLeft className="size-4" />
-          {locale === "zh-CN" ? "回到文档总览" : "Back to docs"}
+          {locale === "zh" ? "回到文档总览" : "Back to docs"}
         </Link>
       </main>
     );
@@ -44,7 +45,7 @@ export function DocsDetailPage() {
     <main className="container-x grid gap-10 py-12 lg:grid-cols-[14rem_1fr]">
       <aside className="lg:sticky lg:top-20 lg:self-start">
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {locale === "zh-CN" ? "文档" : "Docs"}
+          {locale === "zh" ? "文档" : "Docs"}
         </h2>
         <nav className="space-y-5">
           {groups.map((group) => {
@@ -79,7 +80,7 @@ export function DocsDetailPage() {
       <article>
         {doc.fallbackFromZh ? (
           <div className="mb-6 rounded-xl border border-flame-200 bg-flame-50/60 px-4 py-3 text-sm text-flame-700">
-            {locale === "zh-CN"
+            {locale === "zh"
               ? "本页内容为中文原文；尚未翻译为英文。"
               : "This document is shown in its original Chinese; an English translation is pending."}
           </div>

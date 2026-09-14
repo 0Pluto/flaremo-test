@@ -2,8 +2,13 @@ import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
 import { renderToString } from "react-dom/server";
 import { getDoc } from "@/lib/docs-source.generated";
 import { buildSeoForPath, renderHtmlShell } from "@/lib/html-shell";
-import type { Locale } from "@/lib/seo";
-import { SOFTWARE_APPLICATION_JSON_LD } from "@/lib/seo";
+import { STATIC_PAGE_META } from "@/lib/route-meta";
+import {
+  getLocaleFromPath,
+  getPathWithoutLocale,
+  SOFTWARE_APPLICATION_JSON_LD,
+  type SupportedLocale,
+} from "@/lib/seo";
 import { createAppRouter } from "@/router";
 
 type RenderResult = {
@@ -11,76 +16,66 @@ type RenderResult = {
   title: string;
 };
 
-const STATIC_META: Record<
-  string,
-  {
-    locale: Locale;
-    title: string;
-    description: string;
-    ogType?: "website" | "article";
-    jsonLd?: unknown;
-  }
-> = {
-  "/": {
-    locale: "zh-CN",
-    title: "FlareMo",
-    description:
-      "一个免费 Cloudflare 账号就能 24 小时在线的个人笔记系统。D1 + R2 + Better Auth + Memos 兼容 API。",
-    jsonLd: SOFTWARE_APPLICATION_JSON_LD,
-  },
-  "/en": {
-    locale: "en-US",
-    title: "FlareMo",
-    description:
-      "A personal note system that runs 24/7 on a free Cloudflare account. D1 + R2 + Better Auth + Memos-compatible API.",
-    jsonLd: SOFTWARE_APPLICATION_JSON_LD,
-  },
-  "/docs": {
-    locale: "zh-CN",
-    title: "文档总览",
-    description: "FlareMo 文档总览：部署、架构、兼容矩阵、Agent 集成与参考。",
-  },
-  "/en/docs": {
-    locale: "en-US",
-    title: "Documentation",
-    description:
-      "FlareMo documentation overview: deployment, architecture, compatibility, agent integrations, and reference.",
-  },
-};
-
-function docMeta(pathname: string): {
-  locale: Locale;
+function resolveMeta(pathname: string): {
+  locale: SupportedLocale;
   title: string;
   description: string;
-  ogType: "article";
+  ogType?: "website" | "article";
   jsonLd?: unknown;
-} | null {
-  // /docs/<slug> (zh) or /en/docs/<slug> (en)
-  const match = pathname.match(/^\/(?:en\/)?docs\/([^/]+)$/);
-  if (!match) return null;
-  const isEn = pathname.startsWith("/en");
-  const slug = match[1];
-  const locale: Locale = isEn ? "en-US" : "zh-CN";
-  const doc = getDoc(slug, locale);
-  if (!doc) return null;
+} {
+  const locale = getLocaleFromPath(pathname);
+  const cleanPath = getPathWithoutLocale(pathname);
+
+  // Home route
+  if (cleanPath === "/") {
+    const meta = STATIC_PAGE_META[locale];
+    return {
+      locale,
+      title: meta.homeTitle,
+      description: meta.homeDesc,
+      ogType: "website",
+      jsonLd: SOFTWARE_APPLICATION_JSON_LD,
+    };
+  }
+
+  // Docs index route
+  if (cleanPath === "/docs") {
+    const meta = STATIC_PAGE_META[locale];
+    return {
+      locale,
+      title: meta.docsTitle,
+      description: meta.docsDesc,
+      ogType: "website",
+    };
+  }
+
+  // Docs detail route: /docs/:slug
+  const match = cleanPath.match(/^\/docs\/([^/]+)$/);
+  if (match) {
+    const slug = match[1];
+    const docLocale = locale === "zh" ? "zh-CN" : "en-US";
+    const doc = getDoc(slug, docLocale);
+    if (doc) {
+      return {
+        locale,
+        title: doc.title,
+        description: doc.description,
+        ogType: "article",
+        jsonLd: {
+          "@type": "Article",
+          headline: doc.title,
+          description: doc.description,
+          inLanguage: docLocale,
+        },
+      };
+    }
+  }
+
   return {
     locale,
-    title: doc.title,
-    description: doc.description,
-    ogType: "article",
-    jsonLd: {
-      "@type": "Article",
-      headline: doc.title,
-      description: doc.description,
-      inLanguage: isEn ? "en-US" : "zh-CN",
-    },
+    title: "FlareMo",
+    description: "FlareMo",
   };
-}
-
-function resolveMeta(pathname: string) {
-  if (pathname in STATIC_META)
-    return STATIC_META[pathname as keyof typeof STATIC_META];
-  return docMeta(pathname);
 }
 
 /**
@@ -89,9 +84,9 @@ function resolveMeta(pathname: string) {
  */
 export async function renderRoute(pathname: string): Promise<RenderResult> {
   const meta = resolveMeta(pathname);
-  const locale = meta?.locale ?? "zh-CN";
-  const title = meta?.title ?? "FlareMo";
-  const description = meta?.description ?? "FlareMo";
+  const locale = meta.locale;
+  const title = meta.title;
+  const description = meta.description;
 
   const history = createMemoryHistory({
     initialEntries: [pathname],
@@ -101,8 +96,8 @@ export async function renderRoute(pathname: string): Promise<RenderResult> {
   await router.load();
 
   const seo = buildSeoForPath(pathname, title, description, locale, {
-    ogType: meta?.ogType,
-    jsonLd: meta?.jsonLd,
+    ogType: meta.ogType,
+    jsonLd: meta.jsonLd,
   });
 
   const body = renderToString(<RouterProvider router={router} />);

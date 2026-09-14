@@ -1454,7 +1454,7 @@ function getInitialLocale(): Locale {
   if (isLocale(stored)) {
     return stored;
   }
-  return navigator.language.toLowerCase().startsWith("zh") ? "zh-CN" : "en-US";
+  return "en-US";
 }
 
 function isLocale(value: string | null): value is Locale {

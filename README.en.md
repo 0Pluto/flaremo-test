@@ -6,12 +6,23 @@
 </p>
 
 <p align="center">
+  <a href="./README.md"><b>English</b></a> •
+  <a href="./README.zh-CN.md">简体中文</a> •
+  <a href="./README.ja.md">日本語</a> •
+  <a href="./README.fr.md">Français</a> •
+  <a href="./README.es.md">Español</a> •
+  <a href="./README.ko.md">한국어</a> •
+  <a href="./README.ru.md">Русский</a> •
+  <a href="./README.ar.md">العربية</a>
+</p>
+
+<p align="center">
   <a href="https://github.com/realchendahuang/FlareMo/stargazers"><img src="https://img.shields.io/github/stars/realchendahuang/FlareMo?style=flat&color=F38020" alt="GitHub stars"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/github/license/realchendahuang/FlareMo?style=flat&color=2563EB" alt="License"></a>
   <a href="https://workers.cloudflare.com/"><img src="https://img.shields.io/badge/Runtime-Cloudflare%20Workers-F38020?logo=cloudflare&logoColor=white" alt="Cloudflare Workers"></a>
   <a href="https://github.com/usememos/memos"><img src="https://img.shields.io/badge/Ecosystem-Memos%20Compatible-0284C7" alt="Memos Compatible"></a>
   <a href="https://www.better-auth.com/"><img src="https://img.shields.io/badge/Auth-Better%20Auth-10B981" alt="Better Auth"></a>
-  <a href="./README.md"><img src="https://img.shields.io/badge/Language-中文-DC2626" alt="Chinese Documentation"></a>
+  <a href="https://flaremo.app"><img src="https://img.shields.io/badge/Website-flaremo.app-EA580C" alt="Website"></a>
 </p>
 
 <div align="center">

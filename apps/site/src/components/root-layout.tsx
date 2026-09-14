@@ -1,11 +1,11 @@
 import { Outlet, useLocation } from "@tanstack/react-router";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
-import type { Locale } from "@/lib/seo";
+import { getLocaleFromPath } from "@/lib/seo";
 
 export function RootLayout() {
   const { pathname } = useLocation();
-  const locale: Locale = pathname.startsWith("/en") ? "en-US" : "zh-CN";
+  const locale = getLocaleFromPath(pathname);
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground antialiased">

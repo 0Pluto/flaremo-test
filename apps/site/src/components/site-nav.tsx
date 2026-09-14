@@ -1,7 +1,13 @@
 import { Link } from "@tanstack/react-router";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { SiteMark } from "@/components/site-mark";
-import type { Locale } from "@/lib/seo";
+import {
+  getLocalizedPath,
+  getPathWithoutLocale,
+  type Locale,
+  normalizeLocale,
+  type SupportedLocale,
+} from "@/lib/seo";
 
 type NavItem = {
   to: string;
@@ -14,31 +20,44 @@ type SiteNavProps = {
   currentPath: string;
 };
 
-const ZH_ITEMS: NavItem[] = [
-  { to: "/", label: "首页" },
-  { to: "/docs", label: "文档" },
-];
-
-const EN_ITEMS: NavItem[] = [
-  { to: "/en", label: "Home" },
-  { to: "/en/docs", label: "Docs" },
-];
+const NAV_LABELS: Record<
+  SupportedLocale,
+  { home: string; docs: string; signIn: string }
+> = {
+  en: { home: "Home", docs: "Docs", signIn: "Sign in" },
+  zh: { home: "首页", docs: "文档", signIn: "登录 / 注册" },
+  ja: { home: "ホーム", docs: "ドキュメント", signIn: "ログイン" },
+  fr: { home: "Accueil", docs: "Documentation", signIn: "Se connecter" },
+  es: { home: "Inicio", docs: "Documentación", signIn: "Iniciar sesión" },
+  ko: { home: "홈", docs: "문서", signIn: "로그인" },
+  ru: { home: "Главная", docs: "Документация", signIn: "Войти" },
+  ar: { home: "الرئيسية", docs: "المستندات", signIn: "تسجيل الدخول" },
+};
 
 export function SiteNav({ locale, currentPath }: SiteNavProps) {
-  const items = locale === "zh-CN" ? ZH_ITEMS : EN_ITEMS;
+  const norm = normalizeLocale(locale);
+  const labels = NAV_LABELS[norm];
+  const homePath = getLocalizedPath("/", norm);
+  const docsPath = getLocalizedPath("/docs", norm);
+
+  const items: NavItem[] = [
+    { to: homePath, label: labels.home },
+    { to: docsPath, label: labels.docs },
+  ];
+
   return (
     <header className="sticky top-0 z-30 border-b border-border/60 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/65">
       <div className="container-x flex h-14 items-center justify-between gap-4">
         <Link
           aria-label="FlareMo home"
           className="flex items-center gap-2 text-foreground transition-opacity hover:opacity-80"
-          to={locale === "zh-CN" ? "/" : "/en"}
+          to={homePath}
         >
           <SiteMark iconSize="size-6" />
         </Link>
         <nav className="hidden items-center gap-1 md:flex">
           {items.map((item) => {
-            const active = isActive(currentPath, item.to, locale);
+            const active = isActive(currentPath, item.to);
             return (
               <Link
                 aria-current={active ? "page" : undefined}
@@ -61,7 +80,7 @@ export function SiteNav({ locale, currentPath }: SiteNavProps) {
             href="https://app.flaremo.app"
             rel="noopener noreferrer"
           >
-            {locale === "zh-CN" ? "登录 / 注册" : "Sign in"}
+            {labels.signIn}
           </a>
           <a
             className="hidden items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground sm:inline-flex"
@@ -71,12 +90,12 @@ export function SiteNav({ locale, currentPath }: SiteNavProps) {
           >
             GitHub ↗
           </a>
-          <LocaleSwitcher locale={locale} path={currentPath} />
+          <LocaleSwitcher locale={norm} path={currentPath} />
         </div>
       </div>
       <div className="container-x flex gap-1 overflow-x-auto pb-2 pt-1 md:hidden">
         {items.map((item) => {
-          const active = isActive(currentPath, item.to, locale);
+          const active = isActive(currentPath, item.to);
           return (
             <Link
               aria-current={active ? "page" : undefined}
@@ -97,16 +116,11 @@ export function SiteNav({ locale, currentPath }: SiteNavProps) {
   );
 }
 
-function isActive(
-  currentPath: string,
-  itemTo: string,
-  locale: Locale,
-): boolean {
-  if (itemTo === "/") {
-    return locale === "zh-CN" ? currentPath === "/" : currentPath === "/en";
+function isActive(currentPath: string, itemTo: string): boolean {
+  const normCurrent = getPathWithoutLocale(currentPath);
+  const normItem = getPathWithoutLocale(itemTo);
+  if (normItem === "/") {
+    return normCurrent === "/";
   }
-  if (itemTo === "/en") {
-    return currentPath === "/en" || currentPath === "/en/";
-  }
-  return currentPath === itemTo || currentPath.startsWith(`${itemTo}/`);
+  return normCurrent === normItem || normCurrent.startsWith(`${normItem}/`);
 }

@@ -16,7 +16,11 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { getHomeContent } from "@/content/copy";
-import type { Locale } from "@/lib/seo";
+import {
+  getLocaleFromPath,
+  getLocalizedPath,
+  type SupportedLocale,
+} from "@/lib/seo";
 
 const FEATURE_ICONS = [
   ShieldCheck,
@@ -27,37 +31,73 @@ const FEATURE_ICONS = [
   ArrowLeftRight,
 ];
 
+const STAT_TITLES: Record<
+  SupportedLocale,
+  { servers: string; ownership: string }
+> = {
+  en: { servers: "0 Servers", ownership: "100% Yours" },
+  zh: { servers: "0 台服务器", ownership: "100% 自主" },
+  ja: { servers: "0台のサーバー", ownership: "100% 自主管理" },
+  fr: { servers: "0 serveur", ownership: "100 % à vous" },
+  es: { servers: "0 servidores", ownership: "100% tuyo" },
+  ko: { servers: "0대 서버", ownership: "100% 완전 소유" },
+  ru: { servers: "0 серверов", ownership: "100% ваше" },
+  ar: { servers: "0 خوادم", ownership: "100% ملكك" },
+};
+
+const THEME_LABELS: Record<SupportedLocale, { light: string; dark: string }> = {
+  en: { light: "Light", dark: "Dark" },
+  zh: { light: "浅色明亮", dark: "深色沉浸" },
+  ja: { light: "ライト", dark: "ダーク" },
+  fr: { light: "Clair", dark: "Sombre" },
+  es: { light: "Claro", dark: "Oscuro" },
+  ko: { light: "라이트", dark: "다크" },
+  ru: { light: "Светлая", dark: "Тёмная" },
+  ar: { light: "فاتح", dark: "داكن" },
+};
+
+const COMP_HEADERS: Record<SupportedLocale, { nas: string; vps: string }> = {
+  en: { nas: "Home NAS", vps: "Traditional VPS" },
+  zh: { nas: "家用 NAS / 软路由", vps: "传统 VPS 云主机" },
+  ja: { nas: "自宅 NAS / ルーター", vps: "従来の VPS" },
+  fr: { nas: "NAS domestique", vps: "VPS traditionnel" },
+  es: { nas: "NAS doméstico", vps: "VPS tradicional" },
+  ko: { nas: "홈 NAS", vps: "기존 VPS" },
+  ru: { nas: "Домашний NAS", vps: "Обычный VPS" },
+  ar: { nas: "وحدة NAS منزلية", vps: "خوادم VPS التقليدية" },
+};
+
 export function HomePage() {
   const { pathname } = useLocation();
-  const locale: Locale = pathname.startsWith("/en") ? "en-US" : "zh-CN";
+  const locale = getLocaleFromPath(pathname);
   const home = getHomeContent(locale);
 
   return (
     <main>
-      <Hero locale={locale} home={home} />
+      <Hero home={home} locale={locale} />
       <Screenshots
         heading={home.screenshotsHeading}
-        subtitle={home.screenshotsSubtitle}
         locale={locale}
+        subtitle={home.screenshotsSubtitle}
       />
       <Features
         heading={home.featuresHeading}
-        subtitle={home.featuresSubtitle}
-        items={home.features}
         icons={FEATURE_ICONS}
+        items={home.features}
+        subtitle={home.featuresSubtitle}
       />
       <Comparison
         heading={home.comparisonHeading}
-        subtitle={home.comparisonSubtitle}
-        rows={home.comparisonRows}
         locale={locale}
+        rows={home.comparisonRows}
+        subtitle={home.comparisonSubtitle}
       />
       <Faq heading={home.faqHeading} items={home.faqItems} />
       <CtaSection
-        heading={home.ctaHeading}
-        subtitle={home.ctaSubtitle}
         buttonText={home.ctaButton}
+        heading={home.ctaHeading}
         locale={locale}
+        subtitle={home.ctaSubtitle}
       />
     </main>
   );
@@ -67,9 +107,11 @@ function Hero({
   locale,
   home,
 }: {
-  locale: Locale;
+  locale: SupportedLocale;
   home: ReturnType<typeof getHomeContent>;
 }) {
+  const titles = STAT_TITLES[locale] || STAT_TITLES.en;
+
   return (
     <section className="relative overflow-hidden border-b border-border/60 bg-gradient-to-b from-background via-background to-flame-50/30 py-20 md:py-28">
       <div className="container-x space-y-12">
@@ -87,7 +129,7 @@ function Hero({
           <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
             <a
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-gradient px-6 py-3 text-sm font-semibold text-primary-foreground shadow-md transition-all hover:brightness-105 active:translate-y-px motion-safe:duration-200"
-              href={locale === "zh-CN" ? "/docs/deploy" : "/en/docs/deploy"}
+              href={getLocalizedPath("/docs/deploy", locale)}
             >
               {home.primaryCta}
               <ArrowRight className="size-4" />
@@ -117,12 +159,12 @@ function Hero({
           />
           <HeroStat
             icon={<ServerOff className="size-5 text-flame-500" />}
-            title={locale === "zh-CN" ? "0 台服务器" : "0 Servers"}
+            title={titles.servers}
             body={home.statServers}
           />
           <HeroStat
             icon={<ShieldCheck className="size-5 text-flame-500" />}
-            title={locale === "zh-CN" ? "100% 自主" : "100% Yours"}
+            title={titles.ownership}
             body={home.statUptime}
           />
         </div>
@@ -158,9 +200,10 @@ function Screenshots({
 }: {
   heading: string;
   subtitle: string;
-  locale: Locale;
+  locale: SupportedLocale;
 }) {
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const labels = THEME_LABELS[locale] || THEME_LABELS.en;
 
   return (
     <section className="border-b border-border/60 bg-background py-20">
@@ -183,7 +226,7 @@ function Screenshots({
               }`}
             >
               <Sun className="size-3.5 text-amber-500" />
-              {locale === "zh-CN" ? "浅色明亮" : "Light"}
+              {labels.light}
             </button>
             <button
               type="button"
@@ -195,7 +238,7 @@ function Screenshots({
               }`}
             >
               <Moon className="size-3.5 text-indigo-400" />
-              {locale === "zh-CN" ? "深色沉浸" : "Dark"}
+              {labels.dark}
             </button>
           </div>
         </div>
@@ -309,8 +352,10 @@ function Comparison({
   heading: string;
   subtitle: string;
   rows: Array<{ label: string; cloudflare: string; nas: string; vps: string }>;
-  locale: Locale;
+  locale: SupportedLocale;
 }) {
+  const headers = COMP_HEADERS[locale] || COMP_HEADERS.en;
+
   return (
     <section className="border-b border-border/60 bg-secondary/30 py-20">
       <div className="container-x space-y-8">
@@ -328,12 +373,8 @@ function Comparison({
                 <th className="bg-flame-50/50 px-4 py-3 font-semibold text-flame-600">
                   Cloudflare (FlareMo)
                 </th>
-                <th className="px-4 py-3 font-medium">
-                  {locale === "zh-CN" ? "家用 NAS / 软路由" : "Home NAS"}
-                </th>
-                <th className="px-4 py-3 font-medium">
-                  {locale === "zh-CN" ? "传统 VPS 云主机" : "Traditional VPS"}
-                </th>
+                <th className="px-4 py-3 font-medium">{headers.nas}</th>
+                <th className="px-4 py-3 font-medium">{headers.vps}</th>
               </tr>
             </thead>
             <tbody>
@@ -406,7 +447,7 @@ function CtaSection({
   heading: string;
   subtitle: string;
   buttonText: string;
-  locale: Locale;
+  locale: SupportedLocale;
 }) {
   return (
     <section className="bg-gradient-to-b from-background to-flame-50/40 py-20">
@@ -421,7 +462,7 @@ function CtaSection({
           <div className="mt-8 flex justify-center">
             <a
               className="inline-flex items-center gap-2 rounded-xl bg-brand-gradient px-7 py-3.5 text-sm font-semibold text-primary-foreground shadow-md transition-all hover:brightness-105 active:translate-y-px motion-safe:duration-200"
-              href={locale === "zh-CN" ? "/docs/deploy" : "/en/docs/deploy"}
+              href={getLocalizedPath("/docs/deploy", locale)}
             >
               {buttonText}
               <ArrowRight className="size-4" />

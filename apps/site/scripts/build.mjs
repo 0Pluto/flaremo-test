@@ -20,34 +20,42 @@ const root = path.resolve(dirname, "..");
 const outDir = path.join(root, "dist", "site");
 const manifestPath = path.join(outDir, ".vite", "manifest.json");
 
+const SUPPORTED_LOCALES = ["en", "zh", "ja", "fr", "es", "ko", "ru", "ar"];
+
+const DOC_SLUGS = [
+  "agent-deploy",
+  "agent-ingestion",
+  "agent-memory",
+  "architecture-notes",
+  "deploy",
+  "design-system",
+  "maintenance",
+  "memos-compatibility",
+  "memos-ecosystem",
+  "product-requirements",
+  "release",
+  "semantic-search",
+  "tech-stack",
+  "update",
+];
+
 /** All paths that should be prerendered (with doc slugs expanded). */
 function getAllPaths() {
-  const zhDocs = [
-    "agent-deploy",
-    "agent-ingestion",
-    "agent-memory",
-    "architecture-notes",
-    "deploy",
-    "design-system",
-    "maintenance",
-    "memos-compatibility",
-    "memos-ecosystem",
-    "product-requirements",
-    "release",
-    "semantic-search",
-    "tech-stack",
-    "update",
-  ];
-  const enDocs = ["deploy", "agent-deploy", "memos-compatibility", "update"];
-
-  return [
+  const paths = [
     "/",
-    "/en",
     "/docs",
-    "/en/docs",
-    ...zhDocs.map((slug) => `/docs/${slug}`),
-    ...enDocs.map((slug) => `/en/docs/${slug}`),
+    ...DOC_SLUGS.map((slug) => `/docs/${slug}`),
   ];
+
+  for (const loc of SUPPORTED_LOCALES) {
+    paths.push(`/${loc}`);
+    paths.push(`/${loc}/docs`);
+    for (const slug of DOC_SLUGS) {
+      paths.push(`/${loc}/docs/${slug}`);
+    }
+  }
+
+  return paths;
 }
 
 function outputPathFor(routePath) {
@@ -127,14 +135,62 @@ function injectAssets(html, entryJs, entryCss) {
 }
 
 function buildSitemap(paths) {
+  const LOCALES = [
+    { code: "en", prefix: "" },
+    { code: "zh-CN", prefix: "/zh" },
+    { code: "ja", prefix: "/ja" },
+    { code: "fr", prefix: "/fr" },
+    { code: "es", prefix: "/es" },
+    { code: "ko", prefix: "/ko" },
+    { code: "ru", prefix: "/ru" },
+    { code: "ar", prefix: "/ar" },
+  ];
+
+  const cleanPath = (p) => {
+    let s = p.startsWith("/") ? p : `/${p}`;
+    for (const prefix of [
+      "/zh-CN",
+      "/en",
+      "/zh",
+      "/ja",
+      "/fr",
+      "/es",
+      "/ko",
+      "/ru",
+      "/ar",
+    ]) {
+      if (s === prefix) return "/";
+      if (s.startsWith(`${prefix}/`)) return s.slice(prefix.length) || "/";
+    }
+    return s;
+  };
+
+  const getUrl = (clean, loc) => {
+    if (clean === "/") {
+      return loc.prefix ? `https://flaremo.app${loc.prefix}/` : "https://flaremo.app/";
+    }
+    return `https://flaremo.app${loc.prefix}${clean}`;
+  };
+
   const urls = paths
     .map((p) => {
       const loc = p === "/" ? "https://flaremo.app/" : `https://flaremo.app${p}`;
-      return `  <url><loc>${loc}</loc></url>`;
+      const base = cleanPath(p);
+      const alternates = LOCALES.map(
+        (l) => `    <xhtml:link rel="alternate" hreflang="${l.code}" href="${getUrl(base, l)}" />`
+      ).join("\n");
+      const xDefault = `    <xhtml:link rel="alternate" hreflang="x-default" href="${getUrl(base, { prefix: "" })}" />`;
+
+      return `  <url>
+    <loc>${loc}</loc>
+${alternates}
+${xDefault}
+  </url>`;
     })
     .join("\n");
+
   return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
 ${urls}
 </urlset>
 `;

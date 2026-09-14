@@ -38,37 +38,36 @@ export function buildRouteTree() {
     component: DocsDetailPage,
   });
 
-  const enIndexRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/en",
-    component: HomePage,
-  });
-
-  const enDocsIndexRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/en/docs",
-    component: DocsIndexPage,
-  });
-
-  const enDocsSlugRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/en/docs/$slug",
-    component: DocsDetailPage,
-  });
-
   const notFoundRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "*",
     component: NotFoundPage,
   });
 
+  const locales = ["en", "zh", "ja", "fr", "es", "ko", "ru", "ar"] as const;
+  const localeRoutes = locales.flatMap((locale) => [
+    createRoute({
+      getParentRoute: () => rootRoute,
+      path: `/${locale}`,
+      component: HomePage,
+    }),
+    createRoute({
+      getParentRoute: () => rootRoute,
+      path: `/${locale}/docs`,
+      component: DocsIndexPage,
+    }),
+    createRoute({
+      getParentRoute: () => rootRoute,
+      path: `/${locale}/docs/$slug`,
+      component: DocsDetailPage,
+    }),
+  ]);
+
   const routeTree = rootRoute.addChildren([
     indexRoute,
     docsIndexRoute,
     docsSlugRoute,
-    enIndexRoute,
-    enDocsIndexRoute,
-    enDocsSlugRoute,
+    ...localeRoutes,
     notFoundRoute,
   ]);
 

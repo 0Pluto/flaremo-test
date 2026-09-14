@@ -3,19 +3,31 @@ import { ChevronRight } from "lucide-react";
 import { useMemo } from "react";
 import { docPath, getDocNavGroups } from "@/content/docs-nav";
 import { listDocs } from "@/lib/docs-source.generated";
-import type { Locale } from "@/lib/seo";
+import { getLocaleFromPath, type SupportedLocale } from "@/lib/seo";
+
+const HEADINGS: Record<SupportedLocale, string> = {
+  en: "Documentation",
+  zh: "文档总览",
+  ja: "ドキュメント総覧",
+  fr: "Documentation",
+  es: "Documentación",
+  ko: "문서 개요",
+  ru: "Обзор документации",
+  ar: "نظرة عامة على المستندات",
+};
 
 export function DocsIndexPage() {
   const { pathname } = useLocation();
-  const locale: Locale = pathname.startsWith("/en") ? "en-US" : "zh-CN";
-  const docs = useMemo(() => listDocs(locale), [locale]);
+  const locale = getLocaleFromPath(pathname);
+  const docLocale = locale === "zh" ? "zh-CN" : "en-US";
+  const docs = useMemo(() => listDocs(docLocale), [docLocale]);
   const groups = useMemo(() => getDocNavGroups(locale), [locale]);
 
   return (
     <main className="container-x py-12">
       <header className="mb-10">
         <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
-          {locale === "zh-CN" ? "文档总览" : "Documentation"}
+          {HEADINGS[locale] || HEADINGS.en}
         </h1>
       </header>
       <div className="space-y-10">
