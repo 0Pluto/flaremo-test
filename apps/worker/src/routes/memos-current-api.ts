@@ -1372,13 +1372,20 @@ function parseUpdateMask(value: string | undefined) {
 }
 
 function normalizeCurrentOrderBy(value: string) {
-  const match = /^(create_time|update_time)\s+(asc|desc)$/i.exec(value.trim());
+  // display_time is the user-facing alias Memos Web and third-party sync
+  // clients (e.g. Obsidian memos-sync) send for creation order.
+  const match = /^(create_time|update_time|display_time)\s+(asc|desc)$/i.exec(
+    value.trim(),
+  );
   if (!match) {
     throw new ValidationCurrentError(
-      "Only a single create_time or update_time order is supported",
+      "Only a single create_time, display_time, or update_time order is supported",
     );
   }
-  return `${match[1]?.toLowerCase().startsWith("update") ? "updated_at" : "created_at"} ${match[2]?.toLowerCase()}` as
+  const field = match[1]?.toLowerCase().startsWith("update")
+    ? "updated_at"
+    : "created_at";
+  return `${field} ${match[2]?.toLowerCase()}` as
     | "created_at asc"
     | "created_at desc"
     | "updated_at asc"

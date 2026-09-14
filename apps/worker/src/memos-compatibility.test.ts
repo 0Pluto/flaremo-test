@@ -705,6 +705,16 @@ describe("Memos-compatible API contract", () => {
       visibility: "PUBLIC",
     });
 
+    // display_time is the alias third-party sync clients (Obsidian
+    // memos-sync) send for creation order; it must not be rejected.
+    const listedDisplayTime = (await (
+      await fetchCurrent(
+        "http://flaremo.test/api/v1/memos?pageSize=1&orderBy=display_time%20desc",
+        { headers: bearer },
+      )
+    ).json()) as { memos: Array<Record<string, unknown>> };
+    expect(listedDisplayTime.memos[0]).toMatchObject({ name: created.name });
+
     const updated = await fetchCurrent(
       `http://flaremo.test/api/v1/${created.name}?updateMask=pinned,visibility`,
       {
