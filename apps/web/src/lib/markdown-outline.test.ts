@@ -1,15 +1,10 @@
 import { describe, expect, it } from "vitest";
-import {
-  createSlugger,
-  extractOutline,
-  headingText,
-  slugifyHeading,
-} from "./markdown-outline";
+import { createSlugger, extractOutline, headingText } from "./markdown-outline";
 
 describe("outline slugging", () => {
   it("slugifies latin and CJK headings", () => {
-    expect(slugifyHeading("Project Plan")).toBe("project-plan");
-    expect(slugifyHeading("第一章 · 总览")).toBe("第一章-总览");
+    expect(createSlugger()("Project Plan")).toBe("project-plan");
+    expect(createSlugger()("第一章 · 总览")).toBe("第一章-总览");
   });
 
   it("de-duplicates repeated headings", () => {
@@ -20,7 +15,7 @@ describe("outline slugging", () => {
   });
 
   it("falls back to a stable slug for punctuation-only headings", () => {
-    expect(slugifyHeading("!!!")).toBe("section");
+    expect(createSlugger()("!!!")).toBe("section");
   });
 });
 

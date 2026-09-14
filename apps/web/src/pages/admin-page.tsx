@@ -80,7 +80,9 @@ export function AdminPanel() {
     retry: false,
   });
   const meQuery = useQuery({
-    queryKey: ["me"],
+    // Same key as the account page's viewer cache so both views invalidate
+    // together after a role change.
+    queryKey: ["current-flaremo-user"],
     queryFn: getCurrentFlareMoUser,
   });
   // The role matrix the server enforces: only the team owner changes roles,
@@ -109,6 +111,7 @@ export function AdminPanel() {
       void queryClient.invalidateQueries({
         queryKey: ["current-flaremo-user"],
       });
+      void queryClient.invalidateQueries({ queryKey: ["me"] });
     },
   });
 
@@ -127,11 +130,14 @@ export function AdminPanel() {
     }
   };
 
+  // Row-action failures surface as toasts: the create dialog's error slot is
+  // only rendered while that dialog is open, so writing row failures there
+  // made them invisible.
   const handleDeleteUser = async (user: AdminUser) => {
     try {
       await deleteUserMutation.mutateAsync(user.id);
     } catch (error) {
-      setCreateError(errorMessage(error, t("admin.userDeleteFailed")));
+      toast.error(errorMessage(error, t("admin.userDeleteFailed")));
     }
   };
 
@@ -142,7 +148,7 @@ export function AdminPanel() {
       setResetLink(`${base}${result.reset_path}`);
       setCopied(false);
     } catch (error) {
-      setCreateError(errorMessage(error, t("admin.resetFailed")));
+      toast.error(errorMessage(error, t("admin.resetFailed")));
     }
   };
 
@@ -154,7 +160,7 @@ export function AdminPanel() {
         role: user.role === "admin" ? "member" : "admin",
       });
     } catch (error) {
-      setCreateError(errorMessage(error, t("admin.roleUpdateFailed")));
+      toast.error(errorMessage(error, t("admin.roleUpdateFailed")));
     }
   };
 

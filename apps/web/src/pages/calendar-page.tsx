@@ -171,7 +171,6 @@ export function CalendarPage() {
 
         {viewMode === "agenda" ? (
           <AgendaView
-            monthKey={monthKey}
             today={today}
             onDaySelect={(dayKey) => {
               setSelected(dayKey);
@@ -599,11 +598,9 @@ function NotesPanel({ day, monthNotes }: { day: string; monthNotes: number }) {
 }
 
 function AgendaView({
-  monthKey,
   today,
   onDaySelect,
 }: {
-  monthKey: string;
   today: string;
   onDaySelect: (dayKey: string) => void;
 }) {
@@ -631,8 +628,6 @@ function AgendaView({
       tasks: byDay.get(key) ?? [],
     }));
   }, [tasksQuery.data, today]);
-
-  void monthKey;
 
   return (
     <Card>

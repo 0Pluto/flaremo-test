@@ -69,14 +69,27 @@ function useParagraphHighlight(
     if (!container) return;
 
     let highlighted: HTMLElement | null = null;
+    // Cache the cue list once per effect lifetime: re-querying and sorting
+    // the DOM on every playback tick was O(n log n) per tick for long
+    // transcripts. Cue elements are static for the container's lifetime.
+    let cachedCues: { element: HTMLElement; at: number }[] | null = null;
+    const cues = () => {
+      if (!cachedCues) {
+        cachedCues = Array.from(
+          container.querySelectorAll<HTMLElement>("[data-flaremo-t]"),
+        )
+          .map((element) => ({
+            element,
+            at: Number(element.dataset.flaremoT) || 0,
+          }))
+          .sort((a, b) => a.at - b.at);
+      }
+      return cachedCues;
+    };
     const apply = (seconds: number) => {
-      const cues = Array.from(
-        container.querySelectorAll<HTMLElement>("[data-flaremo-t]"),
-      ).sort((a, b) => Number(a.dataset.flaremoT) - Number(b.dataset.flaremoT));
-
       let active: HTMLElement | null = null;
-      for (const cue of cues) {
-        if (Number(cue.dataset.flaremoT) <= seconds) active = cue;
+      for (const cue of cues()) {
+        if (cue.at <= seconds) active = cue.element;
         else break;
       }
 

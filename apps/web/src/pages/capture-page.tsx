@@ -9,6 +9,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import { toast } from "sonner";
 import { createMemo, getCaptureStatus, updateMemo } from "@/api";
 import { authClient } from "@/auth-client";
 import { SubpageHeader } from "@/components/subpage-header";
@@ -182,12 +183,14 @@ export function CapturePage() {
         if (cancelled) void value.release();
         else lock = value;
       })
-      .catch(() => undefined);
+      .catch(() =>
+        toast.warning(t("capture.wakeLockFailed"), { duration: 6000 }),
+      );
     return () => {
       cancelled = true;
       void lock?.release();
     };
-  }, [snapshot.microphoneActive]);
+  }, [snapshot.microphoneActive, t]);
   useEffect(() => {
     if (snapshot.partial || snapshot.sentenceVersion)
       tail.current?.scrollIntoView({ block: "nearest" });
@@ -254,7 +257,7 @@ export function CapturePage() {
       setDraftError(false);
       setCleanupError(false);
       await Promise.all(
-        ["memos", "memo-stats", "tags", "tag-hierarchy"].map((key) =>
+        ["memos", "memo-stats", "tag-hierarchy"].map((key) =>
           queryClient.invalidateQueries({ queryKey: [key] }),
         ),
       );
@@ -302,13 +305,19 @@ export function CapturePage() {
           )
         : localRef.current;
       localRef.current = value;
-      let persisted = true;
       if (value.text) {
-        persisted = await store.save(value).catch(() => false);
+        const persisted = await store.save(value).catch(() => false);
         setDraftError(!persisted);
+        if (!persisted) {
+          // Stay on the page so the author can retry saving or copy the
+          // transcript; navigating away now would silently lose it.
+          savedRef.current = false;
+          return;
+        }
+        savedRef.current = true;
+      } else {
+        savedRef.current = true;
       }
-      // A failed explicit write gets one final best-effort retry during unmount.
-      savedRef.current = persisted;
       proceed();
     } finally {
       setLeaving(false);
@@ -573,11 +582,24 @@ export function CapturePage() {
                   {t("capture.start")}
                 </Button>
               )}
-              {!status.isPending && !status.data?.available && (
+              {status.isError && !status.data ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <p role="status">{t("list.errorDescription")}</p>
+                  <Button
+                    disabled={status.isFetching}
+                    onClick={() => void status.refetch()}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    {t("common.retry")}
+                  </Button>
+                </div>
+              ) : !status.isPending && !status.data?.available ? (
                 <p role="status" className="text-sm text-muted-foreground">
                   {t("capture.unavailable")}
                 </p>
-              )}
+              ) : null}
             </>
           )}
         </>

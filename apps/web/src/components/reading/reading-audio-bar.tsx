@@ -18,7 +18,8 @@ export function ReadingAudioBar({ className }: { className?: string }) {
   const audio = useReadingAudio();
   if (!audio?.track) return null;
 
-  const { track, playing, currentTime, duration, rate, follow } = audio;
+  const { track, playing, currentTime, duration, rate, follow, errored } =
+    audio;
   const max = duration > 0 ? duration : 1;
 
   return (
@@ -79,6 +80,12 @@ export function ReadingAudioBar({ className }: { className?: string }) {
           </Toggle>
         </div>
       </div>
+
+      {errored && (
+        <p className="text-xs text-destructive">
+          {t("reading.audioUnavailable")}
+        </p>
+      )}
 
       {/* The active file with its download entry — shown even for a single
           track, which is the common case and the only place the audio file

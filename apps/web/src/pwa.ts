@@ -134,22 +134,34 @@ export function watchServiceWorkerUpdate(options: {
     onUpdateAvailable();
   }
 
+  const installingRef: { current: PwaWorkerLike | null } = {
+    current: null,
+  };
+  const handleStateChange = () => {
+    const installing = installingRef.current;
+    if (installing?.state === "installed" && hasController) {
+      onUpdateAvailable();
+    }
+  };
   const handleUpdateFound = () => {
     const installing = registration.installing;
     if (!installing) {
       return;
     }
-    const handleStateChange = () => {
-      if (installing.state === "installed" && hasController) {
-        onUpdateAvailable();
-      }
-    };
     installing.addEventListener("statechange", handleStateChange);
+    // Remember the installing worker so cleanup can detach its listener;
+    // removing only the updatefound listener leaked the statechange one.
+    installingRef.current = installing;
   };
 
   registration.addEventListener("updatefound", handleUpdateFound);
-  return () =>
+  return () => {
     registration.removeEventListener("updatefound", handleUpdateFound);
+    installingRef.current?.removeEventListener(
+      "statechange",
+      handleStateChange,
+    );
+  };
 }
 
 /**

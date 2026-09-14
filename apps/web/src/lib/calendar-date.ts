@@ -18,12 +18,6 @@ export function nextDay(key: string): string {
   return isoDay(date);
 }
 
-export function addDays(days: number, fromKey: string): string {
-  const date = new Date(`${fromKey}T12:00:00`);
-  date.setDate(date.getDate() + days);
-  return isoDay(date);
-}
-
 export function addMonths(months: number, fromKey: string): string {
   const date = new Date(`${fromKey}T12:00:00`);
   date.setDate(1);
@@ -76,10 +70,6 @@ export function weekdayLabels(
   formatter: (dayNumber: number) => string,
 ): string[] {
   return WEEKDAY_ORDER[weekStart].map(formatter);
-}
-
-export function compareDayKeys(a: string, b: string): number {
-  return a < b ? -1 : a > b ? 1 : 0;
 }
 
 // Locale-aware titles: zh shows 「2026年9月」 / 「9月16日」, en shows

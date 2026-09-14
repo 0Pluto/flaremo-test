@@ -34,11 +34,6 @@ export function createSlugger() {
   };
 }
 
-/** Slugifies a single heading with no de-duplication context. */
-export function slugifyHeading(text: string) {
-  return createSlugger()(text);
-}
-
 /** Strips inline Markdown so a heading's outline label reads as plain text. */
 export function headingText(raw: string) {
   return raw

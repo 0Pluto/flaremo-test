@@ -150,6 +150,9 @@ export function MemoDetailPage({ memoId }: { memoId: string }) {
         result.duplicate ? t("toast.memoryConfirmed") : t("toast.saved"),
       );
       await queryClient.invalidateQueries({ queryKey });
+      // The memory page caches under ["memories"]; without this the new
+      // memory stays invisible there until an unrelated action.
+      await queryClient.invalidateQueries({ queryKey: ["memories"] });
     },
     onError: (error) =>
       toast.error(errorMessage(error, t("toast.requestFailed"))),
@@ -518,8 +521,12 @@ function MemoDetail({
                       size="icon-sm"
                       variant="ghost"
                       onClick={async () => {
-                        await navigator.clipboard.writeText(url);
-                        toast.success(t("toast.copied"));
+                        try {
+                          await navigator.clipboard.writeText(url);
+                          toast.success(t("toast.copied"));
+                        } catch {
+                          toast.error(t("toast.copyFailed"));
+                        }
                       }}
                     >
                       <ClipboardIcon />

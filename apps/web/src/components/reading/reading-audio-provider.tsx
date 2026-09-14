@@ -28,6 +28,8 @@ type ReadingAudioContextValue = {
   tracks: ReadingAudioTrack[];
   selectTrack: (id: string) => void;
   playing: boolean;
+  /** True when the audio source failed to load (dead link / removed file). */
+  errored: boolean;
   currentTime: number;
   duration: number;
   rate: number;
@@ -90,6 +92,7 @@ export function ReadingAudioProvider({
     tracks[0]?.id ?? null,
   );
   const [playing, setPlaying] = useState(false);
+  const [errored, setErrored] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   // Seeded from the upload-time duration so the readout is real immediately.
   const [duration, setDuration] = useState(tracks[0]?.durationSeconds ?? 0);
@@ -142,6 +145,7 @@ export function ReadingAudioProvider({
     if (audio && outgoing && outgoing !== id && audio.currentTime > 0) {
       savePosition(outgoing, audio.currentTime);
     }
+    setErrored(false);
     setActiveId(id);
   }, []);
 
@@ -178,7 +182,10 @@ export function ReadingAudioProvider({
     const audio = audioRef.current;
     if (!audio) return;
     if (audio.paused) {
-      void audio.play().catch(() => setPlaying(false));
+      void audio.play().catch(() => {
+        setErrored(true);
+        setPlaying(false);
+      });
     } else {
       audio.pause();
     }
@@ -201,6 +208,7 @@ export function ReadingAudioProvider({
   }, []);
 
   const value: ReadingAudioContextValue = {
+    errored,
     track,
     tracks,
     selectTrack,
@@ -226,12 +234,19 @@ export function ReadingAudioProvider({
             setDuration(event.currentTarget.duration)
           }
           onEnded={() => setPlaying(false)}
+          onError={() => {
+            setErrored(true);
+            setPlaying(false);
+          }}
           onPause={() => {
             setPlaying(false);
             if (track)
               savePosition(track.id, audioRef.current?.currentTime ?? 0);
           }}
-          onPlay={() => setPlaying(true)}
+          onPlay={() => {
+            setErrored(false);
+            setPlaying(true);
+          }}
           onTimeUpdate={(event) => {
             const seconds = event.currentTarget.currentTime;
             setCurrentTime(seconds);

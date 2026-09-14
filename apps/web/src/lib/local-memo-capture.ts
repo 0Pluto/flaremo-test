@@ -435,8 +435,15 @@ async function openDatabase(): Promise<IDBDatabase | null> {
       };
       finish(database);
     };
-    request.onerror = () => finish(null);
-    request.onblocked = () => finish(null);
+    // A failed open must not poison the cached promise for the whole
+    // session: the next call retries (e.g. after another tab releases the
+    // version upgrade lock).
+    const fail = () => {
+      databasePromise = undefined;
+      finish(null);
+    };
+    request.onerror = () => fail();
+    request.onblocked = () => fail();
   });
 
   return databasePromise;

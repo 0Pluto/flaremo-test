@@ -187,7 +187,12 @@ export class CaptureController {
             clearTimeout(this.timer);
             this.ready = true;
             this.lastAudio = Date.now();
-            this.update({ state: "recording", startedAt: Date.now() });
+            // Preserve the session's original start across reconnects so the
+            // recorded start time and the total-duration cap stay truthful.
+            this.update({
+              state: "recording",
+              startedAt: this.snapshot.startedAt ?? Date.now(),
+            });
             this.heartbeat = setInterval(() => {
               if (Date.now() - this.lastAudio > 10_000) return this.interrupt();
               if (

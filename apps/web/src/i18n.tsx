@@ -73,6 +73,7 @@ const messages = {
     "capture.interrupted":
       "录音已中断并关闭麦克风。请检查已识别的文字，末尾可能不完整。",
     "capture.unavailable": "语音识别尚未配置或服务暂时不可用，请稍后重试。",
+    "capture.wakeLockFailed": "屏幕保持唤醒失败，锁屏可能中断录音。",
     "capture.connectionFailed":
       "无法连接识别服务，麦克风已关闭。已识别的文字可继续编辑和保存。",
     "capture.finishFailed":
@@ -193,6 +194,7 @@ const messages = {
     "shortcuts.saveEdit": "保存编辑中的记录",
     "composer.removeFile": "移除 {filename}",
     "composer.imageUploadFailed": "图片上传失败，请重试",
+    "attachment.unavailable": "文件加载失败，可能已被删除。",
     "visibility.private": "仅自己可见",
     "visibility.protected": "团队可见",
     "visibility.public": "全网公开",
@@ -270,6 +272,7 @@ const messages = {
     "reading.expand": "展开全文",
     "reading.collapse": "收起",
     "reading.downloadAudio": "下载音频文件",
+    "reading.audioUnavailable": "音频文件加载失败，文件可能已被删除。",
     "markdown.imageUnavailable": "图片无法加载",
     "detail.unavailable": "记录不可用",
     "detail.outgoing": "引用了谁",
@@ -520,6 +523,7 @@ const messages = {
     "toast.relationAdded": "已添加关联",
     "toast.relationRemoved": "已移除关联",
     "toast.copied": "链接已复制",
+    "toast.copyFailed": "复制失败，请手动复制链接。",
     "toast.invalidImport": "导入文件不是有效的 JSON",
     "toast.draftRestored": "已恢复未完成的草稿",
     "toast.queuedForSync": "当前离线，记录会在联网后自动保存",
@@ -761,6 +765,8 @@ const messages = {
       "Recording was interrupted and the microphone is off. Review the captured text; the ending may be incomplete.",
     "capture.unavailable":
       "Transcription is not configured or is temporarily unavailable. Try again later.",
+    "capture.wakeLockFailed":
+      "Failed to keep the screen awake; locking the screen may interrupt the recording.",
     "capture.connectionFailed":
       "Transcription could not connect. The microphone is off; captured text can still be edited and saved.",
     "capture.finishFailed":
@@ -890,6 +896,8 @@ const messages = {
     "shortcuts.saveEdit": "Save the memo being edited",
     "composer.removeFile": "Remove {filename}",
     "composer.imageUploadFailed": "Image upload failed. Try again.",
+    "attachment.unavailable":
+      "The file failed to load; it may have been deleted.",
     "visibility.private": "Only me",
     "visibility.protected": "Team",
     "visibility.public": "Public web",
@@ -972,6 +980,8 @@ const messages = {
     "reading.expand": "Show full text",
     "reading.collapse": "Show less",
     "reading.downloadAudio": "Download audio file",
+    "reading.audioUnavailable":
+      "The audio file failed to load; it may have been deleted.",
     "markdown.imageUnavailable": "Image unavailable",
     "detail.unavailable": "Note unavailable",
     "detail.outgoing": "References",
@@ -1243,6 +1253,7 @@ const messages = {
     "toast.relationAdded": "Link added",
     "toast.relationRemoved": "Link removed",
     "toast.copied": "Link copied",
+    "toast.copyFailed": "Copy failed; copy the link manually.",
     "toast.invalidImport": "The import file is not valid JSON",
     "toast.draftRestored": "Restored your unfinished draft",
     "toast.queuedForSync":
@@ -1443,8 +1454,17 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   }, [locale]);
 
   const value = useMemo<I18nContextValue>(() => {
-    const t = (key: TranslationKey, params?: TranslationParams) =>
-      interpolate(messages[locale][key], params);
+    const t = (key: TranslationKey, params?: TranslationParams) => {
+      const template =
+        messages[locale][key] ??
+        messages["zh-CN"][key] ??
+        // Dynamic keys built from server enums (e.g. memory.type.*) can point
+        // at values added server-side after this client shipped. A readable
+        // fallback keeps the page alive; a throw would crash the route.
+        key.split(".").at(-1) ??
+        key;
+      return interpolate(template, params);
+    };
     const toggleLocale = () =>
       setLocale((current) => (current === "zh-CN" ? "en-US" : "zh-CN"));
     return { locale, setLocale, toggleLocale, t };

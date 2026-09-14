@@ -85,6 +85,9 @@ export function AccountPage() {
     queryKey: ["vector-usage"],
     queryFn: getVectorUsage,
     retry: false,
+    // The global config disables refetchOnWindowFocus; poll mildly so the
+    // quota bars move during a heavy-search session.
+    refetchInterval: 120_000,
   });
   const dataTasksQuery = useQuery({
     queryKey: ["data-tasks"],
@@ -114,6 +117,13 @@ export function AccountPage() {
     },
     onSuccess: async () => {
       await session.refetch();
+      // The renamed viewer feeds the account page, the admin list, and the
+      // workspace header; refresh all cached copies.
+      await queryClient.invalidateQueries({
+        queryKey: ["current-flaremo-user"],
+      });
+      await queryClient.invalidateQueries({ queryKey: ["me"] });
+      await queryClient.invalidateQueries({ queryKey: ["admin-users"] });
     },
   });
   const changePasswordMutation = useMutation({
@@ -277,7 +287,12 @@ export function AccountPage() {
   };
 
   const handleSignOut = async () => {
-    await authClient.signOut();
+    try {
+      await authClient.signOut();
+    } catch {
+      // Clearing local state is still the right move even if the server
+      // call failed (offline); the cookie will be cleaned server-side later.
+    }
     queryClient.clear();
     await navigate({ replace: true, to: "/login" });
   };

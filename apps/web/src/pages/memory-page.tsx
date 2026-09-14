@@ -325,6 +325,7 @@ function MemoryCard({
   onMutated: () => void;
 }) {
   const { t } = useI18n();
+  const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editing, setEditing] = useState(false);
   const [showRevisions, setShowRevisions] = useState(false);
@@ -372,9 +373,14 @@ function MemoryCard({
   const promoteMutation = useMutation({
     mutationFn: () =>
       promoteMemoryToMemo(stripResourceName(memory.id, "memories")),
+    // A promoted memory produces a memo: the timeline and stats must refresh,
+    // otherwise the promoted note only appears after some unrelated action.
     onSuccess: () => {
       toast.success(t("toast.saved"));
       onMutated();
+      void queryClient.invalidateQueries({ queryKey: ["memos"] });
+      void queryClient.invalidateQueries({ queryKey: ["memo-stats"] });
+      void queryClient.invalidateQueries({ queryKey: ["tag-hierarchy"] });
     },
     onError: (error) =>
       toast.error(errorMessage(error, t("toast.memoryPromoteFailed"))),

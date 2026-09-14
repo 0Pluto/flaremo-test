@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import type { TranslationKey } from "@/i18n";
 import { useI18n } from "@/i18n";
 
 /**
@@ -94,11 +93,4 @@ export function CaptchaField({
       )}
     </div>
   );
-}
-
-export function captchaButtonLabel(
-  t: (key: TranslationKey) => string,
-  provider: "none" | "tencent" | "http",
-) {
-  return provider === "none" ? null : t("auth.captchaRequired");
 }

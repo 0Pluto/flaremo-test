@@ -189,6 +189,10 @@ export function FlareMoApp() {
         target instanceof HTMLInputElement ||
         target instanceof HTMLTextAreaElement ||
         (target instanceof HTMLElement && target.isContentEditable);
+      // Chorded shortcuts (⌘C copy, ⌘V paste) and shortcuts while a dialog
+      // owns the focus must not steal focus back to the composer/search.
+      const modalOpen =
+        document.querySelector('[role="dialog"][data-state="open"]') !== null;
       if (
         (event.metaKey || event.ctrlKey) &&
         event.key.toLocaleLowerCase() === "k"
@@ -197,13 +201,20 @@ export function FlareMoApp() {
         focusSearch();
         return;
       }
-      if (event.key === "/" && !editable) {
+      if (event.key === "/" && !editable && !modalOpen) {
         event.preventDefault();
         focusSearch();
         return;
       }
       // "c" jumps straight into the composer for quick capture.
-      if (event.key.toLocaleLowerCase() === "c" && !editable) {
+      if (
+        event.key.toLocaleLowerCase() === "c" &&
+        !editable &&
+        !modalOpen &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.altKey
+      ) {
         const composer = document.getElementById("flaremo-composer-input");
         if (composer instanceof HTMLTextAreaElement) {
           event.preventDefault();
@@ -211,7 +222,7 @@ export function FlareMoApp() {
         }
       }
       // "?" lists the available keyboard shortcuts.
-      if (event.key === "?" && !editable) {
+      if (event.key === "?" && !editable && !modalOpen) {
         event.preventDefault();
         setShowShortcutsOpen(true);
       }

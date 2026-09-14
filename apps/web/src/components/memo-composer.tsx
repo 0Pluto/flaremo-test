@@ -58,6 +58,10 @@ export function MemoComposer({
   draftRef.current = draft;
   const pendingUploadsRef = useRef(0);
   const uploadChainRef = useRef<Promise<void>>(Promise.resolve());
+  // Inline markdown per preuploaded attachment, so a content edit can tell
+  // which references were deleted and prune the bind list (otherwise a
+  // deleted image would be re-bound on submit).
+  const preuploadMarkdownRef = useRef(new Map<string, string>());
 
   // Pasted/dropped images upload immediately (unbound; the send flow claims
   // them afterwards) and their references land at the recorded caret once the
@@ -88,6 +92,11 @@ export function MemoComposer({
               inlineImageMarkdown(attachment.id, attachment.filename),
             );
             cursor = next.caret;
+            const markdown = inlineImageMarkdown(
+              attachment.id,
+              attachment.filename,
+            );
+            preuploadMarkdownRef.current.set(attachment.name, markdown);
             const nextDraft = {
               ...current,
               content: next.content,
@@ -117,16 +126,31 @@ export function MemoComposer({
     textarea.style.height = `${Math.min(textarea.scrollHeight, 320)}px`;
   }, [draft.content]);
 
-  const updateContent = (content: string) =>
-    onDraftChange({
-      ...draft,
+  // All edits rebuild from draftRef, not the render-time prop: an inline
+  // upload chain can land between the render and this event, and building
+  // from the old prop would silently drop the chain's inserted markdown.
+  const commitDraft = (patch: Partial<MemoCaptureInput>) => {
+    const next = { ...draftRef.current, ...patch };
+    draftRef.current = next;
+    onDraftChange(next);
+  };
+  const updateContent = (content: string) => {
+    // Drop preuploaded entries whose inline reference was deleted, so sending
+    // never re-binds an image the author removed from the text.
+    const kept = draftRef.current.preuploadedAttachmentNames?.filter((name) => {
+      const markdown = preuploadMarkdownRef.current.get(name);
+      // Names without a tracked markdown (restored drafts) stay bound.
+      return !markdown || content.includes(markdown);
+    });
+    commitDraft({
       content,
       tags: extractTags(content),
+      preuploadedAttachmentNames: kept,
     });
+  };
   const appendText = (value: string) => {
-    updateContent(
-      `${draft.content}${draft.content && !draft.content.endsWith("\n") ? " " : ""}${value}`,
-    );
+    const base = draftRef.current.content;
+    updateContent(`${base}${base && !base.endsWith("\n") ? " " : ""}${value}`);
   };
   const submit = async () => {
     // Images still uploading have no reference in the content yet; sending
@@ -214,9 +238,10 @@ export function MemoComposer({
                 type="button"
                 variant="ghost"
                 onClick={() =>
-                  onDraftChange({
-                    ...draft,
-                    files: draft.files.filter((item) => item !== file),
+                  commitDraft({
+                    files: draftRef.current.files.filter(
+                      (item) => item !== file,
+                    ),
                   })
                 }
               >

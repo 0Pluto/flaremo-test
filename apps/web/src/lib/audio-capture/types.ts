@@ -6,8 +6,6 @@ export type CaptureState =
   | "reconnecting"
   | "stopping"
   | "review"
-  | "saving"
-  | "saved"
   | "error";
 
 import type { CaptureSentenceEvent } from "@flaremo/contracts";
