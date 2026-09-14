@@ -2,7 +2,8 @@ import { type Locale, normalizeLocale } from "@/lib/seo";
 
 export type HomeContent = {
   heroEyebrow: string;
-  heroTitle: string;
+  heroTitleLine1: string;
+  heroTitleLine2: string;
   heroSubtitle: string;
   primaryCta: string;
   secondaryCta: string;
@@ -37,10 +38,11 @@ export type HomeContent = {
 };
 
 const EN_HOME: HomeContent = {
-  heroEyebrow: "Zero Server Ops · Sub-50ms Global Edge · Free Self-Hosted",
-  heroTitle: "Cloud-native personal notes & shared team knowledge base",
+  heroEyebrow: "Zero Server Ops · Sub-50ms Global Edge · 100% Free Self-Hosted",
+  heroTitleLine1: "Zero Servers. Forever Yours.",
+  heroTitleLine2: "Your Second Brain on the Edge.",
   heroSubtitle:
-    "A quiet personal thinking space with AI long-term memory for one; a shared brain with roles for teams. Zero servers to manage, and your data is forever yours on Cloudflare.",
+    "Next-generation knowledge management built natively on Cloudflare Edge (Workers, D1, R2). Zero VPS maintenance, full Memos API ecosystem support, and persistent MCP memory for your AI copilots.",
   primaryCta: "Read Deploy Guide",
   secondaryCta: "GitHub Source",
   statMemos: "~2.5M text memos",
@@ -156,10 +158,11 @@ const EN_HOME: HomeContent = {
 };
 
 const ZH_HOME: HomeContent = {
-  heroEyebrow: "0 服务器运维 · 毫秒级边缘加速 · 免费自托管",
-  heroTitle: "跑在云端的私人笔记与团队共享知识库",
+  heroEyebrow: "0 服务器运维 · 全球边缘近场直连 · 终身免费自托管",
+  heroTitleLine1: "零服务器，永久拥有",
+  heroTitleLine2: "跑在边缘网络的第二大脑",
   heroSubtitle:
-    "一个人用是安静专注的灵感速记与 AI 长期外部记忆；一个团队用是具备精细角色的共享大脑。无须购买服务器，数据永远归你所有。",
+    "基于 Cloudflare 边缘计算（Workers + D1 + R2）构建的新一代知识管理系统。告别 VPS 与繁重运维，深度融合 Memos 生态与 AI Agent 长期记忆，让灵感随处迸发，永久沉淀。",
   primaryCta: "快速开始部署",
   secondaryCta: "GitHub 源码",
   statMemos: "约 250 万条纯文本笔记",
@@ -275,10 +278,11 @@ const ZH_HOME: HomeContent = {
 };
 
 const JA_HOME: HomeContent = {
-  heroEyebrow: "サーバー不要 · 24時間稼働 · 無料セルフホスト",
-  heroTitle: "クラウドネイティブな個人ノート＆チームナレッジベース",
+  heroEyebrow: "サーバー不要 · 全球エッジ直結 · 完全無料セルフホスト",
+  heroTitleLine1: "サーバー不要、一生モノの所有権。",
+  heroTitleLine2: "エッジネットワークで動く第二の脳。",
   heroSubtitle:
-    "個人では集中できる思考の記録空間とAI長期記憶、チームではきめ細やかな権限を持つ共有脳。サーバー管理は一切不要、データは永久にあなたのものです。",
+    "Cloudflare Workers、D1、R2 を活用した次世代ナレッジベース。VPS 管理ゼロ、Memos API 互換、AI エージェントの長期記憶を手のひらに。",
   primaryCta: "デプロイガイドを読む",
   secondaryCta: "GitHub ソースコード",
   statMemos: "約250万件のメモ",
@@ -393,10 +397,11 @@ const JA_HOME: HomeContent = {
 };
 
 const FR_HOME: HomeContent = {
-  heroEyebrow: "Zéro serveur · En ligne 24/7 · Hébergement gratuit",
-  heroTitle: "Notes personnelles et base d'équipe Cloud-Native",
+  heroEyebrow: "Zéro serveur · Latence sub-50ms · Hébergement gratuit à vie",
+  heroTitleLine1: "Zéro serveur. Pour toujours à vous.",
+  heroTitleLine2: "Votre second cerveau sur l'Edge.",
   heroSubtitle:
-    "Un sanctuaire de réflexion personnelle avec mémoire IA à long terme pour l'individu ; un cerveau partagé avec rôles pour les équipes. Zéro serveur à gérer, vos données restent les vôtres.",
+    "Gestionnaire de connaissances moderne propulsé par Cloudflare (Workers, D1, R2). Zéro maintenance VPS, compatible Memos API et mémoire persistante pour vos agents IA.",
   primaryCta: "Guide de déploiement",
   secondaryCta: "Code source GitHub",
   statMemos: "~2,5 millions de notes",
@@ -512,10 +517,12 @@ const FR_HOME: HomeContent = {
 };
 
 const ES_HOME: HomeContent = {
-  heroEyebrow: "Cero servidores · Siempre en línea · Autohospedaje gratuito",
-  heroTitle: "Notas personales y base de conocimiento para equipos",
+  heroEyebrow:
+    "Cero servidores · Borde global sub-50ms · Autohospedaje gratuito",
+  heroTitleLine1: "Cero servidores. Tuyo para siempre.",
+  heroTitleLine2: "Tu segundo cerebro en el Edge.",
   heroSubtitle:
-    "Un espacio íntimo de reflexión con memoria IA a largo plazo para ti; un cerebro compartido con roles para equipos. Cero servidores que gestionar y tus datos son tuyos para siempre.",
+    "Sistema de gestión del conocimiento de nueva generación basado en Cloudflare (Workers, D1, R2). Sin mantenimiento de VPS, compatible con Memos API y memoria duradera para IA.",
   primaryCta: "Guía de despliegue",
   secondaryCta: "Código en GitHub",
   statMemos: "~2,5 millones de notas",
@@ -631,10 +638,11 @@ const ES_HOME: HomeContent = {
 };
 
 const KO_HOME: HomeContent = {
-  heroEyebrow: "서버리스 · 24시간 가동 · 무료 셀프 호스팅",
-  heroTitle: "클라우드 네이티브 개인 노트 및 팀 공유 지식 베이스",
+  heroEyebrow: "서버리스 · 50ms 미만 글로벌 엣지 · 평생 무료 셀프 호스팅",
+  heroTitleLine1: "서버 제로, 영구 소유.",
+  heroTitleLine2: "엣지 네트워크에서 작동하는 두 번째 뇌.",
   heroSubtitle:
-    "개인에게는 AI 장기 기억을 갖춘 고요한 생각 정리 공간, 팀에게는 역할별 권한을 갖춘 공유 두뇌. 관리할 서버는 없으며, 데이터는 영원히 당신의 것입니다.",
+    "Cloudflare Workers, D1, R2 기반의 차세대 지식 관리 시스템. VPS 유지보수 없이, Memos API 생태계와 AI 에이전트 MCP 장기 기억을 영구 소유하세요.",
   primaryCta: "배포 가이드 읽기",
   secondaryCta: "GitHub 소스코드",
   statMemos: "약 250만 건의 메모",
@@ -749,10 +757,11 @@ const KO_HOME: HomeContent = {
 };
 
 const RU_HOME: HomeContent = {
-  heroEyebrow: "Без серверов · Всегда онлайн · Бесплатный хостинг",
-  heroTitle: "Облачные личные заметки и командная база знаний",
+  heroEyebrow: "Ноль серверов · Глобальный Edge <50мс · Бесплатный хостинг",
+  heroTitleLine1: "Ноль серверов. Навсегда ваше.",
+  heroTitleLine2: "Второй мозг на глобальном Edge.",
   heroSubtitle:
-    "Уютное пространство для мыслей с долгосрочной памятью ИИ для одного; общий рабочий мозг с ролями для команд. Ноль серверов, а данные навсегда остаются вашими.",
+    "Управление знаниями нового поколения на базе Cloudflare (Workers, D1, R2). Никаких VPS, поддержка экосистемы Memos API и постоянная память для ИИ-агентов.",
   primaryCta: "Руководство по установке",
   secondaryCta: "Исходный код на GitHub",
   statMemos: "~2.5 млн заметок",
@@ -868,10 +877,11 @@ const RU_HOME: HomeContent = {
 };
 
 const AR_HOME: HomeContent = {
-  heroEyebrow: "بدون خوادم · متاح 24/7 · استضافة ذاتية مجانية",
-  heroTitle: "ملاحظات سحابية شخصية وقاعدة معرفية مشتركة للفرق",
+  heroEyebrow: "بدون خوادم · استجابة فائقة السرعة · استضافة ذاتية مجانية للأبد",
+  heroTitleLine1: "بدون خوادم. ملكك إلى الأبد.",
+  heroTitleLine2: "دماغك الثاني على شبكة الحافة العالمية.",
   heroSubtitle:
-    "مساحة هادئة للأفكار مع ذاكرة طويلة المدى للذكاء الاصطناعي للفرد؛ وعقل جماعي مشترك مع أدوار دقيقة للفرق. بدون خوادم، وبياناتك ملكك للأبد.",
+    "نظام إدارة معرفة متطور مبني على Cloudflare Edge (Workers, D1, R2). لا صيانة للخوادم، متوافق مع Memos API وذاكرة دائمة لوكلاء الذكاء الاصطناعي.",
   primaryCta: "دليل النشر والتشغيل",
   secondaryCta: "الشيفرة على GitHub",
   statMemos: "نحو 2.5 مليون ملاحظة",

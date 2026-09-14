@@ -142,8 +142,13 @@ function Hero({
 
           {/* Headline */}
           <Reveal delay={0.08}>
-            <h1 className="text-balance text-4xl font-extrabold tracking-tight text-ink sm:text-5xl md:text-6xl lg:text-7xl leading-[1.08]">
-              {home.heroTitle}
+            <h1 className="text-[clamp(1.75rem,5.2vw,4.25rem)] font-extrabold tracking-tight text-ink leading-[1.14]">
+              <span className="block sm:whitespace-nowrap">
+                {home.heroTitleLine1}
+              </span>
+              <span className="mt-1.5 block sm:mt-2.5 bg-gradient-to-r from-amber-500 via-signal to-signal-deep bg-clip-text text-transparent sm:whitespace-nowrap">
+                {home.heroTitleLine2}
+              </span>
             </h1>
           </Reveal>
 
