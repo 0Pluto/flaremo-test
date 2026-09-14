@@ -92,7 +92,22 @@ export function NotificationBell() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-72">
-        {notifications.length === 0 ? (
+        {notificationsQuery.isError && !notificationsQuery.data ? (
+          <div className="flex flex-col items-center gap-2 px-2 py-5">
+            <p className="text-xs text-muted-foreground">
+              {t("list.errorDescription")}
+            </p>
+            <Button
+              disabled={notificationsQuery.isRefetching}
+              onClick={() => void notificationsQuery.refetch()}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              {t("common.retry")}
+            </Button>
+          </div>
+        ) : notifications.length === 0 ? (
           <p className="px-2 py-6 text-center text-xs text-muted-foreground">
             {t("notifications.empty")}
           </p>

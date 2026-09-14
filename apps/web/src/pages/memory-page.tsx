@@ -27,6 +27,7 @@ import {
   unlockMemory,
   updateMemory,
 } from "@/api";
+import { QueryErrorState } from "@/components/query-error-state";
 import { SubpageHeader } from "@/components/subpage-header";
 import {
   AlertDialog,
@@ -167,9 +168,12 @@ export function MemoryPage() {
 
           <TabsContent value="core" className="mt-3">
             <MemoryList
-              memories={groups.core}
+              hasError={listQuery.isError && !listQuery.data}
+              isRetrying={listQuery.isRefetching}
               loading={listQuery.isLoading}
+              memories={groups.core}
               onMutated={invalidate}
+              onRetry={() => void listQuery.refetch()}
             />
           </TabsContent>
           <TabsContent value="projects" className="mt-3">
@@ -177,9 +181,12 @@ export function MemoryPage() {
           </TabsContent>
           <TabsContent value="recent" className="mt-3">
             <MemoryList
-              memories={groups.recent}
+              hasError={listQuery.isError && !listQuery.data}
+              isRetrying={listQuery.isRefetching}
               loading={listQuery.isLoading}
+              memories={groups.recent}
               onMutated={invalidate}
+              onRetry={() => void listQuery.refetch()}
               showSource
             />
           </TabsContent>
@@ -213,9 +220,12 @@ export function MemoryPage() {
           <TabsContent value="archive" className="mt-3">
             <MemoryList
               emptyTitle={t("memory.archiveEmpty")}
-              memories={groups.archive}
+              hasError={listQuery.isError && !listQuery.data}
+              isRetrying={listQuery.isRefetching}
               loading={listQuery.isLoading}
+              memories={groups.archive}
               onMutated={invalidate}
+              onRetry={() => void listQuery.refetch()}
             />
           </TabsContent>
         </Tabs>
@@ -233,6 +243,9 @@ export function MemoryPage() {
 function MemoryList({
   memories,
   loading,
+  hasError,
+  isRetrying,
+  onRetry,
   onMutated,
   emptyTitle,
   showSource = false,
@@ -240,12 +253,25 @@ function MemoryList({
 }: {
   memories: Memory[];
   loading: boolean;
+  hasError?: boolean;
+  isRetrying?: boolean;
+  onRetry?: () => void;
   onMutated: () => void;
   emptyTitle?: string;
   showSource?: boolean;
   review?: boolean;
 }) {
   const { t } = useI18n();
+
+  if (hasError) {
+    return (
+      <QueryErrorState
+        className="min-h-56"
+        isRetrying={isRetrying}
+        onRetry={onRetry ?? (() => undefined)}
+      />
+    );
+  }
 
   if (loading) {
     return (

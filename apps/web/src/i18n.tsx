@@ -24,6 +24,8 @@ const messages = {
     "search.globalScope": "正在搜索时间线和归档",
     "search.semanticEmpty":
       "没有找到语义相近的记录，试试换个说法或先确认已建立语义索引。",
+    "search.semanticDegraded":
+      "语义搜索服务暂时不可用，这些结果来自关键词搜索。",
     "search.syntaxHint":
       "筛选：has:attachment · is:pinned · before:2026-07-01 · after:2026-07-01 · in:archive",
     "common.clearFilters": "清除筛选",
@@ -704,6 +706,8 @@ const messages = {
     "search.globalScope": "Searching timeline and archive",
     "search.semanticEmpty":
       "No semantically similar notes found. Try rephrasing, or verify the semantic index is built.",
+    "search.semanticDegraded":
+      "Semantic search is temporarily unavailable; these results come from keyword search.",
     "search.syntaxHint":
       "Filters: has:attachment · is:pinned · before:2026-07-01 · after:2026-07-01 · in:archive",
     "common.clearFilters": "Clear filters",

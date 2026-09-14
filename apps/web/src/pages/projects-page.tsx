@@ -30,6 +30,7 @@ import {
   updateProject,
   updateTask,
 } from "@/api";
+import { QueryErrorState } from "@/components/query-error-state";
 import { SubpageHeader } from "@/components/subpage-header";
 import {
   AlertDialog,
@@ -168,6 +169,23 @@ export function ProjectsPage() {
               </div>
             )}
 
+            {projectsQuery.isError && !projectsQuery.data && (
+              <div className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
+                <span className="min-w-0 flex-1">
+                  {t("list.errorDescription")}
+                </span>
+                <Button
+                  className="h-6 px-2 text-xs"
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                  onClick={() => void projectsQuery.refetch()}
+                >
+                  {t("common.retry")}
+                </Button>
+              </div>
+            )}
+
             {projects.map((project) => (
               <ProjectRow
                 key={project.id}
@@ -196,6 +214,9 @@ export function ProjectsPage() {
               projects={projects}
               projectById={projectById}
               loading={tasksQuery.isLoading}
+              hasError={tasksQuery.isError && !tasksQuery.data}
+              isRetrying={tasksQuery.isRefetching}
+              onRetry={() => void tasksQuery.refetch()}
               selectedProject={selectedProject}
               tasks={tasks}
               onMutated={invalidate}
@@ -225,6 +246,9 @@ function Board({
   projects,
   projectById,
   loading,
+  hasError,
+  isRetrying,
+  onRetry,
   selectedProject,
   tasks,
   onMutated,
@@ -232,6 +256,9 @@ function Board({
   projects: Project[];
   projectById: Map<string, Project>;
   loading: boolean;
+  hasError: boolean;
+  isRetrying: boolean;
+  onRetry: () => void;
   selectedProject: Project | null;
   tasks: Task[];
   onMutated: () => void;
@@ -245,6 +272,16 @@ function Board({
         <Skeleton className="h-40 w-full" />
         <Skeleton className="h-40 w-full" />
       </div>
+    );
+  }
+
+  if (hasError) {
+    return (
+      <QueryErrorState
+        className="min-h-56"
+        onRetry={onRetry}
+        isRetrying={isRetrying}
+      />
     );
   }
 
@@ -541,6 +578,29 @@ function ProjectFormDialog({
   );
 }
 
+/**
+ * Apply an optimistic task patch (or removal with patch=null) to every cached
+ * task list under the ["tasks"] prefix, preserving each query's other fields.
+ */
+function patchTasksCache(
+  data: unknown,
+  taskId: string,
+  patch: Partial<Task> | null,
+): unknown {
+  if (!data || typeof data !== "object") return data;
+  const current = data as { tasks?: Task[] };
+  if (!Array.isArray(current.tasks)) return data;
+  return {
+    ...current,
+    tasks:
+      patch === null
+        ? current.tasks.filter((item) => item.id !== taskId)
+        : current.tasks.map((item) =>
+            item.id === taskId ? { ...item, ...patch } : item,
+          ),
+  };
+}
+
 function TaskCard({
   projectName,
   task,
@@ -551,28 +611,55 @@ function TaskCard({
   onMutated: () => void;
 }) {
   const { t } = useI18n();
+  const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
+  // Optimistic status flips so slow connections still feel instant; the
+  // board re-syncs from the server on settle.
   const updateMutation = useMutation({
     mutationFn: (input: Parameters<typeof updateTask>[1]) =>
       updateTask(stripResourceName(task.id, "tasks"), input),
+    onMutate: async (input) => {
+      await queryClient.cancelQueries({ queryKey: ["tasks"] });
+      const snapshots = queryClient.getQueriesData({ queryKey: ["tasks"] });
+      queryClient.setQueriesData({ queryKey: ["tasks"] }, (data: unknown) =>
+        patchTasksCache(data, task.id, input),
+      );
+      return snapshots;
+    },
     onSuccess: () => {
       toast.success(t("toast.taskUpdated"));
       onMutated();
     },
-    onError: (error) =>
-      toast.error(errorMessage(error, t("toast.taskUpdateFailed"))),
+    onError: (error, _input, snapshots) => {
+      for (const [key, value] of snapshots ?? []) {
+        queryClient.setQueryData(key, value);
+      }
+      toast.error(errorMessage(error, t("toast.taskUpdateFailed")));
+    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: () => deleteTask(stripResourceName(task.id, "tasks")),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ["tasks"] });
+      const snapshots = queryClient.getQueriesData({ queryKey: ["tasks"] });
+      queryClient.setQueriesData({ queryKey: ["tasks"] }, (data: unknown) =>
+        patchTasksCache(data, task.id, null),
+      );
+      return snapshots;
+    },
     onSuccess: () => {
       toast.success(t("toast.taskDeleted"));
       onMutated();
     },
-    onError: (error) =>
-      toast.error(errorMessage(error, t("toast.taskDeleteFailed"))),
+    onError: (error, _input, snapshots) => {
+      for (const [key, value] of snapshots ?? []) {
+        queryClient.setQueryData(key, value);
+      }
+      toast.error(errorMessage(error, t("toast.taskDeleteFailed")));
+    },
   });
 
   const advance = () => {

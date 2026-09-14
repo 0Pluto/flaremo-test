@@ -577,6 +577,11 @@ export function FlareMoApp() {
                   )}
                 </div>
               )}
+              {isSemanticSearch && semanticResultsQuery.data?.degraded ? (
+                <p className="mb-3 rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                  {t("search.semanticDegraded")}
+                </p>
+              ) : null}
               <MemoList
                 attachmentsByMemo={attachmentsByMemo}
                 emptyDescription={

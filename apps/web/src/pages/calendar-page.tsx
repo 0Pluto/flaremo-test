@@ -8,7 +8,7 @@ import {
   PlusIcon,
   Trash2Icon,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   createProject,
@@ -22,6 +22,7 @@ import {
 } from "@/api";
 import type { CalendarDateCell } from "@/components/flaremo-calendar";
 import { FlareMoCalendar } from "@/components/flaremo-calendar";
+import { QueryErrorState } from "@/components/query-error-state";
 import { SubpageHeader } from "@/components/subpage-header";
 import {
   AlertDialog,
@@ -184,6 +185,11 @@ export function CalendarPage() {
               <CardContent className="p-4">
                 {calendarQuery.isLoading ? (
                   <Skeleton className="h-72 w-full" />
+                ) : calendarQuery.isError && !calendarQuery.data ? (
+                  <QueryErrorState
+                    isRetrying={calendarQuery.isRefetching}
+                    onRetry={() => void calendarQuery.refetch()}
+                  />
                 ) : (
                   <FlareMoCalendar
                     data={data}
@@ -238,6 +244,8 @@ export function CalendarPage() {
                 today={today}
                 defaultProjectId={defaultProjectId}
                 projectsReady={Boolean(projectsQuery.data)}
+                projectsError={projectsQuery.isError && !projectsQuery.data}
+                onRetryProjects={() => void projectsQuery.refetch()}
                 onTaskDragStart={setDragTask}
                 onTaskSaved={invalidateCalendar}
               />
@@ -265,6 +273,8 @@ function DayPanel({
   tasks,
   defaultProjectId,
   projectsReady,
+  projectsError,
+  onRetryProjects,
   onTaskDragStart,
   onTaskSaved,
 }: {
@@ -275,6 +285,8 @@ function DayPanel({
   tasks: Task[];
   defaultProjectId: string | null;
   projectsReady: boolean;
+  projectsError: boolean;
+  onRetryProjects: () => void;
   onTaskDragStart: (task: Task | null) => void;
   onTaskSaved: () => void;
 }) {
@@ -284,6 +296,12 @@ function DayPanel({
   const [rescheduling, setRescheduling] = useState<string | null>(null);
   const [nextDate, setNextDate] = useState(day);
   const [deleteTarget, setDeleteTarget] = useState<Task | null>(null);
+
+  // The reschedule target follows the selected day; a stale useState day
+  // value would otherwise carry the previous day's key into the picker.
+  useEffect(() => {
+    setNextDate(day);
+  }, [day]);
 
   const toggleDone = (task: Task) => {
     setRescheduling(null);
@@ -508,6 +526,21 @@ function DayPanel({
           </AlertDialogContent>
         </AlertDialog>
 
+        {projectsError ? (
+          <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+            <span>{t("list.errorDescription")}</span>
+            <Button
+              className="h-6 px-2 text-xs"
+              size="sm"
+              type="button"
+              variant="outline"
+              onClick={onRetryProjects}
+            >
+              {t("common.retry")}
+            </Button>
+          </div>
+        ) : null}
+
         <form
           className="mt-3 flex items-center gap-2"
           onSubmit={(event) => {
@@ -607,51 +640,59 @@ function AgendaView({
         <h2 className="text-sm font-semibold text-muted-foreground">
           {t("calendar.agendaTitle")}
         </h2>
-        <ul className="mt-3 flex flex-col divide-y divide-border/60">
-          {groups.length === 0 && (
-            <li className="text-sm text-muted-foreground">
-              {t("calendar.agendaEmpty")}
-            </li>
-          )}
-          {groups.map((group) => (
-            <li className="py-2" key={group.key}>
-              <button
-                className="flex w-full items-baseline gap-2 text-left"
-                type="button"
-                onClick={() => onDaySelect(group.key)}
-              >
-                <span
-                  className={cn(
-                    "text-xs font-medium tabular-nums",
-                    group.overdue ? "text-destructive" : "text-foreground",
-                  )}
+        {tasksQuery.isError && !tasksQuery.data ? (
+          <QueryErrorState
+            className="text-muted-foreground"
+            isRetrying={tasksQuery.isRefetching}
+            onRetry={() => void tasksQuery.refetch()}
+          />
+        ) : (
+          <ul className="mt-3 flex flex-col divide-y divide-border/60">
+            {groups.length === 0 && !tasksQuery.isLoading && (
+              <li className="text-sm text-muted-foreground">
+                {t("calendar.agendaEmpty")}
+              </li>
+            )}
+            {groups.map((group) => (
+              <li className="py-2" key={group.key}>
+                <button
+                  className="flex w-full items-baseline gap-2 text-left"
+                  type="button"
+                  onClick={() => onDaySelect(group.key)}
                 >
-                  {group.key === today
-                    ? t("calendar.todayTitle")
-                    : formatDayTitle(group.key, locale)}
-                </span>
-                {group.overdue && (
-                  <span className="rounded-full bg-destructive/10 px-1.5 py-0.5 text-[10px] font-medium text-destructive">
-                    {t("calendar.overdue")}
-                  </span>
-                )}
-                <span className="ml-auto text-xs tabular-nums text-muted-foreground">
-                  {t("calendar.dayTasks", { count: group.tasks.length })}
-                </span>
-              </button>
-              <div className="mt-1 flex flex-col gap-0.5 pl-4">
-                {group.tasks.map((task) => (
                   <span
-                    className="truncate text-sm text-muted-foreground"
-                    key={task.id}
+                    className={cn(
+                      "text-xs font-medium tabular-nums",
+                      group.overdue ? "text-destructive" : "text-foreground",
+                    )}
                   >
-                    {task.title}
+                    {group.key === today
+                      ? t("calendar.todayTitle")
+                      : formatDayTitle(group.key, locale)}
                   </span>
-                ))}
-              </div>
-            </li>
-          ))}
-        </ul>
+                  {group.overdue && (
+                    <span className="rounded-full bg-destructive/10 px-1.5 py-0.5 text-[10px] font-medium text-destructive">
+                      {t("calendar.overdue")}
+                    </span>
+                  )}
+                  <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+                    {t("calendar.dayTasks", { count: group.tasks.length })}
+                  </span>
+                </button>
+                <div className="mt-1 flex flex-col gap-0.5 pl-4">
+                  {group.tasks.map((task) => (
+                    <span
+                      className="truncate text-sm text-muted-foreground"
+                      key={task.id}
+                    >
+                      {task.title}
+                    </span>
+                  ))}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </CardContent>
     </Card>
   );
