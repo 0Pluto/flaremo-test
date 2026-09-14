@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Check, ExternalLink, Monitor, Moon, Sun } from "lucide-react";
+import { Check, Monitor, Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { SiteMark } from "@/components/site-mark";
@@ -38,11 +38,9 @@ const NAV_LABELS: Record<
   {
     home: string;
     features: string;
-    comparison: string;
     ecosystem: string;
     docs: string;
     deploy: string;
-    faq: string;
     cloudflare: string;
     signIn: string;
   }
@@ -50,89 +48,73 @@ const NAV_LABELS: Record<
   zh: {
     home: "首页",
     features: "特性",
-    comparison: "对比",
     ecosystem: "生态",
     docs: "文档",
     deploy: "快速部署",
-    faq: "常见问题",
-    cloudflare: "免费注册 Cloudflare",
+    cloudflare: "Cloudflare ↗",
     signIn: "进入控制台",
   },
   en: {
     home: "Home",
     features: "Features",
-    comparison: "Comparison",
     ecosystem: "Ecosystem",
     docs: "Docs",
     deploy: "Deploy",
-    faq: "FAQ",
-    cloudflare: "Sign Up Cloudflare",
+    cloudflare: "Cloudflare ↗",
     signIn: "Console",
   },
   ja: {
     home: "ホーム",
     features: "特徴",
-    comparison: "比較",
     ecosystem: "エコシステム",
     docs: "ドキュメント",
     deploy: "デプロイ",
-    faq: "FAQ",
-    cloudflare: "Cloudflare 登録",
+    cloudflare: "Cloudflare ↗",
     signIn: "コンソール",
   },
   fr: {
     home: "Accueil",
-    features: "Fonctionnalités",
-    comparison: "Comparatif",
+    features: "Fonctions",
     ecosystem: "Écosystème",
     docs: "Docs",
     deploy: "Déployer",
-    faq: "FAQ",
-    cloudflare: "Cloudflare Gratuit",
+    cloudflare: "Cloudflare ↗",
     signIn: "Console",
   },
   es: {
     home: "Inicio",
     features: "Funciones",
-    comparison: "Comparativa",
     ecosystem: "Ecosistema",
     docs: "Docs",
     deploy: "Desplegar",
-    faq: "Preguntas",
-    cloudflare: "Registro Cloudflare",
+    cloudflare: "Cloudflare ↗",
     signIn: "Consola",
   },
   ko: {
     home: "홈",
     features: "기능",
-    comparison: "비교",
     ecosystem: "생태계",
     docs: "문서",
     deploy: "배포",
-    faq: "FAQ",
-    cloudflare: "Cloudflare 가입",
+    cloudflare: "Cloudflare ↗",
     signIn: "콘솔",
   },
   ru: {
     home: "Главная",
     features: "Возможности",
-    comparison: "Сравнение",
     ecosystem: "Экосистема",
     docs: "Документация",
     deploy: "Развернуть",
-    faq: "FAQ",
-    cloudflare: "Регистрация Cloudflare",
+    cloudflare: "Cloudflare ↗",
     signIn: "Консоль",
   },
   ar: {
     home: "الرئيسية",
     features: "المميزات",
-    comparison: "المقارنة",
     ecosystem: "المنظومة",
     docs: "المستندات",
     deploy: "النشر",
-    faq: "الأسئلة",
-    cloudflare: "تسجيل Cloudflare",
+    cloudflare: "Cloudflare ↗",
     signIn: "لوحة التحكم",
   },
 };
@@ -257,18 +239,15 @@ export function SiteNav({ locale, currentPath }: SiteNavProps) {
   const items: NavItem[] = [
     { to: homePath, label: labels.home },
     { to: `${homePath}#features`, label: labels.features },
-    { to: `${homePath}#comparison`, label: labels.comparison },
     { to: `${homePath}#ecosystem`, label: labels.ecosystem },
     { to: docsPath, label: labels.docs },
     { to: deployPath, label: labels.deploy },
-    { to: `${homePath}#faq`, label: labels.faq },
   ];
 
   return (
     <header className="sticky top-0 z-40 border-b border-line/60 bg-paper/85 backdrop-blur-md transition-colors duration-200">
-      {/* 3 格对称网格：左翼(Logo) 与 右翼(工具组) 均为 1fr，中翼严格居中 */}
-      <div className="container-x grid h-14 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-4">
-        {/* 左翼：Logo */}
+      <div className="container-x relative flex h-14 items-center justify-between gap-4">
+        {/* 左翼：品牌 Logo */}
         <div className="flex items-center justify-start shrink-0">
           <Link
             aria-label="FlareMo home"
@@ -279,49 +258,50 @@ export function SiteNav({ locale, currentPath }: SiteNavProps) {
           </Link>
         </div>
 
-        {/* 中翼：严格居中统一胶囊导航 */}
-        <nav className="hidden items-center justify-center gap-0.5 rounded-full border border-line/60 bg-soft-surface/80 p-1 shadow-2xs lg:flex">
-          {items.map((item) => {
-            const active = isItemActive(currentPath, currentHash, item.to);
-            return (
-              <a
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "rounded-full px-3 py-1 text-xs font-semibold transition-all duration-150 whitespace-nowrap",
-                  active
-                    ? "bg-surface text-ink shadow-[var(--panel-elev)] font-bold"
-                    : "text-mist hover:text-ink hover:bg-wash",
-                )}
-                key={item.to}
-                href={item.to}
-              >
-                {item.label}
-              </a>
-            );
-          })}
-        </nav>
+        {/* 中翼：绝对 50% 物理居中，无论左右宽度如何，永远死死居中于视口中心 */}
+        <div className="hidden lg:flex absolute left-1/2 -translate-x-1/2 pointer-events-auto">
+          <nav className="flex items-center justify-center gap-0.5 rounded-full border border-line/60 bg-soft-surface/80 p-1 shadow-2xs">
+            {items.map((item) => {
+              const active = isItemActive(currentPath, currentHash, item.to);
+              return (
+                <a
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "rounded-full px-3 py-1 text-xs font-semibold transition-all duration-150 whitespace-nowrap",
+                    active
+                      ? "bg-surface text-ink shadow-[var(--panel-elev)] font-bold"
+                      : "text-mist hover:text-ink hover:bg-wash",
+                  )}
+                  key={item.to}
+                  href={item.to}
+                >
+                  {item.label}
+                </a>
+              );
+            })}
+          </nav>
+        </div>
 
         {/* 右翼：统一右对齐工具集群与动作 */}
-        <div className="flex items-center justify-end gap-2 sm:gap-2.5">
-          {/* 联锁工具胶囊：GitHub + 语言切换 + 主题外观，整合为一 */}
+        <div className="flex items-center justify-end gap-2 shrink-0">
+          {/* 联锁工具胶囊：GitHub + 语言切换 + 主题外观，紧凑防溢出 */}
           <div className="inline-flex h-8 items-center rounded-full border border-line/70 bg-surface/90 shadow-2xs divide-x divide-line/60">
             {/* GitHub 按钮 */}
             <a
-              className="inline-flex h-full items-center gap-1.5 px-2.5 sm:px-3 text-xs font-medium text-ink transition-colors hover:bg-wash first:rounded-l-full"
+              className="inline-flex h-full items-center justify-center px-2.5 text-xs font-medium text-ink transition-colors hover:bg-wash first:rounded-l-full"
               href="https://github.com/realchendahuang/FlareMo"
               rel="noopener noreferrer"
               target="_blank"
-              title="GitHub 源码仓库"
+              title="GitHub 源码仓库 (realchendahuang/FlareMo)"
             >
               <GithubIcon className="size-3.5" />
-              <span className="hidden sm:inline">GitHub</span>
-              <ExternalLink className="size-2.5 text-fog hidden sm:inline" />
             </a>
 
-            {/* 国际化语言切换 (嵌入胶囊) */}
+            {/* 国际化语言切换 (使用 short 简短标签) */}
             <LocaleSwitcher
               locale={norm}
               path={currentPath}
+              short={true}
               className="inline-flex h-full items-center gap-1 border-none rounded-none bg-transparent px-2.5 text-xs font-medium text-ink shadow-none transition-colors hover:bg-wash hover:border-none focus:outline-none cursor-pointer"
             />
 
@@ -329,17 +309,16 @@ export function SiteNav({ locale, currentPath }: SiteNavProps) {
             <ThemeToggle className="inline-flex h-full w-8 items-center justify-center border-none rounded-none text-mist transition-colors hover:bg-wash hover:text-ink focus:outline-none last:rounded-r-full cursor-pointer" />
           </div>
 
-          {/* Cloudflare 注册快捷外链 (微橙高光胶囊) */}
+          {/* Cloudflare 注册快捷外链 (超宽屏幕 2xl 上显示，小桌面优雅隐藏防止挤压) */}
           <a
-            className="hidden xl:inline-flex h-8 items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 dark:border-amber-400/30 dark:bg-amber-400/10 px-3 text-xs font-semibold text-amber-600 dark:text-amber-400 shadow-2xs transition-colors hover:bg-amber-500/20 hover:border-amber-500/50 shrink-0"
+            className="hidden 2xl:inline-flex h-8 items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 dark:border-amber-400/30 dark:bg-amber-400/10 px-2.5 text-xs font-semibold text-amber-600 dark:text-amber-400 shadow-2xs transition-colors hover:bg-amber-500/20 hover:border-amber-500/50 shrink-0"
             href="https://dash.cloudflare.com/sign-up?utm_source=flaremo"
             rel="noopener noreferrer"
             target="_blank"
-            title="Cloudflare 官方免费注册"
+            title="Cloudflare 官方免费注册 / Sign up for free Cloudflare account"
           >
             <CloudflareIcon className="size-3.5 text-amber-500" />
             <span>{labels.cloudflare}</span>
-            <ExternalLink className="size-2.5 opacity-60" />
           </a>
 
           {/* 快速进入应用主 CTA */}
@@ -347,7 +326,7 @@ export function SiteNav({ locale, currentPath }: SiteNavProps) {
             asChild
             size="xs"
             variant="flame"
-            className="h-8 px-3.5 rounded-full shadow-xs shrink-0 font-semibold"
+            className="h-8 px-3.5 rounded-full shadow-xs shrink-0 font-semibold text-xs"
           >
             <a href="https://app.flaremo.app" rel="noopener noreferrer">
               {labels.signIn}
@@ -356,7 +335,7 @@ export function SiteNav({ locale, currentPath }: SiteNavProps) {
         </div>
       </div>
 
-      {/* 移动端与平板快捷导航横向滚动条 (包含完整 7 项) */}
+      {/* 移动端与平板快捷导航横向滚动条 (包含完整导航项) */}
       <div className="container-x flex gap-1.5 overflow-x-auto pb-2 pt-0.5 lg:hidden no-scrollbar">
         {items.map((item) => {
           const active = isItemActive(currentPath, currentHash, item.to);

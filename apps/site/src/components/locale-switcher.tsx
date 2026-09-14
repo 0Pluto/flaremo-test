@@ -18,17 +18,30 @@ import {
 } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 
+const LOCALE_SHORT_LABELS: Record<SupportedLocale, string> = {
+  zh: "中文",
+  en: "EN",
+  ja: "日本語",
+  fr: "FR",
+  es: "ES",
+  ko: "한국어",
+  ru: "RU",
+  ar: "العربية",
+};
+
 type LocaleSwitcherProps = {
   locale: Locale;
   /** Path of the current route (e.g. "/", "/docs", "/docs/deploy"). */
   path: string;
   className?: string;
+  short?: boolean;
 };
 
 export function LocaleSwitcher({
   locale,
   path,
   className,
+  short = false,
 }: LocaleSwitcherProps) {
   const router = useRouter();
   const current = normalizeLocale(locale);
@@ -55,8 +68,8 @@ export function LocaleSwitcher({
           )}
         >
           <Globe className="size-3.5 text-mist shrink-0" />
-          <span className="max-w-[80px] truncate">
-            {LOCALE_LABELS[current]}
+          <span className="truncate">
+            {short ? LOCALE_SHORT_LABELS[current] : LOCALE_LABELS[current]}
           </span>
           <ChevronDown className="size-3 text-fog shrink-0 opacity-70" />
         </button>
