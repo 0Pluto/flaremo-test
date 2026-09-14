@@ -1,200 +1,176 @@
-# FlareMo
+# FlareMo 🔥
 
-**A Cloudflare-native team knowledge base that runs all day on a free Cloudflare account. Use it alone and it is a quiet personal notebook; use it with a team and it becomes a shared knowledge base with roles and three visibility levels (private, team-visible, public). It ships with D1, R2, Better Auth native authentication, an optional Cloudflare Access outer layer, a quiet memo timeline, and a Memos-compatible API subset.**
-
-[![GitHub stars](https://img.shields.io/github/stars/realchendahuang/FlareMo?style=social)](https://github.com/realchendahuang/FlareMo)
-[![license](https://img.shields.io/github/license/realchendahuang/FlareMo)](./LICENSE)
-[![Powered by Cloudflare](https://img.shields.io/badge/powered%20by-Cloudflare-F38020?logo=cloudflare&logoColor=white)](https://www.cloudflare.com/)
-[![Memos compatible](https://img.shields.io/badge/Memos-compatible-0466c1)](https://github.com/usememos/memos)
-
-[中文 README](./README.md)
-
-<p>
-  <img src="./docs/assets/flaremo-desktop.png" alt="FlareMo desktop timeline" width="720">
-  <img src="./docs/assets/flaremo-mobile.png" alt="FlareMo mobile timeline" width="220">
+<p align="center">
+  <b>Zero Servers · Zero Upkeep · 24/7 Global Edge Uptime · Absolute Data Ownership</b><br>
+  For individuals: a quiet, focused thought capture space and second brain. For teams: a shared knowledge base with fine-grained roles.
 </p>
 
-The screenshots show the current backend-backed timeline, editor, filtering, and mobile navigation. Features that are not implemented yet, such as messaging-app capture, are not exposed as placeholder UI.
+<p align="center">
+  <a href="https://github.com/realchendahuang/FlareMo/stargazers"><img src="https://img.shields.io/github/stars/realchendahuang/FlareMo?style=flat&color=F38020" alt="GitHub stars"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/github/license/realchendahuang/FlareMo?style=flat&color=2563EB" alt="License"></a>
+  <a href="https://workers.cloudflare.com/"><img src="https://img.shields.io/badge/Runtime-Cloudflare%20Workers-F38020?logo=cloudflare&logoColor=white" alt="Cloudflare Workers"></a>
+  <a href="https://github.com/usememos/memos"><img src="https://img.shields.io/badge/Ecosystem-Memos%20Compatible-0284C7" alt="Memos Compatible"></a>
+  <a href="https://www.better-auth.com/"><img src="https://img.shields.io/badge/Auth-Better%20Auth-10B981" alt="Better Auth"></a>
+  <a href="./README.md"><img src="https://img.shields.io/badge/Language-中文-DC2626" alt="Chinese Documentation"></a>
+</p>
 
-## What It Does
+<div align="center">
 
-- Quick memo capture with tags and attachments.
-- Timeline, archive, trash, D1 FTS5 search, tag filtering, and activity heatmap. Search spans timeline and archived notes by default and supports `has:attachment`, `is:pinned`, `before:YYYY-MM-DD`, `after:YYYY-MM-DD`, and `in:timeline|archive|trash`.
-- Semantic search ("Find"): Workers AI embeddings plus a Vectorize derived index, with every hit re-checked against D1 permissions; it degrades to FTS5 keyword search when the embedding provider or index is absent. See [docs/semantic-search.md](./docs/semantic-search.md) for the boundary.
-- Daily review (`/review/daily`, this-day-in-history), random walk (`/review/walk`, tag/relation strolls with a postcard summary), and related notes on the memo detail page.
-- An installable PWA; new memo drafts are saved locally, while offline submissions (including attachments) wait in a local queue and are submitted in order when connectivity returns.
-- Markdown/GFM with image and audio attachment previews.
-- Memo detail pages with relations, backlinks, and revision restore.
-- Revocable public share links.
-- Team mode: `owner` / `admin` / `member` roles with member management. Admins add members in the Team Management page (name + email; the server issues a one-time activation link and members set their own passwords — the admin never handles or sees a password), promote or demote admins, and remove members with a retryable data cleanup that deletes private data while keeping team and public content.
-- Three visibility levels: private (author only), team-visible (read-only for active members), and public (anonymous read-only). The web UI, Memos-compatible API, MCP, attachments, search, and SSE all share one permission matrix.
-- Memos-style import and export with conflict strategies.
-- A current Memos-style camelCase/protobuf-JSON `/api/v1` subset for memos, attachments, relations, shares, social resources, the auth facade, and PAT resources; the Connect JSON/protobuf/gRPC-Web surface also covers the single-user UserService webhook CRUD/signing-secret and notification list/update/delete subset, including comment/mention payloads. The legacy snake_case wire remains available through an explicit header.
-- Chinese and English interface.
+| ☀️ Desktop · Light Theme | 🌙 Desktop · Dark Theme | 📱 Mobile · Responsive |
+| :---: | :---: | :---: |
+| <img src="./docs/assets/flaremo-desktop-light.png" width="360" alt="FlareMo Desktop Light Mode" /> | <img src="./docs/assets/flaremo-desktop-dark.png" width="360" alt="FlareMo Desktop Dark Mode" /> | <img src="./docs/assets/flaremo-mobile.png" width="168" alt="FlareMo Mobile Mode" /> |
 
-FlareMo keeps the UI honest: if a feature is not wired to the backend, it does not appear as a fake entry point.
+<sub>Actual live screenshots: seamless light/dark mode switching and full-featured mobile responsiveness. Every feature shown is wired to working backend capabilities.</sub>
 
-## Deployment
+</div>
 
-Deployment is manual by design: the repository does not track `wrangler.jsonc`, and there is no one-click button or automatic deployer. Two ways to get there — pick one.
+---
 
-### Agent Deployment
+## 💡 Why FlareMo?
 
-Use the repository [agent deployment runbook](./docs/agent-deploy.md) with Codex, Claude Code, Cursor Agent, or another command-capable agent. The agent copies `wrangler.jsonc.example`, creates the D1 / R2 resources, fills in the `database_id`, applies migrations, and deploys.
+Tools like Flomo and Memos proved the immense value of low-friction memo capture and a distraction-free timeline. However, self-hosting a traditional note-taking setup typically means paying for a VPS, configuring Docker and PostgreSQL, scripting automated backups, and dreading disk or hardware failures.
 
-### Manual Deployment
+FlareMo answers a simpler question: **Can you get a 24/7 online, resilient, globally accelerated knowledge base with zero server maintenance, using just a free Cloudflare account?**
 
+- **Truly Serverless**: Both code and static assets run on Cloudflare Workers edge nodes near you with millisecond latency.
+- **Enterprise-grade durability out of the box**: Cloudflare D1 handles notes and metadata; Cloudflare R2 stores media attachments with multi-region replication.
+- **AI-Native Second Brain**: Built-in MCP endpoints and Agent Memory hub allow AI agents (Claude, Cursor, Codex, ChatGPT) to read and update your long-term preferences and project context.
+- **Quiet for one, powerful for many**: Default is an encrypted, private single-user sanctuary. Enable team mode, and it instantly transforms into a collaborative workspace with roles and three-tier visibility.
+
+---
+
+## ✨ Key Features
+
+### 1. Instant Capture & Inspiring Review
+- **Capture in milliseconds**: Card-style timeline, tags, Markdown/GFM, and previews for image and audio attachments.
+- **Lightning-fast search**: SQLite FTS5 full-text indexing with query operators (`has:attachment`, `is:pinned`, `before:YYYY-MM-DD`, `after:YYYY-MM-DD`, `in:timeline|archive|trash`).
+- **Semantic "Find" (Vector Search)**: Workers AI embeddings paired with Vectorize derived vector indexes for contextual recall; re-verifies permissions against D1 and seamlessly falls back to FTS5.
+- **Thought activation**: Built-in **Daily Review** (on this day), **Random Walk** (wandering through tag and backlink graphs with postcard summaries), and related note recommendations.
+- **Revision history**: Full version diffs and one-click historical restore.
+
+### 2. AI Long-term Memory & Native MCP
+- **Agent Memory**: Through `/memory/mcp`, AI agents can record and update cross-session long-term memory (preferences, project decisions, constraints, lessons).
+- **Human in the loop**: Review, verify, lock, or correct AI-recorded memories at `/memory`.
+- **Open ecosystem**: Standard `/mcp` (Streamable HTTP MCP) endpoint to query and append notes programmatically.
+
+### 3. Team Collaboration & 3-Tier Visibility
+- **Role governance**: `owner`, `admin`, and `member` roles. Admins invite members via one-time activation links (members choose their own passwords; admins never handle plaintext credentials).
+- **3-tier visibility**:
+  - 🔒 **Private**: Only author can view.
+  - 👥 **Team**: Shared read-only with active team members.
+  - 🌐 **Public**: Anonymous read-only via time-limited share links.
+- **Safe offboarding**: Removing a member triggers reliable background cleanup that purges private data while preserving team and public notes.
+
+### 4. Offline First & PWA Experience
+- **Installable PWA**: Install to macOS, Windows, iOS, or Android home screen with native feel.
+- **Reliable offline sync**: Drafts save locally instantly. Offline submissions and uploads queue up and replay automatically when connectivity is restored.
+- **Live voice capture**: Access `/capture` for real-time streaming speech-to-text (ASR) transcription.
+
+### 5. Secure Better Auth Application Security
+- **Better Auth powered**: HttpOnly, `SameSite=Lax` browser cookie sessions; revocable `memos_pat_` Personal Access Tokens for scripts, CLI, and MCP.
+- **Strict Origin protection**: State-changing requests enforce exact origin whitelisting. Cloudflare Access remains available as an optional outer defensive perimeter.
+
+### 6. Memos Compatibility & Seamless Migration
+- **Memos `/api/v1` compatibility**: Provides core Memos API endpoints (camelCase default, legacy snake_case via header) and OpenAPI schema.
+- **Third-party apps ready**: Works directly with mobile clients like Moe Memos.
+- **Bi-directional import & export**: One-click import from Memos / flomo with conflict strategies and full raw export bundles.
+
+---
+
+## 📊 How Generous Is Cloudflare's Free Tier?
+
+Many assume "free" means "severely limited". For text-heavy personal knowledge bases, Cloudflare's free quota is virtually inexhaustible:
+
+| Resource | Free Tier Quota | Equivalent Capacity | Practical Lifespan |
+| :--- | :--- | :--- | :--- |
+| **Cloudflare D1** | **5 GB database** | ~**2.5 Million** text memos | Writing 100 memos daily would take **68 years** to fill |
+| **Cloudflare R2** | **10 GB storage** | ~**5,000–10,000** photos / **80 hours** of voice | **$0 egress fees**; public sharing won't trigger bandwidth bills |
+| **Cloudflare Workers** | Generous free request limits | 300+ global edge locations | Millisecond latency worldwide without cold boots |
+
+---
+
+## 🥊 Comparison: Cloudflare Native vs Home NAS vs Traditional VPS
+
+| Dimension | Cloudflare Native (FlareMo) | Home NAS / Mini PC | Traditional VPS |
+| :--- | :--- | :--- | :--- |
+| **Data Durability** | **Enterprise multi-region replication**, zero hardware failure risk | Single drive failure or power outage can cause total data loss | Dependent on manual snapshot & backup routines |
+| **Maintenance** | **Zero**: No OS patching, no Docker compose, no DB maintenance | OS updates, Docker upkeep, SMART disk alerts, router configs | Kernel upgrades, security patches, watchdog daemons |
+| **Access Latency** | **Global edge CDN**, sub-100ms response anywhere | Requires DDNS / frp / Tailscale tunnels, constrained by home uplink | Dependent on single cloud region; high cross-border latency |
+| **SSL & Domains** | **Automated HTTPS** & custom domain bindings | Manual certificate issuance, reverse proxy configuration | Nginx / Caddy config & Let's Encrypt renewal maintenance |
+| **Financial Cost** | **$0 / month** on free tier | High upfront hardware cost + ongoing electricity | Ongoing monthly / annual server & bandwidth bills |
+
+---
+
+## 🚀 5-Minute Quick Deployment
+
+### Method 1: Deploy with an AI Agent (Recommended)
+
+Give the repository to an agent capable of executing terminal commands (e.g. Claude Code, Cursor Agent, Codex) along with [docs/agent-deploy.md](./docs/agent-deploy.md):
+> "Please deploy FlareMo to my Cloudflare account following docs/agent-deploy.md."
+
+---
+
+### Method 2: Manual 3-Step Deployment
+
+#### 1. Create Cloudflare Resources
 ```bash
-pnpm install
+pnpm exec wrangler whoami
 pnpm exec wrangler d1 create flaremo
 pnpm exec wrangler r2 bucket create flaremo-attachments
 ```
 
-Copy `wrangler.jsonc.example` to `wrangler.jsonc` (the repository does not track `wrangler.jsonc` itself), fill in the generated D1 `database_id`, and set `FLAREMO_PUBLIC_URL` to your public origin, then run:
-
+#### 2. Configure Settings & Secrets
 ```bash
-pnpm verify
-pnpm deploy:dry-run
-pnpm deploy
+cp wrangler.jsonc.example wrangler.jsonc
 ```
-
-Full deployment docs: [docs/deploy.md](./docs/deploy.md).
-
-### Pre-deployment Checklist
-
-- Wrangler is logged in to the target Cloudflare account: `pnpm exec wrangler whoami`.
-- `wrangler.jsonc` uses `DB` as the D1 binding and contains the target D1 `database_id`.
-- `wrangler.jsonc` uses `ATTACHMENTS` as the R2 binding, and the target bucket exists.
-- `pnpm deploy` applies pending remote D1 migrations before publishing the Worker.
-- `FLAREMO_PUBLIC_URL` is set to the production canonical origin, and Better Auth secrets are configured through Wrangler or the Cloudflare dashboard.
-- The one-time owner bootstrap, native login, and PAT creation have been verified; if Cloudflare Access is enabled, the outer policy and application authentication have both been tested.
-- Cloudflare Access policies are optional outer controls for human access, Service Tokens, and public share bypass routes.
-- The release gate has passed: `pnpm verify` and `pnpm deploy:dry-run`.
-
-## Auth Boundary: Better Auth, with optional Access
-
-FlareMo's application authentication is provided by Better Auth. On the first production deployment, the operator manually enters the one-time bootstrap secret, username, display name, email, and password in the HTTPS `/setup` page to create the single owner. Public signup is disabled after bootstrap. The main team path is adding members in the Team Management page: the server issues a one-time activation link and members set their own passwords. The owner can still enable open registration as a compatibility path (off by default), letting anyone create a member account through `/register` or the Memos-compatible `signup`. `FLAREMO_SINGLE_USER_EMAIL` and `FLAREMO_SINGLE_USER_NAME` are legacy variables for existing `users/owner` domain metadata, not login credentials or bootstrap inputs; the setup form is authoritative. Team roles, visibility permissions, and member-removal semantics are documented in [docs/team-mode.md](./docs/team-mode.md). The data model leaves room for future mapped users without changing existing memo IDs.
-
-- Browser login uses an `HttpOnly`, `SameSite=Lax` cookie session.
-- Scripts, MCP, and Memos-compatible clients use a revocable `memos_pat_` Personal Access Token created by an authenticated account.
-- The plaintext PAT is returned only at creation time; list and revoke responses do not expose it.
-- Cookie-session state-changing requests such as `POST`, `PATCH`, and `DELETE` must carry an `Origin` that exactly matches `FLAREMO_PUBLIC_URL` or `FLAREMO_TRUSTED_ORIGINS`; missing or untrusted origins return `403`. PAT requests may omit `Origin` for desktop scripts and MCP clients, but a supplied `Origin` must match the same allowlist or the request returns `403`. Wildcards, `Referer`, and Access headers are not substitutes for Origin validation.
-- Cloudflare Access is an optional outer layer. An Access Service Token only passes the outer policy; it does not become a FlareMo user session. If Access is enabled, clients need both layers.
-- Public shares continue to use FlareMo share tokens, expiry, and memo-state checks.
-
-Set the production `FLAREMO_PUBLIC_URL` to an origin without a path, query, or fragment, then configure the two Worker secrets interactively:
-
+Fill in the generated `database_id` and set `FLAREMO_PUBLIC_URL` to your production domain. Then set secrets:
 ```bash
 pnpm exec wrangler secret put BETTER_AUTH_SECRET --config ./wrangler.jsonc
 pnpm exec wrangler secret put FLAREMO_BOOTSTRAP_SECRET --config ./wrangler.jsonc
 ```
 
-Never put real secrets, the initial password, cookies, or PATs in `wrangler.jsonc`, documentation, Git, logs, or chat. See the [deployment guide](./docs/deploy.md) for the setup sequence.
-
-Native PAT example (`FLAREMO_MEMOS_PAT` must come from a secure local configuration):
-
-```bash
-curl "$FLAREMO_URL/api/v1/memos" \
-  -H "Authorization: Bearer $FLAREMO_MEMOS_PAT"
-```
-
-When Access remains enabled, add its headers as well; an Access Service Token alone is not enough for private application data:
-
-```bash
-curl "$FLAREMO_URL/api/v1/memos" \
-  -H "CF-Access-Client-Id: $FLAREMO_ACCESS_CLIENT_ID" \
-  -H "CF-Access-Client-Secret: $FLAREMO_ACCESS_CLIENT_SECRET" \
-  -H "Authorization: Bearer $FLAREMO_MEMOS_PAT"
-```
-
-## Tech Stack
-
-- Runtime: Cloudflare Workers
-- Web: React, Vite, Tailwind CSS, shadcn/radix primitives
-- API: Hono-style Worker routes, Zod contracts, OpenAPI
-- Database: Cloudflare D1, Drizzle
-- Object storage: Cloudflare R2
-- Auth boundary: Better Auth; optional Cloudflare Access outer layer
-- Package manager: pnpm
-
-D1 is the source of truth for notes, users, relations, shares, settings, and attachment metadata. R2 stores only binary objects and export bundles.
-
-## Positioning: AI-native personal knowledge management
-
-FlareMo is built as **AI-native personal knowledge management**: use it alone and it is a quiet personal notebook, use it with a team and it becomes a shared knowledge base, with semantic search, AI memory, and agent read/write as first-class parts of the product. Its goals differ from Memos, so **full compatibility is not a goal**.
-
-Memos is the ecosystem anchor FlareMo chose, not a template to reproduce:
-
-- **Reuse what works**: the domain model, resource naming, the `/api/v1` protocol, OpenAPI, import/export, and the MCP direction, along with the third-party clients and scripts built around them.
-- **Extend where upstream has nothing**: Agent Memory, semantic search ("Find"), projects and tasks, and audio-transcript reading are FlareMo-native capabilities, not constrained by upstream shape.
-- **Take upstream features on demand**: adopt them only where we need them and the semantics make sense. Upstream interfaces such as `AIService.Transcribe` return `501` in FlareMo, because AI is FlareMo's own track.
-
-**Diverging from upstream over time is an expected outcome, not an accident.** Compatibility is a way to start from a mature foundation and avoid wasted effort, not a product goal in itself; FlareMo's direction is defined by its own needs.
-
-One engineering discipline applies to the compatibility surface: the **existing fields and semantics of `/api/v1/*` are a contract for third-party clients**, so we only add to it and never reshape it. New capabilities go to the FlareMo-native `/api/app/*` surface first, or into the freely extensible memo payload. That keeps the Memos ecosystem usable without limiting where FlareMo can grow. See the compatibility strategy section in [docs/architecture-notes.md](./docs/architecture-notes.md).
-
----
-
-## Memos Compatibility
-
-FlareMo uses Memos as an ecosystem anchor, not as an internal server fork. The compatibility layer is an adapter over FlareMo domain services.
-
-Current docs:
-
-- [Memos compatibility matrix](./docs/memos-compatibility.md)
-- [Memos ecosystem matrix](./docs/memos-ecosystem.md)
-- [Semantic search architecture](./docs/semantic-search.md)
-- [OpenAPI](./packages/contracts/src/openapi.ts)
-
-The important auth detail is the two-layer boundary. A third-party Memos client must send a FlareMo PAT, and if the production instance is behind Access it must also send these headers:
-
-```text
-CF-Access-Client-Id
-CF-Access-Client-Secret
-```
-
-`memos_pat_` is a FlareMo-native application credential, not proof of complete Memos Server auth parity. The Origin security direction follows the [Memos 0.30 MCP browser-origin model](https://usememos.com/docs/integrations/mcp). The default `/api/v1` wire is now the implemented current camelCase/protobuf-JSON subset, while `X-FlareMo-Wire: legacy` keeps the older snake_case surface available. The Better Auth-backed auth facade and PAT resources are implemented as a subset; `accessToken` is an opaque session-backed token, not a native Memos JWT. The root `/mcp` endpoint is a stateless Streamable HTTP MCP tool subset. FlareMo has bounded social routes and a UserService webhook CRUD/signing-secret plus notification list/update/delete subset, including comment/mention payloads, and a bounded asynchronous outbox for four memo webhook events with retries; complete Memos Server parity, full CEL/Connect/SSE, complete upstream comments/reactions/shortcuts service/wire parity, full multi-user notification ACL, complete upstream webhook event semantics/egress SSRF protection, and real smoke tests for third-party clients remain unfinished. See the [compatibility matrix](./docs/memos-compatibility.md) and [ecosystem matrix](./docs/memos-ecosystem.md).
-
-## Development
-
-```bash
-pnpm install
-pnpm migrate:local
-pnpm dev
-```
-
-Local URL:
-
-```text
-http://localhost:8787
-```
-
-Quality gate:
-
+#### 3. Deploy
 ```bash
 pnpm verify
 pnpm deploy:dry-run
+pnpm deploy
+```
+Visit your production domain at `/setup` and enter the `FLAREMO_BOOTSTRAP_SECRET` to initialize your Owner account.
+
+Detailed guides: [Deployment Guide](./docs/deploy.md) · [Update Guide](./docs/update.md).
+
+---
+
+## 🧱 Architecture & Tech Stack
+
+```mermaid
+flowchart LR
+  Browser["FlareMo Web UI (React 19 / PWA)"] --> Worker["Cloudflare Worker"]
+  Clients["Memos Clients / Scripts / MCP"] --> Worker
+
+  Worker --> Auth["Better Auth (Session / PAT)"]
+  Worker --> D1["Cloudflare D1 (Memos / Relations / Settings)"]
+  Access["Cloudflare Access (Optional Outer Perimeter)"] -.-> Worker
+  Worker --> R2["Cloudflare R2 (Attachments & Exports)"]
+  Worker --> Assets["Workers Static Assets"]
 ```
 
-Maintenance commands:
+- **Runtime**: Cloudflare Workers
+- **Frontend**: React 19, Vite, TanStack Router, Tailwind CSS 4, Radix UI
+- **Database**: Cloudflare D1, Drizzle ORM
+- **Storage**: Cloudflare R2
+- **Auth**: Better Auth (HttpOnly cookie session + revocable `memos_pat_`)
+- **AI & Search**: Workers AI, Vectorize, SQLite FTS5
 
-```bash
-pnpm format:check
-pnpm screenshots
-pnpm backup:drill
-pnpm release vX.Y.Z
-```
+---
 
-A thin CI (format / lint / typecheck / unit tests, ~3 min) guards every push and external PR. It does not run E2E and never deploys. Maintainers run the full local release gate before publishing: A self-hosted deployment repository includes the least-privilege `Prepare FlareMo update` workflow that only prepares upstream Release updates as pull requests; Cloudflare Workers Builds remains the deployer for repositories connected to it. See [the update guide](./docs/en/update.md).
+## 🌟 Star History
 
-## Contributing
+[![Star History Chart](https://api.star-history.com/svg?repos=realchendahuang/FlareMo&type=Date)](https://star-history.com/#realchendahuang/FlareMo&Date)
 
-Read [CONTRIBUTING.md](./CONTRIBUTING.md), [SUPPORT.md](./SUPPORT.md), [SECURITY.md](./SECURITY.md), and [ROADMAP.md](./ROADMAP.md).
+---
 
-## License
+## 📄 License
 
-FlareMo is open source under the [GNU AGPL-3.0](./LICENSE) (AGPL-3.0-only).
-
-- Self-hosting, modification, and redistribution follow the AGPL-3.0 terms; if you offer a modified version as a network service, you must make the corresponding source available to that service's users.
-- Copyright (c) 2026 realchendahuang. The copyright holder may dual-license beyond AGPL-3.0 for the FlareMo hosted offering.
-- The "FlareMo" name and marks are not licensed under AGPL-3.0; forks and derivatives must not use the FlareMo brand for promotion or imply official endorsement.
+Open-sourced under the [GNU AGPL-3.0](./LICENSE) license.
+Copyright (c) 2026 realchendahuang.

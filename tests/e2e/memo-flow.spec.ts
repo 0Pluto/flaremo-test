@@ -394,6 +394,19 @@ test("shows the installed version and safe update fallback", async ({
   ).json<{ version: string }>();
   const version = `v${health.version}`;
 
+  await page.route("https://api.github.com/**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        tag_name: version,
+        name: version,
+        published_at: "2026-09-14T00:00:00Z",
+        html_url: `https://github.com/realchendahuang/FlareMo/releases/tag/${version}`,
+      }),
+    });
+  });
+
   await page.goto("/");
 
   // Up-to-date state names itself; the version pin lives next to the bell.

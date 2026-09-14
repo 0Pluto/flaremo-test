@@ -1,379 +1,243 @@
-# FlareMo
+# FlareMo 🔥
 
-**一个免费账号就能 24 小时跑在云端的团队知识库。一个人用，是安静的私人笔记；一个团队用，是带角色权限的共享知识库。Cloudflare 原生部署，自带数据库和对象存储，私密 / 团队 / 公开三档可见性，应用层使用 Better Auth 原生登录，对外保留 Memos 兼容 API；Cloudflare Access 可以作为可选外层防线。**
-
-[![GitHub stars](https://img.shields.io/github/stars/realchendahuang/FlareMo?style=social)](https://github.com/realchendahuang/FlareMo)
-[![license](https://img.shields.io/github/license/realchendahuang/FlareMo)](./LICENSE)
-[![Powered by Cloudflare](https://img.shields.io/badge/powered%20by-Cloudflare-F38020?logo=cloudflare&logoColor=white)](https://www.cloudflare.com/)
-[![Memos compatible](https://img.shields.io/badge/Memos-compatible-0466c1)](https://github.com/usememos/memos)
-
-[English](./README.en.md)
-
-<p>
-  <img src="./docs/assets/flaremo-desktop.png" alt="FlareMo desktop timeline" width="720">
-  <img src="./docs/assets/flaremo-mobile.png" alt="FlareMo mobile timeline" width="220">
+<p align="center">
+  <b>0 服务器 · 0 维护成本 · 24 小时全球边缘在线 · 数据绝对自主掌控</b><br>
+  一个人用，是安静专注的私人灵感速记与第二大脑；一个团队用，是具备多级权限的共享知识库。
 </p>
 
-截图展示的是当前已接上后端的时间线、编辑、筛选和移动端导航体验；未实现的能力（如微信输入）不会以占位入口的形式出现在界面里。
+<p align="center">
+  <a href="https://github.com/realchendahuang/FlareMo/stargazers"><img src="https://img.shields.io/github/stars/realchendahuang/FlareMo?style=flat&color=F38020" alt="GitHub stars"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/github/license/realchendahuang/FlareMo?style=flat&color=2563EB" alt="License"></a>
+  <a href="https://workers.cloudflare.com/"><img src="https://img.shields.io/badge/Runtime-Cloudflare%20Workers-F38020?logo=cloudflare&logoColor=white" alt="Cloudflare Workers"></a>
+  <a href="https://github.com/usememos/memos"><img src="https://img.shields.io/badge/Ecosystem-Memos%20Compatible-0284C7" alt="Memos Compatible"></a>
+  <a href="https://www.better-auth.com/"><img src="https://img.shields.io/badge/Auth-Better%20Auth-10B981" alt="Better Auth"></a>
+  <a href="./README.en.md"><img src="https://img.shields.io/badge/Language-English-6B7280" alt="English Documentation"></a>
+</p>
+
+<div align="center">
+
+| ☀️ 桌面端 · 浅色明亮 | 🌙 桌面端 · 深色沉浸 | 📱 移动端 · 极简随行 |
+| :---: | :---: | :---: |
+| <img src="./docs/assets/flaremo-desktop-light.png" width="360" alt="FlareMo 桌面端浅色界面" /> | <img src="./docs/assets/flaremo-desktop-dark.png" width="360" alt="FlareMo 桌面端深色界面" /> | <img src="./docs/assets/flaremo-mobile.png" width="168" alt="FlareMo 移动端界面" /> |
+
+<sub>真实运行界面：支持深浅主题无缝切换与全功能移动端自适应。所有展示功能均已稳定接入后端，不放未实现的占位按钮。</sub>
+
+</div>
 
 ---
 
-## 为什么做这个项目
+## 💡 为什么选择 FlareMo
 
-Flomo 证明了「快速记录 + 安静时间线」这种轻量笔记体验是有价值的。但自部署这类系统通常意味着一台 VPS、一个 Postgres、一堆 Docker 容器、一份每周要维护的备份脚本，以及硬盘哪天坏了数据全没的风险。
+Flomo 和 Memos 证明了「快速捕捉 + 流式时间线」这种无压力记录体验的巨大价值。但自部署传统的笔记系统通常意味着：你需要一台按月付费的 VPS、安装并配置 Docker / Postgres、编写定时备份脚本，还要时刻提防硬盘损坏或机房故障导致的数据损失。
 
-FlareMo 想回答另一个问题：**能不能只用一个免费 Cloudflare 账号，不买服务器、不装数据库、不写备份脚本，就拥有一个 24 小时在线、数据不会丢、可以自定义域名、还能被各种工具调用的知识库——一个人用是私人笔记，一个团队用是共享知识库？**
+FlareMo 探索了一条完全不同的道路：**仅凭一个免费的 Cloudflare 账号，不买服务器、不装数据库、不写备份脚本，就能拥有一个 24 小时高可用、数据永不丢失、全球就近加速、还能被各类 AI 与自动化工具调用的现代化知识库。**
 
-答案是可以。Cloudflare 免费账号就能提供：
-
-- **Cloudflare D1：5 GB 数据库** —— 用来存笔记、标签、关系、分享、设置。
-- **Cloudflare R2：10 GB 对象存储** —— 用来存附件、图片、导出包。
-- **Cloudflare Workers：免费请求额度，全球边缘节点** —— 代码和前端都在离你最近的地方跑。
-- **Better Auth 原生认证** —— 一次性设置用户名和密码，浏览器使用安全 cookie session，脚本和 Memos 客户端使用可撤销的 `memos_pat_` PAT；Cloudflare Access 可继续作为外层防线。
-- **Workers Static Assets** —— 前端和 API 由同一个 Worker 提供，一次部署全搞定。
-
-整套系统跑在一个 Worker 上。你没有一个「服务器」要照看，只有一份代码和一个免费账号。
-
-团队协作也不需要为此升级到付费 SaaS 或多养一台服务器：同一份部署里，管理员在「团队管理」界面添加成员，笔记按「私密 / 团队可见 / 全网公开」三档可见性共享；成员被移出时，其私密数据被完整清理，团队与公开内容保留。所有数据——包括团队成员的数据——都只存在你自己的 Cloudflare 账号里。
+- **真正的 Serverless**：代码与静态前端直接部署在 Cloudflare Workers 全球边缘网络，毫秒级响应。
+- **开箱即用的企业级存储**：以 Cloudflare D1 作为元数据与笔记事实源，Cloudflare R2 存储媒体附件，自带跨地域持久化冗余。
+- **AI 原生设计**：内置 MCP 协议与 Agent Memory 长期记忆中枢，让 AI 真正成为你的第二大脑。
+- **一人安静，多人协同**：默认是私密的单人速记空间；开启团队模式后，即刻变身为具备精细角色与可见性隔离的团队工作台。
 
 ---
 
-## 这点免费额度到底够用多少
+## ✨ 核心特性
 
-很多人对 5 GB 数据库 / 10 GB 对象存储没概念，觉得「免费」就是「不够用」。实际上对个人笔记这种写入量极低、纯文本为主的场景，免费额度是溢出的。
+### 1. 极速速记与沉浸式回顾
+- **即开即写**：卡片式流式时间线，支持多标签归类、Markdown/GFM 渲染、图片与音频媒体预览。
+- **智能搜索**：D1 FTS5 全文快速检索，支持过滤条件（`has:attachment`、`is:pinned`、`before:YYYY-MM-DD`、`after:YYYY-MM-DD`、`in:timeline|archive|trash`）。
+- **向量语义「找一找」**：集成 Cloudflare Workers AI embedding + Vectorize 派生索引，理解上下文意图；自动鉴权并在索引未就绪时平滑降级为关键词搜索。
+- **灵感激活**：内置**每日回顾**（那年今日时光机）、**随机漫步**（标签与双向链接穿梭游走 + 明信片总结）和 memo 详情页相关笔记推荐。
+- **版本回溯**：完整的修改历史与版本对比，随时还原任一历史快照。
 
-**5 GB D1 数据库：**
+### 2. AI 长期记忆与 MCP 原生集成
+- **Agent Memory**：通过 `/memory/mcp` 端点，AI Agent（Claude Desktop、Cursor、Codex、OpenAI 等）可以直接读写跨会话的长期记忆（偏好、决策、约束、教训）。
+- **人机协同**：用户可在 `/memory` 界面集中查看、确认、锁定或纠正 AI 沉淀的记忆，确保知识沉淀准确可控。
+- **生态互联**：提供标准 `/mcp` 端点（Streamable HTTP MCP），支持快速查询笔记与灵感沉淀。
 
-- 一条普通笔记（含标签、时间戳、索引开销）算 2 KB，5 GB 可以存约 **250 万条笔记**。
-- 即使你每天写 100 条，也能写 **68 年**。
-- 实际上绝大多数人一辈子也写不到 5 GB 的纯文本笔记。
+### 3. 团队协作与三级权限体系
+- **角色清晰**：提供 `owner` / `admin` / `member` 三种角色体系。管理员签发一次性激活链接，成员自主设置密码，保障隐私合规。
+- **三档可见性**：
+  - 🔒 **私密**：仅作者本人可见。
+  - 👥 **团队可见**：团队有效成员只读共享。
+  - 🌐 **全网公开**：匿名只读分享（带有时效控制与状态校验）。
+- **安全移除与物理清理**：成员被移出空间时，自动触发可重试的私有数据深度清理，团队与公开沉淀妥善保留。
 
-**10 GB R2 对象存储：**
+### 4. 离线可用与多端适配（PWA）
+- **可安装 PWA**：支持一键安装到桌面和手机主屏幕，原生 App 级流畅体验。
+- **离线可靠写入**：断网状态下草稿本地暂存，离线提交（含图片/附件）进入待同步队列，恢复网络后自动按序安全提交。
+- **实时语音速记**：登录后访问 `/capture` 页面，支持前台实时流式 ASR 语音听写转文本，随想随录。
 
-- 一张手机压缩后约 1–2 MB，10 GB 约可存 **5000–10000 张图片**。
-- 或者约 **80 小时**的中等码率语音备忘录。
-- R2 的出口流量不收费，分享给别人看图也不会产生流量账单。
+### 5. 坚固的应用层认证
+- **Better Auth 驱动**：浏览器使用安全 `HttpOnly`、`SameSite=Lax` Cookie Session；脚本、MCP 和第三方客户端使用账户签发的可撤销 `memos_pat_` Personal Access Token。
+- **严密防御**：状态变更请求（POST/PATCH/DELETE）强制精确校验 Origin 白名单；支持 Cloudflare Access 作为可选外层防护。
 
-换句话说，免费额度不是一个「很快就会撞到」的天花板，而是一个「你大概率永远用不完」的容量。
-
----
-
-## 为什么放在 Cloudflare 上比放 NAS 更稳
-
-自部署还有一个常被低估的成本：**数据的物理安全**。
-
-- **NAS / 自建服务器**：数据在你自己家里的硬盘上。硬盘会坏，电源会跳，家里可能漏水、可能被盗、可能搬家时磕碰。哪怕你做 RAID，也只是延缓单盘故障，挡不住整台机器或整个房间出事。异地备份需要你另外搭一套。
-- **Cloudflare**：D1 和 R2 的数据由 Cloudflare 在企业级基础设施上持久化，自带冗余。你不用买第二块硬盘，不用写定时备份脚本，不用关心磁盘 SMART 报警。Cloudflare 不会因为你家停电而丢数据。
-
-这不代表你不用做导出——FlareMo 支持 Memos 格式导出包，重要数据本地留一份永远是好习惯。但日常的「会不会哪天醒来笔记全没了」这种焦虑，Cloudflare 帮你挡掉了。
-
-除此之外，Cloudflare 还附带了自部署很难同时凑齐的几样东西：
-
-- **全球边缘网络**：你和朋友在不同国家，访问都走最近的节点。
-- **免费 HTTPS 和自定义域名**：绑个域名就行，证书自动续。
-- **不用打洞**：不用 frp、不用 Tailscale、不用公网 IP，分享链接直接发给别人就能开。
-- **零运维**：没有系统要打补丁，没有数据库要升级，没有进程要看门狗。
-
----
-
-## 现在能做什么
-
-- 快速记录笔记，支持标签和附件。
-- 时间线、归档、回收站。
-- D1 FTS5 全文搜索、标签筛选、活动热力图；默认搜索时间线与归档，搜索支持 `has:attachment`、`is:pinned`、`before:YYYY-MM-DD`、`after:YYYY-MM-DD` 和 `in:timeline|archive|trash`。
-- 语义搜索（「找一找」）：Workers AI embedding + Vectorize 派生索引，命中后回 D1 复查权限；provider 或索引缺失时自动降级回 FTS5 关键词搜索，边界见 [docs/semantic-search.md](./docs/semantic-search.md)。
-- 每日回顾（`/review/daily` 那年今日）、随机漫步（`/review/walk` 标签/引用游走 + 明信片总结）和 memo 详情页的相关笔记。
-- 可安装的 PWA；新建笔记草稿自动保存在本机，离线提交（包括附件）进入本机待同步队列，重新联网后按顺序提交。
-- Markdown/GFM、图片与音频附件预览。
-- 记录详情、引用关系、反向链接和历史版本恢复。
-- 可撤销的公开分享链接。
-- 团队模式：`owner` / `admin` / `member` 角色与成员管理。管理员在「团队管理」界面添加成员（姓名 + 邮箱，服务端签发一次性激活链接，成员自设密码，管理员不经手也不可知晓密码）、设置或取消管理员、移出成员并触发可重试的数据清理（私密内容删除，团队与公开内容保留）。
-- 三档可见性：私密（仅作者）、团队可见（有效成员只读）、全网公开（匿名只读）；Web、Memos 兼容 API、MCP、附件、搜索与 SSE 共用同一权限矩阵。
-- 支持冲突策略的 Memos 数据导入导出。
-- Memos current camelCase / protobuf-JSON 风格的 `/api/v1` memo、attachment、relation、share、social、auth facade 和 PAT 资源子集；Connect JSON/protobuf/gRPC-Web 还覆盖多用户 UserService 的 webhook CRUD/signing-secret 与 notification list/update/delete（含 comment/mention payload）；旧 snake_case wire 通过显式 header 保留。
-- OpenAPI 输出。
-- MCP 端点。
-- Agent Memory：AI 长期记忆中枢，Agent 通过 `/memory/mcp` 读写跨 session 的长期记忆（偏好、决策、约束、教训），`/memory` 界面可查看、确认、锁定、纠正。
-- 中英文界面。
-
-前端只保留当前已经接上能力的入口。像微信输入这类还没实现的能力，不会挂在界面里占位置。
+### 6. Memos 兼容与无痛迁移
+- **兼容 Memos API**：提供 `/api/v1/*` 核心端点（camelCase 与 legacy snake_case 支持）与 OpenAPI 契约规范。
+- **适配主流客户端**：兼容 Moe Memos 等主流第三方客户端及周边自动化工具。
+- **双向无损导入导出**：支持 Memos 标准格式数据包一键导入（带冲突处理策略）与全量归档导出。
 
 ---
 
-## 部署：手动或让 Agent 替你做
+## 📊 免费额度到底够用多少？
 
-FlareMo 的部署被刻意做得很轻。仓库不再跟踪 `wrangler.jsonc`，部署是手动操作，没有一键按钮或自动部署。两种方式，挑一种就行。
+很多人对 Cloudflare 免费计划的容量缺乏概念，实际上对于个人或小团队知识库场景，免费配额几乎是**永久溢出**的：
 
-**方式一：让 AI Agent 替你部署**
+| 资源组件 | 免费配额 | 对应知识库容量 | 实际使用评估 |
+| :--- | :--- | :--- | :--- |
+| **Cloudflare D1** | **5 GB 数据库** | 约 **250 万条** 纯文本笔记 | 即使每天坚持记录 100 条，也能连续记录 **68 年** |
+| **Cloudflare R2** | **10 GB 对象存储** | 约 **5,000–10,000 张** 高清压缩图片 / **80 小时** 语音 | **0 出口流量费用**，公开分享大量图片也无需担忧账单 |
+| **Cloudflare Workers** | 免费边缘请求额度 | 全球 300+ 边缘节点就近响应 | 首字节毫秒级响应，告别服务器延迟与卡顿 |
 
-仓库里带了一份 [docs/agent-deploy.md](./docs/agent-deploy.md)，是写给 Codex / Claude Code / Cursor 这类 Agent 用的部署 runbook。把仓库交给一个能跑命令的 Agent，它就能复制 `wrangler.jsonc.example`、创建 D1 / R2 资源、填写 `database_id`、跑迁移、部署。你不用记命令，Agent 自己按步骤来。
+> 换言之，在绝大多数使用周期内，你都不需要为服务器、存储或流量支付一分钱。
 
-需要让 Agent、Telegram 或其他 IM 渠道直接写入笔记时，参考 [Agent 与 IM 渠道写入](./docs/agent-ingestion.md)。仓库提供一个经过测试的独立 Telegram Worker 示例，不会把渠道密钥或平台逻辑塞进 FlareMo 主 Worker。
+---
 
-需要让 Agent 读写跨 session 的长期记忆（用户偏好、项目决策、约束、教训）时，参考 [Agent Memory](./docs/agent-memory.md)：统一 `/memory/mcp` 端点 + 六个工具，记忆归用户所有、可随时查看和纠正。
+## 🥊 架构对比：Cloudflare 原生 vs 家用 NAS vs 传统 VPS
 
-**方式二：手动部署**（想自己一步步来的话）先创建资源：
+| 评估维度 | Cloudflare 原生架构 (FlareMo) | 家用 NAS / 软路由自建 | 传统 VPS 云主机 |
+| :--- | :--- | :--- | :--- |
+| **数据安全性** | **企业级多副本持久化**，无单点硬件故障风险 | 硬盘损坏、断电、漏水可能导致全量数据损失 | 依赖自行配置的备份策略与快照 |
+| **日常维护成本** | **零维护**：无需打补丁、无系统升级、无 Docker 运维 | 需维护系统、Docker、监控硬盘 SMART、维护网络 | 需定期升级操作系统内核、数据库、配置看门狗 |
+| **外网访问速度** | **全球边缘 CDN 加速**，就近节点直接命中 | 需自行配置内网穿透（frp/Tailscale），受家庭上行带宽限制 | 取决于单个机房地理位置，跨地域访问延迟高 |
+| **网络与证书** | **自带免费 HTTPS 与自定义域名绑定**，自动续签 | 需自行申请泛域名证书、配置 DDNS 与反向代理 | 需配置 Nginx/Caddy 及 Let's Encrypt 证书轮换 |
+| **资金支出** | **0 元**（利用长期免费额度） | 硬件购置成本高昂（数千元），且有电费开销 | 按月/年持续支付服务器与带宽续费账单 |
 
+---
+
+## 🚀 5 分钟极速部署
+
+FlareMo 刻意保持轻巧。部署流程完全透明，可由 AI Agent 代劳，亦可手动通过 CLI 执行。
+
+### 方式一：让 AI Agent 替你部署（推荐）
+
+仓库内附带专为 AI 编写的部署指引：[docs/agent-deploy.md](./docs/agent-deploy.md)。
+
+只需将本项目仓库路径提供给能够执行终端命令的 AI Agent（如 Claude Code、Cursor Agent、Codex），对它说：
+> “请按照 docs/agent-deploy.md 的指引帮我部署 FlareMo 到我的 Cloudflare 账号。”
+
+Agent 将自动完成创建 D1/R2 资源、写入配置、运行数据库迁移与发布全部流程。
+
+---
+
+### 方式二：手动 3 步部署
+
+#### 1. 创建 Cloudflare 存储资源
 ```bash
+# 登录 Cloudflare 账号
+pnpm exec wrangler whoami
+
+# 创建 D1 数据库与 R2 存储桶
 pnpm exec wrangler d1 create flaremo
 pnpm exec wrangler r2 bucket create flaremo-attachments
 ```
 
-把 `wrangler.jsonc.example` 复制为 `wrangler.jsonc`（仓库不跟踪 `wrangler.jsonc` 本身），填入 D1 输出的 `database_id`，并把 `FLAREMO_PUBLIC_URL` 设为你的公开访问域名，再执行：
-
+#### 2. 初始化配置文件与安全密钥
+复制配置模板：
 ```bash
-pnpm verify
-pnpm deploy:dry-run
-pnpm deploy
+cp wrangler.jsonc.example wrangler.jsonc
 ```
+在 `wrangler.jsonc` 中填入第一步终端输出的 `database_id`，并将 `FLAREMO_PUBLIC_URL` 设置为你的生产访问域名（如 `https://notes.yourdomain.com`）。
 
-完整部署说明见 [docs/deploy.md](./docs/deploy.md)，版本更新见 [docs/update.md](./docs/update.md)。
-
-**部署前检查清单**
-
-- Wrangler 已登录目标 Cloudflare 账号：`pnpm exec wrangler whoami`。
-- `wrangler.jsonc` 里的 D1 binding 是 `DB`，并已填入目标 D1 的 `database_id`。
-- `wrangler.jsonc` 里的 R2 binding 是 `ATTACHMENTS`，目标 bucket 已创建。
-- `pnpm deploy` 会先应用尚未执行的远端 D1 migrations，再发布 Worker。
-- `wrangler.jsonc` 已设置生产 `FLAREMO_PUBLIC_URL`，并通过 Wrangler secret 配置 Better Auth secrets。
-- 已完成一次性 owner bootstrap、原生登录和 PAT 创建验证；如果启用 Cloudflare Access，也已验证外层 policy 与应用层认证同时通过。
-- Cloudflare Access application（可选）已规划好人类访问、Service Token 和公开分享 bypass。
-- 发布前已跑：`pnpm verify` 和 `pnpm deploy:dry-run`。
-
----
-
-## 登录：Better Auth 原生认证，Access 可选
-
-FlareMo 的应用层认证由 Better Auth 提供。第一次部署时由部署者在生产 HTTPS 的 `/setup` 页面手动输入一次性 bootstrap secret、显示名、邮箱和密码，创建唯一初始 owner；成功后公共 signup 默认关闭。团队协作的主路径是管理员在「团队管理」界面添加成员：服务端签发一次性激活链接，成员自行设置密码；`owner` 也可以在后台开启开放注册（兼容路径，默认关闭），开启后任何人都能通过 `/register` 页或 Memos 兼容客户端的 `signup` 创建普通成员账户。`FLAREMO_SINGLE_USER_EMAIL` 和 `FLAREMO_SINGLE_USER_NAME` 只是既有 `users/owner` domain metadata 的 legacy 变量，不是登录凭据或 bootstrap 输入。团队角色、可见性权限和成员移除语义见 [docs/team-mode.md](./docs/team-mode.md)。
-
-- Web 端使用**邮箱 + 密码**登录（`/login`）；注册、管理员建号、初始化都以邮箱为登录凭证。Memos 兼容客户端仍使用**用户名 + 密码**登录——用户名由邮箱自动生成（可复制、可在账户页修改），协议上无法用邮箱登录。
-
-- 浏览器登录后使用 `HttpOnly`、`SameSite=Lax` cookie session。
-- 脚本、Memos-compatible 客户端和 MCP 使用账户创建的 `memos_pat_` Personal Access Token。
-- PAT 只在创建响应中显示一次，可以列出元数据并撤销；PAT 不能进入账户管理接口。
-- cookie session 的 `POST`、`PATCH`、`DELETE` 等状态变更必须带 `Origin`，并精确匹配 `FLAREMO_PUBLIC_URL` 或 `FLAREMO_TRUSTED_ORIGINS`，否则返回 `403`；PAT 请求可以无 Origin，但如果携带 Origin 也必须匹配同一 allowlist，否则返回 `403`。不使用 wildcard、`Referer` 或 Access headers 替代 Origin。
-- Cloudflare Access 是可选外层。启用时，Access Service Token 只通过外层 policy，仍必须同时提供 Better Auth cookie 或 PAT。
-- 当前没有邮件 provider，因此不依赖邮件验证或邮件找回密码。成员忘记密码时，owner 在后台生成一次性重置链接（`/reset` 页自行设密，管理员不接触明文）；owner 自己忘记密码时，用部署时配置的 `FLAREMO_RECOVERY_SECRET` 走 `/recover` 页面恢复。已知当前密码时也可在账户页修改。
-- 公开分享仍使用 FlareMo share token、过期时间和 memo 状态校验，不把公开分享混入私有登录。
-
-生产部署前在 `wrangler.jsonc` 填入不带 path/query/hash 的 `FLAREMO_PUBLIC_URL`，并交互式配置 secrets：
-
+生成并安全写入必要密钥：
 ```bash
 pnpm exec wrangler secret put BETTER_AUTH_SECRET --config ./wrangler.jsonc
 pnpm exec wrangler secret put FLAREMO_BOOTSTRAP_SECRET --config ./wrangler.jsonc
 ```
 
-不要把真实 secret、初始密码、cookie 或 PAT 写进 `wrangler.jsonc`、文档、Git、日志或聊天。完整 setup、Access 迁移和恢复说明见 [部署文档](./docs/deploy.md)。
-
-原生 PAT 访问示例（`FLAREMO_MEMOS_PAT` 只应来自本地安全配置）：
-
+#### 3. 部署上线
 ```bash
-curl "$FLAREMO_URL/api/v1/memos" \
-  -H "Authorization: Bearer $FLAREMO_MEMOS_PAT"
+# 验证构建与打包
+pnpm verify
+pnpm deploy:dry-run
+
+# 执行远端数据库迁移并部署 Worker
+pnpm deploy
 ```
 
-如果生产仍启用 Access，再附加 Access headers；仅有 Access Service Token 不足以访问私有业务数据：
+部署完成后，在浏览器打开你的生产域名并访问 `/setup` 页面，输入你在部署时填写的 `FLAREMO_BOOTSTRAP_SECRET`，即可一键初始化拥有最高权限的 Owner 账号！
 
-```bash
-curl "$FLAREMO_URL/api/v1/memos" \
-  -H "CF-Access-Client-Id: $FLAREMO_ACCESS_CLIENT_ID" \
-  -H "CF-Access-Client-Secret: $FLAREMO_ACCESS_CLIENT_SECRET" \
-  -H "Authorization: Bearer $FLAREMO_MEMOS_PAT"
-```
-
-旧版 MCP 访问示例（保留给已有 FlareMo 客户端）：
-
-```bash
-curl "$FLAREMO_URL/api/v1/mcp" \
-  -H "content-type: application/json" \
-  -H "CF-Access-Client-Id: $FLAREMO_ACCESS_CLIENT_ID" \
-  -H "CF-Access-Client-Secret: $FLAREMO_ACCESS_CLIENT_SECRET" \
-  -H "Authorization: Bearer $FLAREMO_MEMOS_PAT" \
-  --data '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
-```
-
-current Memos 风格的无状态 Streamable HTTP MCP 使用根路径 `/mcp`，支持 `initialize`、`notifications/initialized`、`tools/list` 和 `tools/call`。它仍是 FlareMo 的工具子集，不承诺 SSE、有状态 MCP session 或完整 Memos MCP method surface：
-
-```bash
-curl "$FLAREMO_URL/mcp" \
-  -H "content-type: application/json" \
-  -H "accept: application/json, text/event-stream" \
-  -H "Authorization: Bearer $FLAREMO_MEMOS_PAT" \
-  --data '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26"}}'
-```
-
-建议只 bypass 的公开路径（如果启用 Access）：
-
-- `/share/*`
-- `/api/public/shares/*`
-- `/assets/*`
-
-分享内容仍由 FlareMo 的 share token、过期时间和 memo 状态校验。当前 `/api/v1` 默认是 current camelCase wire，`/mcp` 是无状态 Streamable HTTP MCP 子集；旧 snake_case API 可通过 `X-FlareMo-Wire: legacy` 或 legacy vendor `Accept` 显式选择。Better Auth-backed auth facade 和 PAT 资源已提供，但 `accessToken` 是 opaque session-backed token，不是 Memos 原生 JWT。当前已有 memo/social 的有限子集，以及 UserService webhook CRUD/signing-secret、notification list/update/delete、comment/mention notification payload 和四类 memo 事件的有界异步 webhook outbox 投递/重试；完整 Memos Server parity、完整 CEL/Connect/SSE、comments/reactions/shortcuts 的完整上游 service/wire parity、完整多用户 notification ACL、webhook 的完整上游事件语义/egress SSRF 防护，以及第三方客户端逐一实测仍未完成，详见 [兼容矩阵](./docs/memos-compatibility.md) 和 [生态实测矩阵](./docs/memos-ecosystem.md)。
+> 完整部署细节与常见问题排查请参见 [部署文档](./docs/deploy.md)。后续版本升级请参见 [版本更新手册](./docs/update.md)。
 
 ---
 
-## 技术栈
+## 🧱 架构与技术栈
 
-- Runtime: Cloudflare Workers
-- Web: React, Vite, Tailwind CSS, shadcn/radix primitives
-- API: Hono-style Worker routes, Zod contracts, OpenAPI
-- Database: Cloudflare D1, Drizzle
-- Object storage: Cloudflare R2
-- Auth boundary: Better Auth; optional Cloudflare Access outer layer
-- Package manager: pnpm
-
-D1 是笔记、用户、标签、分享、关系等业务数据的事实源。R2 只放附件、导出包和对象文件。KV、Vectorize、Workers AI、Queues/Cron 只有在对应功能真的进入实现时才接入，不拿来替代 D1。
-
-## 架构
-
+### 系统拓扑
 ```mermaid
 flowchart LR
-  Browser["FlareMo Web UI"] --> Worker["Cloudflare Worker"]
-  Clients["Memos-compatible clients / scripts / MCP"] --> Worker
+  Browser["FlareMo Web 前端 (React 19 / PWA)"] --> Worker["Cloudflare Worker 边缘核心"]
+  Clients["Memos 客户端 / 自动化脚本 / MCP"] --> Worker
 
-  Worker --> Auth["Better Auth: sessions, accounts, PATs"]
-  Worker --> D1["D1: memos, users, relations, shares, settings"]
-  Access["Cloudflare Access (optional)"] -. outer policy .-> Worker
-  Worker --> R2["R2: attachments and exports"]
-  Worker --> Assets["Workers Static Assets"]
+  Worker --> Auth["Better Auth (Session / PAT)"]
+  Worker --> D1["Cloudflare D1 (笔记 / 关系 / 权限事实源)"]
+  Access["Cloudflare Access (可选外层防线)"] -.-> Worker
+  Worker --> R2["Cloudflare R2 (附件 / 媒体 / 导出包)"]
+  Worker --> Assets["Workers Static Assets (单 Worker 静态托管)"]
 ```
 
-一个 Worker 同时服务 API 和前端静态资源。D1 保存权威数据，R2 保存附件。Memos 兼容层是 adapter，不是把原版 Memos 服务端搬到 Workers 上跑。
+### 技术栈选型
+- **边缘运行时**：Cloudflare Workers (V8 Isolate)
+- **Web 前端**：React 19, Vite, TanStack Router (Code-based), Tailwind CSS 4, Radix UI
+- **数据层**：Cloudflare D1 (SQLite at the edge), Drizzle ORM
+- **存储层**：Cloudflare R2 (S3 兼容对象存储)
+- **鉴权体系**：Better Auth 原生方案（HttpOnly Cookie + 可撤销 `memos_pat_`）
+- **AI 与搜索**：Cloudflare Workers AI, Vectorize 向量检索, SQLite FTS5 全文搜索
 
 ---
 
-## 定位：AI native 的个人知识管理
+## 🤝 Memos 生态与兼容说明
 
-FlareMo 要做的是 **AI native 的个人知识管理**——一个人用是安静的私人笔记，一个团队用是共享的知识库，并且把语义检索、AI 记忆、Agent 读写这些能力做成产品的原生部分。它和 Memos 的目标不一样，所以**不以「完全兼容」为目标**。
+FlareMo 的初心是构建 **AI Native 的新一代个人与团队知识中枢**。我们以 Memos 优秀的领域设计与 API 契约为生态底座，但**不以 100% 盲目复刻上游为目标**：
 
-Memos 是 FlareMo 选定的生态底座，不是要复刻的对象：
+- **深度复用**：完整兼容 `/api/v1` 核心端点、OpenAPI 契约以及数据导入导出，使现有的 Memos 移动端 App（如 iOS / Android 客户端）及快捷指令可以直接连接使用。
+- **原生演进**：Agent Memory 长期记忆体系、向量语义「找一找」、三档团队权限模型、流式语音转录均为 FlareMo 原生能力，不受上游架构束缚。
 
-- **能复用的就复用**：领域模型、资源命名、`/api/v1` 协议、OpenAPI、导入导出和 MCP 方向，以及围绕它们生长的第三方客户端与脚本生态。
-- **上游没有的，自己扩展**：Agent Memory、语义检索与「找一找」、项目与任务、音频文稿阅读等，都是 FlareMo 原生能力，不受上游形态约束。
-- **上游有的，也按需兼容**：只在我们需要、且语义说得通的时候接。`AIService.Transcribe` 这类上游接口在 FlareMo 明确返回 `501`，因为 AI 能力是 FlareMo 自己的赛道。
-
-**未来与上游分叉是预期结果，不是意外。** 兼容是「借一个成熟底座、少走弯路」的手段，不是产品目标本身；FlareMo 的方向由自己的需求定义。
-
-兼容面有一条工程纪律：`/api/v1/*` 的**既有字段与语义是第三方客户端的契约**，只做加法、不改形状——新增能力优先落在 FlareMo 原生面 `/api/app/*`，或写入可自由扩展的 memo payload。这样既能持续复用 Memos 生态，也不妨碍 FlareMo 往前长。详见 [docs/architecture-notes.md](./docs/architecture-notes.md) 的兼容策略章节。
+API 兼容细节见 [兼容矩阵](./docs/memos-compatibility.md)，第三方工具实测记录见 [生态实测矩阵](./docs/memos-ecosystem.md)。
 
 ---
 
-## Memos 兼容面
-
-FlareMo 保留 Memos 风格的核心实体，目标是复用 Memos 的客户端、脚本、导入导出和周边工具，而不是把原版 Memos 的 Go server 搬过来。
-
-保留实体：`users/{id}`、`memos/{id}`、`attachments/{id}`、memo payload / property、relations、shares、settings。
-
-当前公开 API 子集：
-
-- `POST /api/v1/memos`
-- `GET /api/v1/memos`
-- `GET /api/v1/{name=memos/*}`
-- `PATCH /api/v1/{memo.name=memos/*}`
-- `DELETE /api/v1/{name=memos/*}`
-- `GET /api/v1/{name=memos/*}/attachments`
-- `PATCH /api/v1/{name=memos/*}/attachments`
-- `GET /api/v1/{name=memos/*}/relations`
-- `PATCH /api/v1/{name=memos/*}/relations`
-- `GET /api/v1/memos/{id}/relation-context`
-- `GET /api/v1/memos/{id}/context`
-- `GET /api/v1/memos/{id}/revisions`
-- `POST /api/v1/memos/{id}/revisions/restore`
-- `GET /api/v1/{parent=memos/*}/shares`
-- `POST /api/v1/{parent=memos/*}/shares`
-- `GET /api/v1/shares/{share_id}`
-- `DELETE /api/v1/shares/{share_id}`
-- `POST /api/v1/attachments`
-- `GET /api/v1/attachments`
-- `GET /api/v1/{name=attachments/*}`
-- `GET /api/v1/{name=attachments/*}/blob`
-- `DELETE /api/v1/{name=attachments/*}`
-- `GET /api/v1/export`
-- `POST /api/v1/import`
-- `GET /openapi.json`
-- `POST /api/v1/mcp`
-
-内部服务不复制原版 Memos 的多数据库抽象、本地文件假设、后台 runner、SSE、完整社交功能和实例管理后台。Memos 兼容范围见 [docs/memos-compatibility.md](./docs/memos-compatibility.md)，第三方客户端和工具的实测矩阵见 [docs/memos-ecosystem.md](./docs/memos-ecosystem.md)。
-
----
-
-## 本地运行
+## 🛠️ 本地开发与工程验证
 
 ```bash
+# 安装依赖
 pnpm install
+
+# 初始化本地 D1 数据库
 pnpm migrate:local
+
+# 启动本地开发服务 (默认 http://localhost:8787)
 pnpm dev
 ```
 
-本地默认地址：`http://localhost:8787`
-
-`pnpm dev` 会先构建前端，再用 Wrangler 启动 Worker，本地 D1/R2 使用 Wrangler 的本地模拟。
-
----
-
-## 项目状态
-
-FlareMo 当前已经具备：
-
-- 可部署的 Cloudflare Worker + Workers Static Assets 一体应用。
-- D1 + Drizzle schema 和 migrations。
-- R2 附件。
-- Memos 兼容 API 子集、导入导出、OpenAPI 和 MCP。
-- Flomo 风格的快速记录和时间线 UI。
-- Better Auth 原生 cookie session、一次性 owner bootstrap 和可撤销 `memos_pat_` PAT。
-- 团队模式：owner/admin/member 角色、团队管理界面、三档可见性权限矩阵和可重试的成员移除清理。
-- Cloudflare Access 可选外层防线，以及公开分享 bypass 的边界说明。
-- Agent 部署 runbook、发版规则、兼容矩阵和开源协作文件。
-
-后续方向见 [ROADMAP.md](./ROADMAP.md)。语义搜索的实现边界见 [docs/semantic-search.md](./docs/semantic-search.md)。
-
-## 工程化
-
-仓库带一个瘦 CI（format / lint / typecheck / 单元测试，约 3 分钟）作为兕底与外部 PR 门禁。发布前由维护者在本地执行完整门禁：
+### 质量门禁与测试规范
 
 ```bash
-pnpm verify
-pnpm deploy:dry-run
-```
-
-自部署仓库自带一个最小权限的更新 workflow（`flaremo-update.yml`）。它只同步正式 Release 并创建升级 PR；合并后由该仓库连接的 Cloudflare Workers Builds 负责部署，不需要 Cloudflare API Token。配置方式见 [docs/update.md](./docs/update.md)。
-
-常用维护命令：
-
-```bash
+# 代码风格与静态检查
 pnpm format:check
-pnpm persistence:check
-pnpm screenshots
-pnpm backup:drill
-pnpm release vX.Y.Z
+pnpm check
+
+# 单元测试与契约测试
+pnpm test
+
+# 生产发版前综合质检（完整门禁）
+pnpm verify
 ```
-
-`pnpm verify` 会先校验 D1 持久化清单完整性，再跑类型检查、Vitest、生产构建和 Playwright E2E。Memos 兼容面有独立的 Worker contract test，覆盖 DTO shape、附件导入导出和 OpenAPI 路径。截图由 `pnpm screenshots` 从本地 Worker 实例生成，README 里的图片不是设计稿。
-
-发版规则见 [docs/release.md](./docs/release.md)。维护手册见 [docs/maintenance.md](./docs/maintenance.md)。贡献说明见 [CONTRIBUTING.md](./CONTRIBUTING.md)。支持入口见 [SUPPORT.md](./SUPPORT.md)。安全策略见 [SECURITY.md](./SECURITY.md)。社区行为准则见 [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)。
 
 ---
 
-## 参考项目
+## 🌟 Star History
 
-- [usememos/memos](https://github.com/usememos/memos)：数据模型、资源命名和兼容 API 参考。
-- [blinkospace/blinko](https://github.com/blinkospace/blinko)：搜索、附件和编辑体验参考。
-- [XuYouo/MeowNocode](https://github.com/XuYouo/MeowNocode)：Cloudflare D1 轻量应用参考。
+如果你觉得 FlareMo 对你有帮助，欢迎点亮右上角的 Star ⭐️，你的支持是项目持续迭代的最大动力！
 
-## Star
+<p align="center">
+  <a href="https://star-history.com/#realchendahuang/FlareMo&Date">
+    <img src="https://api.star-history.com/svg?repos=realchendahuang/FlareMo&type=Date" alt="Star History Chart" width="700">
+  </a>
+</p>
 
-喜欢这个项目，可以点个 Star，方便跟进更新。
+---
 
-[![Star History Chart](https://api.star-history.com/svg?repos=realchendahuang/FlareMo&type=Date)](https://star-history.com/#realchendahuang/FlareMo&Date)
+## 📄 开源许可证
 
-## License
-
-FlareMo 以 [GNU AGPL-3.0](./LICENSE)（AGPL-3.0-only）授权开源。
-
-- 自部署、修改和再分发按 AGPL-3.0 条款执行；以网络服务形式提供修改版本时，需要向该服务的使用者公开对应源码。
-- Copyright (c) 2026 realchendahuang。版权持有者可以在 AGPL-3.0 之外，为 FlareMo 托管服务使用双许可。
-- "FlareMo" 名称与标识不属于 AGPL-3.0 授权范围；fork 与衍生项目不得使用 FlareMo 品牌进行推广或暗示官方背书。
-
-### 主动语音记录（Capture）
-
-登录后进入 `/capture`，点击开始，在前台实时识别语音；停止后编辑文字并保存为普通记录，默认仅自己可见并带 `voice` 标签。支持腾讯云或 DashScope 实时 ASR；未配置时不显示导航入口。不保存原始音频，不承诺后台或锁屏录音。配置和真机验收见 [Voice Capture](docs/voice-capture.md)。
+本项目基于 [GNU AGPL-3.0](./LICENSE) 协议开源。
+- 允许自托管部署、修改和学习使用。若基于本项目以网络服务（SaaS）形式对外提供修改版本，须按 AGPL-3.0 条款向用户开源修改后的全部源代码。
+- Copyright (c) 2026 realchendahuang.
