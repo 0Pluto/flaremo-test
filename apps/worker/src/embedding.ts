@@ -138,7 +138,6 @@ class HttpEmbeddingProvider implements EmbeddingProvider {
 
 class CloudflareVectorIndex implements VectorIndex {
   constructor(private readonly index: VectorizeIndex) {}
-
   async query(vector: number[], topK: number, namespace?: string) {
     const result = await this.index.query(vector, {
       topK,
@@ -169,18 +168,28 @@ class CloudflareVectorIndex implements VectorIndex {
 
   async getByIds(ids: string[]): Promise<VectorIndexVector[]> {
     if (ids.length === 0) return [];
-    const found = await this.index.getByIds(ids);
-    return found.map((vector) => ({
-      id: vector.id,
-      values: Array.from(vector.values ?? []),
-      metadata: (vector.metadata ?? {}) as Record<string, unknown>,
-      ...(vector.namespace ? { namespace: vector.namespace } : {}),
-    }));
+    const found: VectorIndexVector[] = [];
+    // Vectorize caps id-list operations at 100 ids per call.
+    for (let offset = 0; offset < ids.length; offset += 100) {
+      const batch = await this.index.getByIds(ids.slice(offset, offset + 100));
+      for (const vector of batch) {
+        found.push({
+          id: vector.id,
+          values: Array.from(vector.values ?? []),
+          metadata: (vector.metadata ?? {}) as Record<string, unknown>,
+          ...(vector.namespace ? { namespace: vector.namespace } : {}),
+        });
+      }
+    }
+    return found;
   }
 
   async deleteByIds(ids: string[]) {
     if (ids.length === 0) return;
-    await this.index.deleteByIds(ids);
+    // Vectorize caps id-list operations at 100 ids per call.
+    for (let offset = 0; offset < ids.length; offset += 100) {
+      await this.index.deleteByIds(ids.slice(offset, offset + 100));
+    }
   }
 
   async describe(): Promise<VectorIndexInfo> {

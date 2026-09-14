@@ -37,8 +37,9 @@ export async function cleanupFlaremoArtifacts(
   ];
   for (const target of targets) {
     if (!target.index) continue;
-    for (let offset = 0; offset < target.ids.length; offset += 500) {
-      const ids = target.ids.slice(offset, offset + 500);
+    // Vectorize caps id-list operations at 100 ids per call.
+    for (let offset = 0; offset < target.ids.length; offset += 100) {
+      const ids = target.ids.slice(offset, offset + 100);
       if (ids.length > 0) await target.index.deleteByIds(ids);
     }
   }
