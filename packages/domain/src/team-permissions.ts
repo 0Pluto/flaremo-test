@@ -109,23 +109,33 @@ export function canReadMemo(user: TeamViewer | null, memo: MemoRow): boolean {
 
 /**
  * Edit the memo's content, payload, pinned flag, or visibility. Own memos
- * only; another author's team memo requires the team owner. Administrators
- * govern memos (status transitions) but never rewrite them.
+ * only; another author's memo requires the memo's own team owner. Governance
+ * stays inside the memo's organization — an owner of organization A must
+ * never rewrite or delete organization B's memos, matching the read boundary.
  */
 export function canEditMemo(user: TeamViewer | null, memo: MemoRow): boolean {
   if (!user || user.status !== "active") return false;
   if (memo.userId === user.id) return true;
-  return isTeamOwner(user) && memo.teamId !== null;
+  return (
+    isTeamOwner(user) &&
+    memo.teamId !== null &&
+    memo.teamId === user.teamOrganizationId
+  );
 }
 
 /**
  * Govern the memo's lifecycle: archive, restore, or move to the recycle bin.
- * Own memos only; another author's team memo requires a team administrator.
+ * Own memos only; another author's memo requires an administrator of the
+ * memo's own team.
  */
 export function canGovernMemo(user: TeamViewer | null, memo: MemoRow): boolean {
   if (!user || user.status !== "active") return false;
   if (memo.userId === user.id) return true;
-  return isTeamAdmin(user) && memo.teamId !== null;
+  return (
+    isTeamAdmin(user) &&
+    memo.teamId !== null &&
+    memo.teamId === user.teamOrganizationId
+  );
 }
 
 export const canDeleteMemo = canEditMemo;

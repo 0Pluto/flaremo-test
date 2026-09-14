@@ -17,6 +17,7 @@ import {
   NotFoundError,
   ValidationError,
 } from "./errors";
+import { canReadMemo } from "./team-permissions";
 
 const MAX_NOTIFICATION_PAGE_SIZE = 1_000;
 const MAX_WEBHOOK_DISPLAY_NAME_LENGTH = 256;
@@ -493,14 +494,25 @@ async function notificationToDto(
   };
 }
 
+/**
+ * Notification visibility mirrors the memo read boundary: private memos stay
+ * author-only and team memos are readable only inside their organization, so
+ * a mention in someone else's protected memo can never leak a content
+ * snippet across organizations.
+ */
 function canReadNotificationMemo(
   user: UserRow,
-  memo: { userId: string; visibility: string },
+  memo: {
+    userId: string;
+    visibility: string;
+    teamId: string | null;
+    status: string;
+  },
 ) {
-  if (memo.visibility === "private") return memo.userId === user.id;
-  // Protected and public memos are readable by an authenticated notification
-  // owner. The broader multi-user memo ACL remains a separate tranche.
-  return memo.visibility === "protected" || memo.visibility === "public";
+  return canReadMemo(
+    user,
+    memo as unknown as Parameters<typeof canReadMemo>[1],
+  );
 }
 
 function notificationSnippet(content: string) {

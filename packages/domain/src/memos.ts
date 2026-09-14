@@ -28,6 +28,7 @@ import {
   assertCanDeleteMemo,
   assertCanEditMemo,
   assertCanGovernMemo,
+  canReadMemo,
   isActiveTeamMember,
   memoReadScope,
   type TeamViewer,
@@ -76,7 +77,8 @@ export function parseMemoFilterScanLimit(
   return parsed;
 }
 
-function assertMemoContentSize(content: string) {
+/** Shared by every memo write path (create, update, comments, import). */
+export function assertMemoContentSize(content: string) {
   if (content.length > MAX_MEMO_CONTENT_LENGTH) {
     throw new ValidationError(
       `Memo content exceeds the ${MAX_MEMO_CONTENT_LENGTH} character limit`,
@@ -150,6 +152,7 @@ export async function createMemo(
     type: "memo.created",
     name: row.id,
     visibility: row.visibility,
+    teamId: row.teamId,
     creatorId: user.id,
     createdAt: now,
   });
@@ -167,6 +170,7 @@ export async function createMemo(
     senderId: user.id,
     content: row.content,
     previousContent: "",
+    teamId: row.teamId,
     visibility: row.visibility,
     previousVisibility: "private",
     createdAt: now,
@@ -707,6 +711,7 @@ export async function updateMemo(
           content: nextContent,
           previousContent:
             existing.visibility === "private" ? "" : existing.content,
+          teamId: nextTeamId,
           visibility: nextVisibility,
           previousVisibility: existing.visibility,
           createdAt: now,
@@ -730,6 +735,7 @@ export async function updateMemo(
     type: status === "deleted" ? "memo.deleted" : "memo.updated",
     name: existing.id,
     visibility: input.visibility ?? existing.visibility,
+    teamId: nextTeamId,
     creatorId: existing.userId,
     createdAt: now,
   });
@@ -864,6 +870,7 @@ export async function hardDeleteMemo(
     type: "memo.deleted",
     name: existing.id,
     visibility: existing.visibility,
+    teamId: existing.teamId,
     creatorId: existing.userId,
     createdAt: now,
   });
@@ -906,6 +913,7 @@ type MemoMentionNotificationInput = {
   senderId: string;
   content: string;
   previousContent: string;
+  teamId: string | null;
   visibility: MemoRow["visibility"];
   previousVisibility: MemoRow["visibility"];
   createdAt: string;
@@ -924,8 +932,18 @@ async function buildMemoMentionNotifications(
   const mentionedUsers = await findMentionedUsers(db, input.content, [
     input.senderId,
   ]);
+  // A mention never outruns read access: only mentioned users who may read
+  // the memo receive a notification (and its content snippet).
+  const memoView = {
+    id: input.memoId,
+    userId: input.senderId,
+    teamId: input.teamId,
+    visibility: input.visibility,
+    status: "normal" as const,
+  };
   return mentionedUsers
     .filter((user) => !previousUserIds.has(user.id))
+    .filter((user) => canReadMemo(user, memoView as MemoRow))
     .map((user) =>
       insertMemoNotification(db, {
         receiverId: user.id,

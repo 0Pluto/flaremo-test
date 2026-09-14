@@ -110,4 +110,17 @@ describe("team memo permissions", () => {
     expect(canReadMemo(member, trashed)).toBe(false);
     expect(canReadMemo(admin, trashed)).toBe(true);
   });
+
+  it("never lets another organization's owner/admin edit, govern, or delete its public memos", () => {
+    const foreignMemo = memo("protected", { teamId: "orgs/other" });
+    const foreignPublic = memo("public", { teamId: "orgs/other" });
+    for (const actor of [owner, admin, member]) {
+      // Read stays world-readable for public rows, but every write power is
+      // confined to the memo's own organization.
+      expect(canEditMemo(actor, foreignMemo)).toBe(false);
+      expect(canGovernMemo(actor, foreignMemo)).toBe(false);
+      expect(canEditMemo(actor, foreignPublic)).toBe(false);
+      expect(canGovernMemo(actor, foreignPublic)).toBe(false);
+    }
+  });
 });

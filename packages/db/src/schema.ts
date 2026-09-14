@@ -353,6 +353,9 @@ export const memosSseEvents = sqliteTable(
     visibility: text("visibility", {
       enum: ["private", "protected", "public"],
     }).notNull(),
+    // Owning organization for protected events: delivery is restricted to
+    // members of this team so event metadata cannot leak across orgs.
+    teamId: text("team_id"),
     creatorId: text("creator_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),

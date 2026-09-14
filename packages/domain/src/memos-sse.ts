@@ -5,7 +5,7 @@ import {
   type UserRow,
 } from "@flaremo/db";
 import { and, asc, gt, sql } from "drizzle-orm";
-import { isActiveTeamMember } from "./team-permissions";
+import { isActiveTeamMember, type TeamViewer } from "./team-permissions";
 
 export const MEMOS_SSE_EVENT_TYPES = [
   "memo.created",
@@ -23,6 +23,8 @@ export type NewMemosSseEvent = {
   name: string;
   parent?: string;
   visibility: "private" | "protected" | "public";
+  /** Owning organization; required so protected events stay org-scoped. */
+  teamId?: string | null;
   creatorId: string;
   createdAt: string;
 };
@@ -38,6 +40,7 @@ export function insertMemosSseEvent(db: FlareMoDb, event: NewMemosSseEvent) {
     name: event.name,
     parent: event.parent ?? null,
     visibility: event.visibility,
+    teamId: event.teamId ?? null,
     creatorId: event.creatorId,
     createdAt: event.createdAt,
   });
@@ -74,11 +77,20 @@ export async function listMemosSseEvents(
     .limit(safeLimit);
 }
 
+/**
+ * Delivery mirrors the memo read boundary: private events go only to their
+ * creator, protected events only to members of the event's organization, and
+ * public events to any active member. A protected event without a team id is
+ * undeliverable (fail-closed for legacy rows written before the column).
+ */
 export function canReceiveMemosSseEvent(
   event: MemosSseEventRow,
-  user: UserRow,
+  user: TeamViewer,
 ) {
   if (!isActiveTeamMember(user)) return false;
-  if (event.visibility !== "private") return true;
-  return event.creatorId === user.id;
+  if (event.visibility === "private") return event.creatorId === user.id;
+  if (event.visibility === "protected") {
+    return Boolean(event.teamId && event.teamId === user.teamOrganizationId);
+  }
+  return true;
 }

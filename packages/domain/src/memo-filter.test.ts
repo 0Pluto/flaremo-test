@@ -126,6 +126,34 @@ describe("Memos CEL filter", () => {
     );
   });
 
+  it("rejects super-linear regex shapes that enable catastrophic backtracking", () => {
+    // Quantifier over a group containing alternation.
+    expect(() => compileMemoFilter('content.matches("(a|aa)+$")')).toThrow(
+      "Invalid Memos CEL filter",
+    );
+    // Quantifier over a group containing a quantifier (classic nested form).
+    expect(() => compileMemoFilter('content.matches("(a+)+$")')).toThrow(
+      "Invalid Memos CEL filter",
+    );
+    expect(() => compileMemoFilter('content.matches("(?:x+y)+$")')).toThrow(
+      "Invalid Memos CEL filter",
+    );
+    // Quantifier over a group with an inner bounded quantifier still counts.
+    expect(() => compileMemoFilter('content.matches("(a?b)+$")')).toThrow(
+      "Invalid Memos CEL filter",
+    );
+    // Linear shapes keep working.
+    expect(compileMemoFilter('content.matches("(abc)+")')?.(memo, user)).toBe(
+      false,
+    );
+    expect(compileMemoFilter('content.matches("a*b+c?")')?.(memo, user)).toBe(
+      false,
+    );
+    expect(
+      compileMemoFilter('content.matches("[ab]+road")')?.(memo, user),
+    ).toBe(false);
+  });
+
   it("supports the upstream set helpers and non-vacuous tags.all", () => {
     expect(
       compileMemoFilter(

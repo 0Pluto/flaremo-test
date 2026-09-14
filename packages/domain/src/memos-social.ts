@@ -23,6 +23,7 @@ import {
 import { createResourceId, parseResourceName } from "./ids";
 import { compileMemoFilter } from "./memo-filter";
 import {
+  assertMemoContentSize,
   getMemoById,
   getMemoByIdForViewer,
   normalizeMemoClientId,
@@ -31,8 +32,9 @@ import {
 import { insertMemosSseEvent } from "./memos-sse";
 import { findMentionedUsers, insertMemoNotification } from "./memos-user";
 import { insertMemosWebhookEvent } from "./memos-webhooks";
+import { assertMemoCountQuota } from "./quotas";
 import { extractTags, normalizeMemoTags } from "./tags";
-import { memoReadScope } from "./team-permissions";
+import { isActiveTeamMember, memoReadScope } from "./team-permissions";
 
 export type CreateMemoCommentInput = {
   parentMemoName?: string;
@@ -151,7 +153,13 @@ export async function createMemoComment(
   if (typeof content !== "string" || !content.trim()) {
     throw new ValidationError("Comment content is required");
   }
-
+  // Comments are memos: they pass the same three gates as createMemo —
+  // active membership, content ceiling, and the per-user memo count quota.
+  if (!isActiveTeamMember(user)) {
+    throw new ForbiddenError("Removed members cannot create memos.");
+  }
+  assertMemoContentSize(content);
+  await assertMemoCountQuota(db, undefined, user.id);
   const payload = normalizeMemoPayload(
     effectiveInput.comment?.payload ?? effectiveInput.payload,
   );
@@ -216,6 +224,7 @@ export async function createMemoComment(
     // refresh the comment collection attached to that resource.
     name: parentId,
     visibility: parent.visibility,
+    teamId: parent.teamId,
     creatorId: parent.userId,
     createdAt: now,
   });
@@ -366,15 +375,10 @@ export async function listMemoComments(
   const baseFilters = [
     eq(memoRelations.relatedMemoId, parentId),
     eq(memoRelations.type, "comment"),
-    ...(user
-      ? [
-          or(
-            eq(memos.userId, user.id),
-            eq(memos.visibility, "public"),
-            eq(memos.visibility, "protected"),
-          ),
-        ]
-      : [eq(memos.visibility, "public")]),
+    // Comment rows inherit the parent memo's visibility; the row filter must
+    // match the memo read boundary exactly (organization-aware), not a looser
+    // visibility-only check.
+    memoReadScope(user),
     ...(user
       ? [inArray(memos.status, ["normal", "archived"])]
       : [eq(memos.status, "normal")]),
@@ -460,38 +464,61 @@ export async function upsertMemoReaction(
     throw new ValidationError("Reaction contentId must match the memo name");
   }
   const memo = await getMemoById(db, user, contentId);
+  if (memo.status !== "normal") {
+    throw new ValidationError("Reactions are only allowed on active memos");
+  }
   const reactionType = effectiveInput.reactionType.trim();
   if (!reactionType || reactionType.length > 128) {
     throw new ValidationError("Reaction type is required");
   }
 
   const now = new Date().toISOString();
-  await db.batch([
-    db
-      .insert(reactions)
-      .values({
-        id: createSocialResourceId("reactions"),
-        creatorId: user.id,
-        contentId,
-        reactionType,
-        createdAt: now,
-      })
-      .onConflictDoUpdate({
-        target: [
-          reactions.creatorId,
-          reactions.contentId,
-          reactions.reactionType,
-        ],
-        set: { reactionType },
-      }),
-    insertMemosSseEvent(db, {
-      type: "reaction.upserted",
-      name: contentId,
-      visibility: memo.visibility,
-      creatorId: memo.userId,
+  // Emit the SSE event only when the upsert actually created or changed a
+  // reaction — a repeat of the same reaction is a no-op and must not flood
+  // subscribers with identical events.
+  const existing = await db
+    .select()
+    .from(reactions)
+    .where(
+      and(
+        eq(reactions.creatorId, user.id),
+        eq(reactions.contentId, contentId),
+        eq(reactions.reactionType, reactionType),
+      ),
+    )
+    .get();
+  const upsertStatement = db
+    .insert(reactions)
+    .values({
+      id: createSocialResourceId("reactions"),
+      creatorId: user.id,
+      contentId,
+      reactionType,
       createdAt: now,
-    }),
-  ]);
+    })
+    .onConflictDoUpdate({
+      target: [
+        reactions.creatorId,
+        reactions.contentId,
+        reactions.reactionType,
+      ],
+      set: { reactionType },
+    });
+  if (existing) {
+    await db.batch([upsertStatement]);
+  } else {
+    await db.batch([
+      upsertStatement,
+      insertMemosSseEvent(db, {
+        type: "reaction.upserted",
+        name: contentId,
+        visibility: memo.visibility,
+        teamId: memo.teamId,
+        creatorId: memo.userId,
+        createdAt: now,
+      }),
+    ]);
+  }
 
   const row = await db
     .select()
@@ -640,9 +667,18 @@ export async function deleteMemoReaction(
   if (parsed.contentId && parsed.contentId !== row.contentId) {
     throw new NotFoundError("Reaction not found");
   }
-  const memo = await getMemoById(db, user, row.contentId, {
-    includeDeleted: true,
+  // The deleter is the reaction's own creator; requiring memo read access
+  // here would strand the reaction row when the author later privatizes or
+  // deletes the memo. The memo row is only needed for the event metadata.
+  const memo = await db.query.memos.findFirst({
+    where: eq(memos.id, row.contentId),
   });
+  if (!memo) {
+    await db
+      .delete(reactions)
+      .where(and(eq(reactions.id, row.id), eq(reactions.creatorId, user.id)));
+    return;
+  }
   await db.batch([
     db
       .delete(reactions)
@@ -651,6 +687,7 @@ export async function deleteMemoReaction(
       type: "reaction.deleted",
       name: row.contentId,
       visibility: memo.visibility,
+      teamId: memo.teamId,
       creatorId: memo.userId,
       createdAt: new Date().toISOString(),
     }),

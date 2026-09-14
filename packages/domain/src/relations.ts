@@ -100,6 +100,7 @@ export async function replaceMemoRelations(
     type: "memo.updated",
     name: memo.id,
     visibility: memo.visibility,
+    teamId: memo.teamId,
     creatorId: memo.userId,
     createdAt: now,
   });
