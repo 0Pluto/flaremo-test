@@ -272,7 +272,7 @@ function BentoFeatures({
   icons: typeof FEATURE_ICONS;
 }) {
   return (
-    <section className="container-x space-y-10">
+    <section id="features" className="container-x space-y-10 scroll-mt-20">
       <div className="max-w-2xl space-y-2">
         <Badge variant="flame">Architecture & Capabilities</Badge>
         <h2 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl md:text-4xl">
@@ -328,7 +328,7 @@ function ComparisonSection({
   const headers = COMP_HEADERS[locale] || COMP_HEADERS.en;
 
   return (
-    <section className="container-x space-y-8">
+    <section id="comparison" className="container-x space-y-8 scroll-mt-20">
       <div className="max-w-2xl space-y-2">
         <Badge variant="flame">Fair Comparison</Badge>
         <h2 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl md:text-4xl">
@@ -621,7 +621,7 @@ function EcosystemSection({ locale }: { locale: SupportedLocale }) {
   const content = ECOSYSTEM_CONTENT[locale] || ECOSYSTEM_CONTENT.en;
 
   return (
-    <section className="container-x space-y-8">
+    <section id="ecosystem" className="container-x space-y-8 scroll-mt-20">
       <div className="max-w-2xl space-y-2">
         <Badge variant="flame">Open Ecosystem</Badge>
         <h2 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl md:text-4xl">
@@ -670,7 +670,7 @@ function FaqSection({
   items: Array<{ q: string; a: string }>;
 }) {
   return (
-    <section className="container-x space-y-8">
+    <section id="faq" className="container-x space-y-8 scroll-mt-20">
       <div className="max-w-2xl space-y-2">
         <Badge variant="secondary">Questions & Answers</Badge>
         <h2 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl md:text-4xl">

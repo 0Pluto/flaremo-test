@@ -16,14 +16,20 @@ import {
   SUPPORTED_LOCALES,
   type SupportedLocale,
 } from "@/lib/seo";
+import { cn } from "@/lib/utils";
 
 type LocaleSwitcherProps = {
   locale: Locale;
   /** Path of the current route (e.g. "/", "/docs", "/docs/deploy"). */
   path: string;
+  className?: string;
 };
 
-export function LocaleSwitcher({ locale, path }: LocaleSwitcherProps) {
+export function LocaleSwitcher({
+  locale,
+  path,
+  className,
+}: LocaleSwitcherProps) {
   const router = useRouter();
   const current = normalizeLocale(locale);
 
@@ -43,7 +49,10 @@ export function LocaleSwitcher({ locale, path }: LocaleSwitcherProps) {
         <button
           type="button"
           aria-label="选择语言 / Select language"
-          className="inline-flex h-8 items-center gap-1.5 rounded-full border border-line/70 bg-surface/90 px-2.5 text-xs font-medium text-ink shadow-2xs transition-colors hover:bg-wash hover:border-line focus:outline-none focus:ring-1 focus:ring-signal/40 cursor-pointer"
+          className={cn(
+            "inline-flex h-8 items-center gap-1.5 rounded-full border border-line/70 bg-surface/90 px-2.5 text-xs font-medium text-ink shadow-2xs transition-colors hover:bg-wash hover:border-line focus:outline-none focus:ring-1 focus:ring-signal/40 cursor-pointer",
+            className,
+          )}
         >
           <Globe className="size-3.5 text-mist shrink-0" />
           <span className="max-w-[80px] truncate">
