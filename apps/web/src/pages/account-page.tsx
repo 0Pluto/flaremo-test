@@ -24,6 +24,7 @@ import { useI18n } from "@/i18n";
 import { errorMessage } from "@/lib/error";
 import { InstallAppCard } from "./account/install-app-card";
 import { ProfilePanel } from "./account/profile-panel";
+import { PushPanel } from "./account/push-panel";
 import { MIN_PASSWORD_LENGTH, SecurityPanel } from "./account/security-panel";
 import { TokensPanel } from "./account/tokens-panel";
 import { TransferPanel } from "./account/transfer-panel";
@@ -357,6 +358,8 @@ export function AccountPage() {
               />
 
               <InstallAppCard />
+
+              <PushPanel />
 
               <SecurityPanel
                 emailProviderDisabled={

@@ -353,6 +353,19 @@ const messages = {
     "auth.saving": "正在保存…",
     "auth.usernameUpdateFailed": "无法更新用户名。",
     "auth.passwordTitle": "修改密码",
+    "push.title": "推送提醒",
+    "push.description":
+      "每日回顾与逾期日程的浏览器推送提醒。需要通知权限，之后即使页面关闭也会收到提醒。",
+    "push.enable": "开启推送",
+    "push.disable": "关闭推送",
+    "push.subscribed": "已开启推送提醒",
+    "push.unsubscribed": "已关闭推送提醒",
+    "push.subscribeFailed": "开启推送失败，请重试。",
+    "push.unsubscribeFailed": "关闭推送失败，请重试。",
+    "push.permissionDenied": "浏览器通知权限被拒绝，请在站点设置中允许通知。",
+    "push.unconfigured": "本实例未配置推送服务。",
+    "push.notConfigured":
+      "本实例未配置推送密钥（需要 FLAREMO_VAPID_PUBLIC_KEY / FLAREMO_VAPID_PRIVATE_KEY）。",
     "auth.noEmailProviderNote":
       "本实例未配置邮件服务：忘记密码与邮件验证功能关闭，密码找回需管理员协助。",
     "auth.currentPassword": "当前密码",
@@ -1070,6 +1083,20 @@ const messages = {
     "auth.saving": "Saving…",
     "auth.usernameUpdateFailed": "Could not update the username.",
     "auth.passwordTitle": "Change password",
+    "push.title": "Push reminders",
+    "push.description":
+      "Browser push for the daily review and overdue-task reminders. Works after the page is closed.",
+    "push.enable": "Enable push",
+    "push.disable": "Disable push",
+    "push.subscribed": "Push reminders enabled",
+    "push.unsubscribed": "Push reminders disabled",
+    "push.subscribeFailed": "Enabling push failed. Please retry.",
+    "push.unsubscribeFailed": "Disabling push failed. Please retry.",
+    "push.permissionDenied":
+      "Notification permission was denied; allow notifications in the site settings.",
+    "push.unconfigured": "This deployment has no push configuration.",
+    "push.notConfigured":
+      "Push keys are not configured (needs FLAREMO_VAPID_PUBLIC_KEY / FLAREMO_VAPID_PRIVATE_KEY).",
     "auth.noEmailProviderNote":
       "This deployment has no email provider: forgot-password and email verification are disabled, and password recovery needs administrator help.",
     "auth.currentPassword": "Current password",

@@ -23,6 +23,7 @@ import {
   createMemo,
   createMemoryFromMemo,
   createMemoryFromMemoInputToWrite,
+  deletePushSubscription,
   deleteTag,
   estimateTokenCount,
   getBranding,
@@ -38,18 +39,22 @@ import {
   listAttachmentsForMemos,
   listDailyReviewMemos,
   listMemos,
+  listPushSubscriptions,
   listRelatedMemos,
   listTagHierarchy,
   listUserNotifications,
   moveMemoToTrash,
   NotFoundError,
+  type PushKeys,
   renameTag,
   reportPlanUsage,
   reportVectorUsage,
+  savePushSubscription,
   semanticSearchMemos,
   type UserNotificationDto,
   updateMemo,
   updateUserNotification,
+  ValidationError,
 } from "@flaremo/domain";
 import {
   memosToListResponse,
@@ -58,6 +63,7 @@ import {
 } from "@flaremo/memos";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
+import { z } from "zod";
 import { getRequestContext, type HonoBindings } from "../context";
 import {
   createEmbeddingProvider,
@@ -71,6 +77,14 @@ import { buildMemoContext } from "../memo-context";
 import { hardDeleteMemoWithAttachments } from "../memo-hard-delete";
 
 export const appApi = new Hono<HonoBindings>();
+
+/** Both VAPID keys must be present for push to be enabled. */
+function resolvePushKeys(env: HonoBindings["Bindings"]): PushKeys | null {
+  const publicKey = env.FLAREMO_VAPID_PUBLIC_KEY?.trim();
+  const privateKey = env.FLAREMO_VAPID_PRIVATE_KEY?.trim();
+  if (!publicKey || !privateKey) return null;
+  return { publicKey, privateKey };
+}
 
 const FLAREMO_RELEASES_URL =
   "https://github.com/realchendahuang/FlareMo/releases";
@@ -253,6 +267,72 @@ appApi.get(
         })),
         degraded: false,
       });
+    } catch (error) {
+      return jsonError(c, error);
+    }
+  },
+);
+
+// Web Push: expose the VAPID public key and manage the caller's subscriptions.
+appApi.get("/push/config", async (c) => {
+  try {
+    const { user } = await getRequestContext(c);
+    const keys = resolvePushKeys(c.env);
+    return c.json({
+      public_key: keys ? keys.publicKey : null,
+      subscriptions: (
+        await listPushSubscriptions((await getRequestContext(c)).db, user.id)
+      ).length,
+    });
+  } catch (error) {
+    return jsonError(c, error);
+  }
+});
+
+appApi.post(
+  "/push/subscribe",
+  zValidator(
+    "json",
+    z.object({
+      endpoint: z.string().url().max(1024),
+      keys: z.object({
+        p256dh: z.string().min(1).max(256),
+        auth: z.string().min(1).max(256),
+      }),
+    }),
+  ),
+  async (c) => {
+    try {
+      const { db, user } = await getRequestContext(c);
+      const keys = resolvePushKeys(c.env);
+      if (!keys)
+        return jsonError(c, new ValidationError("Push not configured"));
+      const body = c.req.valid("json");
+      await savePushSubscription(db, user, {
+        endpoint: body.endpoint,
+        p256dh: body.keys.p256dh,
+        auth: body.keys.auth,
+      });
+      return c.json({ ok: true });
+    } catch (error) {
+      return jsonError(c, error);
+    }
+  },
+);
+
+appApi.post(
+  "/push/unsubscribe",
+  zValidator(
+    "json",
+    z.object({
+      endpoint: z.string().url().max(1024),
+    }),
+  ),
+  async (c) => {
+    try {
+      const { db, user } = await getRequestContext(c);
+      await deletePushSubscription(db, user, c.req.valid("json").endpoint);
+      return c.json({ ok: true });
     } catch (error) {
       return jsonError(c, error);
     }

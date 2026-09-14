@@ -101,6 +101,11 @@
     "FLAREMO_PUBLIC_URL": "",
     // Optional comma-separated additional browser origins for trusted clients.
     "FLAREMO_TRUSTED_ORIGINS": "",
+    // Optional Web Push reminders (daily review, overdue tasks). Generate a
+    // keypair with `npx web-push generate-vapid-keys`; both values go here
+    // (the public key is not secret). Omitting either disables push.
+    "FLAREMO_VAPID_PUBLIC_KEY": "",
+    "FLAREMO_VAPID_PRIVATE_KEY": "",
     // Semantic-search embedding. `workers-ai` uses Cloudflare's own model with
     // no external key; `http` calls an external REST endpoint; `none` disables
     // semantic search and falls back to FTS5 keyword search.

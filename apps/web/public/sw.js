@@ -236,3 +236,48 @@ function hasNoStoreDirective(response) {
     response.headers.get("cache-control") ?? "",
   );
 }
+
+
+// --- Web Push -------------------------------------------------------------
+
+self.addEventListener("push", (event) => {
+  let payload = { title: "FlareMo", body: "", url: "/" };
+  try {
+    if (event.data) {
+      const parsed = event.data.json();
+      payload = {
+        title: typeof parsed.title === "string" ? parsed.title : payload.title,
+        body: typeof parsed.body === "string" ? parsed.body : payload.body,
+        url: typeof parsed.url === "string" ? parsed.url : payload.url,
+      };
+    }
+  } catch {
+    // Keep the default payload for opaque/empty pushes.
+  }
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: `${self.registration.scope}brand`,
+      badge: `${self.registration.scope}brand`,
+      tag: payload.url,
+      data: { url: payload.url },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = event.notification.data?.url ?? "/";
+  event.waitUntil(
+    (async () => {
+      const clients = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
+      for (const client of clients) {
+        if (client.url.endsWith(target)) return client.focus();
+      }
+      return self.clients.openWindow(target);
+    })(),
+  );
+});

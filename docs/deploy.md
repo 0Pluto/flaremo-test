@@ -146,6 +146,19 @@ curl "$FLAREMO_URL/api/auth/flaremo/bootstrap/status"
 
 没有邮件 provider 时，已完成 bootstrap 的单用户实例可以使用单独的 `FLAREMO_RECOVERY_SECRET` 做受限恢复。这个入口只重置现有 owner，不创建用户、不重建 `auth_user_links`，并通过 Better Auth 的 reset-password 流程完成密码校验、哈希、一次性 verification 消费和 session 撤销；现有 `memos_pat_` 也会全部撤销。它是运维破窗能力，不是普通用户的忘记密码功能。
 
+### Web Push 推送提醒（可选）
+
+每日回顾与逾期日程支持浏览器 Web Push。生成 VAPID 密钥对后写入 Worker vars：
+
+```bash
+pnpm exec npx web-push generate-vapid-keys
+# 两个值填入 wrangler.jsonc 的 vars：
+#   FLAREMO_VAPID_PUBLIC_KEY  （公开值，非 secret）
+#   FLAREMO_VAPID_PRIVATE_KEY （仅服务端使用；不放公开仓/客户端）
+```
+
+两个键都配置后，账户页「推送提醒」面板可开启/关闭订阅；每日 cron 在生成每日回顾与逾期提醒通知时同发推送。缺任一键则推送端到端关闭，站内通知不受影响。
+
 安全边界：
 
 - secret 只通过 Wrangler secret 或 Cloudflare 控制台输入，不能进入 URL、请求体、代码、Git、日志或聊天；

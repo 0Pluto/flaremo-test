@@ -2,7 +2,7 @@ import {
   createCurrentOpenApiDocument,
   createOpenApiDocument,
 } from "@flaremo/contracts";
-import { createDb } from "@flaremo/db";
+import { createDb, memosNotifications, tasks } from "@flaremo/db";
 import {
   beginFlaremoMemberRemoval,
   claimMemberRemovalJob,
@@ -22,13 +22,16 @@ import {
   listQueuedMemberRemovalJobs,
   MEMOS_SSE_RETENTION_MS,
   type PlanLimits,
+  type PushKeys,
   parseUserPlanLimits,
   pruneMemosSseEvents,
+  pushNotificationToUser,
   requeueStaleMemberRemovalJobs,
   SELF_HOST_UNLIMITED,
   type UserPlanLimits,
   updateMemberRemovalJob,
 } from "@flaremo/domain";
+import { and, eq, inArray, lt, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { cleanupFlaremoArtifacts } from "./artifact-cleanup";
@@ -423,6 +426,50 @@ export async function runScheduledMaintenance(
   const overdueNotificationCount = await createOverdueTaskNotifications(db, {
     date: reviewDate,
   });
+  // Fire the Web Push reminders alongside the notification rows. Push stays
+  // disabled end-to-end without both VAPID keys; failures never affect the
+  // notification rows.
+  const pushKeys = pushKeysFromEnv(env);
+  if (pushKeys) {
+    const reviewReceivers = await db
+      .select({ receiverId: memosNotifications.receiverId })
+      .from(memosNotifications)
+      .where(
+        and(
+          eq(memosNotifications.type, "daily_review"),
+          eq(memosNotifications.sourceEventId, `daily-review:${reviewDate}`),
+        ),
+      );
+    for (const { receiverId } of reviewReceivers) {
+      await pushNotificationToUser(db, pushKeys, receiverId, {
+        title: "FlareMo 每日回顾",
+        body: "今天有「那年今天」的记录值得回看。",
+        url: "/review/daily",
+      }).catch(() => undefined);
+    }
+    // One aggregate push per user with overdue tasks, instead of a push per
+    // task row.
+    const overdueByUser = await db
+      .select({
+        userId: tasks.userId,
+        count: sql<number>`count(*)`.mapWith(Number),
+      })
+      .from(tasks)
+      .where(
+        and(
+          lt(tasks.dueAt, reviewDate),
+          inArray(tasks.status, ["todo", "in_progress"]),
+        ),
+      )
+      .groupBy(tasks.userId);
+    for (const row of overdueByUser) {
+      await pushNotificationToUser(db, pushKeys, row.userId, {
+        title: "FlareMo 日程提醒",
+        body: `有 ${row.count} 个日程已经逾期。`,
+        url: "/calendar",
+      }).catch(() => undefined);
+    }
+  }
   console.log(
     JSON.stringify({
       message: "attachment cleanup complete",
@@ -455,6 +502,12 @@ async function dispatchRequestEmbeddingOutbox(
       ? (userId) => options.resolveUserPlanLimits(env, userId)
       : undefined,
   });
+}
+
+function pushKeysFromEnv(env: FlareMoEnv): PushKeys | null {
+  const publicKey = env.FLAREMO_VAPID_PUBLIC_KEY?.trim();
+  const privateKey = env.FLAREMO_VAPID_PRIVATE_KEY?.trim();
+  return publicKey && privateKey ? { publicKey, privateKey } : null;
 }
 
 function logBackgroundTaskFailure(task: string, error: unknown) {

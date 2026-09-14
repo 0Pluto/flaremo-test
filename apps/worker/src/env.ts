@@ -42,6 +42,11 @@ export type FlareMoEnv = Env & {
   // parseUserPlanLimits). Unset = no per-user limits; only deployment-level
   // (or none) applies.
   FLAREMO_USER_LIMITS_JSON?: string;
+  // Web Push (see packages/domain/src/push.ts). Generate with
+  // `npx web-push generate-vapid-keys`; both keys are plain config values —
+  // unset keys disable push end-to-end.
+  FLAREMO_VAPID_PUBLIC_KEY?: string;
+  FLAREMO_VAPID_PRIVATE_KEY?: string;
   // Semantic-search configuration. Provider/model/dimensions are non-secret;
   // the external HTTP provider's API URL/key are optional (the key is a secret).
   FLAREMO_EMBEDDING_PROVIDER?: string;

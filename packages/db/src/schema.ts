@@ -591,6 +591,27 @@ export const memosWebhookDeliveries = sqliteTable(
 // Notifications are inbox rows, not a denormalized user setting. Keeping the
 // memo references and snippets here lets list/update/delete stay bounded and
 // makes a comment notification idempotent for a given recipient/type pair.
+// Web Push subscriptions for proactive reminders (daily review, overdue
+// tasks). Endpoints are browser-scoped and unique; keys are base64url.
+export const pushSubscriptions = sqliteTable(
+  "push_subscriptions",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    endpoint: text("endpoint").notNull(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("push_subscriptions_endpoint_idx").on(table.endpoint),
+    index("push_subscriptions_user_idx").on(table.userId),
+  ],
+);
+
 export const memosNotifications = sqliteTable(
   "memos_notifications",
   {
@@ -1206,6 +1227,7 @@ export type MemosWebhookEventRow = typeof memosWebhookEvents.$inferSelect;
 export type MemosWebhookDeliveryRow =
   typeof memosWebhookDeliveries.$inferSelect;
 export type MemosNotificationRow = typeof memosNotifications.$inferSelect;
+export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
 export type AttachmentRow = typeof attachments.$inferSelect;
 export type ShareRow = typeof shares.$inferSelect;
 export type DataTaskRow = typeof dataTasks.$inferSelect;
