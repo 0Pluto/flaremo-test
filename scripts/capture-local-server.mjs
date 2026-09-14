@@ -230,6 +230,8 @@ function applyMigrations(persistRoot) {
     [
       "exec",
       "wrangler",
+      "--config",
+      "./wrangler.jsonc",
       "d1",
       "migrations",
       "apply",

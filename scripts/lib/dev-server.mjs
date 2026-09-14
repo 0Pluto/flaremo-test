@@ -42,6 +42,11 @@ export function startDevServer({
       "apply",
       "DB",
       "--local",
+      // Pin the operator config explicitly: wrangler.json (the Deploy to
+      // Cloudflare button config with placeholder IDs) also lives in the repo
+      // root and would otherwise shadow this resolution.
+      "--config",
+      "./wrangler.jsonc",
       "--persist-to",
       persistDir,
     ],

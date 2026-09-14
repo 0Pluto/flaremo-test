@@ -27,6 +27,8 @@ step("export local D1 dump", () =>
   run("pnpm", [
     "exec",
     "wrangler",
+    "--config",
+    "./wrangler.jsonc",
     "d1",
     "export",
     "DB",
@@ -42,6 +44,8 @@ step("export local D1 data", () =>
   run("pnpm", [
     "exec",
     "wrangler",
+    "--config",
+    "./wrangler.jsonc",
     "d1",
     "export",
     "DB",
@@ -86,6 +90,8 @@ step("create isolated restore schema from migrations", () =>
   run("pnpm", [
     "exec",
     "wrangler",
+    "--config",
+    "./wrangler.jsonc",
     "d1",
     "migrations",
     "apply",
@@ -100,6 +106,8 @@ step("restore D1 data into isolated local database", () =>
   run("pnpm", [
     "exec",
     "wrangler",
+    "--config",
+    "./wrangler.jsonc",
     "d1",
     "execute",
     "DB",
@@ -128,6 +136,8 @@ step("list remote D1 migrations", () =>
   run("pnpm", [
     "exec",
     "wrangler",
+    "--config",
+    "./wrangler.jsonc",
     "d1",
     "migrations",
     "list",
@@ -183,6 +193,8 @@ function queryLocalCounts(persistTo) {
     [
       "exec",
       "wrangler",
+      "--config",
+      "./wrangler.jsonc",
       "d1",
       "execute",
       "DB",
