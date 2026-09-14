@@ -28,6 +28,7 @@ export const RESTORE_TABLES = [
   "shortcuts",
   "memos_webhooks",
   "memos_webhook_events",
+  "push_subscriptions",
   "memos_webhook_deliveries",
   "memos_notifications",
   "attachments",
