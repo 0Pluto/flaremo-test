@@ -22,7 +22,7 @@ import {
 } from "./embedding-outbox";
 import { SELF_HOST_UNLIMITED, type UserPlanLimits } from "./limits";
 import { createMemory, type MemoryActor } from "./memory";
-import { createMemo, hardDeleteMemo } from "./memos";
+import { createMemo, hardDeleteMemo, updateMemo } from "./memos";
 import { readMonthlyUsageTotal } from "./quotas";
 import { incrementUsageCounter } from "./usage";
 import { createFlaremoMember, ensureSingleUser } from "./users";
@@ -48,6 +48,12 @@ class FakeVectorIndex implements VectorIndex {
   async upsert(vectors: VectorIndexVector[]) {
     this.lastUpsert = vectors;
     for (const vector of vectors) this.store.set(vector.id, vector);
+  }
+  async getByIds(ids: string[]): Promise<VectorIndexVector[]> {
+    return ids.flatMap((id) => {
+      const vector = this.store.get(id);
+      return vector ? [vector] : [];
+    });
   }
   async deleteByIds(ids: string[]) {
     this.lastDeletedIds = ids;
@@ -113,7 +119,7 @@ describe("embedding outbox", () => {
     expect(updated?.embeddingVersion).toBe("test-model@4");
   });
 
-  it("stores memo vectors in the shared namespace", async () => {
+  it("stores private memo vectors in the author's personal namespace", async () => {
     const _memo = await createMemo(db, user, {
       content: "租户隔离的向量",
       visibility: "private",
@@ -129,8 +135,130 @@ describe("embedding outbox", () => {
     expect(index.store.size).toBe(1);
     const [stored] = [...index.store.values()];
     expect(stored).toBeDefined();
-    expect(stored?.namespace).toBeUndefined();
+    expect(stored?.namespace).toBe(`user:${user.id}`);
     expect(stored?.metadata).toMatchObject({ user_id: user.id });
+    const updated = await db
+      .select()
+      .from(memos)
+      .where(eq(memos.id, _memo.id))
+      .get();
+    expect(updated?.embeddingChunks).toBe(1);
+  });
+
+  it("stores team-visible memo vectors in the shared team namespace", async () => {
+    const memo = await createMemo(db, user, {
+      content: "团队的向量",
+      visibility: "protected",
+      source: "web",
+    });
+    const index = new FakeVectorIndex();
+    await dispatchEmbeddingOutbox(db, {
+      provider: fakeProvider(),
+      memosIndex: index,
+      memoriesIndex: null,
+    });
+
+    const [stored] = [...index.store.values()];
+    expect(stored?.namespace).toBe("team:default");
+    const updated = await db
+      .select()
+      .from(memos)
+      .where(eq(memos.id, memo.id))
+      .get();
+    expect(updated?.embeddingChunks).toBe(1);
+  });
+
+  it("relocates vectors to the team namespace on publish without re-embedding", async () => {
+    const memo = await createMemo(db, user, {
+      content: "要发布到团队的笔记",
+      visibility: "private",
+      source: "web",
+    });
+    const index = new FakeVectorIndex();
+    await dispatchEmbeddingOutbox(db, {
+      provider: fakeProvider(),
+      memosIndex: index,
+      memoriesIndex: null,
+    });
+    const [personal] = [...index.store.values()];
+    expect(personal?.namespace).toBe(`user:${user.id}`);
+
+    // Publish: visibility changes and a relocate task is enqueued.
+    await updateMemo(db, user, memo.id, { visibility: "protected" });
+    await dispatchEmbeddingOutbox(db, {
+      provider: fakeProvider(),
+      memosIndex: index,
+      memoriesIndex: null,
+    });
+
+    const relocated = index.store.get(`${memo.id}#chunks/0`);
+    expect(relocated?.namespace).toBe("team:default");
+    expect(relocated?.values).toEqual(personal?.values);
+    expect(index.store.size).toBe(1);
+
+    const updated = await db
+      .select()
+      .from(memos)
+      .where(eq(memos.id, memo.id))
+      .get();
+    expect(updated?.embeddingStatus).toBe("indexed");
+    expect(updated?.embeddingChunks).toBe(1);
+  });
+
+  it("relocates vectors back to the personal namespace on unpublish", async () => {
+    const memo = await createMemo(db, user, {
+      content: "要撤回的团队笔记",
+      visibility: "protected",
+      source: "web",
+    });
+    const index = new FakeVectorIndex();
+    await dispatchEmbeddingOutbox(db, {
+      provider: fakeProvider(),
+      memosIndex: index,
+      memoriesIndex: null,
+    });
+    expect([...index.store.values()][0]?.namespace).toBe("team:default");
+
+    await updateMemo(db, user, memo.id, { visibility: "private" });
+    await dispatchEmbeddingOutbox(db, {
+      provider: fakeProvider(),
+      memosIndex: index,
+      memoriesIndex: null,
+    });
+
+    expect(index.store.size).toBe(1);
+    expect(index.store.get(`${memo.id}#chunks/0`)?.namespace).toBe(
+      `user:${user.id}`,
+    );
+  });
+
+  it("re-embeds on relocate when stored values cannot be read back", async () => {
+    const memo = await createMemo(db, user, {
+      content: "丢失向量后自愈的笔记",
+      visibility: "private",
+      source: "web",
+    });
+    const index = new FakeVectorIndex();
+    await dispatchEmbeddingOutbox(db, {
+      provider: fakeProvider(),
+      memosIndex: index,
+      memoriesIndex: null,
+    });
+    // Simulate a lost vector store: relocation must re-embed and still land
+    // in the correct namespace.
+    index.store.clear();
+
+    await updateMemo(db, user, memo.id, { visibility: "protected" });
+    await dispatchEmbeddingOutbox(db, {
+      provider: fakeProvider(),
+      memosIndex: index,
+      memoriesIndex: null,
+    });
+
+    const relocated = index.store.get(`${memo.id}#chunks/0`);
+    expect(relocated).toBeDefined();
+    expect(relocated?.namespace).toBe("team:default");
+    expect(relocated?.values.length).toBeGreaterThan(0);
   });
 
   it("deletes vectors on hard delete", async () => {

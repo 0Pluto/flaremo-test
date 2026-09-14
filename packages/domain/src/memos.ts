@@ -693,6 +693,11 @@ export async function updateMemo(
   // Re-index whenever the indexed text or the indexable status changes. The
   // dispatch step re-reads the latest row and decides index vs delete, so a
   // status-only transition (archive/trash/restore) is handled by one task.
+  // A visibility change moves the vectors between the personal and team
+  // namespaces instead: relocate re-derives chunk ids and copies the stored
+  // values without regenerating embeddings.
+  const visibilityChanged =
+    input.visibility !== undefined && input.visibility !== existing.visibility;
   const embeddingTaskStatement =
     input.content !== undefined || input.status !== undefined
       ? insertEmbeddingTask(db, {
@@ -702,7 +707,15 @@ export async function updateMemo(
           operation: "reindex",
           createdAt: now,
         })
-      : undefined;
+      : visibilityChanged
+        ? insertEmbeddingTask(db, {
+            userId: existing.userId,
+            resourceType: "memo",
+            resourceId: existing.id,
+            operation: "relocate",
+            createdAt: now,
+          })
+        : undefined;
 
   const updateStatement = db
     .update(memos)

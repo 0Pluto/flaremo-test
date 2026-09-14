@@ -47,7 +47,7 @@ memos/{memo_id}#chunks/{chunk_index}
 }
 ```
 
-- **memo 向量全部写在同一个共享 namespace**（查询时不传 namespace）。metadata 里的 `user_id` 只是归属标注，不作为 Vectorize 侧的查询预过滤：整个团队共享同一次向量查询，查询成本不随作者数量增长，被移除作者的团队/公开 memo 也仍可被召回。授权边界是查询时回 D1 的 `memoReadScope` 复查（见「查询流程」），而不是 namespace 或 metadata 过滤。
+- **memo 向量按可见性分区写入 namespace**：私密 memo 的向量写在作者的个人 namespace（`user:{userId}`），对团队可见的 memo（`protected` / `public`）写在共享团队 namespace（`team:{teamId}`，当前部署用常量 `default`）。metadata 里的 `user_id` 只是归属标注，不作为 Vectorize 侧的查询预过滤。可见性转换通过 outbox 的 `relocate` 任务把向量搬家到目标 namespace（`getByIds` 原样读回向量值，不重新生成 embedding），写入路径在 upsert 前先做 index 级 `deleteByIds` 清掉旧分区的残留。授权边界是查询时回 D1 的 `memoReadScope` 复查（见「查询流程」），而不是 namespace 或 metadata 过滤。设计见 [vector-namespace-design.md](./vector-namespace-design.md)。
 - **memory 向量保留 per-user namespace**（namespace = 记忆所属用户），因为记忆召回只允许触达调用者自己的条目。
 - metadata 只用于过滤和回查。不要把完整 `content`、附件正文、share token、Access Service Token、用户邮箱或其他凭据放进 Vectorize metadata。
 
@@ -55,10 +55,12 @@ memos/{memo_id}#chunks/{chunk_index}
 
 创建或更新 memo 时：
 
-1. 先写 D1，同时在 `embedding_tasks` outbox 表记录一条索引任务。
+1. 先写 D1，同时在 `embedding_tasks` outbox 表记录一条索引任务（内容/状态变化投 `reindex`，可见性变化投 `relocate`）。
 2. 请求路径的 outbox sweep 和每日 Cron（`17 3 * * *`）都会派发任务；失败任务保留重试计数，D1 的 `embedding_status` 记录 `not_indexed / pending / indexed / error`。
 3. 派发时从 D1 重新读取 memo，按内容切成稳定 chunk，用 Workers AI（默认 `@cf/qwen/qwen3-embedding-0.6b`，1024 维）生成 embeddings。
-4. 批量 upsert 到 Vectorize 的共享 namespace（metadata 带 `memo_id` / `user_id`），并在 D1 记录 `indexed`。
+4. 批量 upsert 到由当时可见性决定的 namespace（metadata 带 `memo_id` / `user_id`，并记录 `embedding_chunks`），并在 D1 记录 `indexed`。写入前先对该 memo 的全部 chunk id 做 index 级 `deleteByIds`，保证向量在任一时刻只存在于一个分区。
+
+可见性转换（发布到团队 / 撤回个人）由 `relocate` 任务处理：从索引 `getByIds` 原样读回 chunk 向量值，`deleteByIds` 清除旧位置后按目标 namespace 重新 upsert——内容未变就不重新生成 embedding；若读回的向量缺失则回退到重新 embed（同时自愈索引）。搬迁任务的派发同样走请求路径 sweep + Cron。
 
 如果 embedding 或 Vectorize 写入失败，D1 写入仍然成功。失败只影响语义搜索召回，不影响 memo 创建、更新、导出、分享或 Memos-compatible API。
 
@@ -88,9 +90,9 @@ Vectorize V2 的 mutation 可能不是立刻对查询可见，因此查询层始
 语义查询（`/api/app/search/semantic`）时：
 
 1. 对用户查询生成 embedding（同一 provider、同一模型）。
-2. 在共享 namespace 里做**一次** Vectorize 查询，`topK = min(limit * 5, 100)`。放宽的 top-K 吸收会被 D1 复查丢弃的其他作者的候选，使召回质量不依赖 per-user 预过滤。
+2. 在调用者有权检索的 namespace 分区内做向量查询：个人 namespace 总是查；团队 namespace 在默认 `team` 布局下加入（`FLAREMO_VECTORIZE_TEAM_LAYOUT=solo` 时跳过）。候选总预算 `topK = min(limit * 5, 100)` 在分区之间拆分，两组结果按 memo 聚合去重、取每 memo 最高 chunk 分。
 3. 去掉 `#chunks/` 后缀得到 memo id，回 D1 用 `memoReadScope`（私密 / 团队可见 / 公开的三档可见性权限矩阵）加 `status in (normal, archived)` 批量读取。**这一步 D1 复查是唯一的授权边界**，路由不得绕过它直接查 `memos` 表。
-4. 按 memo 聚合最高 chunk score，按分数排序，返回 FlareMo 自己的 search result DTO，而不是直接返回 Vectorize match。
+4. 按分数排序，返回 FlareMo 自己的 search result DTO，而不是直接返回 Vectorize match。
 
 普通关键词搜索仍走 D1 FTS5。降级路径：embedding provider 或 Vectorize index 缺失/报错时，语义搜索回退到 D1 FTS5 关键词搜索；`FLAREMO_EMBEDDING_PROVIDER=none` 时索引派发直接跳过，FTS5 搜索完全不受影响。
 

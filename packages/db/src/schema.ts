@@ -233,6 +233,11 @@ export const memos = sqliteTable(
     embeddingVersion: text("embedding_version"),
     embeddedAt: text("embedded_at"),
     embeddingError: text("embedding_error"),
+    // Chunk count recorded at last successful index, for exact vector usage
+    // reporting and targeted relocate/delete sweeps. NULL for rows that were
+    // last indexed before this column existed (delete then falls back to the
+    // bounded 256-chunk window).
+    embeddingChunks: integer("embedding_chunks"),
   },
   (table) => [
     index("memos_user_status_pinned_created_id_idx").on(
@@ -794,6 +799,9 @@ export const memoryItems = sqliteTable(
     embeddingVersion: text("embedding_version"),
     embeddedAt: text("embedded_at"),
     embeddingError: text("embedding_error"),
+    // Chunk count at last successful index (memories are single atomic
+    // vectors, so this is 1 when indexed).
+    embeddingChunks: integer("embedding_chunks"),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
     deletedAt: text("deleted_at"),
@@ -936,7 +944,7 @@ export const embeddingTasks = sqliteTable(
     resourceType: text("resource_type", { enum: ["memo", "memory"] }).notNull(),
     resourceId: text("resource_id").notNull(),
     operation: text("operation", {
-      enum: ["index", "reindex", "delete"],
+      enum: ["index", "reindex", "relocate", "delete"],
     }).notNull(),
     status: text("status", {
       enum: ["pending", "running", "succeeded", "dead"],

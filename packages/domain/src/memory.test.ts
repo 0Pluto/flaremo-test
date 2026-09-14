@@ -283,6 +283,9 @@ describe("memory domain services", () => {
           return [{ id: pino.memory.id, score: 0.9 }];
         },
         async upsert() {},
+        async getByIds() {
+          return [];
+        },
         async deleteByIds() {},
         async describe() {
           return { vectorCount: 0, dimensions: 4 };

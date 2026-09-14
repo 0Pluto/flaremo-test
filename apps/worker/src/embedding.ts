@@ -2,6 +2,8 @@ import {
   DEFAULT_EMBEDDING_DIMENSIONS,
   DEFAULT_EMBEDDING_MODEL,
   type EmbeddingProvider,
+  memoTeamNamespace,
+  memoUserNamespace,
   type VectorIndex,
   type VectorIndexInfo,
   type VectorIndexVector,
@@ -54,6 +56,22 @@ export function createVectorIndex(
     kind === "memo" ? env.VECTORIZE_MEMOS : env.VECTORIZE_MEMORIES;
   if (!binding) return null;
   return new CloudflareVectorIndex(binding);
+}
+
+/**
+ * The memo vector partitions a caller's semantic search scans. Always the
+ * author's personal namespace; the shared team namespace joins when the
+ * deployment runs the team layout (default) — `solo` deployments skip it
+ * entirely. The D1 `memoReadScope` re-check stays the authorization boundary
+ * regardless of what is scanned.
+ */
+export function memoSearchNamespaces(
+  env: FlareMoEnv,
+  user: { id: string },
+): string[] | undefined {
+  const layout = (env.FLAREMO_VECTORIZE_TEAM_LAYOUT ?? "team").trim();
+  if (layout === "solo") return [memoUserNamespace(user.id)];
+  return [memoUserNamespace(user.id), memoTeamNamespace()];
 }
 
 class WorkersAiEmbeddingProvider implements EmbeddingProvider {
@@ -147,6 +165,17 @@ class CloudflareVectorIndex implements VectorIndex {
         ...(vector.namespace ? { namespace: vector.namespace } : {}),
       })),
     );
+  }
+
+  async getByIds(ids: string[]): Promise<VectorIndexVector[]> {
+    if (ids.length === 0) return [];
+    const found = await this.index.getByIds(ids);
+    return found.map((vector) => ({
+      id: vector.id,
+      values: Array.from(vector.values ?? []),
+      metadata: (vector.metadata ?? {}) as Record<string, unknown>,
+      ...(vector.namespace ? { namespace: vector.namespace } : {}),
+    }));
   }
 
   async deleteByIds(ids: string[]) {

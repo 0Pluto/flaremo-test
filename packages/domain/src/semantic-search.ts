@@ -7,8 +7,12 @@ import { memoReadScope } from "./team-permissions";
 export type SemanticSearchDeps = {
   provider: EmbeddingProvider;
   index: VectorIndex;
-  /** Scopes the vector query to one tenant inside a shared index. */
-  namespace?: string;
+  /**
+   * Scopes the vector query to tenant buckets inside a shared index (one
+   * bucket per searched partition, e.g. the caller's personal namespace plus
+   * the team namespace). Omitted namespaces are simply not queried.
+   */
+  namespaces?: string[];
 };
 
 export type SemanticMemoHit = {
@@ -41,19 +45,25 @@ export async function semanticSearchMemos(
   const [queryVector] = await deps.provider.embed([trimmed]);
   if (!queryVector || queryVector.length === 0) return [];
 
-  // Memo embeddings live in one shared namespace, so a single vector query
-  // serves the whole team — including removed authors whose team/public memos
-  // are intentionally retained — and query cost stays constant as authors are
-  // added. Vectorize only supplies candidates; the D1 scope below remains the
-  // authorization boundary and drops private hits. (Memory embeddings keep
+  // Memo embeddings are partitioned per visibility bucket (personal namespaces
+  // plus one shared team namespace), so each query only scans the partitions
+  // the caller is entitled to search — no pool dilution from other tenants.
+  // Vectorize only supplies candidates; the D1 scope below remains the
+  // authorization boundary and drops anything else. (Memory embeddings keep
   // per-user namespaces because memory recall is scoped to the caller's own
-  // items.) The widened top-K absorbs candidates from other authors that the
-  // D1 re-check may drop.
-  const matches = await deps.index.query(
-    queryVector,
-    Math.min(limit * 5, 100),
-    deps.namespace,
+  // items.) The top-K budget is split across buckets; matches are merged by
+  // best chunk score per memo.
+  const namespaces = deps.namespaces?.length ? deps.namespaces : [undefined];
+  const bucketTopK = Math.min(
+    Math.ceil(Math.min(limit * 5, 100) / namespaces.length),
+    100,
   );
+  const queried = await Promise.all(
+    namespaces.map((namespace) =>
+      deps.index.query(queryVector, bucketTopK, namespace),
+    ),
+  );
+  const matches = queried.flat();
   if (matches.length === 0) return [];
 
   const candidateIds = [

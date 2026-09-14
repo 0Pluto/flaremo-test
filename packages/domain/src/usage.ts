@@ -1,5 +1,5 @@
 import type { FlareMoDb, UserRow } from "@flaremo/db";
-import { usageCounters } from "@flaremo/db";
+import { memoryItems, memos, usageCounters } from "@flaremo/db";
 import { and, eq, sql } from "drizzle-orm";
 import type { VectorIndex } from "./embedding";
 
@@ -65,9 +65,11 @@ async function readCounter(
 }
 
 /**
- * Self-measured vector usage: stored dimensions come from Vectorize describe(),
- * query dimensions and embedding counters from D1 usage_counters. This is a
- * panel estimate against the configured allowance, not Cloudflare's bill.
+ * Self-measured vector usage. Stored vector counts are derived from D1
+ * (`embedding_chunks` on indexed rows) so a shared deployment reports the
+ * caller's own vectors rather than the index-wide total; query dimensions and
+ * embedding counters come from D1 usage_counters. This is a panel estimate
+ * against the configured allowance, not Cloudflare's bill.
  */
 export async function reportVectorUsage(
   db: FlareMoDb,
@@ -75,32 +77,52 @@ export async function reportVectorUsage(
   input: VectorUsageReportInput,
   deps: VectorUsageDeps,
 ): Promise<VectorUsageReportResult> {
-  const indexes: VectorUsageIndexReport[] = [];
-  for (const [kind, index, name] of [
-    ["memo", deps.memosIndex, "flaremo-memos"],
-    ["memory", deps.memoriesIndex, "flaremo-memories"],
-  ] as const) {
-    if (!index) {
+  const memoRow = await db
+    .select({
+      memoVectors: sql<number>`coalesce(sum(${memos.embeddingChunks}), 0)`,
+    })
+    .from(memos)
+    .where(
+      and(eq(memos.userId, user.id), eq(memos.embeddingStatus, "indexed")),
+    );
+  const memoVectors = Number(memoRow[0]?.memoVectors ?? 0);
+
+  const indexes: VectorUsageIndexReport[] = [
+    {
+      name: "flaremo-memos",
+      kind: "memo",
+      vectors_count: memoVectors,
+      stored_dimensions: memoVectors * input.dimensions,
+    },
+  ];
+  try {
+    if (deps.memoriesIndex) {
+      // Memory vectors stay single-atomic under a per-user namespace, so the
+      // caller's stored count equals their indexed memory rows.
+      const memoryRow = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(memoryItems)
+        .where(
+          and(
+            eq(memoryItems.userId, user.id),
+            eq(memoryItems.embeddingStatus, "indexed"),
+          ),
+        );
+      const memoryVectors = Number(memoryRow[0]?.count ?? 0);
       indexes.push({
-        name,
-        kind,
-        vectors_count: 0,
-        stored_dimensions: 0,
+        name: "flaremo-memories",
+        kind: "memory",
+        vectors_count: memoryVectors,
+        stored_dimensions: memoryVectors * input.dimensions,
       });
-      continue;
     }
-    try {
-      const info = await index.describe();
-      indexes.push({
-        name,
-        kind,
-        vectors_count: info.vectorCount,
-        stored_dimensions:
-          info.vectorCount * (info.dimensions || input.dimensions),
-      });
-    } catch {
-      indexes.push({ name, kind, vectors_count: 0, stored_dimensions: 0 });
-    }
+  } catch {
+    indexes.push({
+      name: "flaremo-memories",
+      kind: "memory",
+      vectors_count: 0,
+      stored_dimensions: 0,
+    });
   }
 
   return {

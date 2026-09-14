@@ -52,9 +52,48 @@ export interface VectorIndex {
     namespace?: string,
   ): Promise<VectorIndexMatch[]>;
   upsert(vectors: VectorIndexVector[]): Promise<void>;
+  /** Read back stored vectors (values + metadata) by id, for relocation. */
+  getByIds(ids: string[]): Promise<VectorIndexVector[]>;
   deleteByIds(ids: string[]): Promise<void>;
   describe(): Promise<VectorIndexInfo>;
 }
+
+// ---------------------------------------------------------------------------
+// Namespace layout
+// ---------------------------------------------------------------------------
+
+/**
+ * Team id for the shared team namespace. One deployment currently hosts one
+ * team; the constant keeps the `team:{teamId}` name shape stable for a future
+ * multi-team layout (renaming then costs one full rebuild, which is already a
+ * supported recovery path).
+ */
+export const DEFAULT_TEAM_ID = "default";
+
+export function memoUserNamespace(userId: string): string {
+  return `user:${userId}`;
+}
+
+export function memoTeamNamespace(teamId: string = DEFAULT_TEAM_ID): string {
+  return `team:${teamId}`;
+}
+
+/**
+ * Target namespace for a memo's vectors. Private memos live under the
+ * author's personal namespace; team-visible ones live in the shared team
+ * namespace. D1 visibility at dispatch time is the single determinant — no
+ * extra state is stored on the vector side.
+ */
+export function memoTargetNamespace(
+  visibility: MemoVisibility,
+  userId: string,
+): string {
+  return visibility === "private"
+    ? memoUserNamespace(userId)
+    : memoTeamNamespace();
+}
+
+export type MemoVisibility = "private" | "protected" | "public";
 
 /** A `null` provider means semantic search is disabled; callers fall back to
  * FTS5 keyword search. */

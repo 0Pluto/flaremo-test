@@ -52,6 +52,11 @@ export type FlareMoEnv = Env & {
   // Usage-panel limits. Defaults are the Workers Free Vectorize allowance.
   FLAREMO_VECTORIZE_STORED_LIMIT?: string;
   FLAREMO_VECTORIZE_QUERIED_LIMIT?: string;
+  // Memo vector layout (see docs/vector-namespace-design.md). "team" (default)
+  // partitions memos into per-user personal namespaces plus one shared team
+  // namespace; "solo" skips the team namespace entirely (personal-only
+  // deployments: no team partition, team publish entry hidden).
+  FLAREMO_VECTORIZE_TEAM_LAYOUT?: string;
   // Upper bound (rows) for CEL memo-filter scans that cannot fully translate
   // to SQL (see src/filter-scan-limit.ts). Unset = 5000.
   FLAREMO_MEMO_FILTER_SCAN_LIMIT?: string;

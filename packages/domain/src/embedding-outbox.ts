@@ -11,6 +11,7 @@ import {
   chunkVectorIds,
   type EmbeddingProvider,
   embeddingVersion,
+  memoTargetNamespace,
   type VectorIndex,
 } from "./embedding";
 import type { PlanLimits, UserPlanLimits } from "./limits";
@@ -22,7 +23,11 @@ import {
 import { incrementUsageCounter } from "./usage";
 
 export type EmbeddingResourceType = "memo" | "memory";
-export type EmbeddingTaskOperation = "index" | "reindex" | "delete";
+export type EmbeddingTaskOperation =
+  | "index"
+  | "reindex"
+  | "relocate"
+  | "delete";
 
 const MAX_ATTEMPTS = 5;
 const MAX_TASKS_PER_SWEEP = 32;
@@ -204,6 +209,16 @@ async function processEmbeddingTask(
   nowIso: string,
 ) {
   if (task.resourceType === "memo") {
+    if (task.operation === "relocate") {
+      await processMemoRelocateTask(
+        db,
+        deps.provider,
+        deps.memosIndex,
+        task,
+        nowIso,
+      );
+      return;
+    }
     await processMemoEmbeddingTask(
       db,
       deps.provider,
@@ -253,6 +268,9 @@ async function processMemoEmbeddingTask(
 
   const chunks = chunkText(memo.content);
   if (chunks.length === 0) {
+    // Content emptied while still indexable: drop any previously stored chunk
+    // vectors, then record the empty index state.
+    await index.deleteByIds(chunkIdsForMemo(memo.id));
     await db
       .update(memos)
       .set({
@@ -260,6 +278,7 @@ async function processMemoEmbeddingTask(
         embeddingVersion: embeddingVersion(provider.model, provider.dimensions),
         embeddedAt: nowIso,
         embeddingError: null,
+        embeddingChunks: 0,
       })
       .where(and(eq(memos.id, memo.id), eq(memos.userId, memo.userId)));
     return;
@@ -268,12 +287,17 @@ async function processMemoEmbeddingTask(
   const vectors = await provider.embed(chunks);
   await recordEmbeddingUsage(db, task.userId, chunks);
   const ids = chunkVectorIds(memo.id, chunks.length);
+  // deleteByIds is index-wide: clear any copies left by a prior visibility
+  // state (e.g. the memo was edited after publishing) before writing to the
+  // namespace implied by the current visibility, so exactly one copy remains.
+  await index.deleteByIds(chunkIdsForMemo(memo.id));
   await index.upsert(
     ids.map((id, index_) => ({
       id,
       values: vectors[index_] ?? [],
-      // Memo vectors share one namespace: the D1 scope at query time is the
-      // authorization boundary, and metadata keeps the owner for tooling.
+      // The namespace follows the memo's visibility at dispatch time; the D1
+      // scope at query time stays the authorization boundary either way.
+      namespace: memoTargetNamespace(memo.visibility, memo.userId),
       metadata: { memo_id: memo.id, user_id: memo.userId },
     })),
   );
@@ -285,6 +309,100 @@ async function processMemoEmbeddingTask(
       embeddingVersion: embeddingVersion(provider.model, provider.dimensions),
       embeddedAt: nowIso,
       embeddingError: null,
+      embeddingChunks: chunks.length,
+    })
+    .where(and(eq(memos.id, memo.id), eq(memos.userId, memo.userId)));
+}
+
+/**
+ * Move a memo's vectors to the namespace implied by its current visibility
+ * without regenerating embeddings: chunk ids are derived deterministically
+ * from the unchanged content, values are read back with getByIds, old copies
+ * are deleted (deleteByIds is index-wide), and the values are re-upserted
+ * under the target namespace. If read-back finds fewer vectors than chunks
+ * (never indexed or partially lost), the chunks are re-embedded instead —
+ * content is unchanged, so this is also a self-heal.
+ */
+async function processMemoRelocateTask(
+  db: FlareMoDb,
+  provider: EmbeddingProvider | null,
+  index: VectorIndex | null,
+  task: EmbeddingTaskRow,
+  nowIso: string,
+) {
+  const memo = await db
+    .select()
+    .from(memos)
+    .where(and(eq(memos.id, task.resourceId), eq(memos.userId, task.userId)))
+    .get();
+
+  if (!provider || !index) return;
+
+  const indexing =
+    memo !== undefined &&
+    (memo.status === "normal" || memo.status === "archived");
+
+  if (!indexing || !memo) {
+    await index.deleteByIds(chunkIdsForMemo(task.resourceId));
+    if (memo) {
+      await clearMemoEmbedding(db, memo);
+    }
+    return;
+  }
+
+  const chunks = chunkText(memo.content);
+  const targetNamespace = memoTargetNamespace(memo.visibility, memo.userId);
+
+  if (chunks.length === 0) {
+    await index.deleteByIds(chunkIdsForMemo(memo.id));
+    await db
+      .update(memos)
+      .set({
+        embeddingStatus: "indexed",
+        embeddingVersion: embeddingVersion(provider.model, provider.dimensions),
+        embeddedAt: nowIso,
+        embeddingError: null,
+        embeddingChunks: 0,
+      })
+      .where(and(eq(memos.id, memo.id), eq(memos.userId, memo.userId)));
+    return;
+  }
+
+  const ids = chunkVectorIds(memo.id, chunks.length);
+  // deleteByIds is index-wide (no namespace parameter), so a delete here is
+  // safe under either scoping semantic; it clears any stale copy regardless
+  // of where a previous write left it. Delete happens BEFORE the upsert —
+  // writing first and deleting after could remove the fresh copy if the
+  // delete turns out to cross namespaces.
+  const stored = await index.getByIds(ids).catch(() => []);
+  await index.deleteByIds(chunkIdsForMemo(memo.id));
+
+  let values = stored.length === ids.length ? stored : [];
+  if (values.length === 0) {
+    const vectors = await provider.embed(chunks);
+    await recordEmbeddingUsage(db, task.userId, chunks);
+    values = ids.map((id, index_) => ({
+      id,
+      values: vectors[index_] ?? [],
+    }));
+  }
+  await index.upsert(
+    values.map((vector) => ({
+      id: vector.id,
+      values: vector.values,
+      namespace: targetNamespace,
+      metadata: { memo_id: memo.id, user_id: memo.userId },
+    })),
+  );
+
+  await db
+    .update(memos)
+    .set({
+      embeddingStatus: "indexed",
+      embeddingVersion: embeddingVersion(provider.model, provider.dimensions),
+      embeddedAt: nowIso,
+      embeddingError: null,
+      embeddingChunks: chunks.length,
     })
     .where(and(eq(memos.id, memo.id), eq(memos.userId, memo.userId)));
 }
@@ -337,6 +455,7 @@ async function processMemoryEmbeddingTask(
       embeddingVersion: embeddingVersion(provider.model, provider.dimensions),
       embeddedAt: nowIso,
       embeddingError: null,
+      embeddingChunks: 1,
     })
     .where(
       and(eq(memoryItems.id, memory.id), eq(memoryItems.userId, memory.userId)),
@@ -351,6 +470,7 @@ async function clearMemoEmbedding(db: FlareMoDb, memo: MemoRow) {
       embeddingVersion: null,
       embeddedAt: null,
       embeddingError: null,
+      embeddingChunks: null,
     })
     .where(and(eq(memos.id, memo.id), eq(memos.userId, memo.userId)));
 }
@@ -363,6 +483,7 @@ async function clearMemoryEmbedding(db: FlareMoDb, memory: MemoryItemRow) {
       embeddingVersion: null,
       embeddedAt: null,
       embeddingError: null,
+      embeddingChunks: null,
     })
     .where(
       and(eq(memoryItems.id, memory.id), eq(memoryItems.userId, memory.userId)),
@@ -569,7 +690,8 @@ export async function rebuildEmbeddingIndexes(
           ids.map((id, index_) => ({
             id,
             values: vectors[index_] ?? [],
-            // Shared namespace, matching the memo write path above.
+            // Partition by visibility, matching the write path.
+            namespace: memoTargetNamespace(memo.visibility, memo.userId),
             metadata: { memo_id: memo.id, user_id: memo.userId },
           })),
         );
@@ -581,6 +703,7 @@ export async function rebuildEmbeddingIndexes(
           embeddingVersion: version,
           embeddedAt: new Date().toISOString(),
           embeddingError: null,
+          embeddingChunks: chunks.length,
         })
         .where(and(eq(memos.id, memo.id), eq(memos.userId, memo.userId)));
       done += 1;
@@ -611,6 +734,7 @@ export async function rebuildEmbeddingIndexes(
         embeddingVersion: version,
         embeddedAt: new Date().toISOString(),
         embeddingError: null,
+        embeddingChunks: 1,
       })
       .where(
         and(

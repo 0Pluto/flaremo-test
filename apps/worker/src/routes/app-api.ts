@@ -60,6 +60,7 @@ import { getRequestContext, type HonoBindings } from "../context";
 import {
   createEmbeddingProvider,
   createVectorIndex,
+  memoSearchNamespaces,
   resolveEmbeddingConfig,
 } from "../embedding";
 import { jsonError } from "../http";
@@ -112,6 +113,11 @@ appApi.get("/health", async (c) => {
         : null,
       releases_url: FLAREMO_RELEASES_URL,
       update_guide_url: FLAREMO_UPDATE_GUIDE_URL,
+      // Memo vector partition layout (see docs/vector-namespace-design.md).
+      team_layout:
+        (c.env.FLAREMO_VECTORIZE_TEAM_LAYOUT ?? "team").trim() === "solo"
+          ? "solo"
+          : "team",
     });
   } catch (error) {
     return jsonError(c, error);
@@ -199,7 +205,7 @@ appApi.get(
       const hits = await semanticSearchMemos(
         db,
         user,
-        { provider, index },
+        { provider, index, namespaces: memoSearchNamespaces(c.env, user) },
         query.q,
         query.limit,
       );

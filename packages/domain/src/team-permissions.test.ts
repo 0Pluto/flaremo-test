@@ -33,6 +33,7 @@ function memo(visibility: MemoRow["visibility"]): MemoRow {
     embeddingVersion: null,
     embeddedAt: null,
     embeddingError: null,
+    embeddingChunks: null,
   };
 }
 
