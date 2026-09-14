@@ -1,6 +1,7 @@
 import {
   beginFlaremoMemberRemoval,
   createMemberRemovalJob,
+  deleteMemosPersonalAccessToken,
   ForbiddenError,
   finalizeFlaremoMemberRemoval,
   getMemosPersonalAccessToken,
@@ -107,6 +108,22 @@ accountApi.post("/personal-access-tokens/:id/revoke", async (c) => {
       },
     });
     return c.json({ personal_access_token: toPersonalAccessTokenDto(updated) });
+  } catch (error) {
+    return jsonError(c, error);
+  }
+});
+
+accountApi.delete("/personal-access-tokens/:id", async (c) => {
+  try {
+    const context = await getBrowserRequestContext(c);
+    const deleted = await deleteMemosPersonalAccessToken(context.db, {
+      authUserId: context.authUserId,
+      keyId: c.req.param("id"),
+    });
+    if (!deleted) {
+      throw new NotFoundError("Personal access token not found.");
+    }
+    return c.json({ ok: true });
   } catch (error) {
     return jsonError(c, error);
   }

@@ -31,6 +31,7 @@ type TokensPanelProps = {
   copied: boolean;
   createTokenIsPending: boolean;
   createdToken: string | null;
+  deletingTokenId: string | undefined;
   locale: string;
   revokingTokenId: string | undefined;
   setTokenExpiryDays: (value: string) => void;
@@ -46,6 +47,7 @@ type TokensPanelProps = {
   onCopyToken: () => Promise<void>;
   onCreateToken: () => Promise<void>;
   onRevokeToken: (id: string) => Promise<void>;
+  onDeleteToken: (id: string) => Promise<void>;
   onHideCreatedToken: () => void;
 };
 
@@ -53,6 +55,7 @@ export function TokensPanel({
   copied,
   createTokenIsPending,
   createdToken,
+  deletingTokenId,
   locale,
   revokingTokenId,
   setTokenExpiryDays,
@@ -65,6 +68,7 @@ export function TokensPanel({
   onCopyToken,
   onCreateToken,
   onRevokeToken,
+  onDeleteToken,
   onHideCreatedToken,
 }: TokensPanelProps) {
   const [createOpen, setCreateOpen] = useState(false);
@@ -108,10 +112,12 @@ export function TokensPanel({
           {tokensQuery.data?.personal_access_tokens.map((token) => (
             <PersonalAccessTokenRow
               key={token.id}
+              deleting={deletingTokenId === token.id}
               locale={locale}
               pending={revokingTokenId === token.id}
               token={token}
               onRevoke={() => onRevokeToken(token.id)}
+              onDelete={() => onDeleteToken(token.id)}
               t={t}
             />
           ))}
@@ -207,19 +213,24 @@ export function TokensPanel({
 }
 
 function PersonalAccessTokenRow({
+  deleting,
   locale,
   pending,
   t,
   token,
   onRevoke,
+  onDelete,
 }: {
+  deleting: boolean;
   locale: string;
   pending: boolean;
   t: (key: TranslationKey, params?: Record<string, string | number>) => string;
   token: PersonalAccessToken;
   onRevoke: () => Promise<void>;
+  onDelete: () => Promise<void>;
 }) {
   const [confirmingRevoke, setConfirmingRevoke] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const dateFormatter = new Intl.DateTimeFormat(locale, {
     dateStyle: "medium",
     timeStyle: "short",
@@ -251,25 +262,69 @@ function PersonalAccessTokenRow({
           {token.request_count}
         </p>
       </div>
-      {token.enabled && (
-        <AlertDialog open={confirmingRevoke} onOpenChange={setConfirmingRevoke}>
+      <div className="flex flex-wrap gap-2">
+        {token.enabled && (
+          <AlertDialog
+            open={confirmingRevoke}
+            onOpenChange={setConfirmingRevoke}
+          >
+            <Button
+              disabled={pending || deleting}
+              size="sm"
+              type="button"
+              variant="outline"
+              onClick={() => setConfirmingRevoke(true)}
+            >
+              {pending && (
+                <Loader2Icon
+                  className="animate-spin"
+                  data-icon="inline-start"
+                />
+              )}
+              {t("auth.revokeToken")}
+            </Button>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t("auth.revokeToken")}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {t("auth.revokeTokenConfirm", {
+                    name: token.name ?? t("auth.unnamedToken"),
+                  })}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={(event) => {
+                    event.preventDefault();
+                    setConfirmingRevoke(false);
+                    void onRevoke();
+                  }}
+                >
+                  {t("auth.revokeToken")}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+        <AlertDialog open={confirmingDelete} onOpenChange={setConfirmingDelete}>
           <Button
-            disabled={pending}
+            disabled={pending || deleting}
             size="sm"
             type="button"
-            variant="outline"
-            onClick={() => setConfirmingRevoke(true)}
+            variant="ghost"
+            onClick={() => setConfirmingDelete(true)}
           >
-            {pending && (
+            {deleting && (
               <Loader2Icon className="animate-spin" data-icon="inline-start" />
             )}
-            {t("auth.revokeToken")}
+            {t("auth.deleteToken")}
           </Button>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>{t("auth.revokeToken")}</AlertDialogTitle>
+              <AlertDialogTitle>{t("auth.deleteToken")}</AlertDialogTitle>
               <AlertDialogDescription>
-                {t("auth.revokeTokenConfirm", {
+                {t("auth.deleteTokenConfirm", {
                   name: token.name ?? t("auth.unnamedToken"),
                 })}
               </AlertDialogDescription>
@@ -279,16 +334,16 @@ function PersonalAccessTokenRow({
               <AlertDialogAction
                 onClick={(event) => {
                   event.preventDefault();
-                  setConfirmingRevoke(false);
-                  void onRevoke();
+                  setConfirmingDelete(false);
+                  void onDelete();
                 }}
               >
-                {t("auth.revokeToken")}
+                {t("auth.deleteToken")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      )}
+      </div>
     </div>
   );
 }

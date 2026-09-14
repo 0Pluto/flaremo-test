@@ -245,6 +245,45 @@ test("creates, uses, and revokes a Memos PAT while shares stay public", async ()
     });
     expect(revokedPatResponse.status()).toBe(401);
 
+    // Hard delete: the token row disappears from the list and its plaintext
+    // value stops authenticating immediately.
+    const deleteSeedResponse = await session.post(
+      "/api/app/account/personal-access-tokens",
+      {
+        headers: { origin: E2E_BASE_URL },
+        data: { name: "E2E delete me", expires_in_days: 30 },
+      },
+    );
+    expect(deleteSeedResponse.status()).toBe(201);
+    const deleteSeed = (await deleteSeedResponse.json()) as {
+      token: string;
+      personal_access_token: { id: string };
+    };
+    const deleteTokenResponse = await session.delete(
+      `/api/app/account/personal-access-tokens/${deleteSeed.personal_access_token.id}`,
+      { headers: { origin: E2E_BASE_URL } },
+    );
+    expect(deleteTokenResponse.status()).toBe(200);
+    const deletedPatResponse = await patClient.post("/api/v1/memos", {
+      headers: {
+        authorization: `Bearer ${deleteSeed.token}`,
+        "x-flaremo-wire": "legacy",
+      },
+      data: { content: "should be rejected" },
+    });
+    expect(deletedPatResponse.status()).toBe(401);
+    const listedAfterDelete = await (
+      await session.get("/api/app/account/personal-access-tokens")
+    ).text();
+    expect(listedAfterDelete).not.toContain(
+      deleteSeed.personal_access_token.id,
+    );
+    const deleteMissingResponse = await session.delete(
+      `/api/app/account/personal-access-tokens/${deleteSeed.personal_access_token.id}`,
+      { headers: { origin: E2E_BASE_URL } },
+    );
+    expect(deleteMissingResponse.status()).toBe(404);
+
     const logoutResponse = await session.post("/api/auth/sign-out", {
       headers: { origin: E2E_BASE_URL },
       data: {},

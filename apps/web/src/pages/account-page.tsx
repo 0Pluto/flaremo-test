@@ -8,6 +8,7 @@ import {
   createExportTask,
   createPersonalAccessToken,
   deleteAccount,
+  deletePersonalAccessToken,
   getCurrentFlareMoUser,
   getVectorUsage,
   listDataTasks,
@@ -157,6 +158,14 @@ export function AccountPage() {
       });
     },
   });
+  const deleteTokenMutation = useMutation({
+    mutationFn: deletePersonalAccessToken,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["personal-access-tokens"],
+      });
+    },
+  });
 
   const handleUsernameSubmit = async () => {
     setAccountError(null);
@@ -245,6 +254,15 @@ export function AccountPage() {
       await revokeTokenMutation.mutateAsync(id);
     } catch (error) {
       setTokenError(errorMessage(error, t("auth.tokenRevokeFailed")));
+    }
+  };
+
+  const handleDeleteToken = async (id: string) => {
+    setTokenError(null);
+    try {
+      await deleteTokenMutation.mutateAsync(id);
+    } catch (error) {
+      setTokenError(errorMessage(error, t("auth.tokenDeleteFailed")));
     }
   };
 
@@ -356,6 +374,11 @@ export function AccountPage() {
                     ? revokeTokenMutation.variables
                     : undefined
                 }
+                deletingTokenId={
+                  deleteTokenMutation.isPending
+                    ? deleteTokenMutation.variables
+                    : undefined
+                }
                 setTokenExpiryDays={setTokenExpiryDays}
                 setTokenName={setTokenName}
                 t={t}
@@ -366,6 +389,7 @@ export function AccountPage() {
                 onCopyToken={handleCopyToken}
                 onCreateToken={handleCreateToken}
                 onRevokeToken={handleRevokeToken}
+                onDeleteToken={handleDeleteToken}
                 onHideCreatedToken={() => setCreatedToken(null)}
               />
 

@@ -350,3 +350,21 @@ export async function getMemosPersonalAccessToken(
     })) ?? null
   );
 }
+
+/** Hard-delete a token row, scoped to its owner. Returns the deleted id or null. */
+export async function deleteMemosPersonalAccessToken(
+  db: FlareMoDb,
+  input: { authUserId: string; keyId: string },
+) {
+  const deleted = await db
+    .delete(authApiKeys)
+    .where(
+      and(
+        eq(authApiKeys.id, input.keyId),
+        eq(authApiKeys.referenceId, input.authUserId),
+        eq(authApiKeys.configId, "memos"),
+      ),
+    )
+    .returning({ id: authApiKeys.id });
+  return deleted[0]?.id ?? null;
+}

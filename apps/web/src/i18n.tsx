@@ -401,6 +401,10 @@ const messages = {
     "auth.revokeTokenConfirm":
       "撤销后使用该令牌的客户端将立即失去访问权限，且无法恢复。确定撤销「{name}」吗？",
     "auth.tokenRevokeFailed": "无法撤销令牌。",
+    "auth.deleteToken": "删除",
+    "auth.deleteTokenConfirm":
+      "删除后该令牌将从列表中永久移除。确定删除「{name}」吗？",
+    "auth.tokenDeleteFailed": "无法删除令牌。",
     "auth.registerTitle": "注册 FlareMo 账户",
     "auth.registerLink": "还没有账户？注册",
     "auth.signUp": "注册",
@@ -1106,6 +1110,10 @@ const messages = {
     "auth.revokeTokenConfirm":
       "Clients using this token lose access immediately and it cannot be restored. Revoke \u201c{name}\u201d?",
     "auth.tokenRevokeFailed": "Could not revoke the token.",
+    "auth.deleteToken": "Delete",
+    "auth.deleteTokenConfirm":
+      "The token will be permanently removed from the list. Delete “{name}”?",
+    "auth.tokenDeleteFailed": "Could not delete the token.",
     "auth.registerTitle": "Create a FlareMo account",
     "auth.registerLink": "No account? Sign up",
     "auth.signUp": "Sign up",

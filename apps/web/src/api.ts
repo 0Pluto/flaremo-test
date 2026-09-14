@@ -827,6 +827,13 @@ export async function revokePersonalAccessToken(id: string) {
   );
 }
 
+export async function deletePersonalAccessToken(id: string) {
+  return apiRequest<{ ok: true }>(
+    `/api/app/account/personal-access-tokens/${encodeURIComponent(id)}`,
+    { method: "DELETE" },
+  );
+}
+
 export async function changeEmail(input: {
   current_password: string;
   new_email: string;
