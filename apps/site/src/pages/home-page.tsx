@@ -8,19 +8,16 @@ import {
   ExternalLink,
   Image as ImageIcon,
   Layers,
-  Lock,
-  Moon,
   Radio,
   ServerOff,
   ShieldCheck,
   Smartphone,
   Sparkles,
-  Sun,
   Users,
   WifiOff,
   Zap,
 } from "lucide-react";
-import { useState } from "react";
+import { InteractiveShowcase } from "@/components/interactive-showcase";
 import {
   AnimatedNumber,
   PopIn,
@@ -54,17 +51,6 @@ const STAT_TITLES: Record<
   ar: { servers: "0 خوادم", ownership: "100% ملكك" },
 };
 
-const THEME_LABELS: Record<SupportedLocale, { light: string; dark: string }> = {
-  en: { light: "Light Mode", dark: "Dark Mode" },
-  zh: { light: "明亮日间", dark: "曜石夜间" },
-  ja: { light: "ライト", dark: "ダーク" },
-  fr: { light: "Clair", dark: "Sombre" },
-  es: { light: "Claro", dark: "Oscuro" },
-  ko: { light: "라이트", dark: "다크" },
-  ru: { light: "Светлая", dark: "Тёмная" },
-  ar: { light: "فاتح", dark: "داكن" },
-};
-
 const COMP_HEADERS: Record<SupportedLocale, { nas: string; vps: string }> = {
   en: { nas: "Home NAS / Homelab", vps: "Traditional VPS Cloud" },
   zh: { nas: "家用 NAS / 软路由", vps: "传统 VPS 云主机" },
@@ -84,9 +70,8 @@ export function HomePage() {
   return (
     <main className="space-y-24 sm:space-y-32 pb-24 overflow-x-hidden">
       <Hero home={home} locale={locale} />
-      <ProductShowcase
+      <InteractiveShowcase
         heading={home.screenshotsHeading}
-        locale={locale}
         subtitle={home.screenshotsSubtitle}
       />
       <BentoFeatures
@@ -263,124 +248,7 @@ function Hero({
 }
 
 /* ============================================================
-   2. 交互式视窗展示
-   ============================================================ */
-
-function ProductShowcase({
-  heading,
-  subtitle,
-  locale,
-}: {
-  heading: string;
-  subtitle: string;
-  locale: SupportedLocale;
-}) {
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-  const labels = THEME_LABELS[locale] || THEME_LABELS.en;
-
-  return (
-    <section className="container-x">
-      <div className="space-y-8">
-        <div className="flex flex-col items-center justify-between gap-4 text-center sm:flex-row sm:text-left">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl md:text-4xl">
-              {heading}
-            </h2>
-            <p className="mt-1 text-sm text-mist">{subtitle}</p>
-          </div>
-
-          {/* 切换预览明暗模式 */}
-          <div className="inline-flex items-center rounded-full border border-line/70 bg-soft-surface p-1 shadow-xs">
-            <button
-              type="button"
-              onClick={() => setTheme("light")}
-              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer ${
-                theme === "light"
-                  ? "bg-surface text-ink shadow-xs"
-                  : "text-mist hover:text-ink"
-              }`}
-            >
-              <Sun className="size-3.5 text-amber-500" />
-              <span>{labels.light}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setTheme("dark")}
-              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer ${
-                theme === "dark"
-                  ? "bg-surface text-ink shadow-xs"
-                  : "text-mist hover:text-ink"
-              }`}
-            >
-              <Moon className="size-3.5 text-signal" />
-              <span>{labels.dark}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* 桌面 + 移动视窗展示 */}
-        <div className="grid items-end gap-6 lg:grid-cols-[1fr_250px]">
-          {/* macOS 桌面浏览器 Mockup */}
-          <div className="panel-card overflow-hidden border border-line/60 shadow-pop-xl">
-            {/* 顶栏控制台 */}
-            <div className="flex h-10 items-center justify-between border-b border-line/60 bg-soft-surface/90 px-4">
-              <div className="flex items-center gap-2">
-                <span className="size-3 rounded-full bg-[#ff5f56] shadow-2xs" />
-                <span className="size-3 rounded-full bg-[#ffbd2e] shadow-2xs" />
-                <span className="size-3 rounded-full bg-[#27c93f] shadow-2xs" />
-              </div>
-              <div className="flex h-6 w-56 sm:w-72 items-center justify-center gap-1.5 rounded-md border border-line/60 bg-surface/90 px-3 text-[11px] text-mist shadow-2xs">
-                <Lock className="size-3 text-signal" />
-                <span className="font-mono">https://app.flaremo.app</span>
-              </div>
-              <div className="w-10 text-right text-[10px] text-fog font-mono">
-                200 OK
-              </div>
-            </div>
-
-            {/* 真实截图容器 */}
-            <div className="relative aspect-[1024/711] w-full bg-soft-surface">
-              <img
-                alt="FlareMo Desktop Timeline"
-                className="h-full w-full object-cover transition-opacity duration-300"
-                decoding="async"
-                height="711"
-                loading="lazy"
-                src={
-                  theme === "light"
-                    ? "/docs-assets/flaremo-desktop-light.png"
-                    : "/docs-assets/flaremo-desktop-dark.png"
-                }
-                width="1024"
-              />
-            </div>
-          </div>
-
-          {/* 移动端 Mockup */}
-          <div className="mx-auto w-full max-w-[230px] overflow-hidden rounded-[2.5rem] border-4 border-surface bg-paper p-1 shadow-pop-xl ring-1 ring-line/80">
-            <div className="overflow-hidden rounded-[2.1rem] bg-paper">
-              <div className="flex h-6 items-center justify-center bg-soft-surface/80">
-                <span className="h-1 w-12 rounded-full bg-mist/30" />
-              </div>
-              <img
-                alt="FlareMo Mobile Timeline"
-                className="w-full object-cover"
-                decoding="async"
-                height="844"
-                loading="lazy"
-                src="/docs-assets/flaremo-mobile.png"
-                width="390"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ============================================================
-   3. Bento 核心特性网格
+   2. Bento 核心特性网格
    ============================================================ */
 
 function BentoFeatures({
