@@ -2,7 +2,6 @@ import {
   Archive,
   Bell,
   Brain,
-  Calendar,
   CalendarDays,
   FolderKanban,
   Footprints,
@@ -10,6 +9,7 @@ import {
   Image as ImageIcon,
   Inbox,
   List,
+  Lock,
   Menu,
   MoreHorizontal,
   RefreshCw,
@@ -21,7 +21,9 @@ import {
   Zap,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { SHOWCASE_I18N, type ShowcaseContent } from "@/content/showcase-i18n";
+import type { SupportedLocale } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 
 type Memo = {
@@ -35,57 +37,63 @@ type Memo = {
   isNew?: boolean;
 };
 
-const INITIAL_MEMOS: Memo[] = [
-  {
-    id: "memo-65",
-    orderNumber: 65,
-    timeLabel: "21分钟前",
-    title: "阅读摘录：注意力与创造力",
-    content:
-      "信息越多，越需要为自己留出安静的空间。把零散的观察记下来，连接就会慢慢浮现。",
-    quote: "学习不是积累答案，而是不断提出更好的问题。",
-    tags: ["灵感", "阅读"],
-  },
-  {
-    id: "memo-64",
-    orderNumber: 64,
-    timeLabel: "1小时前",
-    title: "让记录成为思考的起点",
-    content:
-      "今天散步时想到：好的工具应该让人专注于自己的想法。打开就能写，想找的内容也能很快找到。\n• 保留清晰的主线\n• 给重要的灵感加上标签\n• 每周花一点时间回顾",
-    tags: ["思考", "产品"],
-  },
-];
-
-const PRESETS = [
-  {
-    text: "在机场候机时随手理清了多端同步幂等协议 #架构 #灵感",
-    title: "边缘毫秒同步方案设计",
-    quote: "客户端优先本地落盘，联网后单调时间戳递增同步。",
-    tag: "架构",
-  },
-  {
-    text: "离线 PWA 模式断网随心记，连网秒级入库 #灵感",
-    title: "离线优先使用体验",
-    quote: "地铁与飞行途中无网环境下的心流完全不中断。",
-    tag: "灵感",
-  },
-  {
-    text: "配置完成 Telegram 随手记 Bot，直接发语音自动转文字入库 #生活",
-    title: "碎片化灵感速记链路",
-    quote: "随手语音发给专属 Bot，10 秒内自动汇总成结构化知识点。",
-    tag: "生活",
-  },
-];
-
 const HEATMAP_TILES = Array.from({ length: 72 }, (_, i) => ({
   id: `tile-k-${i}`,
   isHigh: i >= 68,
   isMedium: i >= 64 && i < 68,
 }));
 
-export function InteractiveShowcase() {
-  const [memos, setMemos] = useState<Memo[]>(INITIAL_MEMOS);
+export function InteractiveShowcase({
+  locale = "zh",
+}: {
+  locale?: SupportedLocale;
+}) {
+  const showcase: ShowcaseContent = SHOWCASE_I18N[locale] || SHOWCASE_I18N.zh;
+
+  const [memos, setMemos] = useState<Memo[]>([
+    {
+      id: "memo-65",
+      orderNumber: 65,
+      timeLabel: showcase.memo1.time,
+      title: showcase.memo1.title,
+      content: showcase.memo1.content,
+      quote: showcase.memo1.quote,
+      tags: showcase.memo1.tags,
+    },
+    {
+      id: "memo-64",
+      orderNumber: 64,
+      timeLabel: showcase.memo2.time,
+      title: showcase.memo2.title,
+      content: showcase.memo2.content,
+      tags: showcase.memo2.tags,
+    },
+  ]);
+
+  // 当外部语言切换时，重置并切换默认展示内容
+  useEffect(() => {
+    setMemos([
+      {
+        id: "memo-65",
+        orderNumber: 65,
+        timeLabel: showcase.memo1.time,
+        title: showcase.memo1.title,
+        content: showcase.memo1.content,
+        quote: showcase.memo1.quote,
+        tags: showcase.memo1.tags,
+      },
+      {
+        id: "memo-64",
+        orderNumber: 64,
+        timeLabel: showcase.memo2.time,
+        title: showcase.memo2.title,
+        content: showcase.memo2.content,
+        tags: showcase.memo2.tags,
+      },
+    ]);
+    setActiveTag(null);
+  }, [showcase]);
+
   const [activeMenu, setActiveMenu] = useState<
     "timeline" | "archive" | "trash"
   >("timeline");
@@ -95,34 +103,26 @@ export function InteractiveShowcase() {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [presetIndex, setPresetIndex] = useState(0);
 
-  // 输入框草稿
+  // 输入框草稿与同步状态
   const [desktopInput, setDesktopInput] = useState("");
   const [mobileInput, setMobileInput] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncedId, setLastSyncedId] = useState<string | null>(null);
 
-  // 记录数统计
-  const totalCount = memos.length + 63; // 保持 65 附近基数
-  const tagList = [
-    { name: "产品", count: 22 },
-    { name: "思考", count: 22 },
-    { name: "灵感", count: 22 },
-    { name: "生活", count: 21 },
-    { name: "计划", count: 21 },
-    { name: "阅读", count: 22 },
-  ];
+  const totalCount = memos.length + 63;
+  const tagList = showcase.ui.tags;
 
-  // 提交新笔记逻辑
+  // 发布新笔记
   const publishMemo = (rawText: string, fromMobile = false) => {
     let text = rawText.trim();
     if (!text) {
-      text = PRESETS[presetIndex % PRESETS.length].text;
+      const presets = showcase.presets;
+      text = presets[presetIndex % presets.length].text;
       setPresetIndex((prev) => prev + 1);
     }
 
     setIsSyncing(true);
 
-    // 提取标签
     const extractedTags = Array.from(
       new Set(
         (text.match(/#([\w\u4e00-\u9fa5]+)/g) || []).map((t) =>
@@ -130,10 +130,12 @@ export function InteractiveShowcase() {
         ),
       ),
     );
-    const tags = extractedTags.length > 0 ? extractedTags : ["灵感"];
+    const tags =
+      extractedTags.length > 0
+        ? extractedTags
+        : [showcase.ui.tags[2]?.name || "ideas"];
 
-    // 寻找预设匹配
-    const matchedPreset = PRESETS.find((p) => p.text === text);
+    const matchedPreset = showcase.presets.find((p) => p.text === text);
     const title =
       matchedPreset?.title ??
       (text.length > 18 ? `${text.slice(0, 16)}...` : text);
@@ -147,7 +149,7 @@ export function InteractiveShowcase() {
       const newMemo: Memo = {
         id: newId,
         orderNumber: nextOrder,
-        timeLabel: "刚刚",
+        timeLabel: showcase.ui.justNow,
         title,
         content: cleanContent || text,
         quote,
@@ -160,7 +162,7 @@ export function InteractiveShowcase() {
       if (fromMobile) setMobileInput("");
       else setDesktopInput("");
       setIsSyncing(false);
-    }, 380);
+    }, 350);
   };
 
   const filteredMemos = memos.filter((m) => {
@@ -178,35 +180,40 @@ export function InteractiveShowcase() {
 
   return (
     <section className="container-x">
-      {/* 真实双端模型 */}
-      <div className="grid gap-6 lg:grid-cols-[1fr_310px] xl:grid-cols-[1fr_330px] items-start">
+      {/* 真实高对比双端硬件模型 */}
+      <div className="grid gap-8 lg:grid-cols-[1fr_310px] xl:grid-cols-[1fr_330px] items-start">
         {/* ============================================================
-            电脑端视窗（严格还原 FlareMo 真实桌面端布局）
+            电脑端设备：高对比 MacBook 视窗底座
             ============================================================ */}
-        <div className="panel-card overflow-hidden border border-line/70 shadow-pop-xl">
+        <div className="relative rounded-2xl border-2 border-zinc-300/90 dark:border-zinc-700/80 bg-paper shadow-[0_20px_50px_-15px_rgba(0,0,0,0.3)] dark:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.85)] ring-1 ring-black/10 dark:ring-white/10 overflow-hidden">
           {/* 桌面端浏览器顶栏 */}
-          <div className="flex h-9 items-center justify-between border-b border-line/60 bg-soft-surface px-4">
+          <div className="flex h-9.5 items-center justify-between border-b border-zinc-200 dark:border-zinc-800 bg-zinc-100/90 dark:bg-zinc-900/90 px-4">
+            {/* macOS 三色交通灯按键 */}
             <div className="flex items-center gap-2">
-              <span className="size-2.5 rounded-full bg-[#ff5f56]" />
-              <span className="size-2.5 rounded-full bg-[#ffbd2e]" />
-              <span className="size-2.5 rounded-full bg-[#27c93f]" />
+              <span className="size-3 rounded-full bg-[#ff5f56] border border-[#e0443e]/40 shadow-xs" />
+              <span className="size-3 rounded-full bg-[#ffbd2e] border border-[#dea123]/40 shadow-xs" />
+              <span className="size-3 rounded-full bg-[#27c93f] border border-[#1aab29]/40 shadow-xs" />
             </div>
 
-            <div className="flex h-5.5 w-60 sm:w-80 items-center justify-center gap-1.5 rounded-md border border-line/60 bg-surface px-3 text-[11px] text-mist">
-              <span className="size-2 rounded-full bg-signal" />
-              <span className="font-mono">https://app.flaremo.app</span>
+            {/* 居中真实网址栏 */}
+            <div className="flex h-6 w-64 sm:w-80 items-center justify-center gap-1.5 rounded-md border border-zinc-200 dark:border-zinc-700/70 bg-white/90 dark:bg-zinc-800/90 px-3 text-[11px] text-zinc-600 dark:text-zinc-300 shadow-2xs">
+              <Lock className="size-3 text-signal" />
+              <span className="font-mono tracking-tight">
+                https://app.flaremo.app
+              </span>
             </div>
 
-            <div className="text-[11px] font-mono text-fog">
-              Cloudflare Workers
+            <div className="text-[11px] font-mono text-fog flex items-center gap-1.5">
+              <span className="size-1.5 rounded-full bg-signal animate-pulse" />
+              <span>Cloudflare Workers</span>
             </div>
           </div>
 
-          {/* 电脑端应用内结构：左侧边栏 + 右侧时间线 */}
+          {/* 电脑端内部结构：左侧资源管理器 + 右侧时间线 */}
           <div className="grid grid-cols-1 md:grid-cols-[210px_1fr] lg:grid-cols-[220px_1fr] min-h-[580px] bg-paper">
-            {/* 左侧真实边栏 (FlareMo Explorer) */}
+            {/* 左侧边栏 (FlareMo Explorer) */}
             <aside className="border-r border-line/60 bg-surface/40 p-4 space-y-4 hidden md:block select-none overflow-y-auto max-h-[620px] no-scrollbar">
-              {/* 边栏顶部 Header：Logo + 标题 + 铃铛 + 版本 + 设置 */}
+              {/* 边栏顶部 Header */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="flex size-6 items-center justify-center rounded-lg bg-brand-gradient text-white text-xs font-bold shadow-2xs">
@@ -235,19 +242,25 @@ export function InteractiveShowcase() {
                   <div className="text-base font-extrabold text-ink tabular-nums">
                     {totalCount}
                   </div>
-                  <div className="text-[10px] text-mist">记录</div>
+                  <div className="text-[10px] text-mist">
+                    {showcase.ui.statsRecords}
+                  </div>
                 </div>
                 <div>
                   <div className="text-base font-extrabold text-ink tabular-nums">
                     {tagList.length}
                   </div>
-                  <div className="text-[10px] text-mist">标签</div>
+                  <div className="text-[10px] text-mist">
+                    {showcase.ui.statsTags}
+                  </div>
                 </div>
                 <div>
                   <div className="text-base font-extrabold text-ink tabular-nums">
                     1
                   </div>
-                  <div className="text-[10px] text-mist">天</div>
+                  <div className="text-[10px] text-mist">
+                    {showcase.ui.statsDays}
+                  </div>
                 </div>
               </div>
 
@@ -264,7 +277,7 @@ export function InteractiveShowcase() {
                         : "hover:text-ink",
                     )}
                   >
-                    趋势
+                    {showcase.ui.trend}
                   </button>
                   <button
                     type="button"
@@ -276,7 +289,7 @@ export function InteractiveShowcase() {
                         : "hover:text-ink",
                     )}
                   >
-                    日历
+                    {showcase.ui.calendar}
                   </button>
                 </div>
 
@@ -298,10 +311,9 @@ export function InteractiveShowcase() {
                     ))}
                   </div>
                   <div className="flex justify-between text-[9px] text-fog font-mono px-0.5">
-                    <span>6月</span>
-                    <span>7月</span>
-                    <span>8月</span>
-                    <span>9月</span>
+                    {showcase.ui.months.map((m) => (
+                      <span key={m}>{m}</span>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -315,17 +327,17 @@ export function InteractiveShowcase() {
                     setActiveTag(null);
                   }}
                   className={cn(
-                    "flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 transition-colors cursor-pointer text-left",
-                    activeMenu === "timeline" && activeTag === null
-                      ? "bg-signal/10 text-signal-ink font-bold border-l-2 border-signal"
-                      : "text-mist hover:bg-wash hover:text-ink",
+                    "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer",
+                    activeMenu === "timeline" && !activeTag
+                      ? "bg-signal/15 text-signal-ink font-bold border border-signal/30"
+                      : "text-mist hover:text-ink hover:bg-wash",
                   )}
                 >
-                  <span className="flex items-center gap-2">
-                    <Inbox className="size-3.5 text-signal" />
-                    <span>时间线</span>
-                  </span>
-                  <span className="text-[10px] tabular-nums font-mono text-signal-ink">
+                  <div className="flex items-center gap-2">
+                    <Inbox className="size-4 text-signal" />
+                    <span>{showcase.ui.timeline}</span>
+                  </div>
+                  <span className="font-mono text-[10px] px-1.5 py-0.5 bg-line/60 rounded-full text-mist">
                     {totalCount}
                   </span>
                 </button>
@@ -334,76 +346,78 @@ export function InteractiveShowcase() {
                   type="button"
                   onClick={() => setActiveMenu("archive")}
                   className={cn(
-                    "flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 transition-colors cursor-pointer text-left",
+                    "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer",
                     activeMenu === "archive"
-                      ? "bg-signal/10 text-signal-ink font-bold"
-                      : "text-mist hover:bg-wash hover:text-ink",
+                      ? "bg-signal/15 text-signal-ink font-bold border border-signal/30"
+                      : "text-mist hover:text-ink hover:bg-wash",
                   )}
                 >
-                  <span className="flex items-center gap-2">
-                    <Archive className="size-3.5" />
-                    <span>归档</span>
+                  <div className="flex items-center gap-2">
+                    <Archive className="size-4" />
+                    <span>{showcase.ui.archive}</span>
+                  </div>
+                  <span className="font-mono text-[10px] px-1.5 py-0.5 bg-line/60 rounded-full text-mist">
+                    0
                   </span>
-                  <span className="text-[10px] text-fog font-mono">0</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setActiveMenu("trash")}
                   className={cn(
-                    "flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 transition-colors cursor-pointer text-left",
+                    "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer",
                     activeMenu === "trash"
-                      ? "bg-signal/10 text-signal-ink font-bold"
-                      : "text-mist hover:bg-wash hover:text-ink",
+                      ? "bg-signal/15 text-signal-ink font-bold border border-signal/30"
+                      : "text-mist hover:text-ink hover:bg-wash",
                   )}
                 >
-                  <span className="flex items-center gap-2">
-                    <Trash2 className="size-3.5" />
-                    <span>回收站</span>
+                  <div className="flex items-center gap-2">
+                    <Trash2 className="size-4" />
+                    <span>{showcase.ui.trash}</span>
+                  </div>
+                  <span className="font-mono text-[10px] px-1.5 py-0.5 bg-line/60 rounded-full text-mist">
+                    0
                   </span>
-                  <span className="text-[10px] text-fog font-mono">0</span>
                 </button>
               </nav>
 
-              {/* 扩展功能列表 */}
-              <div className="pt-2 border-t border-line/60 space-y-0.5 text-xs text-mist">
+              {/* 5项快捷视图 */}
+              <div className="pt-2 border-t border-line/40 space-y-0.5 text-xs text-mist">
                 {[
-                  { icon: CalendarDays, label: "每日回顾" },
-                  { icon: Footprints, label: "随机漫步" },
-                  { icon: Brain, label: "记忆" },
-                  { icon: Calendar, label: "日历" },
-                  { icon: FolderKanban, label: "项目" },
-                ].map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <div
-                      key={item.label}
-                      className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-wash hover:text-ink transition-colors cursor-pointer"
-                    >
-                      <Icon className="size-3.5 text-mist" />
-                      <span>{item.label}</span>
-                    </div>
-                  );
-                })}
+                  { icon: Zap, label: showcase.ui.dailyReview },
+                  { icon: Footprints, label: showcase.ui.randomWalk },
+                  { icon: Brain, label: showcase.ui.memory },
+                  { icon: CalendarDays, label: showcase.ui.calendarView },
+                  { icon: FolderKanban, label: showcase.ui.projects },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg hover:text-ink hover:bg-wash transition-colors cursor-pointer"
+                  >
+                    <item.icon className="size-3.5 text-fog" />
+                    <span>{item.label}</span>
+                  </div>
+                ))}
               </div>
 
-              {/* 标签分类 */}
-              <div className="pt-2 border-t border-line/60 space-y-1">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-fog px-1 flex items-center gap-1">
-                  <Hash className="size-2.5" />
-                  <span>标签索引</span>
+              {/* 标签列表 */}
+              <div className="pt-2 border-t border-line/40 space-y-1">
+                <div className="text-[10px] font-bold text-fog px-2">
+                  {showcase.ui.tagIndex}
                 </div>
-                <div className="space-y-0.5 text-xs">
+                <div className="space-y-0.5">
                   {tagList.map((tag) => (
                     <button
                       type="button"
                       key={tag.name}
-                      onClick={() => setActiveTag(tag.name)}
+                      onClick={() =>
+                        setActiveTag(activeTag === tag.name ? null : tag.name)
+                      }
                       className={cn(
-                        "flex w-full items-center justify-between rounded-lg px-2.5 py-1 transition-colors cursor-pointer text-left",
+                        "w-full flex items-center justify-between px-2.5 py-1 rounded-lg text-xs transition-colors cursor-pointer",
                         activeTag === tag.name
-                          ? "bg-signal/10 text-signal-ink font-bold"
-                          : "text-mist hover:bg-wash hover:text-ink",
+                          ? "bg-signal/15 text-signal-ink font-bold"
+                          : "text-mist hover:text-ink hover:bg-wash",
                       )}
                     >
                       <span>#{tag.name}</span>
@@ -422,7 +436,9 @@ export function InteractiveShowcase() {
               <div className="flex items-center justify-between gap-3 pb-1 border-b border-line/60">
                 <div className="flex items-center gap-1.5 text-sm font-bold text-ink">
                   <span className="text-fog">/</span>
-                  <span>{activeTag ? `标签: #${activeTag}` : "时间线"}</span>
+                  <span>
+                    {activeTag ? `#${activeTag}` : showcase.ui.timeline}
+                  </span>
                 </div>
 
                 <div className="relative w-44 sm:w-56">
@@ -431,56 +447,57 @@ export function InteractiveShowcase() {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="搜索记录..."
-                    className="w-full h-8 pl-8 pr-3 rounded-full border border-line/70 bg-surface text-xs text-ink placeholder:text-fog focus:outline-none focus:border-signal"
+                    placeholder={showcase.ui.searchPlaceholder}
+                    className="w-full h-8 pl-8 pr-3 rounded-full border border-line/70 bg-surface text-xs text-ink placeholder:text-fog focus:outline-none focus:border-signal/70 transition-colors"
                   />
                 </div>
               </div>
 
-              {/* 真实 Memo 发送器 (MemoComposer) */}
-              <div className="rounded-2xl border border-line/70 bg-surface p-3.5 shadow-2xs space-y-2.5 transition-shadow hover:shadow-xs">
+              {/* 真实桌面端 Composer 发送器 */}
+              <div className="rounded-2xl border border-line/70 bg-surface p-4 shadow-2xs space-y-3">
                 <textarea
                   value={desktopInput}
                   onChange={(e) => setDesktopInput(e.target.value)}
-                  placeholder="此刻在想什么？记下来..."
-                  rows={2}
+                  placeholder={showcase.ui.composerPlaceholder}
+                  rows={3}
                   className="w-full bg-transparent text-xs sm:text-sm text-ink placeholder:text-fog resize-none focus:outline-none leading-relaxed"
                 />
 
-                <div className="flex items-center justify-between pt-1">
+                <div className="flex items-center justify-between pt-1 border-t border-line/40">
                   <div className="flex items-center gap-3 text-mist">
                     <button
                       type="button"
-                      title="插入标签"
                       onClick={() => setDesktopInput((prev) => `${prev} #`)}
-                      className="hover:text-ink cursor-pointer"
+                      className="cursor-pointer hover:text-ink transition-colors"
+                      title="插入标签"
                     >
-                      <Hash className="size-3.5" />
+                      <Hash className="size-4" />
                     </button>
                     <button
                       type="button"
-                      title="添加图片"
-                      className="hover:text-ink cursor-pointer"
+                      className="cursor-pointer hover:text-ink transition-colors"
+                      title="上传附件"
                     >
-                      <ImageIcon className="size-3.5" />
+                      <ImageIcon className="size-4" />
                     </button>
                     <button
                       type="button"
-                      title="待办清单"
-                      className="hover:text-ink cursor-pointer"
+                      onClick={() => setDesktopInput((prev) => `${prev}\n• `)}
+                      className="cursor-pointer hover:text-ink transition-colors"
+                      title="列表项目"
                     >
-                      <List className="size-3.5" />
+                      <List className="size-4" />
                     </button>
                   </div>
 
                   <button
                     type="button"
                     onClick={() => publishMemo(desktopInput, false)}
-                    disabled={isSyncing || !desktopInput.trim()}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-brand-gradient px-4 py-1 text-xs font-semibold text-white shadow-xs hover:brightness-105 active:translate-y-px transition-all cursor-pointer disabled:opacity-40"
+                    disabled={isSyncing}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-brand-gradient px-4 py-1.5 text-xs font-semibold text-white shadow-xs hover:brightness-105 active:translate-y-px transition-all cursor-pointer disabled:opacity-40"
                   >
                     <Send className="size-3" />
-                    <span>发送</span>
+                    <span>{showcase.ui.send}</span>
                   </button>
                 </div>
               </div>
@@ -513,7 +530,7 @@ export function InteractiveShowcase() {
                             : "border-line/70 shadow-2xs hover:border-line",
                         )}
                       >
-                        {/* 卡片头部：圆形头像 + 时间/来源 + 更多操作 */}
+                        {/* 卡片头部 */}
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="size-4.5 rounded-full border-2 border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 shrink-0" />
@@ -537,7 +554,7 @@ export function InteractiveShowcase() {
                           {m.content}
                         </p>
 
-                        {/* 引用样式块 (Quote Callout) */}
+                        {/* 引用样式块 */}
                         {m.quote && (
                           <div className="rounded-r-xl border-l-2 border-signal bg-signal/10 p-3 text-xs text-ink leading-relaxed">
                             {m.quote}
@@ -551,17 +568,16 @@ export function InteractiveShowcase() {
                           </div>
                         )}
 
-                        {/* 记录编号与底栏药丸标签 */}
-                        <div className="pt-2 border-t border-line/40 flex items-center justify-between text-xs">
-                          <span className="text-[11px] text-mist font-mono">
-                            记录 {m.orderNumber}
+                        {/* 卡片底部操作栏 */}
+                        <div className="flex items-center justify-between pt-1 border-t border-line/40 text-[11px] text-fog font-mono">
+                          <span>
+                            {showcase.ui.recordPrefix} {m.orderNumber}
                           </span>
-
                           <div className="flex gap-1.5">
                             {m.tags.map((t) => (
                               <span
                                 key={t}
-                                className="rounded-full bg-flame-50 dark:bg-flame-950/50 border border-flame-200 dark:border-flame-900/60 px-2 py-0.5 text-[10px] font-medium text-flame-600 dark:text-flame-400"
+                                className="rounded-full bg-soft-surface px-2 py-0.5 text-[10px] text-mist"
                               >
                                 #{t}
                               </span>
@@ -578,22 +594,32 @@ export function InteractiveShowcase() {
         </div>
 
         {/* ============================================================
-            手机端设备（严格还原 FlareMo 真实移动端单列布局）
+            手机端设备：高质感钛金属 / 极夜黑真实手机硬件模型
             ============================================================ */}
-        <div className="mx-auto w-full max-w-[320px] rounded-[2.6rem] border-4 border-surface bg-paper p-1 shadow-pop-xl ring-1 ring-line/80 relative">
-          <div className="overflow-hidden rounded-[2.2rem] bg-paper border border-line/60 flex flex-col h-[540px] relative">
-            {/* 手机系统状态栏与扬声器孔 */}
-            <div className="h-9 bg-soft-surface px-5 flex items-center justify-between border-b border-line/60 shrink-0 select-none">
-              <span className="text-[11px] font-bold text-ink">09:41</span>
-              <div className="h-3.5 w-16 rounded-full bg-black flex items-center justify-center">
-                <span className="size-1 rounded-full bg-emerald-500 animate-pulse" />
+        <div className="relative mx-auto w-full max-w-[320px] rounded-[48px] border-[9px] border-zinc-900 dark:border-zinc-800 bg-zinc-950 p-[2px] shadow-[0_25px_65px_-12px_rgba(0,0,0,0.45)] dark:shadow-[0_30px_80px_-15px_rgba(0,0,0,0.9)] ring-1 ring-zinc-700/80 dark:ring-zinc-600/70 select-none">
+          {/* 机身侧键物理凹槽 */}
+          <span className="absolute -left-[12px] top-24 h-8 w-1 rounded-l-sm bg-zinc-700 dark:bg-zinc-600" />
+          <span className="absolute -left-[12px] top-36 h-8 w-1 rounded-l-sm bg-zinc-700 dark:bg-zinc-600" />
+          <span className="absolute -right-[12px] top-28 h-12 w-1 rounded-r-sm bg-zinc-700 dark:bg-zinc-600" />
+
+          {/* 屏幕玻璃与边框 */}
+          <div className="overflow-hidden rounded-[38px] bg-paper border border-black/20 dark:border-white/5 flex flex-col h-[560px] relative">
+            {/* 手机系统状态栏 + 灵动岛 (Dynamic Island) */}
+            <div className="h-10 bg-soft-surface px-6 flex items-center justify-between border-b border-line/60 shrink-0">
+              <span className="text-[11px] font-bold text-ink tracking-tight">
+                09:41
+              </span>
+              {/* 灵动岛胶囊孔 */}
+              <div className="h-4 w-20 rounded-full bg-black flex items-center justify-between px-2 shadow-inner">
+                <span className="size-1.5 rounded-full bg-zinc-900 ring-1 ring-zinc-800" />
+                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
               </div>
               <div className="flex items-center gap-1 text-[10px] text-ink font-bold">
                 5G
               </div>
             </div>
 
-            {/* 移动端 App 真实顶栏：汉堡菜单 (可点击打开抽屉) + 标题 + 筛选提示 */}
+            {/* 移动端 App 顶栏：汉堡菜单 + 标题 + 筛选提示 */}
             <div className="px-3.5 py-2 border-b border-line/60 bg-surface flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
                 <button
@@ -608,10 +634,10 @@ export function InteractiveShowcase() {
                   {activeTag
                     ? `#${activeTag}`
                     : activeMenu === "timeline"
-                      ? "时间线"
+                      ? showcase.ui.timeline
                       : activeMenu === "archive"
-                        ? "归档"
-                        : "回收站"}
+                        ? showcase.ui.archive
+                        : showcase.ui.trash}
                 </span>
               </div>
               <div className="flex items-center gap-1.5">
@@ -619,9 +645,9 @@ export function InteractiveShowcase() {
                   <button
                     type="button"
                     onClick={() => setActiveTag(null)}
-                    className="text-[10px] text-mist hover:text-ink cursor-pointer"
+                    className="text-[10px] text-mist hover:text-ink cursor-pointer font-medium"
                   >
-                    ✕ 全部
+                    {showcase.ui.clearFilter}
                   </button>
                 )}
                 <span className="text-[10px] text-fog font-mono bg-soft-surface px-1.5 py-0.5 rounded-full border border-line/60">
@@ -630,7 +656,7 @@ export function InteractiveShowcase() {
               </div>
             </div>
 
-            {/* 手机屏幕主内容区 (可滚动，使用 no-scrollbar 去除粗滚动条) */}
+            {/* 手机屏幕主内容区 (可滚动，使用 no-scrollbar) */}
             <div className="p-3 flex-1 overflow-y-auto space-y-3 no-scrollbar">
               {/* 搜索框 */}
               <div className="relative">
@@ -639,7 +665,7 @@ export function InteractiveShowcase() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="搜索记录..."
+                  placeholder={showcase.ui.searchPlaceholder}
                   className="w-full h-7 pl-7 pr-3 rounded-full border border-line/70 bg-surface text-[11px] text-ink placeholder:text-fog focus:outline-none"
                 />
               </div>
@@ -649,7 +675,7 @@ export function InteractiveShowcase() {
                 <textarea
                   value={mobileInput}
                   onChange={(e) => setMobileInput(e.target.value)}
-                  placeholder="此刻在想什么？记下来..."
+                  placeholder={showcase.ui.composerPlaceholder}
                   rows={2}
                   className="w-full bg-transparent text-xs text-ink placeholder:text-fog resize-none focus:outline-none leading-relaxed"
                 />
@@ -671,6 +697,7 @@ export function InteractiveShowcase() {
                     </button>
                     <button
                       type="button"
+                      onClick={() => setMobileInput((p) => `${p}\n• `)}
                       className="cursor-pointer hover:text-ink"
                     >
                       <List className="size-3.5" />
@@ -688,14 +715,14 @@ export function InteractiveShowcase() {
                     ) : (
                       <>
                         <Send className="size-2.5" />
-                        <span>发送</span>
+                        <span>{showcase.ui.send}</span>
                       </>
                     )}
                   </button>
                 </div>
               </div>
 
-              {/* 移动端时间线笔记流 (严格还原 FlareMo 移动端 Memo 列表) */}
+              {/* 移动端时间线笔记流 */}
               <div className="space-y-2.5">
                 <AnimatePresence initial={false}>
                   {filteredMemos.map((m) => {
@@ -762,16 +789,15 @@ export function InteractiveShowcase() {
               </div>
             </div>
 
-            {/* 手机底部指示条 */}
+            {/* 手机底部指示条 (Home Indicator) */}
             <div className="h-5 flex items-center justify-center bg-soft-surface shrink-0 border-t border-line/40 select-none">
-              <span className="h-1 w-20 rounded-full bg-mist/40" />
+              <span className="h-1 w-24 rounded-full bg-mist/50" />
             </div>
 
             {/* 移动端真实侧边抽屉 (Sheet Drawer) */}
             <AnimatePresence>
               {mobileDrawerOpen && (
                 <>
-                  {/* 背景遮罩 */}
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -781,7 +807,6 @@ export function InteractiveShowcase() {
                     className="absolute inset-0 z-40 bg-black/60 backdrop-blur-xs cursor-pointer"
                   />
 
-                  {/* 侧边滑出抽屉面板 */}
                   <motion.aside
                     initial={{ x: "-100%" }}
                     animate={{ x: 0 }}
@@ -822,19 +847,25 @@ export function InteractiveShowcase() {
                           <div className="text-sm font-extrabold text-ink tabular-nums">
                             {totalCount}
                           </div>
-                          <div className="text-[9px] text-mist">记录</div>
+                          <div className="text-[9px] text-mist">
+                            {showcase.ui.statsRecords}
+                          </div>
                         </div>
                         <div>
                           <div className="text-sm font-extrabold text-ink tabular-nums">
                             {tagList.length}
                           </div>
-                          <div className="text-[9px] text-mist">标签</div>
+                          <div className="text-[9px] text-mist">
+                            {showcase.ui.statsTags}
+                          </div>
                         </div>
                         <div>
                           <div className="text-sm font-extrabold text-ink tabular-nums">
                             1
                           </div>
-                          <div className="text-[9px] text-mist">天</div>
+                          <div className="text-[9px] text-mist">
+                            {showcase.ui.statsDays}
+                          </div>
                         </div>
                       </div>
 
@@ -856,9 +887,9 @@ export function InteractiveShowcase() {
                           ))}
                         </div>
                         <div className="flex justify-between text-[8px] text-fog font-mono px-0.5">
-                          <span>7月</span>
-                          <span>8月</span>
-                          <span>9月</span>
+                          <span>{showcase.ui.months[1]}</span>
+                          <span>{showcase.ui.months[2]}</span>
+                          <span>{showcase.ui.months[3]}</span>
                         </div>
                       </div>
 
@@ -880,7 +911,7 @@ export function InteractiveShowcase() {
                         >
                           <div className="flex items-center gap-2">
                             <Inbox className="size-3.5 text-signal" />
-                            <span>时间线</span>
+                            <span>{showcase.ui.timeline}</span>
                           </div>
                           <span className="font-mono text-[9px] px-1 py-0.2 bg-line/60 rounded-full text-mist">
                             {totalCount}
@@ -902,7 +933,7 @@ export function InteractiveShowcase() {
                         >
                           <div className="flex items-center gap-2">
                             <Archive className="size-3.5" />
-                            <span>归档</span>
+                            <span>{showcase.ui.archive}</span>
                           </div>
                           <span className="font-mono text-[9px] px-1 py-0.2 bg-line/60 rounded-full text-mist">
                             0
@@ -924,7 +955,7 @@ export function InteractiveShowcase() {
                         >
                           <div className="flex items-center gap-2">
                             <Trash2 className="size-3.5" />
-                            <span>回收站</span>
+                            <span>{showcase.ui.trash}</span>
                           </div>
                           <span className="font-mono text-[9px] px-1 py-0.2 bg-line/60 rounded-full text-mist">
                             0
@@ -935,11 +966,14 @@ export function InteractiveShowcase() {
                       {/* 快捷视图 */}
                       <div className="pt-2 border-t border-line/40 space-y-0.5 text-[11px] text-mist">
                         {[
-                          { icon: Zap, label: "每日回顾" },
-                          { icon: Footprints, label: "随机漫步" },
-                          { icon: Brain, label: "记忆" },
-                          { icon: CalendarDays, label: "日历" },
-                          { icon: FolderKanban, label: "项目" },
+                          { icon: Zap, label: showcase.ui.dailyReview },
+                          { icon: Footprints, label: showcase.ui.randomWalk },
+                          { icon: Brain, label: showcase.ui.memory },
+                          {
+                            icon: CalendarDays,
+                            label: showcase.ui.calendarView,
+                          },
+                          { icon: FolderKanban, label: showcase.ui.projects },
                         ].map((item) => (
                           <button
                             type="button"
@@ -956,7 +990,7 @@ export function InteractiveShowcase() {
                       {/* 标签列表 */}
                       <div className="pt-2 border-t border-line/40 space-y-1">
                         <div className="text-[10px] font-bold text-fog px-2">
-                          标签索引
+                          {showcase.ui.tagIndex}
                         </div>
                         <div className="space-y-0.5">
                           {tagList.map((tag) => (

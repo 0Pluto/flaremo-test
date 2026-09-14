@@ -62,6 +62,17 @@ const COMP_HEADERS: Record<SupportedLocale, { nas: string; vps: string }> = {
   ar: { nas: "وحدة NAS منزلية", vps: "خوادم VPS التقليدية" },
 };
 
+const COMP_DIMENSIONS: Record<SupportedLocale, string> = {
+  en: "Dimension",
+  zh: "对比维度",
+  ja: "比較項目",
+  fr: "Dimension",
+  es: "Dimensión",
+  ko: "비교 기준",
+  ru: "Критерий",
+  ar: "معيار المقارنة",
+};
+
 export function HomePage() {
   const { pathname } = useLocation();
   const locale = getLocaleFromPath(pathname);
@@ -70,7 +81,7 @@ export function HomePage() {
   return (
     <main className="space-y-24 sm:space-y-32 pb-24 overflow-x-hidden">
       <Hero home={home} locale={locale} />
-      <InteractiveShowcase />
+      <InteractiveShowcase locale={locale} />
       <BentoFeatures
         heading={home.featuresHeading}
         icons={FEATURE_ICONS}
@@ -89,6 +100,7 @@ export function HomePage() {
         buttonText={home.ctaButton}
         heading={home.ctaHeading}
         locale={locale}
+        secondaryCta={home.secondaryCta}
         subtitle={home.ctaSubtitle}
       />
     </main>
@@ -289,10 +301,6 @@ function BentoFeatures({
                     {item.description}
                   </p>
                 </div>
-                <div className="mt-6 flex items-center gap-1 text-xs font-semibold text-signal-ink opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                  <span>了解更多</span>
-                  <ArrowRight className="size-3" />
-                </div>
               </SpotlightCard>
             </RevealItem>
           );
@@ -334,7 +342,9 @@ function ComparisonSection({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line/60 bg-soft-surface/80 text-left text-xs uppercase tracking-wider text-mist">
-                <th className="px-5 py-4 font-semibold">对比维度</th>
+                <th className="px-5 py-4 font-semibold">
+                  {COMP_DIMENSIONS[locale] || COMP_DIMENSIONS.en}
+                </th>
                 <th className="bg-signal/10 px-5 py-4 font-bold text-signal-ink">
                   Cloudflare (FlareMo)
                 </th>
@@ -375,63 +385,254 @@ function ComparisonSection({
    5. 多端生态与无缝兼容展示
    ============================================================ */
 
-function EcosystemSection({ locale }: { locale: SupportedLocale }) {
-  const isZh = locale === "zh";
+const ECOSYSTEM_CONTENT: Record<
+  SupportedLocale,
+  {
+    heading: string;
+    subtitle: string;
+    clients: Array<{
+      title: string;
+      tag: string;
+      desc: string;
+    }>;
+  }
+> = {
+  zh: {
+    heading: "全面的 Memos 生态无缝兼容",
+    subtitle:
+      "完整兼容 Memos /api/v1 协议与可撤销个人访问令牌（PAT），你的现有工具链立即可用。",
+    clients: [
+      {
+        title: "Moe Memos",
+        tag: "iOS & Android",
+        desc: "最受欢迎的开源移动双端，支持直接以 FlareMo 地址与 PAT 凭据连接。",
+      },
+      {
+        title: "Telegram Bot",
+        tag: "即时捕捉",
+        desc: "随手向专属 Bot 发送文字、图片与语音，几秒内完成碎片灵感入库。",
+      },
+      {
+        title: "AI MCP Server",
+        tag: "Model Context Protocol",
+        desc: "连接 Claude Desktop、Cursor 与 Codex，将笔记库作为 AI 长期记忆体。",
+      },
+      {
+        title: "Raycast / Alfred",
+        tag: "桌面心流",
+        desc: "全局快捷键一秒唤起输入框，不打断手头心流快速记下闪念。",
+      },
+    ],
+  },
+  en: {
+    heading: "Full Memos Ecosystem Compatibility",
+    subtitle:
+      "Drop-in compatibility with Memos /api/v1 endpoints and Personal Access Tokens (PAT). Keep your favorite daily tools.",
+    clients: [
+      {
+        title: "Moe Memos",
+        tag: "iOS & Android",
+        desc: "The most popular open-source mobile client for iOS and Android with direct PAT connection.",
+      },
+      {
+        title: "Telegram Bot",
+        tag: "Instant Capture",
+        desc: "Send notes, voice memos, and photos directly to your personal bot in seconds.",
+      },
+      {
+        title: "AI MCP Server",
+        tag: "Model Context Protocol",
+        desc: "Connect Claude Desktop, Cursor, and Codex as your AI long-term external brain.",
+      },
+      {
+        title: "Raycast / Alfred",
+        tag: "Desktop Workflow",
+        desc: "Trigger global quick-capture shortcuts on desktop without breaking your creative flow.",
+      },
+    ],
+  },
+  ja: {
+    heading: "Memos エコシステムとの完全互換",
+    subtitle:
+      "Memos /api/v1 エンドポイントと PAT トークンを標準サポート。使い慣れたツールをそのまま活用できます。",
+    clients: [
+      {
+        title: "Moe Memos",
+        tag: "iOS & Android",
+        desc: "iOS/Android 対応の人気オープンソースモバイルクライアント。PAT で直接連携。",
+      },
+      {
+        title: "Telegram Bot",
+        tag: "即時キャプチャ",
+        desc: "専用 Bot にテキストや写真、音声メモを送信して数秒でインプット完了。",
+      },
+      {
+        title: "AI MCP Server",
+        tag: "Model Context Protocol",
+        desc: "Claude Desktop や Cursor、Codex と連携し、ノートを AI の長期記憶として活用。",
+      },
+      {
+        title: "Raycast / Alfred",
+        tag: "デスクトップ",
+        desc: "ショートカットで瞬時にメモウィンドウを起動し、思考の流れを中断せず記録。",
+      },
+    ],
+  },
+  fr: {
+    heading: "Compatibilité totale avec l'écosystème Memos",
+    subtitle:
+      "Compatibilité directe avec l'API Memos /api/v1 et les jetons PAT. Conservez vos outils préférés.",
+    clients: [
+      {
+        title: "Moe Memos",
+        tag: "iOS & Android",
+        desc: "Client mobile open-source populaire pour iOS et Android avec synchronisation directe.",
+      },
+      {
+        title: "Telegram Bot",
+        tag: "Capture instantanée",
+        desc: "Envoyez des notes, des messages vocaux et des photos directement à votre bot en quelques secondes.",
+      },
+      {
+        title: "AI MCP Server",
+        tag: "Model Context Protocol",
+        desc: "Connectez Claude Desktop, Cursor et Codex comme mémoire externe à long terme pour l'IA.",
+      },
+      {
+        title: "Raycast / Alfred",
+        tag: "Flux de bureau",
+        desc: "Raccourci clavier global pour capturer des pensées sans interrompre votre concentration.",
+      },
+    ],
+  },
+  es: {
+    heading: "Compatibilidad total con el ecosistema Memos",
+    subtitle:
+      "Compatibilidad directa con la API /api/v1 de Memos y tokens PAT. Conserva todas tus herramientas diarias.",
+    clients: [
+      {
+        title: "Moe Memos",
+        tag: "iOS y Android",
+        desc: "Cliente móvil de código abierto líder para iOS y Android con conexión directa mediante PAT.",
+      },
+      {
+        title: "Telegram Bot",
+        tag: "Captura instantánea",
+        desc: "Envía notas, audios y fotos directamente a tu bot personal en cuestión de segundos.",
+      },
+      {
+        title: "AI MCP Server",
+        tag: "Model Context Protocol",
+        desc: "Conecta Claude Desktop, Cursor y Codex como memoria externa a largo plazo para IA.",
+      },
+      {
+        title: "Raycast / Alfred",
+        tag: "Flujo de escritorio",
+        desc: "Atajo de teclado global para captura rápida en escritorio sin interrumpir tu concentración.",
+      },
+    ],
+  },
+  ko: {
+    heading: "완벽한 Memos 생태계 호환성",
+    subtitle:
+      "Memos /api/v1 표준 API 및 PAT 토큰 호환. 기존에 사용하던 모든 도구를 즉시 연결할 수 있습니다.",
+    clients: [
+      {
+        title: "Moe Memos",
+        tag: "iOS & Android",
+        desc: "iOS 및 Android를 지원하는 인기 오픈소스 모바일 클라이언트. PAT로 즉시 연결.",
+      },
+      {
+        title: "Telegram Bot",
+        tag: "즉각적인 기록",
+        desc: "전용 봇에 텍스트, 음성, 사진을 보내 몇 초 만에 아이디어를 안전하게 저장.",
+      },
+      {
+        title: "AI MCP Server",
+        tag: "Model Context Protocol",
+        desc: "Claude Desktop, Cursor, Codex에 연결하여 나만의 AI 장기 외장 기억 저장소로 활용.",
+      },
+      {
+        title: "Raycast / Alfred",
+        tag: "데스크톱 워크플로",
+        desc: "단축키로 1초 만에 캡처 창을 호출하여 작업 흐름의 중단 없이 빠르게 메모.",
+      },
+    ],
+  },
+  ru: {
+    heading: "Полная совместимость с экосистемой Memos",
+    subtitle:
+      "Поддержка Memos /api/v1 и токенов PAT. Ваши любимые приложения и скрипты работают сразу.",
+    clients: [
+      {
+        title: "Moe Memos",
+        tag: "iOS и Android",
+        desc: "Популярный мобильный клиент с открытым исходным кодом для iOS и Android.",
+      },
+      {
+        title: "Telegram Bot",
+        tag: "Быстрый сбор",
+        desc: "Отправляйте заметки, голос и фото в личного бота за пару секунд.",
+      },
+      {
+        title: "AI MCP Server",
+        tag: "Model Context Protocol",
+        desc: "Подключение Claude Desktop, Cursor и Codex в качестве внешней памяти для ИИ.",
+      },
+      {
+        title: "Raycast / Alfred",
+        tag: "Настольный поток",
+        desc: "Глобальное сочетание клавиш для мгновенной фиксации идей на рабочем столе.",
+      },
+    ],
+  },
+  ar: {
+    heading: "توافق كامل مع منظومة Memos",
+    subtitle:
+      "توافق مباشر مع واجهة Memos /api/v1 ورموز الوصول الشخصية (PAT). احتفظ بأدواتك اليومية المفضلة.",
+    clients: [
+      {
+        title: "Moe Memos",
+        tag: "iOS و Android",
+        desc: "عميل الهاتف المحمول مفتوح المصدر الشهير لنظامي iOS و Android مع اتصال مباشر.",
+      },
+      {
+        title: "Telegram Bot",
+        tag: "التقاط فوري",
+        desc: "أرسل الملاحظات والرسائل الصوتية والصور مباشرة إلى روبوتك الشخصي في ثوانٍ.",
+      },
+      {
+        title: "AI MCP Server",
+        tag: "Model Context Protocol",
+        desc: "اربط Claude Desktop و Cursor كذاكرة طويلة المدى للذكاء الاصطناعي الخاص بك.",
+      },
+      {
+        title: "Raycast / Alfred",
+        tag: "سير العمل المكتبي",
+        desc: "مفتاح اختصار شامل لالتقاط الأفكار على سطح المكتب دون مقاطعة تركيزك.",
+      },
+    ],
+  },
+};
 
-  const clients = [
-    {
-      title: "Moe Memos",
-      tag: "iOS & Android",
-      desc: isZh
-        ? "最受欢迎的开源移动双端，支持直接以 FlareMo 地址与 PAT 连接。"
-        : "Popular native mobile client for iOS & Android with offline sync.",
-      icon: Smartphone,
-    },
-    {
-      title: "Telegram Bot",
-      tag: "Instant Capture",
-      desc: isZh
-        ? "随手向专属 Bot 发送文字、图片与语音，几秒内完成碎片灵感入库。"
-        : "Send notes, voice, and photos directly to your personal bot.",
-      icon: Radio,
-    },
-    {
-      title: "AI MCP Server",
-      tag: "Model Context Protocol",
-      desc: isZh
-        ? "连接 Claude Desktop、Cursor 与 Codex，将笔记库作为 AI 长期记忆体。"
-        : "Directly connect Claude Desktop & Cursor as your AI external brain.",
-      icon: Sparkles,
-    },
-    {
-      title: "Raycast / Alfred",
-      tag: "Desktop Workflow",
-      desc: isZh
-        ? "全局快捷键一秒唤起输入框，不打断手头心流快速记下一笔。"
-        : "Global hotkey quick-capture on macOS without breaking flow.",
-      icon: Zap,
-    },
-  ];
+const ECOSYSTEM_ICONS = [Smartphone, Radio, Sparkles, Zap];
+
+function EcosystemSection({ locale }: { locale: SupportedLocale }) {
+  const content = ECOSYSTEM_CONTENT[locale] || ECOSYSTEM_CONTENT.en;
 
   return (
     <section className="container-x space-y-8">
       <div className="max-w-2xl space-y-2">
         <Badge variant="flame">Open Ecosystem</Badge>
         <h2 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl md:text-4xl">
-          {isZh
-            ? "全面的 Memos 生态无缝兼容"
-            : "Full Memos Ecosystem Compatibility"}
+          {content.heading}
         </h2>
-        <p className="text-sm text-mist">
-          {isZh
-            ? "完整兼容 Memos /api/v1 协议与可撤销个人访问令牌（PAT），你的现有工具链立即可用。"
-            : "Drop-in compatibility with Memos API and PAT tokens. Keep your favorite daily tools."}
-        </p>
+        <p className="text-sm text-mist">{content.subtitle}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {clients.map((c) => {
-          const Icon = c.icon;
+        {content.clients.map((c, idx) => {
+          const Icon = ECOSYSTEM_ICONS[idx] ?? Sparkles;
           return (
             <SpotlightCard
               key={c.title}
@@ -507,11 +708,13 @@ function CtaSection({
   heading,
   subtitle,
   buttonText,
+  secondaryCta,
   locale,
 }: {
   heading: string;
   subtitle: string;
   buttonText: string;
+  secondaryCta: string;
   locale: SupportedLocale;
 }) {
   return (
@@ -544,7 +747,7 @@ function CtaSection({
                 rel="noopener noreferrer"
                 target="_blank"
               >
-                <span>GitHub 源码</span>
+                <span>{secondaryCta}</span>
                 <ExternalLink className="size-3.5 text-mist" />
               </a>
             </Button>

@@ -37,39 +37,39 @@ export type HomeContent = {
 };
 
 const EN_HOME: HomeContent = {
-  heroEyebrow: "Zero Servers · Always Online · Free Self-Hosted",
+  heroEyebrow: "Zero Server Ops · Sub-50ms Global Edge · Free Self-Hosted",
   heroTitle: "Cloud-native personal notes & shared team knowledge base",
   heroSubtitle:
-    "A quiet personal thinking space with AI long-term memory for one; a shared brain with roles for teams. Zero servers to manage, and your data is forever yours.",
+    "A quiet personal thinking space with AI long-term memory for one; a shared brain with roles for teams. Zero servers to manage, and your data is forever yours on Cloudflare.",
   primaryCta: "Read Deploy Guide",
   secondaryCta: "GitHub Source",
   statMemos: "~2.5M text memos",
-  statPhotos: "~10k photos · $0 egress",
-  statServers: "24/7 global edge latency",
-  statUptime: "Multi-region replication",
-  featuresHeading: "Why Choose FlareMo",
+  statPhotos: "~10,000 photos · $0 egress",
+  statServers: "300+ edge datacenters",
+  statUptime: "Multi-region persistence & backup",
+  featuresHeading: "Engineered for Focus and Longevity",
   featuresSubtitle:
     "Leave heavy server maintenance behind and enjoy pure, reliable, AI-native knowledge management",
   features: [
     {
       title: "Enterprise Durability",
       description:
-        "Memos live in your Cloudflare D1 database and R2 bucket with multi-region persistence. Drive failure, power outages, and moves won't touch your data.",
+        "Memos live in your Cloudflare D1 database and R2 bucket with multi-region persistence. Drive failure, power outages, and moving hardware won't touch your data.",
     },
     {
       title: "Generous Free Tier",
       description:
-        "The free tier holds 2.5 million text memos plus 10k photos. R2 has $0 egress fees so sharing notes won't surprise you with bandwidth charges.",
+        "Cloudflare's free tier provides 5GB D1 database (~2.5 million text memos) and 10GB R2 storage (~10,000 photos). R2 has $0 egress fees so sharing notes won't surprise you with bandwidth charges.",
     },
     {
       title: "Offline-First & PWA",
       description:
-        "Installable PWA. Write seamlessly on planes or subways. Drafts save instantly and sync sequentially when connectivity returns.",
+        "Installable PWA for iOS, Android, and desktop. Write seamlessly on planes or subways. Drafts save instantly locally and sync sequentially when connectivity returns.",
     },
     {
-      title: "AI-Native Long-term Memory",
+      title: "AI-Native Long-Term Memory",
       description:
-        "Built-in /memory/mcp endpoint allows AI agents (Claude, Cursor, Codex) to read and update your preferences and project context with full human auditability.",
+        "Built-in Model Context Protocol (MCP) endpoint allows AI agents (Claude, Cursor, Codex) to read and update your preferences and project context with full human auditability.",
     },
     {
       title: "Team Collaboration & Roles",
@@ -77,9 +77,9 @@ const EN_HOME: HomeContent = {
         "Owner, Admin, and Member roles with 3-tier visibility (private, team-visible, public). Safe offboarding deletes private data cleanly.",
     },
     {
-      title: "Memos Compatible",
+      title: "Memos Compatible & Import/Export",
       description:
-        "Full compatibility with Memos /api/v1 endpoints and OpenAPI. Direct integration with existing third-party clients, plus one-click import and export.",
+        "Full compatibility with Memos /api/v1 endpoints and OpenAPI. Direct integration with existing third-party clients like Moe Memos, plus one-click import and export.",
     },
   ],
   comparisonHeading: "Why Cloudflare Native Wins",
@@ -156,49 +156,49 @@ const EN_HOME: HomeContent = {
 };
 
 const ZH_HOME: HomeContent = {
-  heroEyebrow: "0 服务器 · 24 小时全球在线 · 免费自托管",
+  heroEyebrow: "0 服务器运维 · 毫秒级边缘加速 · 免费自托管",
   heroTitle: "跑在云端的私人笔记与团队共享知识库",
   heroSubtitle:
-    "一个人用是安静专注的灵感速记与 AI 长期记忆；一个团队用是具备精细角色的共享大脑。无须购买服务器，数据永远归你所有。",
+    "一个人用是安静专注的灵感速记与 AI 长期外部记忆；一个团队用是具备精细角色的共享大脑。无须购买服务器，数据永远归你所有。",
   primaryCta: "快速开始部署",
   secondaryCta: "GitHub 源码",
-  statMemos: "约 250 万条笔记",
-  statPhotos: "1 万张图片 · 0 流量费",
-  statServers: "7×24h 边缘秒开",
-  statUptime: "企业级多副本容灾",
-  featuresHeading: "为什么选择 FlareMo",
+  statMemos: "约 250 万条纯文本笔记",
+  statPhotos: "1 万张图片 · 0 出口流量费",
+  statServers: "全球 300+ 边缘近场直连",
+  statUptime: "企业级多副本 · 本地自由归档",
+  featuresHeading: "为专注记录与长期沉淀而生",
   featuresSubtitle:
-    "抛开繁重的服务器运维，享受更纯粹、更强大、更安全的知识管理",
+    "告别繁重的服务器运维与数据焦虑，享受更纯粹、更强大、更安全的知识管理",
   features: [
     {
       title: "企业级持久化，永不丢失",
       description:
-        "笔记存储于 Cloudflare D1 数据库与 R2 存储桶，自带跨地域冗余。无需担心硬盘坏道、停电或意外损坏。",
+        "笔记存储于 Cloudflare D1 分布式数据库与 R2 存储桶，自带跨地域冗余容灾。无需担心硬盘坏道、停电或单点损坏。",
     },
     {
-      title: "免费配额，终生够用",
+      title: "免费配额，终生充裕",
       description:
-        "Cloudflare 免费层可存约 250 万条纯文本笔记与 1 万张高清照片，R2 存储免收出口流量费，0 成本无负担。",
+        "Cloudflare 官方免费层提供 5GB D1 数据库与 10GB R2 存储，R2 存储免收外网出口流量费，0 成本无财务负担。",
     },
     {
-      title: "离线可用，即时回放",
+      title: "离线优先，全平台 PWA",
       description:
-        "支持 PWA 原生安装。无网络时草稿本地秒级暂存，重新联网后待同步队列自动按顺序安全提交。",
+        "深度支持 PWA 原生安装。在飞行模式或地铁弱网下照常书写，草稿本地秒级暂存，重新联网后自动按序安全提交。",
     },
     {
-      title: "AI 原生，跨会话记忆",
+      title: "AI 原生，跨会话长期记忆",
       description:
-        "内置 /memory/mcp 端点，AI Agent（Claude、Cursor、Codex）可将知识库作为长期记忆读写，数据完全受你掌控。",
+        "内置标准化 MCP（Model Context Protocol）端点，Claude Desktop、Cursor、Codex 等 AI 助手可将知识库作为长期记忆安全读写。",
     },
     {
-      title: "团队协作，三级权限",
+      title: "团队协作，三级精细权限",
       description:
-        "支持 Owner / Admin / Member 多角色协作，提供私密、团队可见、公开三档可见性，离职成员私密数据深度清理。",
+        "支持 Owner / Admin / Member 多角色协同，提供私密、团队可见、公开三档可见性，离职成员私密数据支持深度彻底清理。",
     },
     {
-      title: "兼容 Memos，无缝迁移",
+      title: "全面兼容 Memos 与 flomo",
       description:
-        "全面兼容 Memos /api/v1 常用端点与 OpenAPI，支持第三方客户端直接连接，Memos/flomo 数据一键无损导入导出。",
+        "完整实现 Memos /api/v1 核心接口与 OpenAPI 规范，支持第三方客户端直接连接，Memos/flomo 数据一键无损导入导出。",
     },
   ],
   comparisonHeading: "为什么选择 Cloudflare 原生架构",
@@ -249,11 +249,11 @@ const ZH_HOME: HomeContent = {
   faqItems: [
     {
       q: "免费配额真的够用吗？",
-      a: "完全够用。Cloudflare 免费层提供 5GB D1 数据库（可存约 250 万条普通笔记）与 10GB R2 存储（约 1 万张压缩图片）。即使每天写 100 条笔记，也能写 68 年，对绝大部分笔记用户而言终生都难以触及上限。",
+      a: "完全够用。Cloudflare 免费层提供 5GB D1 数据库（可存约 250 万条普通文本笔记）与 10GB R2 存储（约 1 万张压缩图片）。即使每天写 100 条笔记，也能写 68 年，对绝大部分笔记用户而言终生都难以触及上限。",
     },
     {
       q: "如何确保我的数据绝对安全？",
-      a: "笔记保存在 Cloudflare 企业级分布式基础设施中，自带高冗余持久化，不会因单点硬件故障丢失。同时 FlareMo 支持一键导出标准 Memos 格式备份包，随时可本地离线归档形成双重保障。",
+      a: "笔记保存在 Cloudflare 企业级分布式基础设施中，自带跨地域冗余持久化，不会因单点硬件故障丢失。同时 FlareMo 支持一键导出标准 Memos 格式备份包，随时可本地离线归档形成双重保障。",
     },
     {
       q: "能从 Memos 或 flomo 搬家过来吗？",
@@ -265,7 +265,7 @@ const ZH_HOME: HomeContent = {
     },
     {
       q: "单人使用和团队使用有什么区别？",
-      a: "默认是一套安静的单人笔记系统；如果需要协同，管理员可在后台一键生成邀请激活链接添加成员。笔记支持设为私密（仅自己可见）、团队可见（成员只读）或全网公开，数据权属清晰明确。",
+      a: "默认是一套安静专注的单人笔记系统；如果需要协同，管理员可在后台一键生成邀请激活链接添加成员。笔记支持设为私密（仅自己可见）、团队可见（成员只读）或全网公开，数据权属清晰明确。",
     },
   ],
   ctaHeading: "准备好拥有你的第二大脑了吗？",
