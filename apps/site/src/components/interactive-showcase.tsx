@@ -18,6 +18,7 @@ import {
   Settings,
   Sparkles,
   Trash2,
+  X,
   Zap,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -98,6 +99,7 @@ export function InteractiveShowcase({
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [timeViewTab, setTimeViewTab] = useState<"trend" | "calendar">("trend");
   const [searchQuery, setSearchQuery] = useState("");
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
   // 输入框草稿
   const [desktopInput, setDesktopInput] = useState("");
@@ -262,7 +264,7 @@ export function InteractiveShowcase({
           {/* 电脑端应用内结构：左侧边栏 + 右侧时间线 */}
           <div className="grid grid-cols-1 md:grid-cols-[210px_1fr] lg:grid-cols-[220px_1fr] min-h-[580px] bg-paper">
             {/* 左侧真实边栏 (FlareMo Explorer) */}
-            <aside className="border-r border-line/60 bg-surface/40 p-4 space-y-4 hidden md:block select-none overflow-y-auto max-h-[620px]">
+            <aside className="border-r border-line/60 bg-surface/40 p-4 space-y-4 hidden md:block select-none overflow-y-auto max-h-[620px] no-scrollbar">
               {/* 边栏顶部 Header：Logo + 标题 + 铃铛 + 版本 + 设置 */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -474,7 +476,7 @@ export function InteractiveShowcase({
             </aside>
 
             {/* 右侧主工作区 (时间线 + 发送器) */}
-            <main className="p-4 sm:p-5 space-y-4 max-h-[620px] overflow-y-auto">
+            <main className="p-4 sm:p-5 space-y-4 max-h-[620px] overflow-y-auto thin-scrollbar">
               {/* 顶部标题栏与搜索条 */}
               <div className="flex items-center justify-between gap-3 pb-1 border-b border-line/60">
                 <div className="flex items-center gap-1.5 text-sm font-bold text-ink">
@@ -644,9 +646,9 @@ export function InteractiveShowcase({
             手机端设备（严格还原 FlareMo 真实移动端单列布局）
             ============================================================ */}
         <div className="mx-auto w-full max-w-[320px] rounded-[2.6rem] border-4 border-surface bg-paper p-1 shadow-pop-xl ring-1 ring-line/80 relative">
-          <div className="overflow-hidden rounded-[2.2rem] bg-paper border border-line/60 flex flex-col h-[540px]">
+          <div className="overflow-hidden rounded-[2.2rem] bg-paper border border-line/60 flex flex-col h-[540px] relative">
             {/* 手机系统状态栏与扬声器孔 */}
-            <div className="h-9 bg-soft-surface px-5 flex items-center justify-between border-b border-line/60 shrink-0">
+            <div className="h-9 bg-soft-surface px-5 flex items-center justify-between border-b border-line/60 shrink-0 select-none">
               <span className="text-[11px] font-bold text-ink">09:41</span>
               <div className="h-3.5 w-16 rounded-full bg-black flex items-center justify-center">
                 <span className="size-1 rounded-full bg-emerald-500 animate-pulse" />
@@ -656,24 +658,55 @@ export function InteractiveShowcase({
               </div>
             </div>
 
-            {/* 移动端 App 真实顶栏：汉堡菜单 + 时间线 */}
-            <div className="px-4 py-2 border-b border-line/60 bg-surface flex items-center gap-3 shrink-0">
-              <Menu className="size-4 text-ink cursor-pointer" />
-              <span className="text-sm font-bold text-ink tracking-tight">
-                时间线
-              </span>
+            {/* 移动端 App 真实顶栏：汉堡菜单 (可点击打开抽屉) + 标题 + 筛选提示 */}
+            <div className="px-3.5 py-2 border-b border-line/60 bg-surface flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMobileDrawerOpen(true)}
+                  className="p-1 -ml-1 text-ink hover:text-signal hover:bg-wash transition-colors cursor-pointer rounded-lg focus:outline-none flex items-center"
+                  aria-label="打开侧边栏"
+                  title="点击打开侧边栏"
+                >
+                  <Menu className="size-4" />
+                </button>
+                <span className="text-sm font-bold text-ink tracking-tight">
+                  {activeTag
+                    ? `#${activeTag}`
+                    : activeMenu === "timeline"
+                      ? "时间线"
+                      : activeMenu === "archive"
+                        ? "归档"
+                        : "回收站"}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {activeTag && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTag(null)}
+                    className="text-[10px] text-signal hover:underline cursor-pointer"
+                  >
+                    重置
+                  </button>
+                )}
+                <span className="text-[10px] text-fog font-mono bg-soft-surface px-1.5 py-0.5 rounded-full border border-line/60">
+                  {filteredMemos.length}
+                </span>
+              </div>
             </div>
 
-            {/* 手机屏幕主内容区 (可滚动) */}
-            <div className="p-3 flex-1 overflow-y-auto space-y-3">
+            {/* 手机屏幕主内容区 (可滚动，使用 no-scrollbar 去除粗滚动条) */}
+            <div className="p-3 flex-1 overflow-y-auto space-y-3 no-scrollbar">
               {/* 搜索框 */}
               <div className="relative">
                 <Search className="size-3 text-fog absolute left-2.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="搜索记录..."
                   className="w-full h-7 pl-7 pr-3 rounded-full border border-line/70 bg-surface text-[11px] text-ink placeholder:text-fog focus:outline-none"
-                  readOnly
                 />
               </div>
 
@@ -752,25 +785,25 @@ export function InteractiveShowcase({
               </div>
 
               {/* 移动端时间线第一条卡片预览 */}
-              {memos.length > 0 && (
+              {filteredMemos.length > 0 && (
                 <div className="rounded-2xl border border-line/70 bg-surface p-3 space-y-2 text-xs">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       <span className="size-3.5 rounded-full border border-zinc-300 dark:border-zinc-700 bg-zinc-100" />
                       <span className="text-[10px] text-mist">
-                        {memos[0].timeLabel}
+                        {filteredMemos[0].timeLabel}
                       </span>
                     </div>
                     <MoreHorizontal className="size-3 text-fog" />
                   </div>
                   <div className="font-bold text-ink text-xs line-clamp-1">
-                    {memos[0].title}
+                    {filteredMemos[0].title}
                   </div>
                   <p className="text-[11px] text-mist line-clamp-2">
-                    {memos[0].content}
+                    {filteredMemos[0].content}
                   </p>
                   <div className="flex gap-1 pt-1 border-t border-line/40">
-                    {memos[0].tags.map((t) => (
+                    {filteredMemos[0].tags.map((t) => (
                       <span
                         key={t}
                         className="rounded-full bg-flame-50 dark:bg-flame-950/50 px-2 py-0.5 text-[9px] text-flame-600 dark:text-flame-400 font-medium"
@@ -784,9 +817,245 @@ export function InteractiveShowcase({
             </div>
 
             {/* 手机底部指示条 */}
-            <div className="h-5 flex items-center justify-center bg-soft-surface shrink-0 border-t border-line/40">
+            <div className="h-5 flex items-center justify-center bg-soft-surface shrink-0 border-t border-line/40 select-none">
               <span className="h-1 w-20 rounded-full bg-mist/40" />
             </div>
+
+            {/* 移动端真实侧边抽屉 (Sheet Drawer) */}
+            <AnimatePresence>
+              {mobileDrawerOpen && (
+                <>
+                  {/* 背景遮罩 */}
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    onClick={() => setMobileDrawerOpen(false)}
+                    className="absolute inset-0 z-40 bg-black/60 backdrop-blur-xs cursor-pointer"
+                  />
+
+                  {/* 侧边滑出抽屉面板 */}
+                  <motion.aside
+                    initial={{ x: "-100%" }}
+                    animate={{ x: 0 }}
+                    exit={{ x: "-100%" }}
+                    transition={{ type: "spring", damping: 26, stiffness: 300 }}
+                    className="absolute inset-y-0 left-0 z-50 w-[84%] bg-surface border-r border-line shadow-2xl flex flex-col overflow-hidden"
+                  >
+                    {/* 抽屉顶部 Header */}
+                    <div className="p-3.5 border-b border-line/60 flex items-center justify-between bg-surface/90">
+                      <div className="flex items-center gap-2">
+                        <div className="flex size-6 items-center justify-center rounded-lg bg-brand-gradient text-white text-xs font-bold shadow-2xs">
+                          <span className="text-white font-extrabold text-[13px]">
+                            F
+                          </span>
+                        </div>
+                        <span className="font-bold text-sm text-ink tracking-tight">
+                          FlareMo
+                        </span>
+                        <span className="inline-flex items-center gap-0.5 rounded-full bg-soft-surface px-1.5 py-0.5 text-[8px] font-mono border border-line/60 text-mist">
+                          v0.20
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setMobileDrawerOpen(false)}
+                        className="p-1 text-mist hover:text-ink rounded-lg transition-colors cursor-pointer"
+                        aria-label="关闭侧边栏"
+                      >
+                        <X className="size-4" />
+                      </button>
+                    </div>
+
+                    {/* 抽屉滚动内容 */}
+                    <div className="flex-1 overflow-y-auto p-3 space-y-3.5 no-scrollbar text-xs">
+                      {/* 统计概览 */}
+                      <div className="grid grid-cols-3 text-center py-1.5 border-y border-line/60 bg-soft-surface/40 rounded-lg">
+                        <div>
+                          <div className="text-sm font-extrabold text-ink tabular-nums">
+                            {totalCount}
+                          </div>
+                          <div className="text-[9px] text-mist">记录</div>
+                        </div>
+                        <div>
+                          <div className="text-sm font-extrabold text-ink tabular-nums">
+                            {tagList.length}
+                          </div>
+                          <div className="text-[9px] text-mist">标签</div>
+                        </div>
+                        <div>
+                          <div className="text-sm font-extrabold text-ink tabular-nums">
+                            1
+                          </div>
+                          <div className="text-[9px] text-mist">天</div>
+                        </div>
+                      </div>
+
+                      {/* 贡献热力图 */}
+                      <div className="rounded-xl border border-line/60 bg-surface/70 p-2 space-y-1">
+                        <div className="grid grid-flow-col grid-rows-6 gap-0.5 justify-between">
+                          {HEATMAP_TILES.slice(0, 48).map((tile) => (
+                            <span
+                              key={`mob-${tile.id}`}
+                              className={cn(
+                                "size-1.5 rounded-[1px]",
+                                tile.isHigh
+                                  ? "bg-signal"
+                                  : tile.isMedium
+                                    ? "bg-signal/40"
+                                    : "bg-line/70 dark:bg-line/40",
+                              )}
+                            />
+                          ))}
+                        </div>
+                        <div className="flex justify-between text-[8px] text-fog font-mono px-0.5">
+                          <span>7月</span>
+                          <span>8月</span>
+                          <span>9月</span>
+                        </div>
+                      </div>
+
+                      {/* 菜单列表 */}
+                      <nav className="space-y-0.5 font-semibold text-[11px]">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveMenu("timeline");
+                            setActiveTag(null);
+                            setMobileDrawerOpen(false);
+                          }}
+                          className={cn(
+                            "w-full flex items-center justify-between px-2 py-1.5 rounded-lg transition-colors cursor-pointer",
+                            activeMenu === "timeline" && !activeTag
+                              ? "bg-signal/15 text-signal-ink font-bold border border-signal/30"
+                              : "text-mist hover:text-ink hover:bg-wash",
+                          )}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Inbox className="size-3.5 text-signal" />
+                            <span>时间线</span>
+                          </div>
+                          <span className="font-mono text-[9px] px-1 py-0.2 bg-line/60 rounded-full text-mist">
+                            {totalCount}
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveMenu("archive");
+                            setMobileDrawerOpen(false);
+                          }}
+                          className={cn(
+                            "w-full flex items-center justify-between px-2 py-1.5 rounded-lg transition-colors cursor-pointer",
+                            activeMenu === "archive"
+                              ? "bg-signal/15 text-signal-ink font-bold border border-signal/30"
+                              : "text-mist hover:text-ink hover:bg-wash",
+                          )}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Archive className="size-3.5" />
+                            <span>归档</span>
+                          </div>
+                          <span className="font-mono text-[9px] px-1 py-0.2 bg-line/60 rounded-full text-mist">
+                            0
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveMenu("trash");
+                            setMobileDrawerOpen(false);
+                          }}
+                          className={cn(
+                            "w-full flex items-center justify-between px-2 py-1.5 rounded-lg transition-colors cursor-pointer",
+                            activeMenu === "trash"
+                              ? "bg-signal/15 text-signal-ink font-bold border border-signal/30"
+                              : "text-mist hover:text-ink hover:bg-wash",
+                          )}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Trash2 className="size-3.5" />
+                            <span>回收站</span>
+                          </div>
+                          <span className="font-mono text-[9px] px-1 py-0.2 bg-line/60 rounded-full text-mist">
+                            0
+                          </span>
+                        </button>
+                      </nav>
+
+                      {/* 快捷视图 */}
+                      <div className="pt-2 border-t border-line/40 space-y-0.5 text-[11px] text-mist">
+                        {[
+                          { icon: Zap, label: "每日回顾" },
+                          { icon: Footprints, label: "随机漫步" },
+                          { icon: Brain, label: "记忆" },
+                          { icon: CalendarDays, label: "日历" },
+                          { icon: FolderKanban, label: "项目" },
+                        ].map((item) => (
+                          <button
+                            type="button"
+                            key={item.label}
+                            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:text-ink hover:bg-wash transition-colors cursor-pointer text-left"
+                            onClick={() => setMobileDrawerOpen(false)}
+                          >
+                            <item.icon className="size-3.5 text-fog" />
+                            <span>{item.label}</span>
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* 标签列表 */}
+                      <div className="pt-2 border-t border-line/40 space-y-1">
+                        <div className="text-[10px] font-bold text-fog px-2">
+                          标签索引
+                        </div>
+                        <div className="space-y-0.5">
+                          {tagList.map((tag) => (
+                            <button
+                              type="button"
+                              key={tag.name}
+                              onClick={() => {
+                                setActiveTag(
+                                  activeTag === tag.name ? null : tag.name,
+                                );
+                                setMobileDrawerOpen(false);
+                              }}
+                              className={cn(
+                                "w-full flex items-center justify-between px-2 py-1 rounded-lg text-[11px] transition-colors cursor-pointer",
+                                activeTag === tag.name
+                                  ? "bg-signal/15 text-signal-ink font-bold"
+                                  : "text-mist hover:text-ink hover:bg-wash",
+                              )}
+                            >
+                              <span>#{tag.name}</span>
+                              <span className="text-[9px] text-fog font-mono">
+                                {tag.count}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 抽屉底部设置 */}
+                    <div className="p-2.5 border-t border-line/60 bg-soft-surface/50 flex items-center justify-between text-xs text-mist">
+                      <div className="flex items-center gap-1.5">
+                        <span className="size-4 rounded-full bg-signal/20 flex items-center justify-center text-[10px] font-bold text-signal-ink">
+                          K
+                        </span>
+                        <span className="text-[11px] font-medium text-ink">
+                          flaremo-user
+                        </span>
+                      </div>
+                      <Settings className="size-3.5 hover:text-ink cursor-pointer" />
+                    </div>
+                  </motion.aside>
+                </>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </div>
