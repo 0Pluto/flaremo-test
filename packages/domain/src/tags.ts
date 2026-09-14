@@ -1,7 +1,17 @@
 import type { FlareMoDb, MemoPayload, MemoRow, UserRow } from "@flaremo/db";
-import { memos, memoTags } from "@flaremo/db";
+import { memoRevisions, memos, memoTags } from "@flaremo/db";
 import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
+import { insertEmbeddingTask } from "./embedding-outbox";
 import { NotFoundError, ValidationError } from "./errors";
+import { createResourceId } from "./ids";
+import { insertMemosSseEvent } from "./memos-sse";
+import { insertMemosWebhookEvent } from "./memos-webhooks";
+
+// D1 batches stay well under the per-request statement budget, so a rename
+// over hundreds of memos is split into memo-chunks instead of one unbounded
+// batch. Each chunk is self-contained (tag-row delete first, then inserts),
+// and the operations are idempotent: a retry simply finds fewer rows.
+const TAG_MUTATION_MEMOS_PER_BATCH = 15;
 
 /**
  * Normalize one raw tag value into a canonical tag path.
@@ -220,56 +230,65 @@ export async function renameTag(
     .where(inArray(memos.id, memoIds))
     .all();
 
-  // Rewrite payload.tags and content for every affected memo, moving the
-  // tag subtree: `工作` and `工作/项目A` become `知识/工作` and
-  // `知识/工作/项目A`.
-  const payloadStatements: unknown[] = [];
-  for (const memo of memosToUpdate) {
-    const content = rewriteTagInContent(memo.content, from, to);
-    const payload = memoPayloadWithTags(memo, (tags) =>
-      tags
-        .map((tag) =>
-          tag === from || tag.startsWith(`${from}/`)
-            ? `${to}${tag.slice(from.length)}`
-            : tag,
-        )
-        .filter((tag, index, all) => all.indexOf(tag) === index)
-        .sort((a, b) => a.localeCompare(b)),
+  const now = new Date().toISOString();
+  for (
+    let offset = 0;
+    offset < memosToUpdate.length;
+    offset += TAG_MUTATION_MEMOS_PER_BATCH
+  ) {
+    const chunkMemos = memosToUpdate.slice(
+      offset,
+      offset + TAG_MUTATION_MEMOS_PER_BATCH,
     );
-    payloadStatements.push(
-      db.update(memos).set({ content, payload }).where(eq(memos.id, memo.id)),
-    );
-  }
-
-  // Move the tag rows. Delete first (within the same batch) to avoid
-  // primary-key collisions when a memo already carries a destination path,
-  // then re-insert with the new path and the original timestamps. Keeping
-  // every statement in one D1 batch keeps the move atomic.
-  const deleteStatement = db
-    .delete(memoTags)
-    .where(
-      and(
-        eq(memoTags.userId, user.id),
-        or(eq(memoTags.tag, from), sql`${memoTags.tag} LIKE ${`${from}/%`}`),
-      ),
-    );
-  const insertStatements: unknown[] = rows.map((row) =>
-    db.insert(memoTags).values({
-      memoId: row.memoId,
-      userId: user.id,
-      tag: `${to}${row.tag.slice(from.length)}`,
-      createdAt: row.createdAt,
-    }),
-  );
-
-  const allStatements = [
-    deleteStatement,
-    ...payloadStatements,
-    ...insertStatements,
-  ];
-  if (allStatements.length > 1) {
+    const chunkIds = chunkMemos.map((memo) => memo.id);
+    const chunkIdSet = new Set(chunkIds);
+    const chunkRows = rows.filter((row) => chunkIdSet.has(row.memoId));
+    // Delete-first per chunk avoids primary-key collisions when a memo
+    // already carries the destination path.
+    const chunkStatements: unknown[] = [
+      db
+        .delete(memoTags)
+        .where(
+          and(
+            eq(memoTags.userId, user.id),
+            or(
+              eq(memoTags.tag, from),
+              sql`${memoTags.tag} LIKE ${`${from}/%`}`,
+            ),
+            inArray(memoTags.memoId, chunkIds),
+          ),
+        ),
+    ];
+    for (const memo of chunkMemos) {
+      chunkStatements.push(
+        ...tagMemoUpdateStatements(db, user, memo, now, (memo) => {
+          const content = rewriteTagInContent(memo.content, from, to);
+          const payload = memoPayloadWithTags(memo, (tags) =>
+            tags
+              .map((tag) =>
+                tag === from || tag.startsWith(`${from}/`)
+                  ? `${to}${tag.slice(from.length)}`
+                  : tag,
+              )
+              .filter((tag, index, all) => all.indexOf(tag) === index)
+              .sort((a, b) => a.localeCompare(b)),
+          );
+          return { content, payload };
+        }),
+      );
+    }
+    for (const row of chunkRows) {
+      chunkStatements.push(
+        db.insert(memoTags).values({
+          memoId: row.memoId,
+          userId: user.id,
+          tag: `${to}${row.tag.slice(from.length)}`,
+          createdAt: row.createdAt,
+        }),
+      );
+    }
     await db.batch(
-      allStatements as unknown as Parameters<FlareMoDb["batch"]>[0],
+      chunkStatements as unknown as Parameters<FlareMoDb["batch"]>[0],
     );
   }
 
@@ -314,36 +333,98 @@ export async function deleteTag(
     .where(inArray(memos.id, memoIds))
     .all();
 
-  const statements: unknown[] = [];
-  for (const memo of memosToUpdate) {
-    const content = removeTagFromContent(memo.content, tag);
-    const payload = memoPayloadWithTags(memo, (tags) =>
-      tags.filter((candidate) => candidate !== tag),
+  const now = new Date().toISOString();
+  for (
+    let offset = 0;
+    offset < memosToUpdate.length;
+    offset += TAG_MUTATION_MEMOS_PER_BATCH
+  ) {
+    const chunkMemos = memosToUpdate.slice(
+      offset,
+      offset + TAG_MUTATION_MEMOS_PER_BATCH,
     );
-    statements.push(
-      db.update(memos).set({ content, payload }).where(eq(memos.id, memo.id)),
-    );
-  }
-
-  const deleteStatement = db
-    .delete(memoTags)
-    .where(
-      and(
-        eq(memoTags.userId, user.id),
-        eq(memoTags.tag, tag),
-        inArray(memoTags.memoId, memoIds),
-      ),
-    );
-
-  if (statements.length > 0) {
-    await db.batch([deleteStatement, ...statements] as unknown as Parameters<
-      FlareMoDb["batch"]
-    >[0]);
-  } else {
-    await deleteStatement;
+    const chunkIds = chunkMemos.map((memo) => memo.id);
+    const statements: unknown[] = [
+      db
+        .delete(memoTags)
+        .where(
+          and(
+            eq(memoTags.userId, user.id),
+            eq(memoTags.tag, tag),
+            inArray(memoTags.memoId, chunkIds),
+          ),
+        ),
+    ];
+    for (const memo of chunkMemos) {
+      statements.push(
+        ...tagMemoUpdateStatements(db, user, memo, now, (current) => {
+          const content = removeTagFromContent(current.content, tag);
+          const payload = memoPayloadWithTags(current, (tags) =>
+            tags.filter((candidate) => candidate !== tag),
+          );
+          return { content, payload };
+        }),
+      );
+    }
+    await db.batch(statements as unknown as Parameters<FlareMoDb["batch"]>[0]);
   }
 
   return { removed: memosToUpdate.length };
+}
+
+/**
+ * Per-memo statement bundle for a tag mutation: the memo row update (content,
+ * payload, `updatedAt`), a revision snapshot of the previous state, an
+ * embedding reindex task, and the SSE + webhook events — every side effect a
+ * plain content edit would produce, so tag mutations stay consistent with the
+ * rest of the write paths.
+ */
+function tagMemoUpdateStatements(
+  db: FlareMoDb,
+  user: UserRow,
+  memo: MemoRow,
+  now: string,
+  transform: (memo: MemoRow) => { content: string; payload: MemoPayload },
+): unknown[] {
+  const { content, payload } = transform(memo);
+  const revisedMemo: MemoRow = { ...memo, content, payload, updatedAt: now };
+  return [
+    db
+      .update(memos)
+      .set({ content, payload, updatedAt: now })
+      .where(eq(memos.id, memo.id)),
+    db.insert(memoRevisions).values({
+      id: createResourceId("revisions"),
+      memoId: memo.id,
+      userId: memo.userId,
+      content: memo.content,
+      visibility: memo.visibility,
+      payload: memo.payload,
+      createdAt: now,
+    }),
+    insertEmbeddingTask(db, {
+      userId: memo.userId,
+      resourceType: "memo",
+      resourceId: memo.id,
+      operation: "reindex",
+      createdAt: now,
+    }),
+    insertMemosSseEvent(db, {
+      type: "memo.updated",
+      name: memo.id,
+      visibility: revisedMemo.visibility,
+      teamId: revisedMemo.teamId,
+      creatorId: revisedMemo.userId,
+      createdAt: now,
+    }),
+    insertMemosWebhookEvent(db, {
+      receiverId: memo.userId,
+      activityType: "memos.memo.updated",
+      creator: user,
+      memo: revisedMemo,
+      createdAt: now,
+    }),
+  ];
 }
 
 /**
@@ -366,31 +447,130 @@ function memoPayloadWithTags(
  * Rewrite `#from` tag tokens in content to `#to`, moving the tag subtree.
  * `#工作` becomes `#知识/工作`, and `#工作/项目A` becomes
  * `#知识/工作/项目A` (the descendant suffix is preserved). Tags that merely
- * share a prefix (`#工作者`, `#工作-1`) are left untouched.
+ * share a prefix (`#工作者`, `#工作-1`) are left untouched. Fenced code
+ * blocks, inline code spans, and URLs are never rewritten, so code samples
+ * and link fragments survive a rename intact.
  */
 export function rewriteTagInContent(content: string, from: string, to: string) {
   const escaped = escapeRegExp(from);
-  return content.replace(
-    new RegExp(
-      `(^|[^\\p{L}\\p{N}_\\-/])#${escaped}(?![\\p{L}\\p{N}_\\-])`,
-      "giu",
+  return rewriteOutsideLiteralSegments(content, (segment) =>
+    segment.replace(
+      new RegExp(
+        `(^|[^\\p{L}\\p{N}_\\-/])#${escaped}(?![\\p{L}\\p{N}_\\-])`,
+        "giu",
+      ),
+      (_match, boundary: string) => `${boundary}#${to}`,
     ),
-    (_match, boundary: string) => `${boundary}#${to}`,
   );
 }
 
 /**
  * Remove `#tag` tokens from content, including the trailing separator guard.
+ * Same safety rules as the rename: code spans, fenced blocks, and URLs are
+ * preserved.
  */
 export function removeTagFromContent(content: string, tag: string) {
   const escaped = escapeRegExp(tag);
-  return content.replace(
-    new RegExp(
-      `(^|[^\\p{L}\\p{N}_\\-/])#${escaped}(?![\\p{L}\\p{N}_\\-/])`,
-      "giu",
+  return rewriteOutsideLiteralSegments(content, (segment) =>
+    segment.replace(
+      new RegExp(
+        `(^|[^\\p{L}\\p{N}_\\-/])#${escaped}(?![\\p{L}\\p{N}_\\-/])`,
+        "giu",
+      ),
+      (_match, boundary: string) => (boundary === "" ? "" : boundary),
     ),
-    (_match, boundary: string) => (boundary === "" ? "" : boundary),
   );
+}
+
+/**
+ * Split content into segments, marking fenced code blocks, inline code spans,
+ * and URLs as literal (untouched). Returns the pieces in order.
+ */
+function splitMarkdownLiteralSegments(
+  content: string,
+): { text: string; literal: boolean }[] {
+  const pieces: { text: string; literal: boolean }[] = [];
+  const push = (text: string, literal: boolean) => {
+    if (text) pieces.push({ text, literal });
+  };
+  const lines = content.split(/(?<=\n)/);
+  let inFence = false;
+  let fenceMarker = "";
+  let plain = "";
+  for (const line of lines) {
+    const fenceMatch = inFence
+      ? line.match(/^\s*(~{3,}|`{3,})\s*$/)
+      : line.match(/^\s*(~{3,}|`{3,})/);
+    if (inFence && fenceMatch) {
+      // Closing fence of the same character run.
+      if (fenceMatch[1]?.[0] === fenceMarker[0]) {
+        plain += line;
+        pieces.push({ text: plain, literal: false });
+        plain = "";
+        inFence = false;
+        fenceMarker = "";
+        continue;
+      }
+      plain += line;
+      continue;
+    }
+    if (!inFence && fenceMatch) {
+      plain += line;
+      pieces.push({ text: plain, literal: true });
+      plain = "";
+      inFence = true;
+      fenceMarker = fenceMatch[1] ?? "";
+      continue;
+    }
+    // Split inline code spans and URLs out of ordinary lines.
+    let cursor = 0;
+    let index = 0;
+    while (index < line.length) {
+      const character = line[index];
+      if (character === "`") {
+        let run = 0;
+        while (line[index + run] === "`") run += 1;
+        const close = line.indexOf("`".repeat(run), index + run);
+        if (close !== -1) {
+          plain += line.slice(cursor, index);
+          pieces.push({
+            text: line.slice(index, close + run),
+            literal: true,
+          });
+          cursor = close + run;
+          index = cursor;
+          continue;
+        }
+        index += run;
+        continue;
+      }
+      if (
+        (character === "h" && line.startsWith("https://", index)) ||
+        (character === "h" && line.startsWith("http://", index))
+      ) {
+        let end = index;
+        while (end < line.length && !/\s/.test(line[end] as string)) end += 1;
+        plain += line.slice(cursor, index);
+        pieces.push({ text: line.slice(index, end), literal: true });
+        cursor = end;
+        index = end;
+        continue;
+      }
+      index += 1;
+    }
+    plain += line.slice(cursor);
+  }
+  push(plain, false);
+  return pieces;
+}
+
+function rewriteOutsideLiteralSegments(
+  content: string,
+  transform: (segment: string) => string,
+) {
+  return splitMarkdownLiteralSegments(content)
+    .map(({ text, literal }) => (literal ? text : transform(text)))
+    .join("");
 }
 
 function escapeRegExp(value: string) {

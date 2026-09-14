@@ -169,9 +169,11 @@ export function compileMemoFilter(
     try {
       return compiled(context) === true;
     } catch (error) {
-      throw new ValidationError(
-        `Memos CEL filter evaluation failed: ${safeError(error)}`,
-      );
+      // A data-dependent failure (e.g. one malformed legacy payload) must not
+      // turn the whole view into a permanent 400: the row is excluded from
+      // this filter's results instead. Compile-time errors above still throw.
+      if (isMemoFilterValidationError(error)) throw error;
+      return false;
     }
   };
   evaluate.sqlPredicate = memoFilterSqlPredicate(compiled.ast);
@@ -386,8 +388,10 @@ function rewriteTagsAll(expression: string) {
     }
 
     output += expression.slice(cursor, match.start);
+    // CEL's all() is vacuously true over an empty list; keep the standard
+    // semantics so negated filters (`!tags.all(...)`) agree with upstream.
     const call = expression.slice(match.start, end + 1);
-    output += `(size(tags) > 0 && ${call})`;
+    output += call;
     cursor = end + 1;
   }
   return output;
@@ -1225,12 +1229,23 @@ function memoCreatorId(userId: string) {
     if (parsed <= 2_147_483_647n) return parsed;
   }
 
-  let hash = 0x811c9dc5;
-  for (const byte of new TextEncoder().encode(userId)) {
+  // 53-bit FNV space (two independent 32-bit rounds folded together): with
+  // tens of thousands of users a 31-bit hash would collide at measurable
+  // rates, and a collision would attribute a public memo to the wrong
+  // author in creator_id filters.
+  const bytes = new TextEncoder().encode(userId);
+  const high = BigInt(fnv1a32(bytes, 0x811c9dc5));
+  const low = BigInt(fnv1a32(bytes, 0x9dc5811c));
+  const value = ((high << 32n) | low) & 0x1f_ffff_ffff_ffffn;
+  return value > 1n ? value : 2n;
+}
+
+function fnv1a32(bytes: Uint8Array, seed: number) {
+  let hash = seed;
+  for (const byte of bytes) {
     hash = Math.imul(hash ^ byte, 0x01000193) >>> 0;
   }
-  const value = BigInt(hash & 2_147_483_647);
-  return value > 1n ? value : 2n;
+  return hash;
 }
 
 function distinctStrings(values: string[]) {
@@ -1267,4 +1282,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function safeError(error: unknown) {
   return error instanceof Error ? error.message : "expression is not valid";
+}
+
+function isMemoFilterValidationError(error: unknown): boolean {
+  return error instanceof ValidationError;
 }

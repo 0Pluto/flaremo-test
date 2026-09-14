@@ -2,7 +2,7 @@ import type { PatchMemoRelationsInput } from "@flaremo/contracts";
 import type { FlareMoDb, UserRow } from "@flaremo/db";
 import { memoRelations, memos } from "@flaremo/db";
 import { and, asc, eq, inArray, or } from "drizzle-orm";
-import { NotFoundError } from "./errors";
+import { NotFoundError, ValidationError } from "./errors";
 import { parseResourceName } from "./ids";
 import { getMemoById, getMemoByIdForViewer } from "./memos";
 import { insertMemosSseEvent } from "./memos-sse";
@@ -58,6 +58,10 @@ export async function replaceMemoRelations(
   const memo = await getMemoById(db, user, normalizedMemoId);
   assertCanEditMemo(user, memo);
 
+  // A relation patch expresses the references the client wants; it never
+  // touches comment relations, whose rows are keyed by the comment memo
+  // itself and are managed by the comment lifecycle.
+  const MAX_MEMO_RELATIONS = 200;
   const rows: Array<{
     memoId: string;
     relatedMemoId: string;
@@ -68,6 +72,12 @@ export async function replaceMemoRelations(
   const now = new Date().toISOString();
 
   for (const relation of input.relations) {
+    if (relation.type !== "reference") continue;
+    if (rows.length >= MAX_MEMO_RELATIONS) {
+      throw new ValidationError(
+        `A memo may carry at most ${MAX_MEMO_RELATIONS} relations`,
+      );
+    }
     const relatedMemoId = parseResourceName(relation.related_memo, "memos");
     const key = `${normalizedMemoId}:${relatedMemoId}:${relation.type}`;
     if (seen.has(key)) {
@@ -95,7 +105,12 @@ export async function replaceMemoRelations(
 
   const deleteStatement = db
     .delete(memoRelations)
-    .where(eq(memoRelations.memoId, normalizedMemoId));
+    .where(
+      and(
+        eq(memoRelations.memoId, normalizedMemoId),
+        eq(memoRelations.type, "reference"),
+      ),
+    );
   const eventStatement = insertMemosSseEvent(db, {
     type: "memo.updated",
     name: memo.id,

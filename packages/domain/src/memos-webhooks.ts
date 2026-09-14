@@ -5,6 +5,7 @@ import {
   memosWebhookDeliveries,
   memosWebhookEvents,
   memosWebhooks,
+  reactions,
   type UserRow,
 } from "@flaremo/db";
 import { and, asc, eq, isNotNull, isNull, lt, lte, or } from "drizzle-orm";
@@ -103,7 +104,7 @@ export async function dispatchMemosWebhookOutbox(
   await Promise.all(
     claimedDeliveries.map(async ({ item, delivery }) => {
       try {
-        await postWebhook(item, delivery, now);
+        await postWebhook(db, item, delivery, now);
         await markDeliveryDelivered(db, delivery.id, nowIso);
       } catch (error) {
         await markDeliveryFailed(
@@ -284,12 +285,17 @@ async function claimDelivery(
 }
 
 async function postWebhook(
+  db: FlareMoDb,
   item: PendingDelivery,
   delivery: typeof memosWebhookDeliveries.$inferSelect,
   now: Date,
 ) {
+  // The event snapshot is stored at write time, before reactions land; fill
+  // the reactions field at delivery time so subscribers receive the real
+  // reaction list instead of a constant empty array.
+  const bodyPayload = hydrateWebhookReactions(db, item.event.body);
   const body = JSON.stringify({
-    ...item.event.body,
+    ...bodyPayload,
     url: item.webhook.url,
   });
   const messageId = `msg_${item.event.id}_${delivery.id}`;
@@ -404,6 +410,41 @@ async function markDeliveryFailed(
     .where(eq(memosWebhookDeliveries.id, delivery.id));
 }
 
+/**
+ * Fill `body.memo.reactions` with the memo's current reaction list. The event
+ * snapshot is written before reactions change, so the delivery time is the
+ * only point that can show a truthful list.
+ */
+async function hydrateWebhookReactions(db: FlareMoDb, body: unknown) {
+  if (!body || typeof body !== "object") return body;
+  const memo = (body as { memo?: { name?: string; reactions?: unknown } }).memo;
+  if (
+    !memo ||
+    typeof memo.name !== "string" ||
+    !Array.isArray(memo.reactions)
+  ) {
+    return body;
+  }
+  const memoId = memo.name;
+  const rows = await db
+    .select({
+      reactionType: reactions.reactionType,
+      creatorId: reactions.creatorId,
+    })
+    .from(reactions)
+    .where(eq(reactions.contentId, memoId));
+  return {
+    ...body,
+    memo: {
+      ...memo,
+      reactions: rows.map((row) => ({
+        reaction_type: row.reactionType,
+        creator: row.creatorId,
+      })),
+    },
+  };
+}
+
 function webhookFailureMessage(error: unknown) {
   if (error instanceof DOMException && error.name === "AbortError") {
     return "timeout";
@@ -414,6 +455,10 @@ function webhookFailureMessage(error: unknown) {
   if (error instanceof Error && error.message === "remote_code_not_zero") {
     return error.message;
   }
+  // Keep a bounded excerpt of the real error so dead-letter rows are
+  // diagnosable instead of a bare "network_error" bucket.
+  const detail = error instanceof Error ? error.message : String(error);
+  if (detail) return `network_error: ${detail.slice(0, 180)}`;
   return "network_error";
 }
 
@@ -424,7 +469,14 @@ function memoToWebhookDto(memo: WebhookMemoSnapshot, creator: UserRow) {
     : [];
   return {
     name: memo.id,
-    state: memo.status === "normal" ? "NORMAL" : "ARCHIVED",
+    state:
+      memo.status === "normal"
+        ? "NORMAL"
+        : memo.status === "archived"
+          ? "ARCHIVED"
+          : memo.status === "trashed"
+            ? "TRASHED"
+            : "DELETED",
     creator: creator.id,
     createTime: memo.createdAt,
     updateTime: memo.updatedAt,

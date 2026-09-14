@@ -146,11 +146,13 @@ export async function createUserWebhook(
   try {
     await db.insert(memosWebhooks).values(row);
   } catch (error) {
-    // UUID collisions are extraordinarily unlikely, but a retryable conflict
-    // is clearer to a caller than returning a partially formed resource.
-    throw new ConflictError(
-      `Failed to create webhook: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    // Only an id collision maps to ConflictError; unrelated failures keep
+    // their real shape instead of being reported as "conflict".
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes("UNIQUE constraint failed: memos_webhooks.id")) {
+      throw new ConflictError("Failed to create webhook");
+    }
+    throw error;
   }
   return userWebhookToDto(user, row);
 }
@@ -180,10 +182,12 @@ export async function updateUserWebhook(
         );
         break;
       case "signing_secret":
-        updates.signingSecret = normalizeSigningSecret(
-          input.signingSecret,
-          false,
-        );
+        // An updateMask entry with no value is a no-op for this field; an
+        // explicit empty string is what clears the secret.
+        updates.signingSecret =
+          input.signingSecret === undefined
+            ? existing.signingSecret
+            : normalizeSigningSecret(input.signingSecret, false);
         break;
       default:
         throw new ValidationError(`Unsupported webhook update field: ${field}`);
@@ -379,15 +383,30 @@ export async function findMentionedUsers(
     ),
   ];
   if (usernames.length === 0) return [];
-  const rows = await db
-    .select({ user: users, username: authUsers.username })
-    .from(authUsers)
-    .innerJoin(authUserLinks, eq(authUserLinks.authUserId, authUsers.id))
-    .innerJoin(users, eq(users.id, authUserLinks.flaremoUserId))
-    .where(inArray(authUsers.username, usernames));
-  return rows
-    .filter((row) => row.username && !excludedUserIds.includes(row.user.id))
-    .map((row) => row.user);
+  // D1 caps a single statement at 100 bound parameters; chunk the lookup so a
+  // mention-heavy memo fails with a validation error, never a query limit.
+  const rows = [];
+  for (let offset = 0; offset < usernames.length; offset += 90) {
+    rows.push(
+      ...(await db
+        .select({ user: users, username: authUsers.username })
+        .from(authUsers)
+        .innerJoin(authUserLinks, eq(authUserLinks.authUserId, authUsers.id))
+        .innerJoin(users, eq(users.id, authUserLinks.flaremoUserId))
+        .where(
+          inArray(authUsers.username, usernames.slice(offset, offset + 90)),
+        )),
+    );
+  }
+  const seen = new Set<string>();
+  const result = [];
+  for (const row of rows) {
+    if (!row.username || excludedUserIds.includes(row.user.id)) continue;
+    if (seen.has(row.user.id)) continue;
+    seen.add(row.user.id);
+    result.push(row.user);
+  }
+  return result;
 }
 
 function userWebhookToDto(user: UserRow, row: MemosWebhookRow): UserWebhookDto {

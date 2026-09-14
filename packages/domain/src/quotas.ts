@@ -213,6 +213,12 @@ export async function countUserMemories(
 /**
  * Throws when the user's living-memo stock (plus `additional` about to be
  * written, e.g. an import bundle) would reach the per-user cap.
+ *
+ * Advisory pre-check, not a transactional lock: the count read and the
+ * follow-up insert are separate statements, so concurrent writers can
+ * transiently overshoot by one. D1 offers no cross-statement transaction
+ * around the insert batch; the check stays in the hot path as the
+ * deliberate trade-off.
  */
 export async function assertMemoCountQuota(
   db: FlareMoDb,

@@ -168,8 +168,15 @@ describe("Memos CEL filter", () => {
     ).toBe(true);
 
     const emptyTags = { ...memo, payload: { property: {} } } as MemoRow;
+    // CEL spec: all() over an empty list is vacuously true.
     expect(
       compileMemoFilter('tags.all(t, t.startsWith("work"))')?.(emptyTags, user),
+    ).toBe(true);
+    expect(
+      compileMemoFilter('!tags.all(t, t.startsWith("work"))')?.(
+        emptyTags,
+        user,
+      ),
     ).toBe(false);
   });
 

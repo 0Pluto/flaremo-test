@@ -23,6 +23,7 @@ import { insertMemosSseEvent } from "./memos-sse";
 import { findMentionedUsers, insertMemoNotification } from "./memos-user";
 import { insertMemosWebhookEvent } from "./memos-webhooks";
 import { assertMemoCountQuota, type QuotaScope } from "./quotas";
+import { pruneMemoRevisions } from "./revisions";
 import { extractTags, normalizeMemoTags } from "./tags";
 import {
   assertCanDeleteMemo,
@@ -767,10 +768,22 @@ export async function updateMemo(
           })
         : undefined;
 
+  // Optimistic concurrency: the update only lands when the row still carries
+  // the updatedAt snapshot this decision was made from. A concurrent edit
+  // moves the column, the statement affects zero rows, and the caller gets a
+  // conflict instead of a silent lost update. The revision statement still
+  // snapshots the previous state either way; it is inert history.
   const updateStatement = db
     .update(memos)
     .set(patch)
-    .where(and(eq(memos.id, id), eq(memos.userId, existing.userId)));
+    .where(
+      and(
+        eq(memos.id, id),
+        eq(memos.userId, existing.userId),
+        eq(memos.updatedAt, existing.updatedAt),
+      ),
+    )
+    .returning({ id: memos.id });
   const revisionStatement = db.insert(memoRevisions).values({
     id: revisionId ?? createResourceId("revisions"),
     memoId: existing.id,
@@ -783,10 +796,35 @@ export async function updateMemo(
   const deleteTagsStatement = db
     .delete(memoTags)
     .where(and(eq(memoTags.memoId, id), eq(memoTags.userId, existing.userId)));
+  // The conditional update is always the batch's first statement so its
+  // returned rows can be inspected for the optimistic-concurrency check.
+  const restStatements = [
+    eventStatement,
+    webhookEventStatement,
+    ...(embeddingTaskStatement ? [embeddingTaskStatement] : []),
+    ...notificationStatements,
+  ];
+  const runBatch = async (statements: unknown[]) => {
+    try {
+      return (await db.batch(
+        statements as unknown as Parameters<FlareMoDb["batch"]>[0],
+      )) as unknown as unknown[];
+    } catch (error) {
+      // A concurrent createMemo may claim the same client_id after this
+      // function's pre-check; surface the unique-index race as a conflict
+      // instead of a bare D1 error.
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes("UNIQUE constraint failed: memos.client_id")) {
+        throw new ConflictError("Memo client_id is already in use");
+      }
+      throw error;
+    }
+  };
+  let batchResults: unknown[];
   if (metadataChanged && tags.length > 0 && shouldCreateRevision) {
-    await db.batch([
-      revisionStatement,
+    batchResults = await runBatch([
       updateStatement,
+      revisionStatement,
       deleteTagsStatement,
       db.insert(memoTags).values(
         tags.map((tag) => ({
@@ -796,39 +834,33 @@ export async function updateMemo(
           createdAt: now,
         })),
       ),
-      eventStatement,
-      webhookEventStatement,
-      ...(embeddingTaskStatement ? [embeddingTaskStatement] : []),
-      ...notificationStatements,
+      ...restStatements,
     ]);
   } else if (metadataChanged && shouldCreateRevision) {
-    await db.batch([
-      revisionStatement,
+    batchResults = await runBatch([
       updateStatement,
+      revisionStatement,
       deleteTagsStatement,
-      eventStatement,
-      webhookEventStatement,
-      ...(embeddingTaskStatement ? [embeddingTaskStatement] : []),
-      ...notificationStatements,
+      ...restStatements,
     ]);
   } else if (shouldCreateRevision) {
-    await db.batch([
-      revisionStatement,
+    batchResults = await runBatch([
       updateStatement,
-      eventStatement,
-      webhookEventStatement,
-      ...(embeddingTaskStatement ? [embeddingTaskStatement] : []),
-      ...notificationStatements,
+      revisionStatement,
+      ...restStatements,
     ]);
   } else {
-    await db.batch([
-      updateStatement,
-      eventStatement,
-      webhookEventStatement,
-      ...(embeddingTaskStatement ? [embeddingTaskStatement] : []),
-      ...notificationStatements,
-    ]);
+    batchResults = await runBatch([updateStatement, ...restStatements]);
   }
+
+  const updatedRows = batchResults[0] as { id: string }[] | undefined;
+  if (!updatedRows || updatedRows.length === 0) {
+    throw new ConflictError(
+      "Memo was modified concurrently; reload it and try again.",
+    );
+  }
+
+  void pruneMemoRevisions(db, id).catch(() => undefined);
 
   return getMemoById(db, user, id, { includeDeleted: true });
 }
