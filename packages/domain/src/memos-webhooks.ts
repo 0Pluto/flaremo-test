@@ -415,15 +415,21 @@ async function markDeliveryFailed(
  * snapshot is written before reactions change, so the delivery time is the
  * only point that can show a truthful list.
  */
-async function hydrateWebhookReactions(db: FlareMoDb, body: unknown) {
-  if (!body || typeof body !== "object") return body;
-  const memo = (body as { memo?: { name?: string; reactions?: unknown } }).memo;
+async function hydrateWebhookReactions(
+  db: FlareMoDb,
+  body: unknown,
+): Promise<Record<string, unknown>> {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return {};
+  const source = body as Record<string, unknown>;
+  const memo = source.memo as
+    | { name?: unknown; reactions?: unknown }
+    | undefined;
   if (
     !memo ||
     typeof memo.name !== "string" ||
     !Array.isArray(memo.reactions)
   ) {
-    return body;
+    return source;
   }
   const memoId = memo.name;
   const rows = await db
@@ -434,7 +440,7 @@ async function hydrateWebhookReactions(db: FlareMoDb, body: unknown) {
     .from(reactions)
     .where(eq(reactions.contentId, memoId));
   return {
-    ...body,
+    ...source,
     memo: {
       ...memo,
       reactions: rows.map((row) => ({
