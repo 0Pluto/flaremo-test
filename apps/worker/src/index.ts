@@ -19,8 +19,10 @@ import {
   listAttachmentCleanupCandidates,
   listExpiredTrashedMemos,
   listQueuedMemberRemovalJobs,
+  MEMOS_SSE_RETENTION_MS,
   type PlanLimits,
   parseUserPlanLimits,
+  pruneMemosSseEvents,
   requeueStaleMemberRemovalJobs,
   SELF_HOST_UNLIMITED,
   type UserPlanLimits,
@@ -337,6 +339,12 @@ export async function runScheduledMaintenance(
     }
   }
   await dispatchMemosWebhookOutbox(db);
+  // SSE replay events have a one-week retention; the bounded chunk keeps the
+  // daily sweep from one giant delete.
+  const ssePruned = await pruneMemosSseEvents(
+    db,
+    new Date(scheduledTime - MEMOS_SSE_RETENTION_MS),
+  );
   await dispatchEmbeddingOutbox(db, {
     provider: createEmbeddingProvider(env),
     memosIndex: createVectorIndex(env, "memo"),
@@ -414,6 +422,7 @@ export async function runScheduledMaintenance(
       message: "attachment cleanup complete",
       count: cleanupCount,
       trashPurgeCount,
+      ssePruned,
       staleTaskCount: staleCount,
       expiredTaskCount: expiredIds.length,
       reviewNotificationCount,

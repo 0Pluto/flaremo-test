@@ -279,15 +279,23 @@ export async function listMemosForViewer(
     filters.push(eq(memos.visibility, query.visibility));
   }
 
+  let likeScanFallback = false;
   if (search.text) {
     const ftsQuery = buildFtsQuery(search.text);
-    filters.push(
-      ftsQuery
-        ? sql`${memos.id} IN (
-            SELECT memo_id FROM memos_fts WHERE memos_fts MATCH ${ftsQuery}
-          )`
-        : sql`${memos.content} LIKE ${`%${escapeLike(search.text)}%`} ESCAPE '\\'`,
-    );
+    if (ftsQuery) {
+      filters.push(sql`${memos.id} IN (
+        SELECT memo_id FROM memos_fts WHERE memos_fts MATCH ${ftsQuery}
+      )`);
+    } else {
+      // Non-Latin text (CJK and friends) cannot use the unicode61 FTS index,
+      // so the query falls back to a LIKE scan. It is bounded by the same
+      // scan-limit window as CEL filters below instead of scanning the
+      // author's whole corpus on every keystroke.
+      likeScanFallback = true;
+      filters.push(
+        sql`${memos.content} LIKE ${`%${escapeLike(search.text)}%`} ESCAPE '\\'`,
+      );
+    }
   }
 
   if (search.hasAttachment) {
@@ -378,21 +386,36 @@ export async function listMemosForViewer(
   // evaluated by SQLite itself and needs neither the JS scan nor the limit.
   const fullyPushedDown = celFilter?.completeInSql === true;
   const scanLimit = options.celScanLimit ?? DEFAULT_MEMO_FILTER_SCAN_LIMIT;
+  const jsScan = (celFilter && !fullyPushedDown) || likeScanFallback;
+  if (celFilter && !fullyPushedDown) {
+    // Probe cheaply (id only) before hydrating full rows, so an abusive
+    // expression costs an index-shaped scan instead of 5000 full-row reads.
+    const probe = await db
+      .select({ id: memos.id })
+      .from(memos)
+      .where(and(...filters.filter(Boolean)))
+      .orderBy(
+        desc(memos.pinned),
+        direction === "asc" ? asc(orderColumn) : desc(orderColumn),
+        direction === "asc" ? asc(memos.id) : desc(memos.id),
+      )
+      .limit(scanLimit + 1);
+    if (probe.length > scanLimit && !likeScanFallback) {
+      throw new ValidationError(
+        `Filter scan limit reached (${scanLimit} memos). Narrow the query using a tag, date range, state, or visibility.`,
+      );
+    }
+  }
   const candidates = await orderedQuery.limit(
-    celFilter && !fullyPushedDown ? scanLimit + 1 : query.page_size + 1,
+    jsScan ? scanLimit + 1 : query.page_size + 1,
   );
   const rows =
     celFilter && !fullyPushedDown
       ? candidates.slice(0, scanLimit).filter((memo) => celFilter(memo, user))
       : candidates;
-  if (
-    celFilter &&
-    !fullyPushedDown &&
-    candidates.length > scanLimit &&
-    rows.length <= query.page_size
-  ) {
+  if (candidates.length > scanLimit && rows.length <= query.page_size) {
     throw new ValidationError(
-      `Filter scan limit reached (${scanLimit} memos). Narrow the query using a tag, date range, state, or visibility.`,
+      `Search scan limit reached (${scanLimit} memos). Narrow the query using a tag, date range, state, or visibility.`,
     );
   }
 

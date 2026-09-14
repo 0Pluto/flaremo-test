@@ -293,7 +293,7 @@ async function postWebhook(
   // The event snapshot is stored at write time, before reactions land; fill
   // the reactions field at delivery time so subscribers receive the real
   // reaction list instead of a constant empty array.
-  const bodyPayload = hydrateWebhookReactions(db, item.event.body);
+  const bodyPayload = await hydrateWebhookReactions(db, item.event.body);
   const body = JSON.stringify({
     ...bodyPayload,
     url: item.webhook.url,

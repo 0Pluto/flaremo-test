@@ -257,16 +257,92 @@ export async function listUserNotifications(
     if (cursorFilter) filters.push(cursorFilter);
   }
 
+  // Batch-prefetch every memo the page may reference (one query instead of
+  // up to two point lookups per row), then build DTOs from the map.
   const rows = await selectNotifications(db, and(...filters));
+  const memoIdSet = new Set<string>();
+  for (const row of rows) {
+    memoIdSet.add(row.notification.memoId);
+    if (row.notification.relatedMemoId) {
+      memoIdSet.add(row.notification.relatedMemoId);
+    }
+  }
+  const memoById = new Map(
+    memoIdSet.size
+      ? (
+          await db
+            .select()
+            .from(memos)
+            .where(inArray(memos.id, [...memoIdSet]))
+        ).map((memo) => [memo.id, memo] as const)
+      : [],
+  );
+
   const page: UserNotificationDto[] = [];
   let scanned = 0;
   let lastScanned: NotificationWithSender | undefined;
   for (const row of rows) {
     scanned += 1;
     lastScanned = row;
-    const dto = await notificationToDto(db, user, row);
+    const dto = notificationToDto(user, row, memoById);
     if (dto) page.push(dto);
     if (page.length >= limit) break;
+  }
+  // Rows can be filtered out at DTO time (memo deleted or no longer
+  // readable). When the scan window runs out before the page is full, keep
+  // pulling further windows so filtered rows do not silently truncate the
+  // notification stream.
+  let cursorState = cursor;
+  while (
+    page.length < limit &&
+    scanned >= rows.length &&
+    rows.length === MAX_NOTIFICATION_PAGE_SIZE + 1 &&
+    lastScanned
+  ) {
+    cursorState = {
+      createdAt: lastScanned.notification.createdAt,
+      id: lastScanned.notification.id,
+    };
+    const windowFilters = [
+      eq(memosNotifications.receiverId, user.id),
+      ...(input.excludeTypes && input.excludeTypes.length > 0
+        ? [notInArray(memosNotifications.type, input.excludeTypes)]
+        : []),
+      ...(filter.status ? [eq(memosNotifications.status, filter.status)] : []),
+      ...(filter.type ? [eq(memosNotifications.type, filter.type)] : []),
+      or(
+        lt(memosNotifications.createdAt, cursorState.createdAt),
+        and(
+          eq(memosNotifications.createdAt, cursorState.createdAt),
+          lt(memosNotifications.id, cursorState.id),
+        ),
+      ),
+    ];
+    const more = await selectNotifications(db, and(...windowFilters));
+    const memoIdWindow = new Set<string>();
+    for (const row of more) {
+      memoIdWindow.add(row.notification.memoId);
+      if (row.notification.relatedMemoId) {
+        memoIdWindow.add(row.notification.relatedMemoId);
+      }
+    }
+    const missing = [...memoIdWindow].filter((id) => !memoById.has(id));
+    if (missing.length > 0) {
+      for (const memo of await db
+        .select()
+        .from(memos)
+        .where(inArray(memos.id, missing))) {
+        memoById.set(memo.id, memo);
+      }
+    }
+    for (const row of more) {
+      scanned += 1;
+      lastScanned = row;
+      const dto = notificationToDto(user, row, memoById);
+      if (dto) page.push(dto);
+      if (page.length >= limit) break;
+    }
+    if (more.length === 0) break;
   }
   const next = lastScanned && scanned < rows.length ? lastScanned : undefined;
   return {
@@ -310,7 +386,20 @@ export async function updateUserNotification(
   if (!updated[0]) throw new NotFoundError("Notification not found");
   const row = await getNotification(db, user, id);
   if (!row) throw new NotFoundError("Notification not found after update");
-  const dto = await notificationToDto(db, user, row);
+  const memo = await db.query.memos.findFirst({
+    where: eq(memos.id, row.notification.memoId),
+  });
+  const relatedMemo = row.notification.relatedMemoId
+    ? await db.query.memos.findFirst({
+        where: eq(memos.id, row.notification.relatedMemoId),
+      })
+    : undefined;
+  const memoById = new Map(
+    [...(memo ? [memo] : []), ...(relatedMemo ? [relatedMemo] : [])].map(
+      (item) => [item.id, item] as const,
+    ),
+  );
+  const dto = notificationToDto(user, row, memoById);
   if (!dto) throw new NotFoundError("Notification is no longer visible");
   return dto;
 }
@@ -472,20 +561,16 @@ async function getNotification(
   );
 }
 
-async function notificationToDto(
-  db: FlareMoDb,
+function notificationToDto(
   user: UserRow,
   row: NotificationWithSender,
-): Promise<UserNotificationDto | undefined> {
+  memoById: Map<string, typeof memos.$inferSelect>,
+): UserNotificationDto | undefined {
   const notification = row.notification;
-  const memo = await db.query.memos.findFirst({
-    where: eq(memos.id, notification.memoId),
-  });
+  const memo = memoById.get(notification.memoId);
   if (!memo || !canReadNotificationMemo(user, memo)) return undefined;
   const relatedMemo = notification.relatedMemoId
-    ? await db.query.memos.findFirst({
-        where: eq(memos.id, notification.relatedMemoId),
-      })
+    ? memoById.get(notification.relatedMemoId)
     : undefined;
   if (
     notification.relatedMemoId &&

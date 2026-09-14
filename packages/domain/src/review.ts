@@ -59,23 +59,38 @@ export async function createDailyReviewNotifications(
   if (!DAILY_REVIEW_DATE_PATTERN.test(date) || Number.isNaN(Date.parse(date))) {
     throw new ValidationError("Invalid review date");
   }
-  const allUsers = await db.select().from(users);
+  // One scan over the normal memo corpus grouped in memory replaces the
+  // users × per-user double fan-out; UTC month-day is a direct substr on the
+  // ISO timestamp, so no per-row datetime() arithmetic is needed.
+  const monthDay = date.slice(5);
+  const rows = await db
+    .select({ id: memos.id, userId: memos.userId, createdAt: memos.createdAt })
+    .from(memos)
+    .where(
+      and(
+        eq(memos.status, "normal"),
+        sql`substr(${memos.createdAt}, 6, 5) = ${monthDay}`,
+        sql`substr(${memos.createdAt}, 1, 10) != ${date}`,
+      ),
+    );
+  const anchorByUser = new Map<string, string>();
+  for (const row of rows) {
+    const current = anchorByUser.get(row.userId);
+    if (!current || row.createdAt > current) {
+      anchorByUser.set(row.userId, row.id);
+    }
+  }
+  const allUsers = await db.select({ id: users.id }).from(users);
+  const activeUserIds = new Set(allUsers.map((user) => user.id));
   let created = 0;
-  for (const user of allUsers) {
-    const reviewMemos = await listDailyReviewMemos(db, user, {
-      date,
-      tzOffset: 0,
-    });
-    // Rows come back ascending, so the last entry is the most recent memo and
-    // anchors the notification's required memo reference.
-    const anchor = reviewMemos[reviewMemos.length - 1];
-    if (!anchor) continue;
+  for (const [receiverId, anchorId] of anchorByUser) {
+    if (!activeUserIds.has(receiverId)) continue;
     const inserted = await insertMemoNotification(db, {
-      receiverId: user.id,
-      senderId: user.id,
+      receiverId,
+      senderId: receiverId,
       type: "daily_review",
       sourceEventId: `daily-review:${date}`,
-      memoId: anchor.id,
+      memoId: anchorId,
     });
     if (inserted.meta.changes > 0) created += 1;
   }
@@ -87,21 +102,41 @@ export async function createDailyReviewNotifications(
  * applied in memory rather than as bound parameters so long random walks
  * cannot exceed D1's bound-parameter limit.
  */
+const RANDOM_SAMPLE_WINDOW = 64;
+
 export async function getRandomMemo(
   db: FlareMoDb,
   user: UserRow,
   excludeIds: string[] = [],
 ): Promise<MemoRow | null> {
-  const rows = await db
+  const excluded = new Set(excludeIds);
+  // Sample a bounded random window instead of pulling every memo id; for a
+  // long walk the fallback below covers the rare all-excluded case.
+  const sampled = await db
     .select({ id: memos.id })
     .from(memos)
-    .where(and(eq(memos.userId, user.id), eq(memos.status, "normal")));
-  const excluded = new Set(excludeIds);
-  const candidates = rows.filter((row) => !excluded.has(row.id));
-  if (candidates.length === 0) return null;
-  const picked = pickRandom(candidates);
+    .where(and(eq(memos.userId, user.id), eq(memos.status, "normal")))
+    .orderBy(sql`random()`)
+    .limit(RANDOM_SAMPLE_WINDOW);
+  const pickedId = sampled.find((row) => !excluded.has(row.id))?.id;
+  if (!pickedId) {
+    // Fall back to a full scan only when the sampled window is exhausted.
+    const rows = await db
+      .select({ id: memos.id })
+      .from(memos)
+      .where(and(eq(memos.userId, user.id), eq(memos.status, "normal")));
+    const candidates = rows.filter((row) => !excluded.has(row.id));
+    if (candidates.length === 0) return null;
+    return (
+      (await db
+        .select()
+        .from(memos)
+        .where(eq(memos.id, pickRandom(candidates).id))
+        .get()) ?? null
+    );
+  }
   return (
-    (await db.select().from(memos).where(eq(memos.id, picked.id)).get()) ?? null
+    (await db.select().from(memos).where(eq(memos.id, pickedId)).get()) ?? null
   );
 }
 
@@ -144,6 +179,8 @@ export async function getWalkNextMemo(
             eq(memos.status, "normal"),
           ),
         )
+        .orderBy(sql`random()`)
+        .limit(RANDOM_SAMPLE_WINDOW)
     ).filter((row) => !excluded.has(row.memoId));
     if (tagCandidates.length > 0) {
       const picked = pickRandom(tagCandidates);
