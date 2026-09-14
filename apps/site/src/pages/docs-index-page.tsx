@@ -1,6 +1,8 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, FileText } from "lucide-react";
 import { useMemo } from "react";
+import { Reveal } from "@/components/motion";
+import { Badge } from "@/components/ui/badge";
 import { docPath, getDocNavGroups } from "@/content/docs-nav";
 import { listDocs } from "@/lib/docs-source.generated";
 import { getLocaleFromPath, type SupportedLocale } from "@/lib/seo";
@@ -24,38 +26,49 @@ export function DocsIndexPage() {
   const groups = useMemo(() => getDocNavGroups(locale), [locale]);
 
   return (
-    <main className="container-x py-12">
-      <header className="mb-10">
-        <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
-          {HEADINGS[locale] || HEADINGS.en}
-        </h1>
-      </header>
+    <main className="container-x py-12 md:py-16 space-y-10">
+      <Reveal>
+        <header className="space-y-3">
+          <Badge variant="flame">FlareMo Knowledge Base</Badge>
+          <h1 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl md:text-5xl">
+            {HEADINGS[locale] || HEADINGS.en}
+          </h1>
+          <p className="text-sm text-mist max-w-xl">
+            {locale === "zh"
+              ? "完整的架构指南、部署手册、生态客户端与 Memos 兼容性参考文档。"
+              : "Comprehensive architecture guides, deployment runbooks, and Memos compatibility matrix."}
+          </p>
+        </header>
+      </Reveal>
+
       <div className="space-y-10">
         {groups.map((group) => {
           const docsInGroup = docs.filter((d) => d.group === group.id);
           if (docsInGroup.length === 0) return null;
           return (
-            <section key={group.id}>
-              <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <section key={group.id} className="space-y-4">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-mist">
                 {group.label}
               </h2>
-              <ul className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-background shadow-xs">
+              <div className="panel-card overflow-hidden border border-line/60 divide-y divide-line/60">
                 {docsInGroup.map((doc) => (
-                  <li key={doc.slug}>
-                    <Link
-                      className="group flex items-center justify-between gap-3 px-5 py-4 transition-colors hover:bg-accent/40"
-                      to={docPath(doc.slug, locale)}
-                    >
-                      <div className="space-y-1">
-                        <div className="text-sm font-semibold tracking-tight text-foreground">
-                          {doc.title}
-                        </div>
+                  <Link
+                    className="group flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-wash"
+                    key={doc.slug}
+                    to={docPath(doc.slug, locale)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="icon-dock flex size-8 items-center justify-center text-signal shrink-0">
+                        <FileText className="size-4" />
                       </div>
-                      <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                    </Link>
-                  </li>
+                      <div className="text-sm font-semibold tracking-tight text-ink group-hover:text-signal transition-colors">
+                        {doc.title}
+                      </div>
+                    </div>
+                    <ChevronRight className="size-4 text-fog transition-transform group-hover:translate-x-1 group-hover:text-signal" />
+                  </Link>
                 ))}
-              </ul>
+              </div>
             </section>
           );
         })}

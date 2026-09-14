@@ -5,6 +5,7 @@ import {
   normalizeLocale,
   type SeoHead,
 } from "@/lib/seo";
+import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 
 /**
  * Renders the full static HTML document shell used by scripts/build.mjs for
@@ -52,7 +53,7 @@ export function renderHtmlShell(
     ${metaTags}
     ${linkTags}
     ${scriptTags}
-    <script>/* theme + favicon swap before hydration */</script>
+    <script>${THEME_BOOT_SCRIPT}</script>
   </head>
   <body>
     <div id="root">${body}</div>

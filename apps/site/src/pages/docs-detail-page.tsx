@@ -21,17 +21,17 @@ export function DocsDetailPage() {
 
   if (!doc) {
     return (
-      <main className="container-x py-16 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">
+      <main className="container-x py-20 text-center">
+        <h1 className="text-2xl font-bold tracking-tight text-ink">
           {locale === "zh" ? "文档不存在" : "Document not found"}
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="mt-2 text-sm text-mist">
           {locale === "zh"
             ? "我们暂时没有这份文档。请查看文档总览。"
             : "We don't have that document. See the docs index."}
         </p>
         <Link
-          className="mt-6 inline-flex items-center gap-1 text-sm font-medium text-flame-600 hover:text-flame-500"
+          className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-signal hover:underline"
           to={getLocalizedPath("/docs", locale)}
         >
           <ChevronLeft className="size-4" />
@@ -42,57 +42,70 @@ export function DocsDetailPage() {
   }
 
   return (
-    <main className="container-x grid gap-10 py-12 lg:grid-cols-[14rem_1fr]">
-      <aside className="lg:sticky lg:top-20 lg:self-start">
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {locale === "zh" ? "文档" : "Docs"}
-        </h2>
+    <main className="container-x grid gap-10 py-10 md:py-14 lg:grid-cols-[15rem_1fr]">
+      {/* 侧边导航栏 */}
+      <aside className="lg:sticky lg:top-20 lg:self-start space-y-6">
+        <Link
+          className="inline-flex items-center gap-1 text-xs font-semibold text-mist hover:text-ink transition-colors"
+          to={getLocalizedPath("/docs", locale)}
+        >
+          <ChevronLeft className="size-3.5" />
+          <span>{locale === "zh" ? "文档总览" : "Docs Overview"}</span>
+        </Link>
+
         <nav className="space-y-5">
           {groups.map((group) => {
             const docsInGroup = allDocs.filter((d) => d.group === group.id);
             if (docsInGroup.length === 0) return null;
             return (
-              <div key={group.id}>
-                <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <div key={group.id} className="space-y-1.5">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-fog px-2">
                   {group.label}
                 </div>
                 <ul className="space-y-0.5">
-                  {docsInGroup.map((d) => (
-                    <li key={d.slug}>
-                      <Link
-                        activeProps={{
-                          className:
-                            "bg-accent text-accent-foreground font-medium",
-                        }}
-                        className="block rounded-md px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-                        to={docPath(d.slug, locale)}
-                      >
-                        {d.title}
-                      </Link>
-                    </li>
-                  ))}
+                  {docsInGroup.map((d) => {
+                    const isActive = d.slug === slug;
+                    return (
+                      <li key={d.slug}>
+                        <Link
+                          className={`block rounded-lg px-2.5 py-1.5 text-xs transition-colors ${
+                            isActive
+                              ? "bg-surface font-bold text-signal-ink shadow-2xs border border-line/60"
+                              : "text-mist hover:bg-wash hover:text-ink"
+                          }`}
+                          to={docPath(d.slug, locale)}
+                        >
+                          {d.title}
+                        </Link>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             );
           })}
         </nav>
       </aside>
-      <article>
+
+      {/* 文档主体内容 */}
+      <article className="min-w-0">
         {doc.fallbackFromZh ? (
-          <div className="mb-6 rounded-xl border border-flame-200 bg-flame-50/60 px-4 py-3 text-sm text-flame-700">
+          <div className="mb-6 rounded-xl border border-signal/30 bg-signal/10 px-4 py-3 text-sm text-signal-ink">
             {locale === "zh"
               ? "本页内容为中文原文；尚未翻译为英文。"
               : "This document is shown in its original Chinese; an English translation is pending."}
           </div>
         ) : null}
-        <header className="mb-6 space-y-2 border-b border-border/60 pb-5">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground">
+
+        <header className="mb-8 space-y-2 border-b border-line/60 pb-6">
+          <div className="text-xs font-bold uppercase tracking-wider text-signal">
             {groups.find((g) => g.id === doc.group)?.label}
           </div>
-          <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
+          <h1 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
             {doc.title}
           </h1>
         </header>
+
         <div className="prose-doc">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{doc.body}</ReactMarkdown>
         </div>
