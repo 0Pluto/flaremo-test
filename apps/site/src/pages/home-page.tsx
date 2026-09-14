@@ -83,20 +83,27 @@ export function HomePage() {
       <Hero home={home} locale={locale} />
       <InteractiveShowcase locale={locale} />
       <BentoFeatures
+        badge={home.featuresBadge}
         heading={home.featuresHeading}
         icons={FEATURE_ICONS}
         items={home.features}
         subtitle={home.featuresSubtitle}
       />
       <ComparisonSection
+        badge={home.comparisonBadge}
         heading={home.comparisonHeading}
         locale={locale}
         rows={home.comparisonRows}
         subtitle={home.comparisonSubtitle}
       />
       <EcosystemSection locale={locale} />
-      <FaqSection heading={home.faqHeading} items={home.faqItems} />
+      <FaqSection
+        badge={home.faqBadge}
+        heading={home.faqHeading}
+        items={home.faqItems}
+      />
       <CtaSection
+        badge={home.ctaBadge}
         buttonText={home.ctaButton}
         heading={home.ctaHeading}
         locale={locale}
@@ -266,11 +273,13 @@ function Hero({
    ============================================================ */
 
 function BentoFeatures({
+  badge,
   heading,
   subtitle,
   items,
   icons,
 }: {
+  badge: string;
   heading: string;
   subtitle: string;
   items: Array<{ title: string; description: string }>;
@@ -279,7 +288,7 @@ function BentoFeatures({
   return (
     <section id="features" className="container-x space-y-10 scroll-mt-20">
       <div className="max-w-2xl space-y-2">
-        <Badge variant="flame">Architecture & Capabilities</Badge>
+        <Badge variant="flame">{badge}</Badge>
         <h2 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl md:text-4xl">
           {heading}
         </h2>
@@ -320,11 +329,13 @@ function BentoFeatures({
    ============================================================ */
 
 function ComparisonSection({
+  badge,
   heading,
   subtitle,
   rows,
   locale,
 }: {
+  badge: string;
   heading: string;
   subtitle: string;
   rows: Array<{ label: string; cloudflare: string; nas: string; vps: string }>;
@@ -335,7 +346,7 @@ function ComparisonSection({
   return (
     <section id="comparison" className="container-x space-y-8 scroll-mt-20">
       <div className="max-w-2xl space-y-2">
-        <Badge variant="flame">Fair Comparison</Badge>
+        <Badge variant="flame">{badge}</Badge>
         <h2 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl md:text-4xl">
           {heading}
         </h2>
@@ -393,6 +404,7 @@ function ComparisonSection({
 const ECOSYSTEM_CONTENT: Record<
   SupportedLocale,
   {
+    badge: string;
     heading: string;
     subtitle: string;
     clients: Array<{
@@ -403,6 +415,7 @@ const ECOSYSTEM_CONTENT: Record<
   }
 > = {
   zh: {
+    badge: "连接你已有的工具",
     heading: "全面的 Memos 生态无缝兼容",
     subtitle:
       "完整兼容 Memos /api/v1 协议与可撤销个人访问令牌（PAT），你的现有工具链立即可用。",
@@ -430,6 +443,7 @@ const ECOSYSTEM_CONTENT: Record<
     ],
   },
   en: {
+    badge: "Bring Your Own Tools",
     heading: "Full Memos Ecosystem Compatibility",
     subtitle:
       "Drop-in compatibility with Memos /api/v1 endpoints and Personal Access Tokens (PAT). Keep your favorite daily tools.",
@@ -457,6 +471,7 @@ const ECOSYSTEM_CONTENT: Record<
     ],
   },
   ja: {
+    badge: "既存ツールをそのまま",
     heading: "Memos エコシステムとの完全互換",
     subtitle:
       "Memos /api/v1 エンドポイントと PAT トークンを標準サポート。使い慣れたツールをそのまま活用できます。",
@@ -484,6 +499,7 @@ const ECOSYSTEM_CONTENT: Record<
     ],
   },
   fr: {
+    badge: "Vos outils restent",
     heading: "Compatibilité totale avec l'écosystème Memos",
     subtitle:
       "Compatibilité directe avec l'API Memos /api/v1 et les jetons PAT. Conservez vos outils préférés.",
@@ -511,6 +527,7 @@ const ECOSYSTEM_CONTENT: Record<
     ],
   },
   es: {
+    badge: "Tus herramientas siguen",
     heading: "Compatibilidad total con el ecosistema Memos",
     subtitle:
       "Compatibilidad directa con la API /api/v1 de Memos y tokens PAT. Conserva todas tus herramientas diarias.",
@@ -538,6 +555,7 @@ const ECOSYSTEM_CONTENT: Record<
     ],
   },
   ko: {
+    badge: "기존 도구 연결",
     heading: "완벽한 Memos 생태계 호환성",
     subtitle:
       "Memos /api/v1 표준 API 및 PAT 토큰 호환. 기존에 사용하던 모든 도구를 즉시 연결할 수 있습니다.",
@@ -565,6 +583,7 @@ const ECOSYSTEM_CONTENT: Record<
     ],
   },
   ru: {
+    badge: "Ваши инструменты",
     heading: "Полная совместимость с экосистемой Memos",
     subtitle:
       "Поддержка Memos /api/v1 и токенов PAT. Ваши любимые приложения и скрипты работают сразу.",
@@ -592,6 +611,7 @@ const ECOSYSTEM_CONTENT: Record<
     ],
   },
   ar: {
+    badge: "أدواتك الحالية تعمل",
     heading: "توافق كامل مع منظومة Memos",
     subtitle:
       "توافق مباشر مع واجهة Memos /api/v1 ورموز الوصول الشخصية (PAT). احتفظ بأدواتك اليومية المفضلة.",
@@ -628,7 +648,7 @@ function EcosystemSection({ locale }: { locale: SupportedLocale }) {
   return (
     <section id="ecosystem" className="container-x space-y-8 scroll-mt-20">
       <div className="max-w-2xl space-y-2">
-        <Badge variant="flame">Open Ecosystem</Badge>
+        <Badge variant="flame">{content.badge}</Badge>
         <h2 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl md:text-4xl">
           {content.heading}
         </h2>
@@ -668,16 +688,18 @@ function EcosystemSection({ locale }: { locale: SupportedLocale }) {
    ============================================================ */
 
 function FaqSection({
+  badge,
   heading,
   items,
 }: {
+  badge: string;
   heading: string;
   items: Array<{ q: string; a: string }>;
 }) {
   return (
     <section id="faq" className="container-x space-y-8 scroll-mt-20">
       <div className="max-w-2xl space-y-2">
-        <Badge variant="secondary">Questions & Answers</Badge>
+        <Badge variant="secondary">{badge}</Badge>
         <h2 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl md:text-4xl">
           {heading}
         </h2>
@@ -710,12 +732,14 @@ function FaqSection({
    ============================================================ */
 
 function CtaSection({
+  badge,
   heading,
   subtitle,
   buttonText,
   secondaryCta,
   locale,
 }: {
+  badge: string;
   heading: string;
   subtitle: string;
   buttonText: string;
@@ -732,7 +756,7 @@ function CtaSection({
         />
 
         <div className="relative z-10 mx-auto max-w-2xl space-y-5">
-          <Badge variant="flame">Free · Private · Serverless</Badge>
+          <Badge variant="flame">{badge}</Badge>
           <h2 className="text-balance text-3xl font-extrabold tracking-tight text-ink sm:text-4xl md:text-5xl">
             {heading}
           </h2>

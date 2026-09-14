@@ -11,12 +11,14 @@ export type HomeContent = {
   statPhotos: string;
   statServers: string;
   statUptime: string;
+  featuresBadge: string;
   featuresHeading: string;
   featuresSubtitle: string;
   features: Array<{
     title: string;
     description: string;
   }>;
+  comparisonBadge: string;
   comparisonHeading: string;
   comparisonSubtitle: string;
   comparisonRows: Array<{
@@ -27,18 +29,20 @@ export type HomeContent = {
   }>;
   screenshotsHeading: string;
   screenshotsSubtitle: string;
+  faqBadge: string;
   faqHeading: string;
   faqItems: Array<{
     q: string;
     a: string;
   }>;
+  ctaBadge: string;
   ctaHeading: string;
   ctaSubtitle: string;
   ctaButton: string;
 };
 
 const EN_HOME: HomeContent = {
-  heroEyebrow: "Zero Server Ops · Sub-50ms Global Edge · 100% Free Self-Hosted",
+  heroEyebrow: "Open-source · Cloudflare Edge-native · Memos-compatible",
   heroTitleLine1: "Zero Servers. Forever Yours.",
   heroTitleLine2: "Your Second Brain on the Edge.",
   heroSubtitle:
@@ -49,6 +53,7 @@ const EN_HOME: HomeContent = {
   statPhotos: "~10,000 photos · $0 egress",
   statServers: "300+ edge datacenters",
   statUptime: "Multi-region persistence & backup",
+  featuresBadge: "Why FlareMo",
   featuresHeading: "Engineered for Focus and Longevity",
   featuresSubtitle:
     "Leave heavy server maintenance behind and enjoy pure, reliable, AI-native knowledge management",
@@ -84,6 +89,7 @@ const EN_HOME: HomeContent = {
         "Full compatibility with Memos /api/v1 endpoints and OpenAPI. Direct integration with existing third-party clients like Moe Memos, plus one-click import and export.",
     },
   ],
+  comparisonBadge: "Side-by-Side",
   comparisonHeading: "Why Cloudflare Native Wins",
   comparisonSubtitle:
     "Comparing Cloudflare Serverless against home NAS and traditional VPS self-hosting",
@@ -128,6 +134,7 @@ const EN_HOME: HomeContent = {
   screenshotsHeading: "Polished Visual Experience",
   screenshotsSubtitle:
     "Light mode, dark immersion, and mobile responsive design. Everything is live and working.",
+  faqBadge: "Good to Know",
   faqHeading: "Frequently Asked Questions",
   faqItems: [
     {
@@ -151,27 +158,28 @@ const EN_HOME: HomeContent = {
       a: "By default, it is a quiet single-user sanctuary. When team mode is enabled, admins invite members via one-time activation links. Memos can be private, team-visible, or public.",
     },
   ],
-  ctaHeading: "Ready to Build Your Second Brain?",
+  ctaBadge: "Get Started",
+  ctaHeading: "Your Second Brain Is One Deploy Away",
   ctaSubtitle:
     "No servers, no credit card required. Deploy on Cloudflare in 5 minutes.",
-  ctaButton: "Read 5-Minute Deploy Guide",
+  ctaButton: "Open the Deploy Guide",
 };
 
 const ZH_HOME: HomeContent = {
-  heroEyebrow: "0 服务器运维 · 全球边缘近场直连 · 终身免费自托管",
+  heroEyebrow: "开源免费 · Cloudflare 边缘原生 · Memos 生态兼容",
   heroTitleLine1: "零服务器，永久拥有",
   heroTitleLine2: "跑在边缘网络的第二大脑",
   heroSubtitle:
-    "基于 Cloudflare 边缘计算（Workers + D1 + R2）构建的新一代知识管理系统。告别 VPS 与繁重运维，深度融合 Memos 生态与 AI Agent 长期记忆，让灵感随处迸发，永久沉淀。",
+    "基于 Cloudflare 边缘网络（Workers + D1 + R2）原生构建的新一代知识库：无需 VPS、免运维，完整兼容 Memos 生态，还能作为 AI Agent 的长期记忆。灵感随手记下，永久沉淀。",
   primaryCta: "快速开始部署",
   secondaryCta: "GitHub 源码",
   statMemos: "约 250 万条纯文本笔记",
   statPhotos: "1 万张图片 · 0 出口流量费",
   statServers: "全球 300+ 边缘近场直连",
   statUptime: "企业级多副本 · 本地自由归档",
+  featuresBadge: "为什么是 FlareMo",
   featuresHeading: "为专注记录与长期沉淀而生",
-  featuresSubtitle:
-    "告别繁重的服务器运维与数据焦虑，享受更纯粹、更强大、更安全的知识管理",
+  featuresSubtitle: "把运维交给 Cloudflare，把注意力留给记录本身",
   features: [
     {
       title: "企业级持久化，永不丢失",
@@ -181,7 +189,7 @@ const ZH_HOME: HomeContent = {
     {
       title: "免费配额，终生充裕",
       description:
-        "Cloudflare 官方免费层提供 5GB D1 数据库与 10GB R2 存储，R2 存储免收外网出口流量费，0 成本无财务负担。",
+        "Cloudflare 免费层自带 5GB D1 数据库与 10GB R2 存储，且 R2 不收出口流量费——记得再多，也没有一张账单。",
     },
     {
       title: "离线优先，全平台 PWA",
@@ -204,6 +212,7 @@ const ZH_HOME: HomeContent = {
         "完整实现 Memos /api/v1 核心接口与 OpenAPI 规范，支持第三方客户端直接连接，Memos/flomo 数据一键无损导入导出。",
     },
   ],
+  comparisonBadge: "横向对比",
   comparisonHeading: "为什么选择 Cloudflare 原生架构",
   comparisonSubtitle:
     "对比传统家用 NAS 与 VPS，看 Cloudflare 原生为何是现代自托管的最优解",
@@ -248,6 +257,7 @@ const ZH_HOME: HomeContent = {
   screenshotsHeading: "精致视觉，开箱即用",
   screenshotsSubtitle:
     "浅色明亮、深色沉浸与全功能移动端自适应，所有功能真实可用",
+  faqBadge: "你可能想问",
   faqHeading: "常见问题",
   faqItems: [
     {
@@ -271,10 +281,11 @@ const ZH_HOME: HomeContent = {
       a: "默认是一套安静专注的单人笔记系统；如果需要协同，管理员可在后台一键生成邀请激活链接添加成员。笔记支持设为私密（仅自己可见）、团队可见（成员只读）或全网公开，数据权属清晰明确。",
     },
   ],
-  ctaHeading: "准备好拥有你的第二大脑了吗？",
+  ctaBadge: "开始上手",
+  ctaHeading: "灵感已就位，只差一次部署",
   ctaSubtitle:
-    "无需服务器，无需信用卡，使用免费 Cloudflare 账号 5 分钟即可完成部署。",
-  ctaButton: "查看 5 分钟部署指南",
+    "无需服务器，无需信用卡，用免费 Cloudflare 账号 5 分钟即可跑起来。",
+  ctaButton: "查看部署指南",
 };
 
 const JA_HOME: HomeContent = {
@@ -289,6 +300,7 @@ const JA_HOME: HomeContent = {
   statPhotos: "1万枚の写真 · 転送料0円",
   statServers: "24時間超低遅延",
   statUptime: "マルチリージョン冗長化",
+  featuresBadge: "コア機能",
   featuresHeading: "FlareMoを選ぶ理由",
   featuresSubtitle:
     "煩雑なサーバー運用を手放し、純粋で堅牢なAIネイティブ知識管理を実現",
@@ -324,6 +336,7 @@ const JA_HOME: HomeContent = {
         "Memos /api/v1 仕様と互換。既存のサードパーティアプリ（Moe Memos等）にそのまま接続でき、一括移行も簡単です。",
     },
   ],
+  comparisonBadge: "比較表",
   comparisonHeading: "Cloudflareネイティブが選ばれる理由",
   comparisonSubtitle: "自宅NASや従来型VPSと比較して分かる、真のゼロ保守運用",
   comparisonRows: [
@@ -367,6 +380,7 @@ const JA_HOME: HomeContent = {
   screenshotsHeading: "洗練されたUI、今すぐ体験",
   screenshotsSubtitle:
     "ライトモード、ダークモード、モバイル対応。すべての機能が本番利用可能です。",
+  faqBadge: "チェックポイント",
   faqHeading: "よくある質問",
   faqItems: [
     {
@@ -390,7 +404,8 @@ const JA_HOME: HomeContent = {
       a: "個人利用時は完全プライベートな日記として動作し、チームモードを有効化すると共有・権限分離ワークスペースへと拡張されます。",
     },
   ],
-  ctaHeading: "第2の脳を構築する準備はできましたか？",
+  ctaBadge: "今すぐ始める",
+  ctaHeading: "知識の拠点を、自分のドメインに。",
   ctaSubtitle:
     "サーバー不要、クレジットカード不要。無料のCloudflareアカウントで5分でデプロイ。",
   ctaButton: "5分デプロイガイドを見る",
@@ -408,6 +423,7 @@ const FR_HOME: HomeContent = {
   statPhotos: "10 000 photos · 0$ trafic",
   statServers: "Ultra-basse latence 24/7",
   statUptime: "Réplication multi-régions",
+  featuresBadge: "Atouts clés",
   featuresHeading: "Pourquoi choisir FlareMo",
   featuresSubtitle:
     "Oubliez la maintenance de serveur et profitez d'une gestion de connaissances pure et native pour l'IA",
@@ -443,6 +459,7 @@ const FR_HOME: HomeContent = {
         "Compatible avec l'API Memos /api/v1 et OpenAPI. Connexion directe aux clients mobiles existants et import/export sans friction.",
     },
   ],
+  comparisonBadge: "Comparatif",
   comparisonHeading: "Pourquoi le Cloud-Native surpasse le reste",
   comparisonSubtitle:
     "Comparaison de Cloudflare Serverless avec les NAS domestiques et les VPS classiques",
@@ -487,6 +504,7 @@ const FR_HOME: HomeContent = {
   screenshotsHeading: "Une interface soignée et vivante",
   screenshotsSubtitle:
     "Modes clair, sombre et vue mobile réactive. Tout est fonctionnel et connecté au backend.",
+  faqBadge: "À savoir",
   faqHeading: "Questions fréquentes",
   faqItems: [
     {
@@ -510,7 +528,8 @@ const FR_HOME: HomeContent = {
       a: "Par défaut, c'est un carnet personnel confidentiel. En activant le mode équipe, vous pouvez inviter des membres et partager des notes sélectivement.",
     },
   ],
-  ctaHeading: "Prêt à construire votre second cerveau ?",
+  ctaBadge: "C'est parti",
+  ctaHeading: "Votre second cerveau mérite mieux qu'un VPS.",
   ctaSubtitle:
     "Sans serveur, sans carte bancaire. Déployez sur Cloudflare en 5 minutes.",
   ctaButton: "Lire le guide de déploiement en 5 min",
@@ -529,6 +548,7 @@ const ES_HOME: HomeContent = {
   statPhotos: "10.000 fotos · 0$ tráfico",
   statServers: "Latencia ultrabaja 24/7",
   statUptime: "Replicación multirregional",
+  featuresBadge: "Funciones clave",
   featuresHeading: "¿Por qué elegir FlareMo?",
   featuresSubtitle:
     "Olvídate del mantenimiento de servidores y disfruta de una gestión de conocimiento limpia y nativa de IA",
@@ -564,6 +584,7 @@ const ES_HOME: HomeContent = {
         "Compatibilidad total con la API /api/v1 de Memos y OpenAPI. Conexión directa con clientes como Moe Memos e importación/exportación.",
     },
   ],
+  comparisonBadge: "Comparativa",
   comparisonHeading: "¿Por qué Cloudflare Serverless es superior?",
   comparisonSubtitle:
     "Comparando el enfoque Cloudflare Native frente a NAS caseros y servidores VPS",
@@ -608,6 +629,7 @@ const ES_HOME: HomeContent = {
   screenshotsHeading: "Experiencia visual refinada",
   screenshotsSubtitle:
     "Modo claro, modo oscuro y diseño adaptable para móviles. Todo en producción y funcionando.",
+  faqBadge: "Conviene saber",
   faqHeading: "Preguntas Frecuentes",
   faqItems: [
     {
@@ -631,7 +653,8 @@ const ES_HOME: HomeContent = {
       a: "Por defecto es un diario personal cifrado. Al activar el modo de equipo, puedes invitar a colegas y compartir notas de manera selectiva.",
     },
   ],
-  ctaHeading: "¿Listo para construir tu segundo cerebro?",
+  ctaBadge: "Empieza ahora",
+  ctaHeading: "Tu segundo cerebro merece algo mejor que un VPS.",
   ctaSubtitle:
     "Sin servidores, sin tarjeta de crédito. Despliega en Cloudflare en 5 minutos.",
   ctaButton: "Ver guía de despliegue en 5 minutos",
@@ -649,6 +672,7 @@ const KO_HOME: HomeContent = {
   statPhotos: "1만 장 사진 · 트래픽 0원",
   statServers: "24/7 글로벌 초저지연",
   statUptime: "멀티 리전 다중화",
+  featuresBadge: "핵심 기능",
   featuresHeading: "왜 FlareMo인가",
   featuresSubtitle:
     "복잡한 서버 유지보수에서 벗어나 순수하고 강력한 AI 네이티브 지식 관리를 경험하세요",
@@ -684,6 +708,7 @@ const KO_HOME: HomeContent = {
         "Memos /api/v1 사양 및 OpenAPI 완벽 호환. Moe Memos 등 기존 모바일 앱과 즉시 연동되며 클릭 한 번으로 가져오기/내보내기 가능합니다.",
     },
   ],
+  comparisonBadge: "한눈에 보는 비교",
   comparisonHeading: "Cloudflare 네이티브가 정답인 이유",
   comparisonSubtitle: "홈 NAS 및 전통적인 VPS 호스팅과의 비교 분석",
   comparisonRows: [
@@ -727,6 +752,7 @@ const KO_HOME: HomeContent = {
   screenshotsHeading: "단정하고 유려한 디자인",
   screenshotsSubtitle:
     "라이트 모드, 다크 모드, 모바일 반응형 완벽 대응. 모든 기능이 백엔드와 연동되어 작동합니다.",
+  faqBadge: "알아두면 좋은 점",
   faqHeading: "자주 묻는 질문",
   faqItems: [
     {
@@ -750,7 +776,8 @@ const KO_HOME: HomeContent = {
       a: "혼자 사용할 때는 조용한 1인용 비밀 노트로 작동하며, 팀 모드를 켜면 초대 링크를 통해 동료를 추가하고 팀원끼리 노트를 공유할 수 있습니다.",
     },
   ],
-  ctaHeading: "나만의 제2의 뇌를 구축할 준비가 되셨나요?",
+  ctaBadge: "시작하기",
+  ctaHeading: "제2의 뇌, 이제 내 도메인에.",
   ctaSubtitle:
     "서버도, 신용카드도 필요 없습니다. 무료 Cloudflare 계정으로 5분 만에 배포하세요.",
   ctaButton: "5분 배포 가이드 확인하기",
@@ -768,6 +795,7 @@ const RU_HOME: HomeContent = {
   statPhotos: "10 000 фото · 0$ трафик",
   statServers: "Отклик в миллисекунды 24/7",
   statUptime: "Мультирегиональная надежность",
+  featuresBadge: "Возможности",
   featuresHeading: "Почему именно FlareMo",
   featuresSubtitle:
     "Забудьте об администрировании серверов и наслаждайтесь чистым знанием с нативным ИИ",
@@ -803,6 +831,7 @@ const RU_HOME: HomeContent = {
         "Поддержка API Memos /api/v1 и OpenAPI. Прямая работа с приложениями вроде Moe Memos и экспорт/импорт в один клик.",
     },
   ],
+  comparisonBadge: "Сравнение",
   comparisonHeading: "Почему Cloudflare Serverless лучше",
   comparisonSubtitle:
     "Сравнение архитектуры Cloudflare Native с домашними NAS и VPS-серверами",
@@ -847,6 +876,7 @@ const RU_HOME: HomeContent = {
   screenshotsHeading: "Продуманный визуальный стиль",
   screenshotsSubtitle:
     "Светлая и темная темы, адаптивный интерфейс для телефонов. Всё уже работает на сервере.",
+  faqBadge: "Стоит знать",
   faqHeading: "Часто задаваемые вопросы",
   faqItems: [
     {
@@ -870,7 +900,8 @@ const RU_HOME: HomeContent = {
       a: "По умолчанию это тихий индивидуальный блокнот. Включив командный режим, вы можете приглашать участников по одноразовым ссылкам и делиться выбранными заметками.",
     },
   ],
-  ctaHeading: "Готовы создать свой второй мозг?",
+  ctaBadge: "Начать",
+  ctaHeading: "Второй мозг — на вашем домене.",
   ctaSubtitle:
     "Без серверов и без кредитных карт. Разверните в Cloudflare за 5 минут.",
   ctaButton: "Открыть 5-минутное руководство",
@@ -888,6 +919,7 @@ const AR_HOME: HomeContent = {
   statPhotos: "10 آلاف صورة · 0$ تكلفة نقل",
   statServers: "استجابة فورية فائقة 24/7",
   statUptime: "تكرار جغرافي متعدد المناطق",
+  featuresBadge: "المزايا الأساسية",
   featuresHeading: "لماذا تختار FlareMo؟",
   featuresSubtitle:
     "تخلَّ عن أعباء صيانة الخوادم واستمتع بإدارة معرفية نقية ومدعومة أصلاً بالذكاء الاصطناعي",
@@ -923,6 +955,7 @@ const AR_HOME: HomeContent = {
         "توافق كامل مع واجهة Memos /api/v1 و OpenAPI. اتصال مباشر بالتطبيقات الخارجية مثل Moe Memos مع استيراد وتصدير سهل.",
     },
   ],
+  comparisonBadge: "مقارنة مباشرة",
   comparisonHeading: "لماذا يتفوق التصميم القائم على Cloudflare؟",
   comparisonSubtitle:
     "مقارنة بين بنية Cloudflare Serverless والتخزين المنزلي NAS والخوادم الافتراضية VPS",
@@ -967,6 +1000,7 @@ const AR_HOME: HomeContent = {
   screenshotsHeading: "واجهة أنيقة وتجربة متكاملة",
   screenshotsSubtitle:
     "وضع فاتح، وضع داكن وتجاوب كامل مع الهواتف. جميع الميزات تعمل فعلياً ومتصلة بالنظام.",
+  faqBadge: "معلومات مفيدة",
   faqHeading: "الأسئلة الشائعة",
   faqItems: [
     {
@@ -990,7 +1024,8 @@ const AR_HOME: HomeContent = {
       a: "افتراضياً يعمل كدفتر ملاحظات شخصي وسري، وعند تفعيل وضع الفريق يمكنك دعوة الأعضاء ومشاركة الملاحظات باختيارك.",
     },
   ],
-  ctaHeading: "هل أنت مستعد لبناء عقلك الثاني؟",
+  ctaBadge: "ابدأ الآن",
+  ctaHeading: "عقلك الثاني، على نطاقك الخاص.",
   ctaSubtitle:
     "بدون خوادم، وبدون بطاقة ائتمان. انشر التطبيق على Cloudflare في 5 دقائق.",
   ctaButton: "قراءة دليل النشر السريع (5 دقائق)",
