@@ -70,10 +70,7 @@ export function HomePage() {
   return (
     <main className="space-y-24 sm:space-y-32 pb-24 overflow-x-hidden">
       <Hero home={home} locale={locale} />
-      <InteractiveShowcase
-        heading={home.screenshotsHeading}
-        subtitle={home.screenshotsSubtitle}
-      />
+      <InteractiveShowcase />
       <BentoFeatures
         heading={home.featuresHeading}
         icons={FEATURE_ICONS}

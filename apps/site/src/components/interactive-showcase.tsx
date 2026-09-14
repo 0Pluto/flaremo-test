@@ -16,7 +16,6 @@ import {
   Search,
   Send,
   Settings,
-  Sparkles,
   Trash2,
   X,
   Zap,
@@ -40,7 +39,7 @@ const INITIAL_MEMOS: Memo[] = [
   {
     id: "memo-65",
     orderNumber: 65,
-    timeLabel: "21分钟前 · 本地体验验证",
+    timeLabel: "21分钟前",
     title: "阅读摘录：注意力与创造力",
     content:
       "信息越多，越需要为自己留出安静的空间。把零散的观察记下来，连接就会慢慢浮现。",
@@ -50,7 +49,7 @@ const INITIAL_MEMOS: Memo[] = [
   {
     id: "memo-64",
     orderNumber: 64,
-    timeLabel: "1小时前 · 本地体验验证",
+    timeLabel: "1小时前",
     title: "让记录成为思考的起点",
     content:
       "今天散步时想到：好的工具应该让人专注于自己的想法。打开就能写，想找的内容也能很快找到。\n• 保留清晰的主线\n• 给重要的灵感加上标签\n• 每周花一点时间回顾",
@@ -66,7 +65,7 @@ const PRESETS = [
     tag: "架构",
   },
   {
-    text: "体验了一下离线 PWA 模式，断网随心记，连网秒级入库 #灵感",
+    text: "离线 PWA 模式断网随心记，连网秒级入库 #灵感",
     title: "离线优先使用体验",
     quote: "地铁与飞行途中无网环境下的心流完全不中断。",
     tag: "灵感",
@@ -85,13 +84,7 @@ const HEATMAP_TILES = Array.from({ length: 72 }, (_, i) => ({
   isMedium: i >= 64 && i < 68,
 }));
 
-export function InteractiveShowcase({
-  heading,
-  subtitle,
-}: {
-  heading: string;
-  subtitle: string;
-}) {
+export function InteractiveShowcase() {
   const [memos, setMemos] = useState<Memo[]>(INITIAL_MEMOS);
   const [activeMenu, setActiveMenu] = useState<
     "timeline" | "archive" | "trash"
@@ -100,6 +93,7 @@ export function InteractiveShowcase({
   const [timeViewTab, setTimeViewTab] = useState<"trend" | "calendar">("trend");
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [presetIndex, setPresetIndex] = useState(0);
 
   // 输入框草稿
   const [desktopInput, setDesktopInput] = useState("");
@@ -120,8 +114,11 @@ export function InteractiveShowcase({
 
   // 提交新笔记逻辑
   const publishMemo = (rawText: string, fromMobile = false) => {
-    const text = rawText.trim();
-    if (!text) return;
+    let text = rawText.trim();
+    if (!text) {
+      text = PRESETS[presetIndex % PRESETS.length].text;
+      setPresetIndex((prev) => prev + 1);
+    }
 
     setIsSyncing(true);
 
@@ -136,7 +133,7 @@ export function InteractiveShowcase({
     const tags = extractedTags.length > 0 ? extractedTags : ["灵感"];
 
     // 寻找预设匹配
-    const matchedPreset = PRESETS.find((p) => p.text === rawText);
+    const matchedPreset = PRESETS.find((p) => p.text === text);
     const title =
       matchedPreset?.title ??
       (text.length > 18 ? `${text.slice(0, 16)}...` : text);
@@ -150,7 +147,7 @@ export function InteractiveShowcase({
       const newMemo: Memo = {
         id: newId,
         orderNumber: nextOrder,
-        timeLabel: fromMobile ? "刚刚 · 手机边缘同步" : "刚刚 · 本地体验验证",
+        timeLabel: "刚刚",
         title,
         content: cleanContent || text,
         quote,
@@ -164,14 +161,6 @@ export function InteractiveShowcase({
       else setDesktopInput("");
       setIsSyncing(false);
     }, 380);
-  };
-
-  const handleReset = () => {
-    setMemos(INITIAL_MEMOS);
-    setActiveTag(null);
-    setDesktopInput("");
-    setMobileInput("");
-    setLastSyncedId(null);
   };
 
   const filteredMemos = memos.filter((m) => {
@@ -188,55 +177,7 @@ export function InteractiveShowcase({
   });
 
   return (
-    <section className="container-x space-y-6">
-      {/* 模块标题与状态栏 */}
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
-        <div className="space-y-2 max-w-2xl">
-          <div className="inline-flex items-center gap-2 rounded-full border border-signal/30 bg-signal/10 px-3 py-0.5 text-xs font-semibold text-signal-ink">
-            <span className="size-2 rounded-full bg-signal animate-pulse" />
-            <span>真实产品交互协同演练</span>
-          </div>
-          <h2 className="text-2xl font-extrabold tracking-tight text-ink sm:text-3xl md:text-4xl">
-            {heading}
-          </h2>
-          <p className="text-sm text-mist">{subtitle}</p>
-        </div>
-
-        <div className="flex items-center gap-2 self-stretch sm:self-auto justify-between sm:justify-end">
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-line/70 bg-soft-surface px-3 py-1 text-xs font-semibold text-mist">
-            <Zap className="size-3 text-signal" />
-            <span>D1 边缘多副本同步就绪</span>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleReset}
-            title="重置演练数据"
-            className="inline-flex items-center gap-1 rounded-full border border-line/60 bg-surface px-3 py-1 text-xs font-semibold text-mist transition-colors hover:bg-wash hover:text-ink cursor-pointer"
-          >
-            <RefreshCw className="size-3" />
-            <span>重置</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 提示文案栏 */}
-      <div className="rounded-xl border border-line/60 bg-soft-surface/80 p-3 text-xs text-mist flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-signal/15 text-signal-ink font-bold text-[11px]">
-            💡
-          </span>
-          <span>
-            完全对齐 FlareMo 真实客户端布局与设计。<strong>右侧手机端</strong>
-            可直接键入或点击气泡发送，<strong>左侧电脑端</strong>
-            将即时插入新笔记并动态累加统计！
-          </span>
-        </div>
-        <div className="flex items-center gap-1 text-[11px] font-mono text-signal-ink">
-          <span>{isSyncing ? "⚡ 边缘网络同步中..." : "✓ 状态一致"}</span>
-        </div>
-      </div>
-
+    <section className="container-x">
       {/* 真实双端模型 */}
       <div className="grid gap-6 lg:grid-cols-[1fr_310px] xl:grid-cols-[1fr_330px] items-start">
         {/* ============================================================
@@ -582,12 +523,6 @@ export function InteractiveShowcase({
                           </div>
 
                           <div className="flex items-center gap-2">
-                            {isHighlighted && (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-signal/15 px-2 py-0.5 text-[10px] font-bold text-signal-ink animate-pulse">
-                                <Sparkles className="size-2.5" />
-                                刚刚同步
-                              </span>
-                            )}
                             <MoreHorizontal className="size-3.5 text-fog hover:text-ink cursor-pointer" />
                           </div>
                         </div>
@@ -665,8 +600,7 @@ export function InteractiveShowcase({
                   type="button"
                   onClick={() => setMobileDrawerOpen(true)}
                   className="p-1 -ml-1 text-ink hover:text-signal hover:bg-wash transition-colors cursor-pointer rounded-lg focus:outline-none flex items-center"
-                  aria-label="打开侧边栏"
-                  title="点击打开侧边栏"
+                  aria-label="导航菜单"
                 >
                   <Menu className="size-4" />
                 </button>
@@ -685,9 +619,9 @@ export function InteractiveShowcase({
                   <button
                     type="button"
                     onClick={() => setActiveTag(null)}
-                    className="text-[10px] text-signal hover:underline cursor-pointer"
+                    className="text-[10px] text-mist hover:text-ink cursor-pointer"
                   >
-                    重置
+                    ✕ 全部
                   </button>
                 )}
                 <span className="text-[10px] text-fog font-mono bg-soft-surface px-1.5 py-0.5 rounded-full border border-line/60">
@@ -746,7 +680,7 @@ export function InteractiveShowcase({
                   <button
                     type="button"
                     onClick={() => publishMemo(mobileInput, true)}
-                    disabled={isSyncing || !mobileInput.trim()}
+                    disabled={isSyncing}
                     className="inline-flex items-center gap-1 rounded-full bg-brand-gradient px-3 py-1 text-xs font-semibold text-white shadow-xs hover:brightness-105 active:translate-y-px transition-all cursor-pointer disabled:opacity-40"
                   >
                     {isSyncing ? (
@@ -761,59 +695,71 @@ export function InteractiveShowcase({
                 </div>
               </div>
 
-              {/* 灵感气泡（一键填入并直接演练） */}
-              <div className="space-y-1.5">
-                <div className="text-[10px] font-bold text-fog px-1 flex items-center gap-1">
-                  <span>✨ 快捷灵感（点击一键演练）：</span>
-                </div>
-                <div className="space-y-1">
-                  {PRESETS.map((p) => (
-                    <button
-                      type="button"
-                      key={p.text}
-                      onClick={() => publishMemo(p.text, true)}
-                      disabled={isSyncing}
-                      className="w-full text-left rounded-xl border border-line/60 bg-surface p-2 text-[11px] text-mist hover:text-ink hover:bg-wash transition-colors cursor-pointer group shadow-2xs"
-                    >
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="line-clamp-1">{p.text}</span>
-                        <Send className="size-2.5 text-signal opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* 移动端时间线第一条卡片预览 */}
-              {filteredMemos.length > 0 && (
-                <div className="rounded-2xl border border-line/70 bg-surface p-3 space-y-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <span className="size-3.5 rounded-full border border-zinc-300 dark:border-zinc-700 bg-zinc-100" />
-                      <span className="text-[10px] text-mist">
-                        {filteredMemos[0].timeLabel}
-                      </span>
-                    </div>
-                    <MoreHorizontal className="size-3 text-fog" />
-                  </div>
-                  <div className="font-bold text-ink text-xs line-clamp-1">
-                    {filteredMemos[0].title}
-                  </div>
-                  <p className="text-[11px] text-mist line-clamp-2">
-                    {filteredMemos[0].content}
-                  </p>
-                  <div className="flex gap-1 pt-1 border-t border-line/40">
-                    {filteredMemos[0].tags.map((t) => (
-                      <span
-                        key={t}
-                        className="rounded-full bg-flame-50 dark:bg-flame-950/50 px-2 py-0.5 text-[9px] text-flame-600 dark:text-flame-400 font-medium"
+              {/* 移动端时间线笔记流 (严格还原 FlareMo 移动端 Memo 列表) */}
+              <div className="space-y-2.5">
+                <AnimatePresence initial={false}>
+                  {filteredMemos.map((m) => {
+                    const isHighlighted = m.id === lastSyncedId;
+                    return (
+                      <motion.article
+                        key={m.id}
+                        layout
+                        initial={{ opacity: 0, y: -16, scale: 0.97 }}
+                        animate={{
+                          opacity: 1,
+                          y: 0,
+                          scale: 1,
+                          transition: {
+                            type: "spring",
+                            stiffness: 350,
+                            damping: 25,
+                          },
+                        }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        className={cn(
+                          "rounded-2xl border bg-surface p-3 space-y-2 text-xs transition-all duration-300",
+                          isHighlighted
+                            ? "border-signal/60 ring-2 ring-signal/20 bg-signal/5"
+                            : "border-line/70 shadow-2xs",
+                        )}
                       >
-                        #{t}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <span className="size-3.5 rounded-full border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 shrink-0" />
+                            <span className="text-[10px] text-mist">
+                              {m.timeLabel}
+                            </span>
+                          </div>
+                          <MoreHorizontal className="size-3 text-fog" />
+                        </div>
+                        <div className="font-bold text-ink text-xs line-clamp-1">
+                          {m.title}
+                        </div>
+                        <p className="text-[11px] text-mist line-clamp-2 leading-relaxed">
+                          {m.content}
+                        </p>
+                        {m.quote && (
+                          <div className="border-l-2 border-signal/70 pl-2 text-[10px] italic text-ink/80 bg-wash/60 py-1 rounded-r-md">
+                            {m.quote}
+                          </div>
+                        )}
+                        {m.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 pt-1 border-t border-line/40">
+                            {m.tags.map((t) => (
+                              <span
+                                key={t}
+                                className="rounded-full bg-flame-50 dark:bg-flame-950/50 px-2 py-0.5 text-[9px] text-flame-600 dark:text-flame-400 font-medium"
+                              >
+                                #{t}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </motion.article>
+                    );
+                  })}
+                </AnimatePresence>
+              </div>
             </div>
 
             {/* 手机底部指示条 */}
