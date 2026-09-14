@@ -463,9 +463,15 @@ export const updateNotificationSchema = z.object({
 
 export const appNotificationDtoSchema = z.object({
   name: z.string(),
-  type: z.enum(["memo_comment", "memo_mention", "daily_review"]),
+  type: z.enum([
+    "memo_comment",
+    "memo_mention",
+    "daily_review",
+    "task_overdue",
+  ]),
   status: z.enum(["unread", "archived"]),
-  memo: z.string(),
+  // Task-overdue rows have no memo anchor; memo_snippet carries the title.
+  memo: z.string().nullable(),
   memo_snippet: z.string(),
   create_time: z.string(),
 });

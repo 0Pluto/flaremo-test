@@ -171,6 +171,7 @@ const messages = {
     "notifications.title": "通知",
     "notifications.empty": "还没有通知；往年今天有记录时，会在这里提醒你。",
     "notifications.type.dailyReview": "每日回顾",
+    "notifications.type.taskOverdue": "日程逾期",
     "notifications.type.memoComment": "评论了你的记录",
     "notifications.type.memoMention": "在记录中提到了你",
     "notifications.archiveFailed": "归档通知失败",
@@ -352,6 +353,8 @@ const messages = {
     "auth.saving": "正在保存…",
     "auth.usernameUpdateFailed": "无法更新用户名。",
     "auth.passwordTitle": "修改密码",
+    "auth.noEmailProviderNote":
+      "本实例未配置邮件服务：忘记密码与邮件验证功能关闭，密码找回需管理员协助。",
     "auth.currentPassword": "当前密码",
     "auth.newPassword": "新密码",
     "auth.changePassword": "修改密码",
@@ -873,6 +876,7 @@ const messages = {
     "notifications.empty":
       "No notifications yet — notes from this day in past years will land here.",
     "notifications.type.dailyReview": "Daily review",
+    "notifications.type.taskOverdue": "Task overdue",
     "notifications.type.memoComment": "Commented on your note",
     "notifications.type.memoMention": "Mentioned you in a note",
     "notifications.archiveFailed": "Failed to archive the notification.",
@@ -1066,6 +1070,8 @@ const messages = {
     "auth.saving": "Saving…",
     "auth.usernameUpdateFailed": "Could not update the username.",
     "auth.passwordTitle": "Change password",
+    "auth.noEmailProviderNote":
+      "This deployment has no email provider: forgot-password and email verification are disabled, and password recovery needs administrator help.",
     "auth.currentPassword": "Current password",
     "auth.newPassword": "New password",
     "auth.changePassword": "Change password",

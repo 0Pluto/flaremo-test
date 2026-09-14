@@ -604,7 +604,7 @@ export const memosNotifications = sqliteTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     type: text("type", {
-      enum: ["memo_comment", "memo_mention", "daily_review"],
+      enum: ["memo_comment", "memo_mention", "daily_review", "task_overdue"],
     }).notNull(),
     status: text("status", { enum: ["unread", "archived"] })
       .notNull()
@@ -613,12 +613,14 @@ export const memosNotifications = sqliteTable(
     // This permits a later re-mention after a user was removed from a memo's
     // content while still collapsing retries of the same mutation.
     sourceEventId: text("source_event_id").notNull(),
-    memoId: text("memo_id")
-      .notNull()
-      .references(() => memos.id, { onDelete: "cascade" }),
+    // Task-overdue rows carry no memo anchor; the task title travels in the
+    // snippet instead.
+    memoId: text("memo_id").references(() => memos.id, { onDelete: "cascade" }),
     relatedMemoId: text("related_memo_id").references(() => memos.id, {
       onDelete: "cascade",
     }),
+    // Task-overdue rows carry the task title here instead of a memo anchor.
+    snippet: text("snippet"),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
   },

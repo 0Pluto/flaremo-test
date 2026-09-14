@@ -28,6 +28,8 @@ type SecurityPanelProps = {
   changeEmailIsPending: boolean;
   changePasswordIsPending: boolean;
   currentEmail: string;
+  /** True when the deployment runs FLAREMO_EMAIL_PROVIDER=none. */
+  emailProviderDisabled?: boolean;
   currentPassword: string;
   deleteAccountIsPending: boolean;
   deleteError: string | null;
@@ -66,6 +68,7 @@ function useCloseOnSuccess(
 }
 
 export function SecurityPanel({
+  emailProviderDisabled,
   changeEmailIsPending,
   changePasswordIsPending,
   currentEmail,
@@ -105,6 +108,11 @@ export function SecurityPanel({
 
   return (
     <>
+      {emailProviderDisabled && (
+        <p className="rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          {t("auth.noEmailProviderNote")}
+        </p>
+      )}
       <Card>
         <CardHeader>
           <CardTitle>{t("auth.passwordTitle")}</CardTitle>

@@ -4,6 +4,7 @@ import {
   AtSignIcon,
   BellIcon,
   CalendarClockIcon,
+  ListTodoIcon,
   MessageCircleIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -28,12 +29,14 @@ const TYPE_ICONS = {
   daily_review: CalendarClockIcon,
   memo_comment: MessageCircleIcon,
   memo_mention: AtSignIcon,
+  task_overdue: ListTodoIcon,
 } as const;
 
 const TYPE_LABELS = {
   daily_review: "notifications.type.dailyReview",
   memo_comment: "notifications.type.memoComment",
   memo_mention: "notifications.type.memoMention",
+  task_overdue: "notifications.type.taskOverdue",
 } as const;
 
 export function NotificationBell() {
@@ -67,6 +70,11 @@ export function NotificationBell() {
       void navigate({ to: "/review/daily" });
       return;
     }
+    if (notification.type === "task_overdue") {
+      void navigate({ to: "/calendar" });
+      return;
+    }
+    if (!notification.memo) return;
     void navigate({
       to: "/memo/$memoId",
       params: { memoId: stripResourceName(notification.memo, "memos") },

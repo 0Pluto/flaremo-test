@@ -1,6 +1,6 @@
 import type { FlareMoDb, MemoRow, UserRow } from "@flaremo/db";
-import { memoRelations, memos, memoTags, users } from "@flaremo/db";
-import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
+import { memoRelations, memos, memoTags, tasks, users } from "@flaremo/db";
+import { and, asc, eq, inArray, lt, or, sql } from "drizzle-orm";
 import { ValidationError } from "./errors";
 import { parseResourceName } from "./ids";
 import { getMemoById } from "./memos";
@@ -347,4 +347,48 @@ function pickRandom<T>(items: readonly T[]): T {
     throw new Error("pickRandom requires a non-empty array");
   }
   return item;
+}
+
+/**
+ * File one "task overdue" inbox row per overdue, unfinished task. The source
+ * event id (`task-overdue:<taskId>:<dueDate>`) makes cron retries idempotent;
+ * rescheduling the task produces a new event id on the next sweep. The task
+ * title travels in the row's `snippet` since tasks have no memo anchor.
+ * Returns the number of rows created.
+ */
+export async function createOverdueTaskNotifications(
+  db: FlareMoDb,
+  input: { date: string },
+): Promise<number> {
+  const date = input.date.trim();
+  if (!DAILY_REVIEW_DATE_PATTERN.test(date) || Number.isNaN(Date.parse(date))) {
+    throw new ValidationError("Invalid review date");
+  }
+  const overdue = await db
+    .select({
+      id: tasks.id,
+      userId: tasks.userId,
+      title: tasks.title,
+      dueAt: tasks.dueAt,
+    })
+    .from(tasks)
+    .where(
+      and(
+        lt(tasks.dueAt, date),
+        inArray(tasks.status, ["todo", "in_progress"]),
+      ),
+    )
+    .limit(500);
+  let created = 0;
+  for (const task of overdue) {
+    const inserted = await insertMemoNotification(db, {
+      receiverId: task.userId,
+      senderId: task.userId,
+      type: "task_overdue",
+      sourceEventId: `task-overdue:${task.id}:${task.dueAt}`,
+      snippet: task.title,
+    });
+    if (inserted.meta.changes > 0) created += 1;
+  }
+  return created;
 }

@@ -121,6 +121,9 @@ appApi.get("/health", async (c) => {
         (c.env.FLAREMO_VECTORIZE_TEAM_LAYOUT ?? "team").trim() === "solo"
           ? "solo"
           : "team",
+      // Non-secret capability flags the UI needs (e.g. to explain that the
+      // forgot-password flow is closed when no email provider is configured).
+      email_provider: (c.env.FLAREMO_EMAIL_PROVIDER ?? "none").trim(),
     });
   } catch (error) {
     return jsonError(c, error);

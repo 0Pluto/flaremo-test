@@ -49,7 +49,8 @@ export type UpdateUserWebhookInput = {
 export type UserNotificationType =
   | "memo_comment"
   | "memo_mention"
-  | "daily_review";
+  | "daily_review"
+  | "task_overdue";
 export type UserNotificationStatus = "unread" | "archived";
 
 export type UserNotificationDto = {
@@ -61,7 +62,8 @@ export type UserNotificationDto = {
   status: UserNotificationStatus;
   createTime: string;
   type: UserNotificationType;
-  memo: string;
+  // Task-overdue rows have no memo anchor.
+  memo: string | null;
   relatedMemo?: string;
   memoSnippet: string;
   relatedMemoSnippet: string;
@@ -87,8 +89,11 @@ export type CreateMemoNotificationInput = {
   senderId: string;
   type: UserNotificationType;
   sourceEventId: string;
-  memoId: string;
+  /** Memo anchor, required for memo events; task events carry a snippet. */
+  memoId?: string | null;
   relatedMemoId?: string | null;
+  /** Task-overdue rows store the task title here (reusing memo_id storage). */
+  snippet?: string | null;
   createdAt?: string;
 };
 
@@ -262,7 +267,7 @@ export async function listUserNotifications(
   const rows = await selectNotifications(db, and(...filters));
   const memoIdSet = new Set<string>();
   for (const row of rows) {
-    memoIdSet.add(row.notification.memoId);
+    if (row.notification.memoId) memoIdSet.add(row.notification.memoId);
     if (row.notification.relatedMemoId) {
       memoIdSet.add(row.notification.relatedMemoId);
     }
@@ -321,7 +326,7 @@ export async function listUserNotifications(
     const more = await selectNotifications(db, and(...windowFilters));
     const memoIdWindow = new Set<string>();
     for (const row of more) {
-      memoIdWindow.add(row.notification.memoId);
+      if (row.notification.memoId) memoIdWindow.add(row.notification.memoId);
       if (row.notification.relatedMemoId) {
         memoIdWindow.add(row.notification.relatedMemoId);
       }
@@ -386,9 +391,11 @@ export async function updateUserNotification(
   if (!updated[0]) throw new NotFoundError("Notification not found");
   const row = await getNotification(db, user, id);
   if (!row) throw new NotFoundError("Notification not found after update");
-  const memo = await db.query.memos.findFirst({
-    where: eq(memos.id, row.notification.memoId),
-  });
+  const memo = row.notification.memoId
+    ? await db.query.memos.findFirst({
+        where: eq(memos.id, row.notification.memoId),
+      })
+    : undefined;
   const relatedMemo = row.notification.relatedMemoId
     ? await db.query.memos.findFirst({
         where: eq(memos.id, row.notification.relatedMemoId),
@@ -440,8 +447,10 @@ export function insertMemoNotification(
       type: input.type,
       status: "unread",
       sourceEventId: input.sourceEventId,
-      memoId: input.memoId,
+      memoId: input.snippet ? null : (input.memoId ?? null),
       relatedMemoId: input.relatedMemoId ?? null,
+      // Task-overdue rows carry the task title instead of a memo anchor.
+      snippet: input.snippet ?? null,
       createdAt: now,
       updatedAt: now,
     })
@@ -567,7 +576,25 @@ function notificationToDto(
   memoById: Map<string, typeof memos.$inferSelect>,
 ): UserNotificationDto | undefined {
   const notification = row.notification;
-  const memo = memoById.get(notification.memoId);
+  // Task-overdue rows carry a title snippet instead of a memo anchor.
+  if (notification.type === "task_overdue") {
+    return {
+      name: `${notification.receiverId}/notifications/${notification.id}`,
+      sender: row.sender.id,
+      senderUser: row.sender,
+      senderUsername: row.senderUsername,
+      senderEmail: row.senderEmail,
+      status: notification.status,
+      createTime: notification.createdAt,
+      type: notification.type,
+      memo: null,
+      memoSnippet: notification.snippet ?? "",
+      relatedMemoSnippet: "",
+    };
+  }
+  const memo = notification.memoId
+    ? memoById.get(notification.memoId)
+    : undefined;
   if (!memo || !canReadNotificationMemo(user, memo)) return undefined;
   const relatedMemo = notification.relatedMemoId
     ? memoById.get(notification.relatedMemoId)

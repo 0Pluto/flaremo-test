@@ -92,6 +92,7 @@ export type AppInfo = {
   update_workflow_url: string | null;
   releases_url: string;
   update_guide_url: string;
+  email_provider?: string;
 };
 
 export type LatestRelease = {

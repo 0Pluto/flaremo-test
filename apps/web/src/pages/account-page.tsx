@@ -9,6 +9,7 @@ import {
   createPersonalAccessToken,
   deleteAccount,
   deletePersonalAccessToken,
+  getAppInfo,
   getCurrentFlareMoUser,
   getVectorUsage,
   listDataTasks,
@@ -79,6 +80,12 @@ export function AccountPage() {
   const meQuery = useQuery({
     queryKey: ["current-flaremo-user"],
     queryFn: getCurrentFlareMoUser,
+    retry: false,
+  });
+  const appInfoQuery = useQuery({
+    queryKey: ["app-info"],
+    queryFn: getAppInfo,
+    staleTime: 10 * 60 * 1000,
     retry: false,
   });
   const vectorUsageQuery = useQuery({
@@ -352,6 +359,9 @@ export function AccountPage() {
               <InstallAppCard />
 
               <SecurityPanel
+                emailProviderDisabled={
+                  appInfoQuery.data?.email_provider === "none"
+                }
                 changeEmailIsPending={changeEmailMutation.isPending}
                 changePasswordIsPending={changePasswordMutation.isPending}
                 currentEmail={session.data?.user.email ?? ""}

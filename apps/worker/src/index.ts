@@ -7,6 +7,7 @@ import {
   beginFlaremoMemberRemoval,
   claimMemberRemovalJob,
   createDailyReviewNotifications,
+  createOverdueTaskNotifications,
   deleteExpiredDataTasks,
   dispatchEmbeddingOutbox,
   dispatchMemosWebhookOutbox,
@@ -417,6 +418,11 @@ export async function runScheduledMaintenance(
   const reviewNotificationCount = await createDailyReviewNotifications(db, {
     date: reviewDate,
   });
+  // Overdue task reminders file once per task per due date; the unique
+  // source-event index absorbs cron retries.
+  const overdueNotificationCount = await createOverdueTaskNotifications(db, {
+    date: reviewDate,
+  });
   console.log(
     JSON.stringify({
       message: "attachment cleanup complete",
@@ -426,6 +432,7 @@ export async function runScheduledMaintenance(
       staleTaskCount: staleCount,
       expiredTaskCount: expiredIds.length,
       reviewNotificationCount,
+      overdueNotificationCount,
       scheduledTime,
     }),
   );
