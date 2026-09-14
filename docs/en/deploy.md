@@ -2,7 +2,21 @@
 
 FlareMo deploys to Cloudflare Workers. The same Worker serves the web UI and API. D1 stores canonical data, and R2 stores attachments and export bundles.
 
-Deployment is **manual**: the repository does not track `wrangler.jsonc`, and there is no one-click deploy button, CI, or automatic deployer. Create the resources, copy the config template, fill in your own values, then run the deploy commands.
+## One-click deploy (community-supported)
+
+The repository tracks a button-ready `wrangler.json` for [Deploy to Cloudflare](https://deploy.workers.cloudflare.com/?url=https://github.com/realchendahuang/FlareMo) (the D1 `database_id` is a placeholder; Cloudflare provisions the resources and rewrites the IDs during deployment). The button flow clones the repository into your GitHub account and connects Workers Builds.
+
+Known issues and notes:
+
+- A first attempt can fail with "Github API Limit Exceeded"; this is transient rate limiting on Cloudflare's clone step — wait a few minutes and retry.
+- After the initial deploy, point the Worker's `FLAREMO_PUBLIC_URL` variable at your real origin (a workers.dev subdomain or a custom domain), add `BETTER_AUTH_SECRET` (and optionally `FLAREMO_BOOTSTRAP_SECRET`) with `wrangler secret put`, then deploy once more so the new settings take effect.
+- The Vectorize index used by semantic search is provisioned by the button flow together with R2, D1, and Queues.
+
+Manual deployment remains the fully supported path; the button flow is best for quick trials.
+
+## Manual Deployment
+
+The repository does not track `wrangler.jsonc` (manual deployers keep their config as a local file), and there is no CI or automatic deployer. Create the resources, copy the config template, fill in your own values, then run the deploy commands.
 
 ## Manual Deployment
 

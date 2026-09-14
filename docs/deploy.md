@@ -2,7 +2,21 @@
 
 FlareMo 部署到 Cloudflare Workers。Worker 同时承载前端静态资源和 API，D1 保存主数据，R2 保存附件。
 
-部署是**手动操作**：仓库不跟踪 `wrangler.jsonc`，项目没有一键部署按钮，也没有 CI 或自动部署。先创建资源、复制配置模板并填入自己的值，再执行部署命令。
+## 一键部署（社区支持）
+
+仓库提供一份面向 [Deploy to Cloudflare](https://deploy.workers.cloudflare.com/?url=https://github.com/realchendahuang/FlareMo) 按钮的跟踪配置 `wrangler.json`（D1 `database_id` 是占位值，Cloudflare 会在部署时自动创建资源并改写 ID）。按钮流程会克隆仓库到你的 GitHub 账号并接入 Workers Builds。
+
+已知问题与注意点：
+
+- 首次尝试可能出现 “Github API Limit Exceeded”，这是 Cloudflare 侧克隆时的临时限流，等待几分钟重试通常即可。
+- 部署完成后，需要把 Worker 的 `FLAREMO_PUBLIC_URL` 变量改成你的实际 origin（workers.dev 子域名或自定义域名），并用 `wrangler secret put BETTER_AUTH_SECRET`（及可选 `FLAREMO_BOOTSTRAP_SECRET`）补上密钥，然后重试部署一次使新配置生效。
+- 语义搜索依赖的 Vectorize index 与 R2/D1/Queue 一样由按钮流程自动创建。
+
+手动部署仍是受支持的完整路径，按钮流程更适合快速试用。
+
+## 手动部署
+
+仓库不跟踪 `wrangler.jsonc`（手动部署者的配置以本机文件形式存在），也没有 CI 或自动部署。先创建资源、复制配置模板并填入自己的值，再执行部署命令。
 
 ## 手动部署
 
