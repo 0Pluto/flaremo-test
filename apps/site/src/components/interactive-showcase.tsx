@@ -1,74 +1,88 @@
 import {
-  ArrowUp,
-  Bookmark,
-  Heart,
-  Lock,
-  MessageSquarePlus,
+  Archive,
+  Bell,
+  Brain,
+  Calendar,
+  CalendarDays,
+  FolderKanban,
+  Footprints,
+  Hash,
+  Image as ImageIcon,
+  Inbox,
+  List,
+  Menu,
+  MoreHorizontal,
   RefreshCw,
+  Search,
   Send,
+  Settings,
   Sparkles,
-  Wifi,
+  Trash2,
   Zap,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type Memo = {
   id: string;
+  orderNumber: number;
+  timeLabel: string;
+  title: string;
   content: string;
+  quote?: string;
   tags: string[];
-  createdAt: string;
-  pinned?: boolean;
-  likes: number;
-  liked?: boolean;
   isNew?: boolean;
 };
 
 const INITIAL_MEMOS: Memo[] = [
   {
-    id: "memo-1",
+    id: "memo-65",
+    orderNumber: 65,
+    timeLabel: "21分钟前 · 本地体验验证",
+    title: "阅读摘录：注意力与创造力",
     content:
-      "在 Cloudflare Workers + D1 架构上重构完成，彻底去除了常驻 VPS 与 Docker。首包延迟仅 12ms，数据跨多可用区物理持久化。",
-    tags: ["架构", "Cloudflare"],
-    createdAt: "刚刚",
-    pinned: true,
-    likes: 5,
+      "信息越多，越需要为自己留出安静的空间。把零散的观察记下来，连接就会慢慢浮现。",
+    quote: "学习不是积累答案，而是不断提出更好的问题。",
+    tags: ["灵感", "阅读"],
   },
   {
-    id: "memo-2",
+    id: "memo-64",
+    orderNumber: 64,
+    timeLabel: "1小时前 · 本地体验验证",
+    title: "让记录成为思考的起点",
     content:
-      "离线优先（Offline-First）原则：本地先落 IndexedDB 保证零卡顿，重新连接边缘网关后再按单调时间戳批量追平差量。",
-    tags: ["灵感", "架构"],
-    createdAt: "15 分钟前",
-    likes: 12,
-  },
-  {
-    id: "memo-3",
-    content:
-      "接入 Claude Desktop 与 Cursor 的 MCP 协议端点，AI 编码助理现在已经可以把全库笔记当成长期记忆进行检索和溯源。",
-    tags: ["AI", "生态"],
-    createdAt: "1 小时前",
-    likes: 8,
+      "今天散步时想到：好的工具应该让人专注于自己的想法。打开就能写，想找的内容也能很快找到。\n• 保留清晰的主线\n• 给重要的灵感加上标签\n• 每周花一点时间回顾",
+    tags: ["思考", "产品"],
   },
 ];
 
 const PRESETS = [
   {
     text: "在机场候机时随手理清了多端同步幂等协议 #架构 #灵感",
+    title: "边缘毫秒同步方案设计",
+    quote: "客户端优先本地落盘，联网后单调时间戳递增同步。",
     tag: "架构",
   },
   {
     text: "体验了一下离线 PWA 模式，断网随心记，连网秒级入库 #灵感",
+    title: "离线优先使用体验",
+    quote: "地铁与飞行途中无网环境下的心流完全不中断。",
     tag: "灵感",
   },
   {
-    text: "配置完成 Telegram 随手记 Bot，直接发语音自动转文字入库 #生态",
-    tag: "生态",
+    text: "配置完成 Telegram 随手记 Bot，直接发语音自动转文字入库 #生活",
+    title: "碎片化灵感速记链路",
+    quote: "随手语音发给专属 Bot，10 秒内自动汇总成结构化知识点。",
+    tag: "生活",
   },
 ];
+
+const HEATMAP_TILES = Array.from({ length: 72 }, (_, i) => ({
+  id: `tile-k-${i}`,
+  isHigh: i >= 68,
+  isMedium: i >= 64 && i < 68,
+}));
 
 export function InteractiveShowcase({
   heading,
@@ -78,97 +92,108 @@ export function InteractiveShowcase({
   subtitle: string;
 }) {
   const [memos, setMemos] = useState<Memo[]>(INITIAL_MEMOS);
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  const [mobileText, setMobileText] = useState("");
-  const [selectedPresetTag, setSelectedPresetTag] = useState("架构");
+  const [activeMenu, setActiveMenu] = useState<
+    "timeline" | "archive" | "trash"
+  >("timeline");
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [timeViewTab, setTimeViewTab] = useState<"trend" | "calendar">("trend");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // 输入框草稿
+  const [desktopInput, setDesktopInput] = useState("");
+  const [mobileInput, setMobileInput] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncedId, setLastSyncedId] = useState<string | null>(null);
 
-  // 获取所有独立标签及频次
-  const tagCounts = memos.reduce<Record<string, number>>((acc, m) => {
-    for (const t of m.tags) {
-      acc[t] = (acc[t] || 0) + 1;
-    }
-    return acc;
-  }, {});
+  // 记录数统计
+  const totalCount = memos.length + 63; // 保持 65 附近基数
+  const tagList = [
+    { name: "产品", count: 22 },
+    { name: "思考", count: 22 },
+    { name: "灵感", count: 22 },
+    { name: "生活", count: 21 },
+    { name: "计划", count: 21 },
+    { name: "阅读", count: 22 },
+  ];
 
-  const filteredMemos = selectedTag
-    ? memos.filter((m) => m.tags.includes(selectedTag))
-    : memos;
-
-  // 手机端发布笔记并触发同步
-  const handlePublishFromMobile = (textToSend?: string) => {
-    const rawContent = (textToSend ?? mobileText).trim();
-    if (!rawContent) return;
+  // 提交新笔记逻辑
+  const publishMemo = (rawText: string, fromMobile = false) => {
+    const text = rawText.trim();
+    if (!text) return;
 
     setIsSyncing(true);
 
-    // 提取文本中的 #tag 或附加选中的预设 tag
+    // 提取标签
     const extractedTags = Array.from(
       new Set(
-        (rawContent.match(/#([\w\u4e00-\u9fa5]+)/g) || []).map((t) =>
+        (text.match(/#([\w\u4e00-\u9fa5]+)/g) || []).map((t) =>
           t.replace("#", ""),
         ),
       ),
     );
-    const finalTags =
-      extractedTags.length > 0 ? extractedTags : [selectedPresetTag || "灵感"];
+    const tags = extractedTags.length > 0 ? extractedTags : ["灵感"];
+
+    // 寻找预设匹配
+    const matchedPreset = PRESETS.find((p) => p.text === rawText);
+    const title =
+      matchedPreset?.title ??
+      (text.length > 18 ? `${text.slice(0, 16)}...` : text);
+    const quote = matchedPreset?.quote;
+    const cleanContent = text.replace(/#([\w\u4e00-\u9fa5]+)/g, "").trim();
 
     const newId = `memo-${Date.now()}`;
-    const cleanContent = rawContent
-      .replace(/#([\w\u4e00-\u9fa5]+)/g, "")
-      .trim();
+    const nextOrder = memos.length > 0 ? memos[0].orderNumber + 1 : 66;
 
     setTimeout(() => {
       const newMemo: Memo = {
         id: newId,
-        content: cleanContent || rawContent,
-        tags: finalTags,
-        createdAt: "刚刚同步",
-        likes: 0,
+        orderNumber: nextOrder,
+        timeLabel: fromMobile ? "刚刚 · 手机边缘同步" : "刚刚 · 本地体验验证",
+        title,
+        content: cleanContent || text,
+        quote,
+        tags,
         isNew: true,
       };
 
       setMemos((prev) => [newMemo, ...prev]);
       setLastSyncedId(newId);
-      setMobileText("");
+      if (fromMobile) setMobileInput("");
+      else setDesktopInput("");
       setIsSyncing(false);
-    }, 400);
-  };
-
-  const handleToggleLike = (id: string) => {
-    setMemos((prev) =>
-      prev.map((m) => {
-        if (m.id !== id) return m;
-        const liked = !m.liked;
-        return {
-          ...m,
-          liked,
-          likes: liked ? m.likes + 1 : m.likes - 1,
-        };
-      }),
-    );
-  };
-
-  const handleTogglePin = (id: string) => {
-    setMemos((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, pinned: !m.pinned } : m)),
-    );
+    }, 380);
   };
 
   const handleReset = () => {
     setMemos(INITIAL_MEMOS);
-    setSelectedTag(null);
-    setMobileText("");
+    setActiveTag(null);
+    setDesktopInput("");
+    setMobileInput("");
     setLastSyncedId(null);
   };
 
+  const filteredMemos = memos.filter((m) => {
+    if (activeTag && !m.tags.includes(activeTag)) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      return (
+        m.title.toLowerCase().includes(q) ||
+        m.content.toLowerCase().includes(q) ||
+        m.tags.some((t) => t.toLowerCase().includes(q))
+      );
+    }
+    return true;
+  });
+
   return (
-    <section className="container-x space-y-8">
-      {/* 模块标头 */}
+    <section className="container-x space-y-6">
+      {/* 模块标题与状态栏 */}
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
         <div className="space-y-2 max-w-2xl">
-          <Badge variant="flame">Live Interactive Playground</Badge>
+          <div className="inline-flex items-center gap-2 rounded-full border border-signal/30 bg-signal/10 px-3 py-0.5 text-xs font-semibold text-signal-ink">
+            <span className="size-2 rounded-full bg-signal animate-pulse" />
+            <span>真实产品交互协同演练</span>
+          </div>
           <h2 className="text-2xl font-extrabold tracking-tight text-ink sm:text-3xl md:text-4xl">
             {heading}
           </h2>
@@ -176,19 +201,16 @@ export function InteractiveShowcase({
         </div>
 
         <div className="flex items-center gap-2 self-stretch sm:self-auto justify-between sm:justify-end">
-          <div className="inline-flex items-center gap-2 rounded-full border border-line/70 bg-soft-surface px-3 py-1 text-xs font-semibold text-mist">
-            <span className="relative flex size-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
-            </span>
-            <span>Cloudflare Edge: 12ms</span>
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-line/70 bg-soft-surface px-3 py-1 text-xs font-semibold text-mist">
+            <Zap className="size-3 text-signal" />
+            <span>D1 边缘多副本同步就绪</span>
           </div>
 
           <button
             type="button"
             onClick={handleReset}
             title="重置演练数据"
-            className="inline-flex items-center gap-1.5 rounded-full border border-line/60 bg-surface px-3 py-1 text-xs font-semibold text-mist transition-colors hover:bg-wash hover:text-ink cursor-pointer"
+            className="inline-flex items-center gap-1 rounded-full border border-line/60 bg-surface px-3 py-1 text-xs font-semibold text-mist transition-colors hover:bg-wash hover:text-ink cursor-pointer"
           >
             <RefreshCw className="size-3" />
             <span>重置</span>
@@ -196,129 +218,340 @@ export function InteractiveShowcase({
         </div>
       </div>
 
-      {/* 双端可交互演练工作台 */}
+      {/* 提示文案栏 */}
+      <div className="rounded-xl border border-line/60 bg-soft-surface/80 p-3 text-xs text-mist flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-signal/15 text-signal-ink font-bold text-[11px]">
+            💡
+          </span>
+          <span>
+            完全对齐 FlareMo 真实客户端布局与设计。<strong>右侧手机端</strong>
+            可直接键入或点击气泡发送，<strong>左侧电脑端</strong>
+            将即时插入新笔记并动态累加统计！
+          </span>
+        </div>
+        <div className="flex items-center gap-1 text-[11px] font-mono text-signal-ink">
+          <span>{isSyncing ? "⚡ 边缘网络同步中..." : "✓ 状态一致"}</span>
+        </div>
+      </div>
+
+      {/* 真实双端模型 */}
       <div className="grid gap-6 lg:grid-cols-[1fr_310px] xl:grid-cols-[1fr_330px] items-start">
         {/* ============================================================
-            电脑端桌面浏览器视窗（Desktop View）
+            电脑端视窗（严格还原 FlareMo 真实桌面端布局）
             ============================================================ */}
-        <div className="panel-card overflow-hidden border border-line/70 shadow-pop-xl transition-all duration-300">
-          {/* macOS 视窗顶栏 */}
-          <div className="flex h-10 items-center justify-between border-b border-line/60 bg-soft-surface px-4">
+        <div className="panel-card overflow-hidden border border-line/70 shadow-pop-xl">
+          {/* 桌面端浏览器顶栏 */}
+          <div className="flex h-9 items-center justify-between border-b border-line/60 bg-soft-surface px-4">
             <div className="flex items-center gap-2">
-              <span className="size-3 rounded-full bg-[#ff5f56] shadow-2xs" />
-              <span className="size-3 rounded-full bg-[#ffbd2e] shadow-2xs" />
-              <span className="size-3 rounded-full bg-[#27c93f] shadow-2xs" />
+              <span className="size-2.5 rounded-full bg-[#ff5f56]" />
+              <span className="size-2.5 rounded-full bg-[#ffbd2e]" />
+              <span className="size-2.5 rounded-full bg-[#27c93f]" />
             </div>
 
-            <div className="flex h-6 w-60 sm:w-80 items-center justify-center gap-1.5 rounded-md border border-line/60 bg-surface px-3 text-[11px] text-mist shadow-2xs">
-              <Lock className="size-2.5 text-signal" />
-              <span className="font-mono truncate">
-                https://app.flaremo.app
-              </span>
+            <div className="flex h-5.5 w-60 sm:w-80 items-center justify-center gap-1.5 rounded-md border border-line/60 bg-surface px-3 text-[11px] text-mist">
+              <span className="size-2 rounded-full bg-signal" />
+              <span className="font-mono">https://app.flaremo.app</span>
             </div>
 
-            <div className="flex items-center gap-1 text-[11px] font-semibold text-signal-ink">
-              <Zap className="size-3" />
-              <span className="hidden sm:inline">D1 Global Sync</span>
+            <div className="text-[11px] font-mono text-fog">
+              Cloudflare Workers
             </div>
           </div>
 
-          {/* 桌面端内页主体 */}
-          <div className="grid grid-cols-1 md:grid-cols-[180px_1fr] min-h-[460px] bg-paper">
-            {/* 侧边栏 */}
-            <aside className="border-r border-line/60 bg-surface/50 p-4 space-y-5 hidden md:block">
-              <div className="flex items-center gap-2">
-                <div className="flex size-7 items-center justify-center rounded-lg bg-brand-gradient text-white text-xs font-bold shadow-2xs">
-                  FM
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs font-bold text-ink truncate">
-                    Kim's Space
+          {/* 电脑端应用内结构：左侧边栏 + 右侧时间线 */}
+          <div className="grid grid-cols-1 md:grid-cols-[210px_1fr] lg:grid-cols-[220px_1fr] min-h-[580px] bg-paper">
+            {/* 左侧真实边栏 (FlareMo Explorer) */}
+            <aside className="border-r border-line/60 bg-surface/40 p-4 space-y-4 hidden md:block select-none overflow-y-auto max-h-[620px]">
+              {/* 边栏顶部 Header：Logo + 标题 + 铃铛 + 版本 + 设置 */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="flex size-6 items-center justify-center rounded-lg bg-brand-gradient text-white text-xs font-bold shadow-2xs">
+                    <span className="text-white font-extrabold text-[13px]">
+                      F
+                    </span>
                   </div>
-                  <div className="text-[10px] text-mist">个人私有知识库</div>
+                  <span className="font-bold text-sm text-ink tracking-tight">
+                    FlareMo
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1 text-mist">
+                  <Bell className="size-3.5 hover:text-ink cursor-pointer" />
+                  <span className="inline-flex items-center gap-0.5 rounded-full bg-soft-surface px-1.5 py-0.5 text-[9px] font-mono border border-line/60">
+                    <RefreshCw className="size-2 text-signal" />
+                    v0.20
+                  </span>
+                  <Settings className="size-3.5 hover:text-ink cursor-pointer" />
                 </div>
               </div>
 
-              {/* 标签过滤 */}
-              <div className="space-y-1.5">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-fog px-1">
-                  标签分类
+              {/* 数据总览行：记录 | 标签 | 天数 */}
+              <div className="grid grid-cols-3 text-center py-1.5 border-y border-line/60">
+                <div>
+                  <div className="text-base font-extrabold text-ink tabular-nums">
+                    {totalCount}
+                  </div>
+                  <div className="text-[10px] text-mist">记录</div>
                 </div>
-                <div className="space-y-0.5">
+                <div>
+                  <div className="text-base font-extrabold text-ink tabular-nums">
+                    {tagList.length}
+                  </div>
+                  <div className="text-[10px] text-mist">标签</div>
+                </div>
+                <div>
+                  <div className="text-base font-extrabold text-ink tabular-nums">
+                    1
+                  </div>
+                  <div className="text-[10px] text-mist">天</div>
+                </div>
+              </div>
+
+              {/* 贡献热力图卡片 */}
+              <div className="space-y-2">
+                <div className="flex rounded-lg bg-soft-surface p-0.5 border border-line/60 text-[10px] font-semibold text-mist">
                   <button
                     type="button"
-                    onClick={() => setSelectedTag(null)}
+                    onClick={() => setTimeViewTab("trend")}
                     className={cn(
-                      "flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer text-left",
-                      selectedTag === null
-                        ? "bg-surface text-signal-ink shadow-2xs border border-line/60"
-                        : "text-mist hover:bg-wash hover:text-ink",
+                      "flex-1 py-1 rounded-md text-center transition-colors cursor-pointer",
+                      timeViewTab === "trend"
+                        ? "bg-surface text-signal-ink shadow-2xs font-bold"
+                        : "hover:text-ink",
                     )}
                   >
-                    <span>全部笔记</span>
-                    <span className="text-[10px] text-fog tabular-nums font-mono">
-                      {memos.length}
-                    </span>
+                    趋势
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setTimeViewTab("calendar")}
+                    className={cn(
+                      "flex-1 py-1 rounded-md text-center transition-colors cursor-pointer",
+                      timeViewTab === "calendar"
+                        ? "bg-surface text-signal-ink shadow-2xs font-bold"
+                        : "hover:text-ink",
+                    )}
+                  >
+                    日历
+                  </button>
+                </div>
 
-                  {Object.entries(tagCounts).map(([tag, count]) => (
+                {/* 贡献小方格矩阵 */}
+                <div className="rounded-xl border border-line/60 bg-surface/70 p-2.5 space-y-1.5">
+                  <div className="grid grid-flow-col grid-rows-6 gap-1 justify-between">
+                    {HEATMAP_TILES.map((tile) => (
+                      <span
+                        key={tile.id}
+                        className={cn(
+                          "size-2 rounded-[2px]",
+                          tile.isHigh
+                            ? "bg-signal shadow-2xs"
+                            : tile.isMedium
+                              ? "bg-signal/40"
+                              : "bg-line/70 dark:bg-line/40",
+                        )}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex justify-between text-[9px] text-fog font-mono px-0.5">
+                    <span>6月</span>
+                    <span>7月</span>
+                    <span>8月</span>
+                    <span>9月</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 系统主菜单 */}
+              <nav className="space-y-0.5 text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveMenu("timeline");
+                    setActiveTag(null);
+                  }}
+                  className={cn(
+                    "flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 transition-colors cursor-pointer text-left",
+                    activeMenu === "timeline" && activeTag === null
+                      ? "bg-signal/10 text-signal-ink font-bold border-l-2 border-signal"
+                      : "text-mist hover:bg-wash hover:text-ink",
+                  )}
+                >
+                  <span className="flex items-center gap-2">
+                    <Inbox className="size-3.5 text-signal" />
+                    <span>时间线</span>
+                  </span>
+                  <span className="text-[10px] tabular-nums font-mono text-signal-ink">
+                    {totalCount}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveMenu("archive")}
+                  className={cn(
+                    "flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 transition-colors cursor-pointer text-left",
+                    activeMenu === "archive"
+                      ? "bg-signal/10 text-signal-ink font-bold"
+                      : "text-mist hover:bg-wash hover:text-ink",
+                  )}
+                >
+                  <span className="flex items-center gap-2">
+                    <Archive className="size-3.5" />
+                    <span>归档</span>
+                  </span>
+                  <span className="text-[10px] text-fog font-mono">0</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveMenu("trash")}
+                  className={cn(
+                    "flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 transition-colors cursor-pointer text-left",
+                    activeMenu === "trash"
+                      ? "bg-signal/10 text-signal-ink font-bold"
+                      : "text-mist hover:bg-wash hover:text-ink",
+                  )}
+                >
+                  <span className="flex items-center gap-2">
+                    <Trash2 className="size-3.5" />
+                    <span>回收站</span>
+                  </span>
+                  <span className="text-[10px] text-fog font-mono">0</span>
+                </button>
+              </nav>
+
+              {/* 扩展功能列表 */}
+              <div className="pt-2 border-t border-line/60 space-y-0.5 text-xs text-mist">
+                {[
+                  { icon: CalendarDays, label: "每日回顾" },
+                  { icon: Footprints, label: "随机漫步" },
+                  { icon: Brain, label: "记忆" },
+                  { icon: Calendar, label: "日历" },
+                  { icon: FolderKanban, label: "项目" },
+                ].map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <div
+                      key={item.label}
+                      className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-wash hover:text-ink transition-colors cursor-pointer"
+                    >
+                      <Icon className="size-3.5 text-mist" />
+                      <span>{item.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* 标签分类 */}
+              <div className="pt-2 border-t border-line/60 space-y-1">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-fog px-1 flex items-center gap-1">
+                  <Hash className="size-2.5" />
+                  <span>标签索引</span>
+                </div>
+                <div className="space-y-0.5 text-xs">
+                  {tagList.map((tag) => (
                     <button
                       type="button"
-                      key={tag}
-                      onClick={() => setSelectedTag(tag)}
+                      key={tag.name}
+                      onClick={() => setActiveTag(tag.name)}
                       className={cn(
-                        "flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer text-left",
-                        selectedTag === tag
-                          ? "bg-surface text-signal-ink shadow-2xs border border-line/60"
+                        "flex w-full items-center justify-between rounded-lg px-2.5 py-1 transition-colors cursor-pointer text-left",
+                        activeTag === tag.name
+                          ? "bg-signal/10 text-signal-ink font-bold"
                           : "text-mist hover:bg-wash hover:text-ink",
                       )}
                     >
-                      <span>#{tag}</span>
-                      <span className="text-[10px] text-fog tabular-nums font-mono">
-                        {count}
+                      <span>#{tag.name}</span>
+                      <span className="text-[10px] text-fog font-mono">
+                        {tag.count}
                       </span>
                     </button>
                   ))}
                 </div>
               </div>
-
-              {/* 边缘统计 */}
-              <div className="rounded-xl border border-line/60 bg-soft-surface p-3 space-y-1">
-                <div className="flex items-center justify-between text-[11px] font-medium text-mist">
-                  <span>D1 数据量</span>
-                  <span className="text-signal-ink font-bold font-mono">
-                    5.2 KB
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-[11px] font-medium text-mist">
-                  <span>响应延迟</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-bold font-mono">
-                    12 ms
-                  </span>
-                </div>
-              </div>
             </aside>
 
-            {/* 主时间线区 */}
-            <main className="p-4 sm:p-6 space-y-4 max-h-[560px] overflow-y-auto">
-              {/* 顶部模拟输入框 */}
-              <div className="panel-card p-3 border border-line/60 bg-surface shadow-2xs">
-                <div className="text-xs text-fog flex items-center gap-2">
-                  <MessageSquarePlus className="size-3.5 text-signal" />
-                  <span>桌面端实时就绪，正在监听边缘双向流...</span>
+            {/* 右侧主工作区 (时间线 + 发送器) */}
+            <main className="p-4 sm:p-5 space-y-4 max-h-[620px] overflow-y-auto">
+              {/* 顶部标题栏与搜索条 */}
+              <div className="flex items-center justify-between gap-3 pb-1 border-b border-line/60">
+                <div className="flex items-center gap-1.5 text-sm font-bold text-ink">
+                  <span className="text-fog">/</span>
+                  <span>{activeTag ? `标签: #${activeTag}` : "时间线"}</span>
+                </div>
+
+                <div className="relative w-44 sm:w-56">
+                  <Search className="size-3.5 text-fog absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="搜索记录..."
+                    className="w-full h-8 pl-8 pr-3 rounded-full border border-line/70 bg-surface text-xs text-ink placeholder:text-fog focus:outline-none focus:border-signal"
+                  />
                 </div>
               </div>
 
-              {/* 笔记时间线流 */}
+              {/* 真实 Memo 发送器 (MemoComposer) */}
+              <div className="rounded-2xl border border-line/70 bg-surface p-3.5 shadow-2xs space-y-2.5 transition-shadow hover:shadow-xs">
+                <textarea
+                  value={desktopInput}
+                  onChange={(e) => setDesktopInput(e.target.value)}
+                  placeholder="此刻在想什么？记下来..."
+                  rows={2}
+                  className="w-full bg-transparent text-xs sm:text-sm text-ink placeholder:text-fog resize-none focus:outline-none leading-relaxed"
+                />
+
+                <div className="flex items-center justify-between pt-1">
+                  <div className="flex items-center gap-3 text-mist">
+                    <button
+                      type="button"
+                      title="插入标签"
+                      onClick={() => setDesktopInput((prev) => `${prev} #`)}
+                      className="hover:text-ink cursor-pointer"
+                    >
+                      <Hash className="size-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      title="添加图片"
+                      className="hover:text-ink cursor-pointer"
+                    >
+                      <ImageIcon className="size-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      title="待办清单"
+                      className="hover:text-ink cursor-pointer"
+                    >
+                      <List className="size-3.5" />
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => publishMemo(desktopInput, false)}
+                    disabled={isSyncing || !desktopInput.trim()}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-brand-gradient px-4 py-1 text-xs font-semibold text-white shadow-xs hover:brightness-105 active:translate-y-px transition-all cursor-pointer disabled:opacity-40"
+                  >
+                    <Send className="size-3" />
+                    <span>发送</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 真实笔记卡片流 (MemoCard List) */}
               <div className="space-y-3">
                 <AnimatePresence initial={false}>
-                  {filteredMemos.map((memo) => {
-                    const isHighlighted = memo.id === lastSyncedId;
+                  {filteredMemos.map((m) => {
+                    const isHighlighted = m.id === lastSyncedId;
                     return (
                       <motion.article
-                        key={memo.id}
+                        key={m.id}
                         layout
-                        initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                        initial={{ opacity: 0, y: -20, scale: 0.96 }}
                         animate={{
                           opacity: 1,
                           y: 0,
@@ -331,100 +564,71 @@ export function InteractiveShowcase({
                         }}
                         exit={{ opacity: 0, scale: 0.9 }}
                         className={cn(
-                          "panel-card p-4 transition-all duration-300 relative border",
+                          "rounded-2xl border bg-surface p-4 sm:p-5 space-y-2.5 transition-all duration-300 relative",
                           isHighlighted
-                            ? "border-signal/50 bg-signal/5 shadow-md ring-2 ring-signal/20"
-                            : "border-line/60 bg-surface shadow-2xs hover:border-line",
+                            ? "border-signal/60 ring-2 ring-signal/20 bg-signal/5 shadow-md"
+                            : "border-line/70 shadow-2xs hover:border-line",
                         )}
                       >
-                        {/* 置顶或刚刚同步徽标 */}
-                        <div className="flex items-center justify-between gap-2 mb-2">
+                        {/* 卡片头部：圆形头像 + 时间/来源 + 更多操作 */}
+                        <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className="size-5 rounded-full bg-signal/15 text-signal-ink flex items-center justify-center text-[10px] font-bold">
-                              K
-                            </span>
-                            <span className="text-xs font-bold text-ink">
-                              Kim
-                            </span>
-                            <span className="text-[11px] text-fog font-mono">
-                              {memo.createdAt}
+                            <span className="size-4.5 rounded-full border-2 border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 shrink-0" />
+                            <span className="text-xs text-mist font-medium">
+                              {m.timeLabel}
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-2">
                             {isHighlighted && (
                               <span className="inline-flex items-center gap-1 rounded-full bg-signal/15 px-2 py-0.5 text-[10px] font-bold text-signal-ink animate-pulse">
                                 <Sparkles className="size-2.5" />
                                 刚刚同步
                               </span>
                             )}
-                            {memo.pinned && (
-                              <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-mist">
-                                <Bookmark className="size-2.5 fill-signal text-signal" />
-                                置顶
-                              </span>
-                            )}
+                            <MoreHorizontal className="size-3.5 text-fog hover:text-ink cursor-pointer" />
                           </div>
                         </div>
 
-                        {/* 内容正文 */}
-                        <p className="text-xs sm:text-sm text-ink leading-relaxed">
-                          {memo.content}
+                        {/* 笔记标题 */}
+                        <h3 className="text-sm sm:text-base font-bold text-ink tracking-tight">
+                          {m.title}
+                        </h3>
+
+                        {/* 笔记内容 */}
+                        <p className="text-xs sm:text-sm text-ink leading-relaxed whitespace-pre-line">
+                          {m.content}
                         </p>
 
-                        {/* 标签 */}
-                        {memo.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 mt-2.5">
-                            {memo.tags.map((t) => (
-                              <button
-                                type="button"
-                                key={t}
-                                onClick={() => setSelectedTag(t)}
-                                className="inline-flex items-center rounded-md border border-line/60 bg-soft-surface px-2 py-0.5 text-[10px] font-semibold text-signal-ink hover:bg-wash transition-colors cursor-pointer"
-                              >
-                                #{t}
-                              </button>
-                            ))}
+                        {/* 引用样式块 (Quote Callout) */}
+                        {m.quote && (
+                          <div className="rounded-r-xl border-l-2 border-signal bg-signal/10 p-3 text-xs text-ink leading-relaxed">
+                            {m.quote}
                           </div>
                         )}
 
-                        {/* 底部点赞与置顶操作 */}
-                        <div className="flex items-center justify-between border-t border-line/50 mt-3 pt-2 text-fog">
-                          <div className="flex items-center gap-3">
-                            <button
-                              type="button"
-                              onClick={() => handleToggleLike(memo.id)}
-                              className={cn(
-                                "flex items-center gap-1 text-[11px] font-semibold transition-colors cursor-pointer",
-                                memo.liked
-                                  ? "text-rose-500 font-bold"
-                                  : "hover:text-ink",
-                              )}
-                            >
-                              <Heart
-                                className={cn(
-                                  "size-3.5",
-                                  memo.liked && "fill-rose-500 text-rose-500",
-                                )}
-                              />
-                              <span>{memo.likes}</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => handleTogglePin(memo.id)}
-                              className={cn(
-                                "flex items-center gap-1 text-[11px] font-semibold transition-colors cursor-pointer",
-                                memo.pinned ? "text-signal" : "hover:text-ink",
-                              )}
-                            >
-                              <Bookmark className="size-3.5" />
-                              <span>{memo.pinned ? "已置顶" : "置顶"}</span>
-                            </button>
+                        {/* 标签行 */}
+                        {m.tags.length > 0 && (
+                          <div className="text-xs text-signal-ink font-medium">
+                            {m.tags.map((t) => `#${t}`).join(" ")}
                           </div>
+                        )}
 
-                          <div className="text-[10px] text-fog">
-                            Cloudflare D1 Validated
+                        {/* 记录编号与底栏药丸标签 */}
+                        <div className="pt-2 border-t border-line/40 flex items-center justify-between text-xs">
+                          <span className="text-[11px] text-mist font-mono">
+                            记录 {m.orderNumber}
+                          </span>
+
+                          <div className="flex gap-1.5">
+                            {m.tags.map((t) => (
+                              <span
+                                key={t}
+                                className="rounded-full bg-flame-50 dark:bg-flame-950/50 border border-flame-200 dark:border-flame-900/60 px-2 py-0.5 text-[10px] font-medium text-flame-600 dark:text-flame-400"
+                              >
+                                #{t}
+                              </span>
+                            ))}
                           </div>
                         </div>
                       </motion.article>
@@ -437,127 +641,151 @@ export function InteractiveShowcase({
         </div>
 
         {/* ============================================================
-            手机端速记设备模拟器（Mobile View）
+            手机端设备（严格还原 FlareMo 真实移动端单列布局）
             ============================================================ */}
         <div className="mx-auto w-full max-w-[320px] rounded-[2.6rem] border-4 border-surface bg-paper p-1 shadow-pop-xl ring-1 ring-line/80 relative">
-          <div className="overflow-hidden rounded-[2.2rem] bg-paper border border-line/60 flex flex-col h-[520px]">
-            {/* 灵动岛与状态栏 */}
-            <div className="h-10 bg-soft-surface px-5 flex items-center justify-between border-b border-line/60 shrink-0">
+          <div className="overflow-hidden rounded-[2.2rem] bg-paper border border-line/60 flex flex-col h-[540px]">
+            {/* 手机系统状态栏与扬声器孔 */}
+            <div className="h-9 bg-soft-surface px-5 flex items-center justify-between border-b border-line/60 shrink-0">
               <span className="text-[11px] font-bold text-ink">09:41</span>
-              {/* 灵动岛胶囊 */}
-              <div className="h-4 w-20 rounded-full bg-black flex items-center justify-center gap-1">
-                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[8px] font-mono text-white/80">
-                  FlareMo
-                </span>
+              <div className="h-3.5 w-16 rounded-full bg-black flex items-center justify-center">
+                <span className="size-1 rounded-full bg-emerald-500 animate-pulse" />
               </div>
-              <div className="flex items-center gap-1 text-ink">
-                <Wifi className="size-3" />
-                <div className="size-2 rounded-full bg-signal" />
+              <div className="flex items-center gap-1 text-[10px] text-ink font-bold">
+                5G
               </div>
             </div>
 
-            {/* 手机 App 顶栏 */}
-            <div className="px-4 py-2.5 border-b border-line/60 bg-surface/80 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-1.5">
-                <div className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-xs font-bold text-ink">随手速记</span>
-              </div>
-              <span className="text-[10px] font-semibold text-mist bg-soft-surface px-2 py-0.5 rounded-full border border-line/60">
-                PWA 离线就绪
+            {/* 移动端 App 真实顶栏：汉堡菜单 + 时间线 */}
+            <div className="px-4 py-2 border-b border-line/60 bg-surface flex items-center gap-3 shrink-0">
+              <Menu className="size-4 text-ink cursor-pointer" />
+              <span className="text-sm font-bold text-ink tracking-tight">
+                时间线
               </span>
             </div>
 
-            {/* 手机内部主体内容区 */}
-            <div className="p-3.5 flex-1 flex flex-col justify-between overflow-y-auto space-y-3">
-              {/* 输入框卡片 */}
-              <div className="panel-card p-3 border border-line/60 bg-surface shadow-2xs space-y-2">
+            {/* 手机屏幕主内容区 (可滚动) */}
+            <div className="p-3 flex-1 overflow-y-auto space-y-3">
+              {/* 搜索框 */}
+              <div className="relative">
+                <Search className="size-3 text-fog absolute left-2.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="搜索记录..."
+                  className="w-full h-7 pl-7 pr-3 rounded-full border border-line/70 bg-surface text-[11px] text-ink placeholder:text-fog focus:outline-none"
+                  readOnly
+                />
+              </div>
+
+              {/* 手机端真实 Memo 发送器 */}
+              <div className="rounded-2xl border border-line/70 bg-surface p-3 shadow-2xs space-y-2">
                 <textarea
-                  value={mobileText}
-                  onChange={(e) => setMobileText(e.target.value)}
-                  placeholder="随时记下灵感，自动实时同步到电脑端知识库..."
-                  rows={3}
+                  value={mobileInput}
+                  onChange={(e) => setMobileInput(e.target.value)}
+                  placeholder="此刻在想什么？记下来..."
+                  rows={2}
                   className="w-full bg-transparent text-xs text-ink placeholder:text-fog resize-none focus:outline-none leading-relaxed"
                 />
 
-                {/* 快捷标签 */}
-                <div className="flex items-center justify-between pt-1 border-t border-line/40">
-                  <div className="flex gap-1">
-                    {["架构", "灵感", "待办"].map((t) => (
-                      <button
-                        type="button"
-                        key={t}
-                        onClick={() => setSelectedPresetTag(t)}
-                        className={cn(
-                          "rounded-md px-2 py-0.5 text-[10px] font-semibold transition-colors cursor-pointer",
-                          selectedPresetTag === t
-                            ? "bg-signal/15 text-signal-ink font-bold border border-signal/30"
-                            : "bg-soft-surface text-mist hover:text-ink",
-                        )}
-                      >
-                        #{t}
-                      </button>
-                    ))}
+                <div className="flex items-center justify-between pt-1">
+                  <div className="flex items-center gap-2.5 text-mist">
+                    <button
+                      type="button"
+                      onClick={() => setMobileInput((p) => `${p} #`)}
+                      className="cursor-pointer hover:text-ink"
+                    >
+                      <Hash className="size-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      className="cursor-pointer hover:text-ink"
+                    >
+                      <ImageIcon className="size-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      className="cursor-pointer hover:text-ink"
+                    >
+                      <List className="size-3.5" />
+                    </button>
                   </div>
 
-                  {/* 发送按钮 */}
-                  <Button
-                    size="xs"
-                    variant="flame"
-                    onClick={() => handlePublishFromMobile()}
-                    disabled={isSyncing || !mobileText.trim()}
-                    className="h-7 px-3 gap-1 rounded-full shadow-xs"
+                  <button
+                    type="button"
+                    onClick={() => publishMemo(mobileInput, true)}
+                    disabled={isSyncing || !mobileInput.trim()}
+                    className="inline-flex items-center gap-1 rounded-full bg-brand-gradient px-3 py-1 text-xs font-semibold text-white shadow-xs hover:brightness-105 active:translate-y-px transition-all cursor-pointer disabled:opacity-40"
                   >
                     {isSyncing ? (
                       <span className="animate-spin text-xs">⟳</span>
                     ) : (
                       <>
-                        <span>同步</span>
-                        <ArrowUp className="size-3" />
+                        <Send className="size-2.5" />
+                        <span>发送</span>
                       </>
                     )}
-                  </Button>
+                  </button>
                 </div>
               </div>
 
-              {/* 灵感填入气泡提示 */}
+              {/* 灵感气泡（一键填入并直接演练） */}
               <div className="space-y-1.5">
-                <div className="text-[10px] font-bold text-fog px-1 flex items-center justify-between">
-                  <span>💡 灵感气泡（点击一键演练）：</span>
+                <div className="text-[10px] font-bold text-fog px-1 flex items-center gap-1">
+                  <span>✨ 快捷灵感（点击一键演练）：</span>
                 </div>
-
                 <div className="space-y-1">
                   {PRESETS.map((p) => (
                     <button
                       type="button"
                       key={p.text}
-                      onClick={() => handlePublishFromMobile(p.text)}
+                      onClick={() => publishMemo(p.text, true)}
                       disabled={isSyncing}
-                      className="w-full text-left rounded-xl border border-line/60 bg-surface/80 p-2 text-[11px] text-mist hover:text-ink hover:bg-wash hover:border-line transition-all duration-150 cursor-pointer group shadow-2xs"
+                      className="w-full text-left rounded-xl border border-line/60 bg-surface p-2 text-[11px] text-mist hover:text-ink hover:bg-wash transition-colors cursor-pointer group shadow-2xs"
                     >
                       <div className="flex items-center justify-between gap-1">
                         <span className="line-clamp-1">{p.text}</span>
-                        <Send className="size-2.5 text-signal shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <Send className="size-2.5 text-signal opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                       </div>
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* 手机底部提示 */}
-              <div className="rounded-xl border border-dashed border-line/80 bg-soft-surface/50 p-2.5 text-center">
-                <div className="text-[10px] font-semibold text-mist leading-tight">
-                  👈 在此点击发送后，请观察左侧电脑端
+              {/* 移动端时间线第一条卡片预览 */}
+              {memos.length > 0 && (
+                <div className="rounded-2xl border border-line/70 bg-surface p-3 space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <span className="size-3.5 rounded-full border border-zinc-300 dark:border-zinc-700 bg-zinc-100" />
+                      <span className="text-[10px] text-mist">
+                        {memos[0].timeLabel}
+                      </span>
+                    </div>
+                    <MoreHorizontal className="size-3 text-fog" />
+                  </div>
+                  <div className="font-bold text-ink text-xs line-clamp-1">
+                    {memos[0].title}
+                  </div>
+                  <p className="text-[11px] text-mist line-clamp-2">
+                    {memos[0].content}
+                  </p>
+                  <div className="flex gap-1 pt-1 border-t border-line/40">
+                    {memos[0].tags.map((t) => (
+                      <span
+                        key={t}
+                        className="rounded-full bg-flame-50 dark:bg-flame-950/50 px-2 py-0.5 text-[9px] text-flame-600 dark:text-flame-400 font-medium"
+                      >
+                        #{t}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-                <div className="text-[9px] text-fog mt-0.5">
-                  新笔记将以弹性动画平滑插入顶部
-                </div>
-              </div>
+              )}
             </div>
 
-            {/* 手机底部 Home Indicator */}
-            <div className="h-5 flex items-center justify-center bg-soft-surface shrink-0">
-              <span className="h-1 w-24 rounded-full bg-mist/40" />
+            {/* 手机底部指示条 */}
+            <div className="h-5 flex items-center justify-center bg-soft-surface shrink-0 border-t border-line/40">
+              <span className="h-1 w-20 rounded-full bg-mist/40" />
             </div>
           </div>
         </div>
