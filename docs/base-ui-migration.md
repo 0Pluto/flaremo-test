@@ -71,12 +71,14 @@
 | --- | --- | --- |
 | `ui/button.tsx` | `Slot.Root` + `asChild` | 🔄 `useRender({ defaultTagName: "button", props, render })`；对外 API `asChild` → `render`（5 处调用点：home-page ×4、site-nav ×1） |
 | `ui/badge.tsx` | `Slot.Root` + `asChild` | 同上（无 asChild 调用点，API 面收敛） |
-| `ui/dropdown-menu.tsx` | `DropdownMenu.*` | 🔄 `Menu`：见 §3.2 通用映射；Content = 封装内 `Positioner + Portal + Popup`；动画选择器 `data-[state=open]:animate-in…` → `data-open:` |
+| `ui/dropdown-menu.tsx` | `DropdownMenu.*` | 🔄 `Menu`：见 §3.2 通用映射；Content = 封装内 `Portal > Positioner > Popup`；动画选择器 `data-[state=open]:animate-in…` → `data-open:` |
 | `ui/progress.tsx` | `Progress.Root/Indicator` | 🔄 `Progress.Root + Track + Indicator`；**删除手写 `translateX`**（Base UI Indicator 内联 `width: N%`，源码核验），保留过渡类 `transition-[width]` |
 
 调用点（`grep -n asChild apps/site/src` 复核）：home-page.tsx:172/179/767/773（`<Button asChild><a/></Button>`）、site-nav.tsx:326、locale-switcher.tsx:61 与 site-nav.tsx:137（`DropdownMenuTrigger asChild`）。
 
 ### 3.2 Menu（两端 dropdown-menu 的目标结构）
+
+> ⚠️ 顺序以 `Portal > Positioner > Popup` 为准（包内 bundled 文档核验；下方简图为修正版，执行时已照此实现）。
 
 ```
 Menu.Root(open / onOpenChange ✅ / defaultOpen ✅ / modal ✅)
@@ -84,18 +86,19 @@ Menu.Root(open / onOpenChange ✅ / defaultOpen ✅ / modal ✅)
      支持 render prop 与 nativeButton —— 源码核验。原 `asChild` 包自定义按钮的
      两处（locale-switcher / ThemeToggle）改为直接把 className/aria-label/
      children 给 Trigger，不再包一层）
-   └─ Menu.Positioner(side ✅ / align ✅ / sideOffset ✅ / alignOffset ✅ / pinned ✅)
-      ├─ Menu.Portal
-      │  └─ Menu.Popup（动画容器）
-      │     └─ Menu.Item(closeOnClick ✅) / Group / GroupLabel / Separator ✅ /
-      │        CheckboxItem(checked ✅ / onCheckedChange ✅ / closeOnClick ✅) /
-      │        RadioGroup(value ✅ / onValueChange ✅) / RadioItem
-      └─ Menu.Arrow（若需要，放在 Positioner 内、Popup 外）
+   └─ Menu.Portal
+      └─ Menu.Positioner(side ✅ / align ✅ / sideOffset ✅ / alignOffset ✅ / pinned ✅)
+         ├─ Menu.Popup（动画容器；z-50/outline-none 样式在 Positioner 上兜底）
+         │  └─ Menu.Item(closeOnClick ✅，默认 true) / Group / GroupLabel（⚠️ 必须包在
+         │     Group 内，裸用抛 error #31）/ Separator ✅ /
+         │     CheckboxItem(checked ✅ / onCheckedChange ✅) + CheckboxItemIndicator /
+         │     RadioGroup(value ✅ / onValueChange ✅) / RadioItem + RadioItemIndicator
+         └─ Menu.Arrow（若需要，放在 Positioner 内、Popup 外）
 ```
 
 - ⚠️ `CheckboxItem`/`RadioItem` 的 `ItemIndicator`：Base UI 为 `CheckboxItemIndicator`/`RadioItemIndicator`，支持 `keepMounted`。
-- ⚠️ Radix `Item.onSelect` → Base UI `Item.onClick` + `closeOnClick` 控制点击后是否收起（默认关闭）。
-- 无 submenu 使用；Base UI 有 `SubmenuRoot/SubmenuTrigger` 备用。
+- ⚠️ Radix `Item.onSelect` → Base UI `Item.onClick` + `closeOnClick` 控制点击后是否收起（默认 true，即点选后收起菜单，与 Radix 语义一致）。
+- 无 submenu 使用；Base UI 有 `SubmenuRoot/SubmenuTrigger`（结构 = SubmenuRoot 内含 SubmenuTrigger + 自己的 Portal>Positioner>Popup），应用 wrapper 已照此实现备用。
 
 ### 3.3 Dialog / AlertDialog / Sheet（应用本体）
 
@@ -115,7 +118,7 @@ Menu.Root(open / onOpenChange ✅ / defaultOpen ✅ / modal ✅)
 
 | 组件 | 映射与验证点 |
 | --- | --- |
-| `Tooltip` | `TooltipProvider` ✅ 存在（源码核验 `delay` prop——我们用的 `delayDuration` 要改名 `delay`，默认值同 0）。结构：Root + Trigger + **Positioner**（承接 sideOffset）+ Portal + Popup + Arrow；Root 另有 `closeDelay`、`trackCursorAxis`。我们 tooltip 内容里 `data-[state=delayed-open]:animate-in` 选择器删除（Base UI 只有 open/closed 状态） |
+| `Tooltip` | `TooltipProvider` ✅ 存在（源码核验 `delay` prop——我们用的 `delayDuration` 要改名 `delay`，默认值同 0）。结构：Root + Trigger + Portal + **Positioner**（承接 sideOffset）+ Popup + Arrow；Root 另有 `closeDelay`、`trackCursorAxis`。我们 tooltip 内容里 `data-[state=delayed-open]:animate-in` 选择器删除（Base UI 只有 open/closed 状态） |
 | `Tabs` | Root/Tab/**List**/Panel/Indicator。我们已用的 `value/defaultValue/orientation/onValueChange` ✅；`activationMode`/`selectOnMove` 在 v1.8 无此 props（默认自动激活），我们也没用。现有 `data-active:` 类直接兼容 |
 | `Slider` | 结构变化最大：Root → **Control** → Track → **Indicator**（替代 Radix `Range`）→ Thumb；可加 `Slider.Value`。props：`min/max/step/value/defaultValue/onValueChange ✅`；⚠️ `minStepsBetweenThumbs` 更名 `minStepsBetweenValues`（我们未用）；新增 `thumbAlignment/thumbCollisionBehavior/locale/format`（不需要可不传）。我们 Slider 按值数组渲染多个 Thumb 的写法保留 |
 | `Switch` | Root/Thumb ✅；选择器重写：`data-[state=checked]:bg-flame-600` → `data-checked:bg-flame-600`，`data-[state=unchecked]` → `data-unchecked`，Thumb 的 `data-[state=checked]:translate-x-4` 同理 |
