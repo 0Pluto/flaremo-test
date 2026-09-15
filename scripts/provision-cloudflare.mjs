@@ -186,6 +186,10 @@ function findD1(name) {
 }
 
 function ensureR2(name) {
+  if (bucketExists(name)) {
+    console.log(`R2 bucket ${name} already exists.`);
+    return;
+  }
   const created = wrangler(["r2", "bucket", "create", name], {
     allowFailure: true,
   });
@@ -198,6 +202,12 @@ function ensureR2(name) {
     return;
   }
   throw new Error(`Could not create R2 bucket ${name}:\n${created.output}`);
+}
+
+function bucketExists(name) {
+  const listed = wrangler(["r2", "bucket", "list"], { allowFailure: true });
+  if (listed.status !== 0) return false;
+  return listedResourceExists(listed.output, name);
 }
 
 function ensureQueue(name) {
@@ -220,8 +230,7 @@ function ensureQueue(name) {
 function queueExists(name) {
   const listed = wrangler(["queues", "list"], { allowFailure: true });
   if (listed.status !== 0) return false;
-  const escaped = name.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`(?:^|\\s)${escaped}(?:\\s|$)`, "m").test(listed.output);
+  return listedResourceExists(listed.output, name);
 }
 
 function ensureVectorize(name, dimensions, metric) {
@@ -332,8 +341,13 @@ function parseJsonOutput(output) {
     : (parsed?.indexes ?? parsed?.result ?? parsed?.databases ?? []);
 }
 
+export function listedResourceExists(output, name) {
+  const escaped = String(name).replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?:^|\\s)${escaped}(?:\\s|$)`, "m").test(output);
+}
+
 export function isAlreadyExists(output) {
-  return /already exists|already been created|already taken|duplicate|a database with that name|code:\s*(10004|10014|11002|11009|409)\b/i.test(
+  return /already exists|already been created|already taken|duplicate|conflict|a database with that name|code:\s*(7502|10004|10014|10073|11002|11009|409)\b/i.test(
     output,
   );
 }

@@ -4,6 +4,7 @@ import {
   isAlreadyExists,
   isPlaceholderDatabaseId,
   isPlaceholderPublicUrl,
+  listedResourceExists,
   resourcesFromConfig,
   workersDevOrigin,
 } from "./provision-cloudflare.mjs";
@@ -83,4 +84,24 @@ test("treats Cloudflare queue name conflicts as already existing", () => {
   const output =
     "Queue name 'flaremo-member-removal' is already taken. Please use a different name and try again. [code: 11009]";
   assert.equal(isAlreadyExists(output), true);
+});
+
+test("treats R2 and D1 name conflicts as already existing", () => {
+  assert.equal(
+    isAlreadyExists(
+      "A request to the Cloudflare API failed.\nBucket name already exists. [code: 10073]",
+    ),
+    true,
+  );
+  assert.equal(
+    isAlreadyExists("Database with name flaremo already exists [code: 7502]"),
+    true,
+  );
+  assert.equal(isAlreadyExists("An index with this name already exists"), true);
+});
+
+test("matches listed Cloudflare resource names without substring collisions", () => {
+  const list = "name: flaremo-attachments\nname: flaremo-memos";
+  assert.equal(listedResourceExists(list, "flaremo-attachments"), true);
+  assert.equal(listedResourceExists(list, "flaremo"), false);
 });
