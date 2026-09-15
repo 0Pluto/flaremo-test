@@ -1,3 +1,10 @@
+import {
+  type EmailLocale,
+  emailCopy,
+  interpolate,
+  isRtlEmailLocale,
+  pickEmailLocale,
+} from "./email-templates";
 import type { FlareMoEnv } from "./env";
 
 /**
@@ -40,6 +47,11 @@ export type SendVerificationEmailInput = {
   token: string;
   /** Public origin of the deployment, e.g. https://app.flaremo.app. */
   publicUrl: string;
+  /**
+   * Raw Accept-Language header of the request that triggered the send.
+   * Every send path is self-service, so the requester is the recipient.
+   */
+  acceptLanguage?: string | null;
 };
 
 type DeliverEmailInput = {
@@ -85,11 +97,29 @@ function actionButtonHtml(url: string, label: string) {
   return `<p><a href="${url}" style="display:inline-block;background:#f97316;color:#fff;text-decoration:none;padding:10px 20px;border-radius:8px">${label}</a></p>`;
 }
 
-function footerHtml(url: string, expiryHours: number, ignoreNote: string) {
+function footerHtml(
+  copy: ReturnType<typeof emailCopy>,
+  url: string,
+  expiryHours: number,
+  ignoreNote: string,
+) {
   return [
-    `<p style="color:#888;font-size:12px">Or paste this link: ${url}</p>`,
-    `<p style="color:#888;font-size:12px">This link expires in ${expiryHours} hours. ${ignoreNote}</p>`,
+    `<p style="color:#888;font-size:12px">${interpolate(copy.pasteLink, { url })}</p>`,
+    `<p style="color:#888;font-size:12px">${interpolate(copy.expiresHours, { hours: expiryHours })} ${ignoreNote}</p>`,
   ].join("");
+}
+
+function emailHtml(
+  locale: EmailLocale,
+  heading: string,
+  body: string,
+  actionHtml: string,
+  footer: string,
+) {
+  const rtl = isRtlEmailLocale(locale)
+    ? ' dir="rtl" style="text-align:right"'
+    : "";
+  return `<div${rtl} style="font-family:system-ui,-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:24px"><h2 style="margin:0 0 12px">${heading}</h2><p style="color:#444;line-height:1.6">${body}</p>${actionHtml}${footer}</div>`;
 }
 
 /**
@@ -99,23 +129,21 @@ export async function sendVerificationEmail(
   env: FlareMoEnv,
   input: SendVerificationEmailInput,
 ): Promise<boolean> {
+  const copy = emailCopy(pickEmailLocale(input.acceptLanguage));
   const verifyUrl = `${input.publicUrl.replace(/\/+$/, "")}/verify-email?token=${encodeURIComponent(input.token)}`;
   return deliverEmail(env, {
     to: input.to,
-    subject: "Verify your FlareMo email",
+    subject: copy.verifyEmail.subject,
     html: [
-      '<div style="font-family:system-ui,-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:24px">',
-      '<h2 style="margin:0 0 12px">Verify your email</h2>',
-      '<p style="color:#444;line-height:1.6">Welcome to FlareMo! Confirm this address to finish creating your account.</p>',
-      actionButtonHtml(verifyUrl, "Verify email"),
-      footerHtml(
-        verifyUrl,
-        24,
-        "If you did not sign up, you can ignore this email.",
+      emailHtml(
+        pickEmailLocale(input.acceptLanguage),
+        copy.verifyEmail.heading,
+        copy.verifyEmail.body,
+        actionButtonHtml(verifyUrl, copy.verifyEmail.button),
+        footerHtml(copy, verifyUrl, 24, copy.verifyEmail.ignore),
       ),
-      "</div>",
     ].join(""),
-    text: `Welcome to FlareMo! Confirm this address to finish creating your account.\n\n${verifyUrl}\n\nThis link expires in 24 hours.`,
+    text: `${copy.verifyEmail.body}\n\n${verifyUrl}\n\n${interpolate(copy.expiresHours, { hours: 24 })} ${copy.verifyEmail.ignore}`,
   });
 }
 
@@ -128,23 +156,22 @@ export async function sendPasswordResetEmail(
   env: FlareMoEnv,
   input: SendVerificationEmailInput,
 ): Promise<boolean> {
+  const locale = pickEmailLocale(input.acceptLanguage);
+  const copy = emailCopy(locale);
   const resetUrl = `${input.publicUrl.replace(/\/+$/, "")}/reset?token=${encodeURIComponent(input.token)}`;
   return deliverEmail(env, {
     to: input.to,
-    subject: "Reset your FlareMo password",
+    subject: copy.resetPassword.subject,
     html: [
-      '<div style="font-family:system-ui,-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:24px">',
-      '<h2 style="margin:0 0 12px">Reset your password</h2>',
-      '<p style="color:#444;line-height:1.6">We received a request to reset the FlareMo password for this address. Click below to choose a new one.</p>',
-      actionButtonHtml(resetUrl, "Reset password"),
-      footerHtml(
-        resetUrl,
-        1,
-        "If you did not request this, you can ignore this email and your password stays unchanged.",
+      emailHtml(
+        locale,
+        copy.resetPassword.heading,
+        copy.resetPassword.body,
+        actionButtonHtml(resetUrl, copy.resetPassword.button),
+        footerHtml(copy, resetUrl, 1, copy.resetPassword.ignore),
       ),
-      "</div>",
     ].join(""),
-    text: `We received a request to reset the FlareMo password for this address.\n\n${resetUrl}\n\nThis link expires in 1 hour. If you did not request this, ignore this email.`,
+    text: `${copy.resetPassword.body}\n\n${resetUrl}\n\n${interpolate(copy.expiresHours, { hours: 1 })} ${copy.resetPassword.ignore}`,
   });
 }
 
@@ -157,22 +184,21 @@ export async function sendEmailChangeVerificationEmail(
   env: FlareMoEnv,
   input: SendVerificationEmailInput,
 ): Promise<boolean> {
+  const locale = pickEmailLocale(input.acceptLanguage);
+  const copy = emailCopy(locale);
   const verifyUrl = `${input.publicUrl.replace(/\/+$/, "")}/verify-email-change?token=${encodeURIComponent(input.token)}`;
   return deliverEmail(env, {
     to: input.to,
-    subject: "Confirm your new FlareMo email",
+    subject: copy.changeEmail.subject,
     html: [
-      '<div style="font-family:system-ui,-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:24px">',
-      '<h2 style="margin:0 0 12px">Confirm your new email</h2>',
-      '<p style="color:#444;line-height:1.6">A request was made to use this address as your FlareMo login email. Confirm it to finish the change.</p>',
-      actionButtonHtml(verifyUrl, "Confirm new email"),
-      footerHtml(
-        verifyUrl,
-        24,
-        "Your current email keeps working until you confirm. If this was not you, ignore this email.",
+      emailHtml(
+        locale,
+        copy.changeEmail.heading,
+        copy.changeEmail.body,
+        actionButtonHtml(verifyUrl, copy.changeEmail.button),
+        footerHtml(copy, verifyUrl, 24, copy.changeEmail.ignore),
       ),
-      "</div>",
     ].join(""),
-    text: `A request was made to use this address as your FlareMo login email.\n\n${verifyUrl}\n\nThis link expires in 24 hours. Your current email keeps working until you confirm.`,
+    text: `${copy.changeEmail.body}\n\n${verifyUrl}\n\n${interpolate(copy.expiresHours, { hours: 24 })} ${copy.changeEmail.ignore}`,
   });
 }

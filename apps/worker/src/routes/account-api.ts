@@ -171,6 +171,7 @@ accountApi.post("/email", zValidator("json", changeEmailSchema), async (c) => {
         to: newEmail,
         token,
         publicUrl: getPublicUrl(c.env),
+        acceptLanguage: c.req.header("accept-language"),
       });
       if (!sent) {
         return c.json(

@@ -164,6 +164,7 @@ authApi.post("/register", zValidator("json", registerSchema), async (c) => {
         to: email,
         token,
         publicUrl: getPublicUrl(c.env),
+        acceptLanguage: c.req.header("accept-language"),
       });
       if (!sent) {
         return c.json(
@@ -243,6 +244,7 @@ authApi.post(
         to: user.email,
         token,
         publicUrl: getPublicUrl(c.env),
+        acceptLanguage: c.req.header("accept-language"),
       });
       if (!sent) {
         return c.json(
@@ -292,6 +294,7 @@ authApi.post(
         to: user.email,
         token,
         publicUrl: getPublicUrl(c.env),
+        acceptLanguage: c.req.header("accept-language"),
       });
       if (!sent) {
         return c.json(
