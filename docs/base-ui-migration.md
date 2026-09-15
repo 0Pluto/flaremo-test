@@ -1,6 +1,6 @@
 # Base UI 迁移实施文档（官网 + 应用本体）· 执行版
 
-> 状态：**待执行**（已评审定调，本文档是唯一执行依据，执行者不再需要自行选型）。
+> 状态：**已执行完毕（2026-09-15）**。批次 1（官网）commit `d7a8f0b`，批次 2（应用）commit `7b722cb`；官网已部署（flaremo-site version fe411966），kosx 已滚 `7b722cb`（version fc1602ed）。实际执行与文档的偏差记录在文末「附录 10：执行结果」。
 > 调研基线：2026-09-15。所有 API 均以 `@base-ui/react@1.8.0` 源码（node_modules 类型声明 + 运行时代码）逐一核验，非仅凭官方文档；各表中的 props 均为实测存在项。
 >
 > 决策：趁快速开发期将两端底层 UI 组件从 `radix-ui` 迁至 `@base-ui/react`，并一次性接完 RTL/i18n 三根线；完成后 Radix 依赖清零、**禁止回增**（以 grep 为准）。
@@ -224,3 +224,28 @@ Menu.Root(open / onOpenChange ✅ / defaultOpen ✅ / modal ✅)
 - 内置字符串：全库无硬编码英文 `aria-label`；DirectionContext 消费方共 18 处文件（menu/combo/select/slider/navigation/scroll-area/otp/composite 等）。
 - shadcn CLI：`migrate --list` 实测（4.12.0 与 latest 相同）。
 - 参考实现：ui.shadcn.com `/docs/components/base/*`（base-nova 样式的 base 版 shadcn 组件源码）。
+
+## 10. 执行结果（2026-09-15，实际执行人补记）
+
+### 10.1 与文档的偏差与修正
+
+1. **`Menu.GroupLabel` 必须包在 `Menu.Group` 内**（§3.2 未写）：Radix 的 `DropdownMenuLabel` 可裸用，Base UI 裸用会抛 production error #31（官网与 dev 均当场复现）。两处 wrapper（site + web `DropdownMenuLabel`）已改为内部自带 `<Menu.Group>` 包裹。
+2. **Menu 组合顺序**：§3.2 简图把 Positioner 画在 Portal 外，实际以包内 bundled 文档与源码为准，正确结构是 `Portal > Positioner > Popup`（两层均已照此实现）。
+3. **无碍但值得记录的实测发现**：
+   - Tailwind v4 的裸 data 变体同时匹配两种属性：`data-open:` → `[data-state=open]` 与 `[data-open]:not([data-open=false])`；`data-active:` 同理；`data-horizontal:`/`data-vertical:` → `[data-orientation=…]`。所以 dialog/sheet/tabs 的既有动画类零改动即兼容（§2.4 的预埋判断全部实测成立）。
+   - Base UI 关闭中的弹层面板在退场动画期间仍留在 DOM（约 100ms），Radix 是即时卸载。e2e `memo-flow` 恢复修订用例因此从「整页 `getByText`」改为「scope 到活动 `tabpanel`」（语义选择器，符合 §5.10 纪律）。
+   - Base UI 菜单的 Escape/外部点击关闭在**真实输入**下完全正常；此前测试脚手架里合成 `click()`/CUA 坐标失灵造成的假象已逐一排除（IAB 环境问题，非库问题）。
+   - 消费端 `DropdownMenuItem.onSelect` → `onClick` 共 4 处（notification-bell / memo-card / memory-page / projects-page）；`Slider` 的 `onValueChange` 参数类型变为 `number | readonly number[]`，reading-audio-bar 一处解构改 `Array.isArray` 判别。
+   - `Progress.Root` 的 `value` 在 Base UI 为必填（官网 wrapper 原来解构后未下传，已修）。
+4. **未迁（与 §8 一致）**：FAQ 原生 `<details>`、装饰动效件、React Aria、sonner、`components.json` style 字段均未动。
+
+### 10.2 验收清单执行结果
+
+- [x] `grep -r "radix-ui" apps/*/src` = 0；两个 package.json 无 `radix-ui`
+- [x] `grep -rn "data-\[state=" apps/*/src` = 0
+- [x] `pnpm format`（4 文件被 format 规整）→ `pnpm lint`（0 error，21 条既有 warning 全在 worker/domain，与迁移无关）→ `pnpm check` → `pnpm typecheck` 全绿
+- [x] `pnpm test`：web 93 / worker 172 / domain 119 / contracts 13 / memos 6 / telegram-bot 4 全绿
+- [x] e2e 46/46 全绿（memo-flow 1 例断言按 §5.10 语义化后通过）
+- [x] 官网 zh/en/ar 走查：8 语言构建成功；ar 页 RTL 镜像、箭头翻转（`rtl:-rotate-180`）、阿文连笔（字距重置生效）、Noto Sans Arabic 加载、hero nowrap 按 locale 条件化；语言菜单/主题菜单真实键盘流程（Enter 开 → ↑↓ 高亮 → Esc 关 → 选中跳转）经真实 Chromium Playwright 验证 3/3 通过
+- [x] 应用键盘/交互走查由 e2e 46 spec（弹窗/菜单/共享/删除确认全链路）覆盖；VoiceOver 人工抽查未做，留待真机随访
+- [x] kosx 已滚 `7b722cb`（version fc1602ed，冒烟 /openapi.json v0.20.0 一致）；自部署生产待 kosx 观察 24h 后手动滚
