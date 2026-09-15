@@ -201,6 +201,10 @@ function ensureR2(name) {
 }
 
 function ensureQueue(name) {
+  if (queueExists(name)) {
+    console.log(`Queue ${name} already exists.`);
+    return;
+  }
   const created = wrangler(["queues", "create", name], { allowFailure: true });
   if (created.status === 0) {
     console.log(`Created Queue ${name}.`);
@@ -211,6 +215,13 @@ function ensureQueue(name) {
     return;
   }
   throw new Error(`Could not create Queue ${name}:\n${created.output}`);
+}
+
+function queueExists(name) {
+  const listed = wrangler(["queues", "list"], { allowFailure: true });
+  if (listed.status !== 0) return false;
+  const escaped = name.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?:^|\\s)${escaped}(?:\\s|$)`, "m").test(listed.output);
 }
 
 function ensureVectorize(name, dimensions, metric) {
@@ -321,8 +332,8 @@ function parseJsonOutput(output) {
     : (parsed?.indexes ?? parsed?.result ?? parsed?.databases ?? []);
 }
 
-function isAlreadyExists(output) {
-  return /already exists|already been created|duplicate|a database with that name|code:\s*(10004|10014|11002|409)\b/i.test(
+export function isAlreadyExists(output) {
+  return /already exists|already been created|already taken|duplicate|a database with that name|code:\s*(10004|10014|11002|11009|409)\b/i.test(
     output,
   );
 }

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  isAlreadyExists,
   isPlaceholderDatabaseId,
   isPlaceholderPublicUrl,
   resourcesFromConfig,
@@ -76,4 +77,10 @@ test("builds the workers.dev origin from worker name and account subdomain", () 
     workersDevOrigin("flaremo", "myaccount"),
     "https://flaremo.myaccount.workers.dev",
   );
+});
+
+test("treats Cloudflare queue name conflicts as already existing", () => {
+  const output =
+    "Queue name 'flaremo-member-removal' is already taken. Please use a different name and try again. [code: 11009]";
+  assert.equal(isAlreadyExists(output), true);
 });
