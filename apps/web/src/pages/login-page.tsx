@@ -129,7 +129,6 @@ export function LoginPage() {
             autoComplete="current-password"
             disabled={isSubmitting}
             id="login-password"
-            minLength={12}
             name="password"
             required
             type="password"
