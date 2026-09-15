@@ -1,13 +1,12 @@
 import { spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import {
   assertDerivedIndexesComplete,
-  buildOrderedDataRestore,
-  buildPersistenceCountsQuery,
+  DERIVED_INDEX_TABLES,
+  POST_RESTORE_DERIVED_SQL,
   RESTORE_TABLES,
-  TABLE_EXPORT_ARGS,
 } from "./persistence-manifest.mjs";
 
 const targetDatabase = requiredEnv("FLAREMO_RESTORE_DATABASE");
@@ -17,7 +16,6 @@ const sourceDatabase = process.env.FLAREMO_SOURCE_DATABASE || "DB";
 const sourceBucket = process.env.FLAREMO_SOURCE_BUCKET || "flaremo-attachments";
 const stamp = new Date().toISOString().replaceAll(/[:.]/g, "-");
 const outputDir = resolve("backups", `remote-restore-${stamp}`);
-const dataDump = join(outputDir, "d1-data.sql");
 const orderedDump = join(outputDir, "d1-data-ordered.sql");
 const generatedConfig = join(outputDir, "wrangler.restore-drill.jsonc");
 const reportPath = join(outputDir, "report.md");
@@ -75,55 +73,157 @@ step("verify source and target resources", () => {
   }
 });
 
-step("export production D1 business data", () =>
-  runWrangler([
-    "d1",
-    "export",
-    sourceDatabase,
-    "--remote",
-    ...TABLE_EXPORT_ARGS,
-    "--no-schema",
-    "--output",
-    dataDump,
-    "--skip-confirmation",
-  ]),
+step("apply migrations to target D1", () =>
+  withRetry(() =>
+    runWrangler([
+      "d1",
+      "migrations",
+      "apply",
+      "DB",
+      "--remote",
+      "--config",
+      generatedConfig,
+    ]),
+  ),
 );
 
-step("order D1 inserts by foreign-key dependency", () => {
-  const dump = readFileSync(dataDump, "utf8");
-  writeFileSync(orderedDump, buildOrderedDataRestore(dump));
+// The source deployment may be several migrations behind the current schema
+// (a stopped self-host keeps its old columns). `d1 export` writes positional
+// INSERTs that cannot load into the current schema, so instead each table is
+// exported as an explicit-column INSERT containing the columns that exist on
+// BOTH sides. Old columns are dropped, new columns fall back to their target
+// defaults — exactly what a real old-backup restore has to do.
+step("export production D1 data schema-adaptively", () => {
+  const lines = ["PRAGMA defer_foreign_keys=TRUE;"];
+  for (const table of RESTORE_TABLES) {
+    const sourceColumns = tableColumns(sourceDatabase, table, "wrangler.jsonc");
+    const targetColumns = tableColumns("DB", table, generatedConfig);
+    if (targetColumns.length === 0) {
+      throw new Error(`Table ${table} is missing from the target schema`);
+    }
+    if (sourceColumns.length === 0) {
+      // A table the source schema does not have yet (e.g. auth_organizations
+      // on a pre-team-model deployment) restores as empty; legacy role data
+      // is re-derived below.
+      console.log(`exported ${table}: table absent on source, skipped`);
+      continue;
+    }
+    const common = targetColumns.filter((column) =>
+      sourceColumns.includes(column),
+    );
+    if (common.length === 0) {
+      throw new Error(`Table ${table} has no common columns between schemas`);
+    }
+    const rows = query(
+      sourceDatabase,
+      `SELECT ${common.map(quoteIdent).join(", ")} FROM ${quoteIdent(table)};`,
+      "wrangler.jsonc",
+    );
+    for (const row of rows) {
+      const values = common.map((column) => sqlLiteral(row[column])).join(", ");
+      lines.push(
+        `INSERT INTO ${quoteIdent(table)} (${common
+          .map(quoteIdent)
+          .join(", ")}) VALUES (${values});`,
+      );
+    }
+    console.log(`exported ${table}: ${rows.length} rows`);
+  }
+  appendLegacyTeamBackfill(lines);
+  lines.push(...POST_RESTORE_DERIVED_SQL);
+  writeFileSync(orderedDump, `${lines.join("\n")}\n`);
 });
 
-step("apply migrations to target D1", () =>
-  runWrangler([
-    "d1",
-    "migrations",
-    "apply",
-    "DB",
-    "--remote",
-    "--config",
-    generatedConfig,
-  ]),
-);
+// A pre-team-model backup has no auth_organizations/auth_members rows: the
+// current schema dropped users.role, so the exporter re-derives the default
+// team and memberships from the legacy column, mirroring migration 0020's
+// backfill. Without this the restored deployment has a complete bootstrap
+// but zero members and cannot sign anyone in.
+function appendLegacyTeamBackfill(lines) {
+  const base =
+    "SELECT l.auth_user_id AS auth_user_id, u.role AS role FROM auth_user_links l JOIN users u ON u.id = l.flaremo_user_id";
+  let memberships;
+  try {
+    memberships = query(
+      sourceDatabase,
+      `${base} WHERE u.status = 'active';`,
+      "wrangler.jsonc",
+    );
+  } catch {
+    // Older schemas predate users.status; treat every linked member as active.
+    memberships = query(sourceDatabase, `${base};`, "wrangler.jsonc");
+  }
+  lines.push(
+    "INSERT INTO auth_organizations (id, name, slug, logo, metadata, created_at)",
+    "SELECT 'orgs/default-team', 'FlareMo Team', 'flaremo', NULL, NULL, CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER)",
+    "WHERE NOT EXISTS (SELECT 1 FROM auth_organizations WHERE slug = 'flaremo');",
+  );
+  for (const row of memberships) {
+    const role = ["owner", "admin"].includes(String(row.role))
+      ? String(row.role)
+      : "member";
+    const values = [
+      sqlLiteral(`members/${randomUUID()}`),
+      "'orgs/default-team'",
+      sqlLiteral(row.auth_user_id),
+      sqlLiteral(role),
+      "CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER)",
+    ].join(", ");
+    lines.push(
+      "INSERT INTO auth_members (id, organization_id, user_id, role, created_at)",
+      `VALUES (${values}) ON CONFLICT (organization_id, user_id) DO NOTHING;`,
+    );
+  }
+}
 
 step("restore production D1 data to target", () =>
-  runWrangler([
-    "d1",
-    "execute",
-    "DB",
-    "--remote",
-    "--file",
-    orderedDump,
-    "--yes",
-    "--config",
-    generatedConfig,
-  ]),
+  withRetry(() =>
+    runWrangler([
+      "d1",
+      "execute",
+      "DB",
+      "--remote",
+      "--file",
+      orderedDump,
+      "--yes",
+      "--config",
+      generatedConfig,
+    ]),
+  ),
 );
 
-const sourceCounts = queryCounts(sourceDatabase);
+// Remote file imports intermittently fail with a transient Cloudflare
+// "Authentication error (10000)" from the API edge; one spaced retry clears
+// it. The failed import leaves the target unchanged (file execute is
+// transactional), so a retry is always safe.
+function withRetry(fn) {
+  let lastError;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      return fn();
+    } catch (error) {
+      lastError = error;
+      console.log("transient failure, retrying...");
+      spawnSync("sleep", ["10"]);
+    }
+  }
+  throw lastError;
+}
+
+const sourceCounts = queryCounts(sourceDatabase, "wrangler.jsonc", {
+  tolerateMissing: true,
+});
 const targetCounts = queryCounts("DB", generatedConfig);
 step("compare source and target D1 counts", () => {
-  for (const table of RESTORE_TABLES) {
+  for (const table of [...RESTORE_TABLES, ...DERIVED_INDEX_TABLES]) {
+    if (sourceCounts[table] === "absent") {
+      // A table the legacy source schema does not have: the restore leaves
+      // it empty or re-derives legacy rows (default team + memberships).
+      console.log(
+        `count ${table}: absent on source, target=${targetCounts[table]}`,
+      );
+      continue;
+    }
     if (sourceCounts[table] !== targetCounts[table]) {
       throw new Error(
         `${table} mismatch: source=${sourceCounts[table]} target=${targetCounts[table]}`,
@@ -268,29 +368,78 @@ function findD1DatabaseId(config) {
   return match[1];
 }
 
-function queryCounts(database, config) {
-  const rows = query(database, buildPersistenceCountsQuery(), config);
-  return rows[0] ?? {};
+function queryCounts(database, config, options = {}) {
+  const tolerateMissing = options.tolerateMissing ?? false;
+  const counts = {};
+  for (const table of [...RESTORE_TABLES, ...DERIVED_INDEX_TABLES]) {
+    try {
+      const rows = query(
+        database,
+        `SELECT COUNT(*) AS count FROM ${quoteIdent(table)};`,
+        config,
+      );
+      counts[table] = rows[0]?.count ?? 0;
+    } catch (error) {
+      if (!tolerateMissing) throw error;
+      counts[table] = "absent";
+    }
+  }
+  return counts;
+}
+
+function tableColumns(database, table, config) {
+  return query(database, `PRAGMA table_info(${quoteIdent(table)});`, config)
+    .map((row) => String(row.name))
+    .sort((a, b) => a.localeCompare(b));
+}
+
+function quoteIdent(identifier) {
+  return `"${identifier.replaceAll('"', '""')}"`;
+}
+
+function sqlLiteral(value) {
+  if (value === null || value === undefined) return "NULL";
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? String(value) : "NULL";
+  }
+  if (typeof value === "boolean") return value ? "1" : "0";
+  if (typeof value === "object") {
+    return `'${JSON.stringify(value).replaceAll("'", "''")}'`;
+  }
+  return `'${String(value).replaceAll("'", "''")}'`;
 }
 
 function query(database, command, config) {
   const configArgs = config ? ["--config", config] : [];
-  const result = runWrangler(
-    [
-      "d1",
-      "execute",
-      database,
-      "--remote",
-      "--command",
-      command,
-      "--json",
-      ...configArgs,
-    ],
-    { capture: true },
-  );
-  const payload = JSON.parse(result.stdout);
-  if (!payload[0]?.success) throw new Error(`D1 query failed for ${database}`);
-  return payload[0].results ?? [];
+  const args = [
+    "d1",
+    "execute",
+    database,
+    "--remote",
+    "--command",
+    command,
+    "--json",
+    ...configArgs,
+  ];
+  // Sequential remote D1 queries occasionally hit a transient Cloudflare
+  // "Authentication error (10000)" from the API edge; one retry clears it.
+  let lastError;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const result = runWrangler(args, { capture: true });
+      const payload = JSON.parse(result.stdout);
+      if (!payload[0]?.success) {
+        throw new Error(`D1 query failed for ${database}`);
+      }
+      return payload[0].results ?? [];
+    } catch (error) {
+      lastError = error;
+      if (attempt < 2) {
+        spawnSync("sleep", ["2"]);
+      }
+    }
+  }
+  throw lastError;
 }
 
 function step(name, fn) {
@@ -308,7 +457,13 @@ function step(name, fn) {
 }
 
 function runWrangler(args, options) {
-  return run("pnpm", ["exec", "wrangler", ...args], options);
+  // The deploy-button wrangler.json is tracked at the repo root and wins
+  // wrangler's implicit config resolution over wrangler.jsonc (placeholder
+  // UUIDs inside), so every command must pin the real config explicitly.
+  const explicitConfig = args.includes("--config")
+    ? []
+    : ["--config", "wrangler.jsonc"];
+  return run("pnpm", ["exec", "wrangler", ...args, ...explicitConfig], options);
 }
 
 function run(command, args, options = {}) {

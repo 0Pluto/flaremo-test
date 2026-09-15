@@ -87,13 +87,17 @@ describe("voice capture controller", () => {
     const socket = s.sockets[0];
     socket.onopen?.();
     s.frame();
+    // Pre-ready audio is buffered, not dropped, so nothing is sent yet.
     expect(socket.send).toHaveBeenCalledTimes(1);
+    expect(
+      socket.send.mock.calls.every(([data]) => typeof data === "string"),
+    ).toBe(true);
     expect(s.controller.getSnapshot().state).toBe("connecting");
     expect(s.controller.getSnapshot().startedAt).toBeNull();
     socket.message({ type: "ready" });
     expect(s.controller.getSnapshot().startedAt).not.toBeNull();
     s.frame();
-    expect(socket.send).toHaveBeenCalledTimes(2);
+    expect(socket.send).toHaveBeenCalledTimes(3); // start + buffered frame + live frame
     socket.message(sentence("part", false));
     expect(s.controller.getSnapshot().partial).toBe("part");
     expect(s.controller.getSnapshot().sentenceVersion).toBe(0);
@@ -130,6 +134,49 @@ describe("voice capture controller", () => {
     await starting;
     expect(s.mic.dispose).toHaveBeenCalledOnce();
     expect(s.sockets).toHaveLength(0);
+  });
+  it("buffers audio across a reconnect and flushes it to the new session", async () => {
+    const s = setup();
+    await s.controller.start();
+    const first = s.sockets[0];
+    first.message({ type: "ready" });
+    first.onclose?.();
+    expect(s.controller.getSnapshot()).toMatchObject({
+      state: "reconnecting",
+      gap: true,
+    });
+    s.frame();
+    s.frame();
+    expect(first.send).toHaveBeenCalledTimes(0); // frames buffered, not dropped
+    await vi.advanceTimersByTimeAsync(1000);
+    const second = s.sockets[1];
+    second.onopen?.();
+    second.message({ type: "ready" });
+    // Gap frames are replayed into the fresh session before live audio.
+    expect(second.send).toHaveBeenCalledTimes(3); // start + 2 buffered frames
+    expect(
+      second.send.mock.calls
+        .slice(1)
+        .every(([data]) => data instanceof ArrayBuffer),
+    ).toBe(true);
+    s.frame();
+    expect(second.send).toHaveBeenCalledTimes(4);
+  });
+  it("drops the oldest buffered frames once the pending cap is exceeded", async () => {
+    const s = setup();
+    await s.controller.start();
+    s.sockets[0].message({ type: "ready" });
+    s.sockets[0].onclose?.();
+    for (let index = 0; index < 1000; index += 1) s.frame();
+    await vi.advanceTimersByTimeAsync(1000);
+    const second = s.sockets[1];
+    second.onopen?.();
+    second.message({ type: "ready" });
+    // 1000 × 3200 B = 3.2 MB exceeds the 2 MB cap: oldest frames are trimmed
+    // until the pending buffer fits, so only the newest ~2 MB is replayed.
+    const replayed = second.send.mock.calls.length;
+    expect(replayed).toBeGreaterThan(0);
+    expect(replayed * 3200).toBeLessThanOrEqual(2_000_000 + 3200);
   });
   it("stops while reconnecting and never opens a second microphone", async () => {
     const s = setup();

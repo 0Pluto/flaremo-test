@@ -152,6 +152,8 @@ pnpm exec wrangler r2 bucket delete "$FLAREMO_RESTORE_BUCKET"
 
 历史真实演练（2026-07-23）只证明当时的早期表集合：生产 D1 的 1 个用户、2 条 memo 和对应 FTS 行被恢复到临时 D1，生产当时没有有效 attachment。它**不能**替代本清单引入后的全表恢复证明；在下一次生产 schema 或恢复流程变更前后，都应重新完成一次远端演练并更新本记录。
 
+2026-09-15 全表恢复演练已完成并通过：持久化清单全部 36 张表 + 两个 FTS 索引逐表计数源/目标一致（5 条 memo、FTS 5 行），0 条有效附件对应 R2 复制计数 0，最后以临时 D1/R2 生成的 Wrangler 配置通过 deploy dry-run；临时资源已当场删除。本次演练暴露并修复了两个真实问题：一是 09-14 引入根目录 `wrangler.json` 后隐式配置解析会命中占位 UUID，`remote-restore-drill.mjs` 现在显式 pin `wrangler.jsonc`；二是自部署生产 schema 停在 8/30（仍有 `users.role`、无 `auth_organizations` 等新表），旧备份无法按列原样装入当前 schema——导出器已改为**按两侧共有列做显式列名 INSERT**（`remote-restore-drill.mjs` 的 schema-adaptive 导出），并在恢复末尾从遗留 `users.role` 重新推导默认团队与 owner 成员（对应 migration 0020 的 backfill）。旧备份 + 新 schema 的恢复路径从此是被演练覆盖的主路径，而不是假设。
+
 ## 线上排障
 
 查看 Worker 日志：

@@ -64,7 +64,8 @@
 - [x] 文稿阅读 cue 缓存（每 tick 的 DOM 扫描消除）；`<audio>` 加载失败在阅读条可见。
 - [x] AttachmentGallery 死链占位；详情页复制加 catch。
 - [x] SW statechange 监听泄漏修复。
-- [x] 路由级 lazy ErrorBoundary 维持 root-route errorComponent 兜底 + 文案保留（root errorComponent 已可读，未加重试重拉 index.html——见残留记录）。
+- [x] 路由级 lazy chunk 失败重试：root-route errorComponent 识别「Failed to fetch dynamically imported module」类错误，重试时清空 SW 全部缓存再 reload，让浏览器拿到新部署的 index.html 与 chunk 图；其他错误维持 `router.invalidate()`。
+- [x] capture 重连帧缓冲：连接建立/重连期间音频帧客户端缓冲（上限 2 MB ≈ 60 s，超限丢最旧），`ready` 后按序补发进新会话，转写不再因网络抖动出现静默空洞。
 - [x] admin 缓存键统一 `["current-flaremo-user"]`；行操作错误改 toast（不再写进创建弹窗的槽）。
 - [x] invalidate 遗漏：promote 刷时间线/统计/标签树；memo→memory 刷记忆页；改名刷全部 viewer 缓存。
 - [x] t() 未知键回退 zh 文案 → 键尾可读文本，不再抛异常。
@@ -78,7 +79,7 @@
 - [x] data-tasks 域层单测（所有权、租约过期、TTL 清理）。
 - [x] push 模块单测（订阅幂等、RFC 8291 信封解密往返）。
 - [x] 复用层覆盖说明：10 个 routes 的行为由 api.test.ts 的 HTTP 级集成测试兜底（51 用例），单独立覆盖的边际价值低于维护成本——记录为接受项。
-- [ ] cron/queue 生命周期自动化测试：scheduled handler 与 Queue 消费者仍是手动验证（`--test-scheduled`），可运行性已由 e2e + 部署冒烟覆盖；列入后续 R8 扩大 e2e 时一并处理。
+- [x] cron/queue 生命周期自动化测试：`apps/worker/src/scheduled.test.ts`（Miniflare D1 + R2 stub）覆盖 runScheduledMaintenance 全链路——过期回收站带附件硬删、孤儿/新鲜附件 GC 分界、每日回顾与逾期日程通知幂等（同日重跑不重复）、过期 data task 清理 + R2 导出工件回收。
 - [ ] packages/db 与 e2e 缺口（Markdown 渲染/revision 恢复/分享撤销 e2e）：与 ROADMAP R8 合并推进。
 
 ## P3 · 兼容层与运维债
@@ -87,14 +88,11 @@
 - [x] **deploy.md 重复标题**（两个"## 手动部署"）已去重；Web Push 配置说明已补充。
 - [x] **vector-namespace-design.md 状态行**已改为"已实施并部署"。
 - [x] **memos-connect-api.ts 体量**（3183 行）：评估结论为暂不拆分——纯重构无行为收益，会与 Memos 兼容层的持续对齐工作产生冲突面；记录为显式接受项。
-- [ ] **恢复演练证明过期**（maintenance.md L153）：需要跑一次 `pnpm backup:drill:remote` 全表恢复证明并更新记录，属运维操作，待下一次滚动部署窗口执行（本地代码侧无欠账）。
+- [x] **恢复演练证明过期**（maintenance.md L153）：2026-09-15 已跑 `pnpm backup:drill:remote` 全表恢复证明——36 张表 + 双 FTS 逐表计数一致，deploy dry-run 通过，临时资源已删，maintenance.md 已记录；顺带修复了 wrangler.json 隐式配置劫持与旧 schema 备份的 schema-adaptive 恢复导出。
 
 ## 残留记账（本轮明确接受的项）
 
-1. 路由级 lazy chunk 的错误重试仍用 `router.invalidate()`（不重拉 index.html）：根因是 SW 缓存契约，改动需动 PWA 更新流程，风险大于收益；root errorComponent 已有完整重试按钮与文案。
-2. capture 重连期间音频帧丢弃（转写静默空洞）需要服务端缓冲协议支持，属功能演进项而非缺陷。
-3. CEL 求值错误逐行排除（而非整体报错）是有意取舍：彻底修复需修复畸形 payload 的产生源头。
-4. cron/queue 自动化测试与全表恢复演练证明：见上文 P2/P3 未勾项。
+1. CEL 求值错误逐行排除（而非整体报错）是有意取舍：彻底修复需修复畸形 payload 的产生源头。
 
 ## 已确认不欠的账（两轮审计核实，勿重复怀疑）
 

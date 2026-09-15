@@ -6,6 +6,11 @@ import {
 import type { Microphone } from "./microphone";
 import type { CaptureSentence, CaptureState } from "./types";
 
+// While the session has no live socket (first connect or reconnect), frames
+// are buffered so speech over the gap still reaches the new session. 16 kHz
+// mono s16le is ~32 KB/s, so this cap holds about a minute of audio; older
+// frames are dropped once it is exceeded.
+const CAPTURE_PENDING_BYTES = 2_000_000;
 export type CaptureError =
   | "permissionDenied"
   | "noMicrophone"
@@ -69,6 +74,8 @@ export class CaptureController {
   private heartbeat: ReturnType<typeof setInterval> | undefined;
   private lastMessage = 0;
   private lastAudio = 0;
+  private pendingFrames: ArrayBuffer[] = [];
+  private pendingBytes = 0;
   constructor(deps: CaptureDependencies) {
     this.deps = deps;
   }
@@ -90,6 +97,8 @@ export class CaptureController {
     this.ids.clear();
     this.textLength = 0;
     this.retry = 0;
+    this.pendingFrames = [];
+    this.pendingBytes = 0;
     const abort = new AbortController();
     this.abort = abort;
     this.update({
@@ -187,6 +196,7 @@ export class CaptureController {
             clearTimeout(this.timer);
             this.ready = true;
             this.lastAudio = Date.now();
+            this.flush(socket);
             // Preserve the session's original start across reconnects so the
             // recorded start time and the total-duration cap stay truthful.
             this.update({
@@ -242,8 +252,14 @@ export class CaptureController {
       !this.ready ||
       (this.snapshot.state !== "recording" &&
         this.snapshot.state !== "stopping")
-    )
+    ) {
+      if (
+        this.snapshot.state === "connecting" ||
+        this.snapshot.state === "reconnecting"
+      )
+        this.buffer(frame);
       return;
+    }
     const socket = this.socket;
     if (socket?.readyState !== 1) return;
     if (socket.bufferedAmount + frame.byteLength > 64_000)
@@ -252,6 +268,34 @@ export class CaptureController {
       socket.send(frame);
     } catch {
       this.lost(socket);
+    }
+  }
+  private buffer(frame: ArrayBuffer) {
+    this.pendingFrames.push(frame);
+    this.pendingBytes += frame.byteLength;
+    while (
+      this.pendingBytes > CAPTURE_PENDING_BYTES &&
+      this.pendingFrames.length > 1
+    ) {
+      const oldest = this.pendingFrames[0];
+      if (!oldest) break;
+      this.pendingBytes -= oldest.byteLength;
+      this.pendingFrames.shift();
+    }
+  }
+  private flush(socket: WebSocket) {
+    const frames = this.pendingFrames;
+    this.pendingFrames = [];
+    this.pendingBytes = 0;
+    for (const frame of frames) {
+      if (socket.readyState !== 1) return this.lost(socket);
+      if (socket.bufferedAmount + frame.byteLength > 64_000)
+        return this.lost(socket);
+      try {
+        socket.send(frame);
+      } catch {
+        return this.lost(socket);
+      }
     }
   }
   private sentence(sentence: CaptureSentence) {
@@ -347,6 +391,8 @@ export class CaptureController {
   }
   private end(error: CaptureError | null = this.snapshot.error) {
     this.dispose();
+    this.pendingFrames = [];
+    this.pendingBytes = 0;
     this.update({
       state:
         this.snapshot.startedAt !== null || this.snapshot.sentences.length
