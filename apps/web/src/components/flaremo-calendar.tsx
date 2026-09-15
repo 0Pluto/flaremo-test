@@ -90,7 +90,7 @@ export const FlareMoCalendar = memo(function FlareMoCalendar({
           variant="ghost"
           onClick={() => onMonthChange(-1)}
         >
-          <ChevronLeftIcon />
+          <ChevronLeftIcon className="rtl:-rotate-180" />
         </Button>
         <Button
           aria-label={t("calendar.nextMonth")}
@@ -99,7 +99,7 @@ export const FlareMoCalendar = memo(function FlareMoCalendar({
           variant="ghost"
           onClick={() => onMonthChange(1)}
         >
-          <ChevronRightIcon />
+          <ChevronRightIcon className="rtl:-rotate-180" />
         </Button>
       </header>
       <div className="mt-2 grid grid-cols-7 text-xs text-muted-foreground">

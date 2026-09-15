@@ -18,11 +18,13 @@
     /* Aligned with the KOSX type stack (impact.kosx.ai): Helvetica covers
        Latin on macOS; CJK falls through to the system Han fonts. */
     --font-heading:
-        "Helvetica Neue", "PingFang SC", "Noto Sans CJK SC", "Noto Sans SC",
-        "Microsoft YaHei", Arial, system-ui, sans-serif;
+        "Helvetica Neue", "Noto Sans Arabic Variable", "PingFang SC",
+        "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei", Arial,
+        system-ui, sans-serif;
     --font-sans:
-        "Helvetica Neue", "PingFang SC", "Noto Sans CJK SC", "Noto Sans SC",
-        "Microsoft YaHei", Arial, system-ui, sans-serif;
+        "Helvetica Neue", "Noto Sans Arabic Variable", "PingFang SC",
+        "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei", Arial,
+        system-ui, sans-serif;
     --font-mono:
         ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
 
@@ -197,6 +199,10 @@
     }
   html {
     @apply font-sans;
+    }
+  /* RTL 排版重置：负字距会切断阿拉伯字母的连笔曲线 */
+  [dir="rtl"] :is(h1, h2, h3, h4, [class*="tracking-"]) {
+    letter-spacing: 0;
     }
   ::selection {
     background: color-mix(in oklab, var(--flame-400) 28%, transparent);

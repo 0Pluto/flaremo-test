@@ -1,9 +1,8 @@
-import { LanguagesIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useBranding } from "@/branding";
 import { FlareMoLogo } from "@/components/flaremo-logo";
 import { InfoTip } from "@/components/info-tip";
-import { Button } from "@/components/ui/button";
+import { LocaleSwitcher } from "@/components/locale-switcher";
 import {
   Card,
   CardContent,
@@ -24,7 +23,7 @@ export function AuthPageFrame({
   eyebrow?: string;
   title: string;
 }) {
-  const { t, toggleLocale } = useI18n();
+  const { t } = useI18n();
   const { product, markLightUrl, markDarkUrl } = useBranding();
 
   return (
@@ -61,16 +60,7 @@ export function AuthPageFrame({
           <span className="lg:hidden">
             <FlareMoLogo labelClassName="text-lg" markClassName="size-7" />
           </span>
-          <Button
-            aria-label={t("language.toggle")}
-            size="sm"
-            title={t("language.toggle")}
-            variant="ghost"
-            onClick={toggleLocale}
-          >
-            <LanguagesIcon data-icon="inline-start" />
-            {t("language.next")}
-          </Button>
+          <LocaleSwitcher />
         </header>
         <Card className="w-full max-w-md shadow-lg">
           <CardHeader className="gap-2">

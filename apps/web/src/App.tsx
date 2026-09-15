@@ -3,7 +3,6 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import {
   CalendarIcon,
   DownloadIcon,
-  LanguagesIcon,
   MenuIcon,
   SettingsIcon,
   UploadIcon,
@@ -23,6 +22,7 @@ import {
 import type { ExplorerView as ViewMode } from "@/components/flaremo-explorer";
 import { FlareMoExplorer } from "@/components/flaremo-explorer";
 import { InfoTip } from "@/components/info-tip";
+import { LocaleSwitcher } from "@/components/locale-switcher";
 import { MemoList } from "@/components/memo-list";
 import { NotificationBell } from "@/components/notification-bell";
 import { PwaUpdatePrompt } from "@/components/pwa-update-prompt";
@@ -66,7 +66,7 @@ const EMPTY_STATS: MemoStatsResponse = {
 registerWorkspaceComponent(FlareMoApp);
 
 export function FlareMoApp() {
-  const { locale, t, toggleLocale } = useI18n();
+  const { locale, t } = useI18n();
   const navigate = useNavigate({ from: "/" });
   const search = indexRoute.useSearch();
   const view = search.view ?? "all";
@@ -380,17 +380,7 @@ export function FlareMoApp() {
       }
       footer={
         <div className="flex items-center gap-1 text-muted-foreground">
-          <Button
-            aria-label={t("language.toggle")}
-            className="w-12 px-2"
-            size="sm"
-            title={t("language.toggle")}
-            variant="ghost"
-            onClick={toggleLocale}
-          >
-            <LanguagesIcon data-icon="inline-start" />
-            <span className="text-xs font-medium">{t("language.next")}</span>
-          </Button>
+          <LocaleSwitcher />
           <Button
             aria-label={t("common.export")}
             size="icon-sm"

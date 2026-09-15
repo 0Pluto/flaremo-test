@@ -1,3 +1,4 @@
+import { DirectionProvider } from "@base-ui/react/direction-provider";
 import {
   createRoute,
   createRouter,
@@ -6,6 +7,7 @@ import {
 import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { isRtlLocale, useI18n } from "@/i18n";
 import { AuthenticatedRoute } from "@/routes/authenticated-route";
 import { indexRoute } from "@/routes/index-route";
 import { rootRoute } from "@/routes/root-route";
@@ -415,11 +417,22 @@ declare module "@tanstack/react-router" {
   }
 }
 
+// DirectionProvider 开关镜像菜单/弹层的 RTL 行为；dir 属性与视觉排版
+// 由 I18nProvider 与 CSS 各自负责（Base UI 不代管 HTML）。
+function DirectionalRoutes() {
+  const { locale } = useI18n();
+  return (
+    <DirectionProvider direction={isRtlLocale(locale) ? "rtl" : "ltr"}>
+      <RouterProvider router={router} />
+      <Toaster />
+    </DirectionProvider>
+  );
+}
+
 export function AppRoutes() {
   return (
     <TooltipProvider>
-      <RouterProvider router={router} />
-      <Toaster />
+      <DirectionalRoutes />
     </TooltipProvider>
   );
 }

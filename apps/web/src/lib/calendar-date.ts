@@ -72,25 +72,26 @@ export function weekdayLabels(
   return WEEKDAY_ORDER[weekStart].map(formatter);
 }
 
-// Locale-aware titles: zh shows 「2026年9月」 / 「9月16日」, en shows
-// "September 2026" / "Sep 16". Built by hand instead of Date#split so the
-// two locales never leak each other's separators.
+// Locale-aware titles via Intl (app locales: zh-CN/en-US/ja/fr/es/ko/ru/ar).
+// zh keeps its hand-built 「2026年9月」 form; everything else uses the native
+// calendar title from ICU data.
 export function formatMonthTitle(monthKey: string, locale: string): string {
   const date = new Date(`${monthKey}-15T12:00:00`);
-  return locale.startsWith("en")
-    ? date.toLocaleDateString("en-US", { month: "long", year: "numeric" })
-    : `${date.getFullYear()}年${date.getMonth() + 1}月`;
+  if (locale.startsWith("zh")) {
+    return `${date.getFullYear()}年${date.getMonth() + 1}月`;
+  }
+  return date.toLocaleDateString(locale, { month: "long", year: "numeric" });
 }
 
 export function formatDayTitle(dayKey: string, locale: string): string {
   const date = new Date(`${dayKey}T12:00:00`);
-  if (locale.startsWith("en")) {
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
+  if (locale.startsWith("zh")) {
+    return `${date.getMonth() + 1}月${date.getDate()}日`;
   }
-  return `${date.getMonth() + 1}月${date.getDate()}日`;
+  return date.toLocaleDateString(locale, {
+    month: "short",
+    day: "numeric",
+  });
 }
 
 // Universe of the timeline search operator stack: a single local day maps to

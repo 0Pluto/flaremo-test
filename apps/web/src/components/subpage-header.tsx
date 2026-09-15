@@ -25,7 +25,7 @@ export function SubpageHeader() {
         size="sm"
         variant="ghost"
       >
-        <ArrowLeftIcon data-icon="inline-start" />
+        <ArrowLeftIcon className="rtl:-rotate-180" data-icon="inline-start" />
         {t("common.back")}
       </Button>
       <FlareMoLogo markClassName="size-5" />
