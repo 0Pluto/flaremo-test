@@ -62,16 +62,23 @@ export function createVectorIndex(
  * The memo vector partitions a caller's semantic search scans. Always the
  * author's personal namespace; the shared team namespace joins when the
  * deployment runs the team layout (default) — `solo` deployments skip it
- * entirely. The D1 `memoReadScope` re-check stays the authorization boundary
- * regardless of what is scanned.
+ * entirely. A space narrows the scan to that space's namespaces only. The D1
+ * `memoReadScope` re-check stays the authorization boundary regardless of
+ * what is scanned.
  */
 export function memoSearchNamespaces(
   env: FlareMoEnv,
   user: { id: string },
+  space?: "personal" | "team",
 ): string[] | undefined {
   const layout = (env.FLAREMO_VECTORIZE_TEAM_LAYOUT ?? "team").trim();
-  if (layout === "solo") return [memoUserNamespace(user.id)];
-  return [memoUserNamespace(user.id), memoTeamNamespace()];
+  const personal = memoUserNamespace(user.id);
+  // Solo deployments index everything in the user namespace, so a team
+  // space scan still has to scan it.
+  if (layout === "solo") return [personal];
+  if (space === "personal") return [personal];
+  if (space === "team") return [memoTeamNamespace()];
+  return [personal, memoTeamNamespace()];
 }
 
 class WorkersAiEmbeddingProvider implements EmbeddingProvider {

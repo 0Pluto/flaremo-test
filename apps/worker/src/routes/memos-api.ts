@@ -48,7 +48,6 @@ import {
   streamExportData,
   updateDataTask,
   updateMemo,
-  ValidationError,
 } from "@flaremo/domain";
 import {
   attachmentToDto,
@@ -79,7 +78,11 @@ export const memosApi = new Hono<HonoBindings>();
 memosApi.get("/memos", zValidator("query", listMemosQuerySchema), async (c) => {
   try {
     const { db, user, memoFilterScanLimit } = await getRequestContext(c);
-    const result = await listMemos(db, user, c.req.valid("query"), {
+    // `space` is a FlareMo app-API concept; the Memos-compatible surface stays
+    // unchanged, so a client that cannot know about it never sends it and the
+    // shared schema does not widen this endpoint's behavior.
+    const { space: _space, ...query } = c.req.valid("query");
+    const result = await listMemos(db, user, query, {
       celScanLimit: memoFilterScanLimit,
     });
     return c.json(memosToListResponse({ ...result, user }));

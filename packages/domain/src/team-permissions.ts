@@ -1,6 +1,7 @@
+import type { MemoSpace } from "@flaremo/contracts";
 import type { MemoRow, UserRow } from "@flaremo/db";
 import { memos } from "@flaremo/db";
-import { and, eq, inArray, or, type SQL, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne, or, type SQL, sql } from "drizzle-orm";
 import { ForbiddenError } from "./errors";
 
 export type TeamRole = "owner" | "admin" | "member";
@@ -89,6 +90,43 @@ export function memoReadScope(user: TeamViewer | null): SQL {
   }
 
   return or(...clauses) ?? sql`0 = 1`;
+}
+
+/**
+ * Row-level space partition on top of the read boundary: `personal` is the
+ * author-only corpus (`team_id` NULL, so ownership is implicit and a client
+ * cannot widen it), `team` is the viewer's organization corpus. The returned
+ * predicate is always ANDed with `memoReadScope`, which remains the
+ * authorization boundary; a viewer outside the team therefore gets an empty
+ * team space, never a broader one. `all` returns null — no extra filter.
+ */
+export function spaceScope(
+  user: TeamViewer | null,
+  space: MemoSpace | undefined,
+): SQL | null {
+  if (!space || space === "all") return null;
+  if (!user || user.status !== "active") return sql`0 = 1`;
+  if (space === "personal") return isNull(memos.teamId);
+  const orgId = user.teamOrganizationId ?? null;
+  if (!orgId) return sql`0 = 1`;
+  return (
+    and(eq(memos.teamId, orgId), ne(memos.visibility, "private")) ?? sql`0 = 1`
+  );
+}
+
+/**
+ * The full row-level filter for a space-scoped query: the read boundary
+ * ANDed with the space partition. A missing or `all` space falls back to the
+ * plain read boundary (the mixed timeline). Aggregation queries (stats,
+ * tags) use this so their numbers always match the corresponding list view.
+ */
+export function scopedReadScope(
+  user: TeamViewer | null,
+  space: MemoSpace | undefined,
+): SQL {
+  const scopeFilter = spaceScope(user, space);
+  if (!scopeFilter) return memoReadScope(user);
+  return and(memoReadScope(user), scopeFilter) ?? memoReadScope(user);
 }
 
 export function canReadMemo(user: TeamViewer | null, memo: MemoRow): boolean {

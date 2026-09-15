@@ -41,6 +41,8 @@ export const semanticSearchResponseSchema = z.object({
 export const semanticMemoSearchQuerySchema = z.object({
   q: z.string().trim().min(1).max(500),
   limit: z.coerce.number().int().min(1).max(50).default(10),
+  // Restrict vector recall to one space's namespaces; absent searches all.
+  space: z.enum(["personal", "team"]).optional(),
 });
 
 export const semanticRecallQuerySchema = z.object({

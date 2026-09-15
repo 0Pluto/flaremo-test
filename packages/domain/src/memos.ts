@@ -2,6 +2,7 @@ import {
   type CreateMemoInput,
   type ListMemosQuery,
   type MemoOrderBy,
+  type MemoSpace,
   type MemoStatsQuery,
   type MemoStatsResponse,
   parseMemoSearchQuery,
@@ -32,6 +33,8 @@ import {
   canReadMemo,
   isActiveTeamMember,
   memoReadScope,
+  scopedReadScope,
+  spaceScope,
   type TeamViewer,
 } from "./team-permissions";
 
@@ -260,6 +263,8 @@ export async function listMemosForViewer(
     ? memos.updatedAt
     : memos.createdAt;
   const filters = [memoReadScope(user)];
+  const spaceFilter = spaceScope(user, query.space);
+  if (spaceFilter) filters.push(spaceFilter);
   if (celFilter?.sqlPredicate) filters.push(celFilter.sqlPredicate);
 
   // The established `state` query parameter wins over a search scope so that
@@ -481,74 +486,109 @@ export async function listMemoTotalsByUser(db: FlareMoDb) {
   return totals;
 }
 
+export type MemoStatsOptions = {
+  /**
+   * Space partition for the workspace sidebar. Absent keeps the historical
+   * own-corpus semantics the Memos-compatible clients depend on; when set,
+   * every number (counts, tags, activity) obeys the same read scope plus
+   * space partition as the corresponding list view.
+   */
+  space?: MemoSpace;
+};
+
 export async function getMemoStats(
   db: FlareMoDb,
-  user: UserRow,
+  user: TeamViewer,
   query: MemoStatsQuery,
+  options: MemoStatsOptions = {},
 ): Promise<MemoStatsResponse> {
   const dateKeyFormatter = createDateKeyFormatter(query.time_zone);
   const todayKey = dateKeyFormatter(new Date());
   const recentCutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
 
-  const [countRow, tagRows, activeDayRows, recentRows] = await Promise.all([
-    db
-      .select({
-        normal:
-          sql<number>`SUM(CASE WHEN ${memos.status} = 'normal' THEN 1 ELSE 0 END)`.mapWith(
-            Number,
+  const corpus = options.space
+    ? scopedReadScope(user, options.space)
+    : eq(memos.userId, user.id);
+  const normalOrArchived = inArray(memos.status, ["normal", "archived"]);
+
+  const [countRow, tagRows, activeDayRows, recentRows, spaceCountRows] =
+    await Promise.all([
+      db
+        .select({
+          normal:
+            sql<number>`SUM(CASE WHEN ${memos.status} = 'normal' THEN 1 ELSE 0 END)`.mapWith(
+              Number,
+            ),
+          archived:
+            sql<number>`SUM(CASE WHEN ${memos.status} = 'archived' THEN 1 ELSE 0 END)`.mapWith(
+              Number,
+            ),
+          trashed:
+            sql<number>`SUM(CASE WHEN ${memos.status} = 'trashed' THEN 1 ELSE 0 END)`.mapWith(
+              Number,
+            ),
+          total:
+            sql<number>`SUM(CASE WHEN ${memos.status} IN ('normal', 'archived') THEN 1 ELSE 0 END)`.mapWith(
+              Number,
+            ),
+        })
+        .from(memos)
+        .where(corpus)
+        .get(),
+      db
+        .select({
+          name: memoTags.tag,
+          count: sql<number>`COUNT(*)`.mapWith(Number),
+        })
+        .from(memoTags)
+        .innerJoin(memos, eq(memoTags.memoId, memos.id))
+        .where(
+          options.space
+            ? and(corpus, normalOrArchived)
+            : and(
+                eq(memoTags.userId, user.id),
+                inArray(memos.status, ["normal", "archived"]),
+              ),
+        )
+        .groupBy(memoTags.tag)
+        .orderBy(asc(memoTags.tag)),
+      db
+        .select({ day: sql<string>`substr(${memos.createdAt}, 1, 10)` })
+        .from(memos)
+        .where(and(corpus, normalOrArchived))
+        .groupBy(sql`substr(${memos.createdAt}, 1, 10)`),
+      db
+        .select({ createdAt: memos.createdAt })
+        .from(memos)
+        .where(
+          and(
+            corpus,
+            normalOrArchived,
+            gte(memos.createdAt, recentCutoff.toISOString()),
           ),
-        archived:
-          sql<number>`SUM(CASE WHEN ${memos.status} = 'archived' THEN 1 ELSE 0 END)`.mapWith(
-            Number,
-          ),
-        trashed:
-          sql<number>`SUM(CASE WHEN ${memos.status} = 'trashed' THEN 1 ELSE 0 END)`.mapWith(
-            Number,
-          ),
-        total:
-          sql<number>`SUM(CASE WHEN ${memos.status} IN ('normal', 'archived') THEN 1 ELSE 0 END)`.mapWith(
-            Number,
-          ),
-      })
-      .from(memos)
-      .where(eq(memos.userId, user.id))
-      .get(),
-    db
-      .select({
-        name: memoTags.tag,
-        count: sql<number>`COUNT(*)`.mapWith(Number),
-      })
-      .from(memoTags)
-      .innerJoin(memos, eq(memoTags.memoId, memos.id))
-      .where(
-        and(
-          eq(memoTags.userId, user.id),
-          inArray(memos.status, ["normal", "archived"]),
         ),
-      )
-      .groupBy(memoTags.tag)
-      .orderBy(asc(memoTags.tag)),
-    db
-      .select({ day: sql<string>`substr(${memos.createdAt}, 1, 10)` })
-      .from(memos)
-      .where(
-        and(
-          eq(memos.userId, user.id),
-          inArray(memos.status, ["normal", "archived"]),
-        ),
-      )
-      .groupBy(sql`substr(${memos.createdAt}, 1, 10)`),
-    db
-      .select({ createdAt: memos.createdAt })
-      .from(memos)
-      .where(
-        and(
-          eq(memos.userId, user.id),
-          inArray(memos.status, ["normal", "archived"]),
-          gte(memos.createdAt, recentCutoff.toISOString()),
-        ),
-      ),
-  ]);
+      // Sidebar badges for the two spaces, computed under the same read
+      // boundary as the mixed timeline. Only requested with a space.
+      options.space
+        ? Promise.all([
+            db
+              .select({ count: sql<number>`COUNT(*)`.mapWith(Number) })
+              .from(memos)
+              .where(
+                and(
+                  scopedReadScope(user, "personal"),
+                  eq(memos.status, "normal"),
+                ),
+              ),
+            db
+              .select({ count: sql<number>`COUNT(*)`.mapWith(Number) })
+              .from(memos)
+              .where(
+                and(scopedReadScope(user, "team"), eq(memos.status, "normal")),
+              ),
+          ])
+        : undefined,
+    ]);
 
   const activityCounts = new Map<string, number>();
   for (const row of recentRows) {
@@ -558,12 +598,21 @@ export async function getMemoStats(
     activityCounts.set(key, (activityCounts.get(key) ?? 0) + 1);
   }
 
+  const [personalCountRows, teamCountRows] = spaceCountRows ?? [[], []];
   return {
     counts: {
       normal: countRow?.normal ?? 0,
       archived: countRow?.archived ?? 0,
       trashed: countRow?.trashed ?? 0,
       total: countRow?.total ?? 0,
+      ...(options.space
+        ? {
+            spaces: {
+              personal: personalCountRows[0]?.count ?? 0,
+              team: teamCountRows[0]?.count ?? 0,
+            },
+          }
+        : {}),
     },
     active_days: activeDayRows.length,
     tags: tagRows,

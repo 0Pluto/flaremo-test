@@ -54,6 +54,7 @@ export function RegisterPage() {
           q: undefined,
           tag: undefined,
           view: undefined,
+          space: undefined,
           untagged: undefined,
           compose: undefined,
         }}

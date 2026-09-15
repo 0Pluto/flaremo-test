@@ -1,6 +1,8 @@
+import type { MemoVisibility } from "@flaremo/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import type { MemoSpace } from "@/api";
 import { MemoComposer } from "@/components/memo-composer";
 import { useMemoMutations } from "@/hooks/use-memo-mutations";
 import { useNewMemoCapture } from "@/hooks/use-new-memo-capture";
@@ -10,6 +12,7 @@ import {
   flushQueuedMemoSubmissions,
   getNewMemoDraftId,
   isBrowserOnline,
+  isMemoCaptureEmpty,
   type MemoCaptureInput,
 } from "@/lib/local-memo-capture";
 import {
@@ -18,20 +21,57 @@ import {
   validateMemoCaptureSubmission,
 } from "@/lib/memo-submission";
 
+// The composer's send target defaults to the active space ("归属在创建时决定").
+// An explicit pick is remembered per space so a member who publishes to the
+// team keeps that habit without re-selecting on every visit.
+const VISIBILITY_PREF_KEY = "flaremo.composer.visibility";
+
+type VisibilityPref = Partial<Record<MemoSpace, MemoVisibility>>;
+
+function readVisibilityPref(): VisibilityPref {
+  try {
+    const raw = localStorage.getItem(VISIBILITY_PREF_KEY);
+    const parsed = raw ? (JSON.parse(raw) as VisibilityPref) : null;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeVisibilityPref(pref: VisibilityPref) {
+  try {
+    localStorage.setItem(VISIBILITY_PREF_KEY, JSON.stringify(pref));
+  } catch {
+    // Persistence is best-effort; the in-memory choice still applies.
+  }
+}
+
 // Keep draft updates and upload progress inside the capture boundary. This
 // component stays mounted across workspace filters so drafts and offline
 // synchronization survive a visit to the archive or trash.
 export const WorkspaceComposer = memo(function WorkspaceComposer({
   visible,
   composeRequested,
+  space,
+  hasTeam,
 }: {
   visible: boolean;
   composeRequested: boolean;
+  space: MemoSpace;
+  hasTeam: boolean;
 }) {
   const { t } = useI18n();
   const navigate = useNavigate({ from: "/" });
   const [newMemoDraftId] = useState(getNewMemoDraftId);
-  const capture = useNewMemoCapture({ draftId: newMemoDraftId });
+  const [visibilityPref, setVisibilityPref] =
+    useState<VisibilityPref>(readVisibilityPref);
+  const spaceDefault: MemoVisibility =
+    hasTeam && space === "team" ? "protected" : "private";
+  const preferredVisibility = visibilityPref[space] ?? spaceDefault;
+  const capture = useNewMemoCapture({
+    draftId: newMemoDraftId,
+    initialVisibility: preferredVisibility,
+  });
   const { createMemoAsync, isCreatingMemo, handleMutationError } =
     useMemoMutations();
   const isQueueFlushing = useRef(false);
@@ -40,6 +80,20 @@ export const WorkspaceComposer = memo(function WorkspaceComposer({
   const restoredDraftNotified = useRef(false);
   const [isCaptureSubmissionPending, setIsCaptureSubmissionPending] =
     useState(false);
+
+  // Following the space into a different corpus retargets an untouched draft.
+  // A draft with content keeps the visibility its author already chose.
+  const lastVisibilitySource = useRef(preferredVisibility);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: retarget on preference change, not on every draft keystroke; the capture object is stable across renders
+  useEffect(() => {
+    if (lastVisibilitySource.current === preferredVisibility) return;
+    lastVisibilitySource.current = preferredVisibility;
+    if (!isMemoCaptureEmpty(capture.draft)) return;
+    capture.updateDraft((current) => ({
+      ...current,
+      visibility: preferredVisibility,
+    }));
+  }, [preferredVisibility]);
 
   const flushQueuedCaptures = useCallback(async () => {
     if (!isBrowserOnline()) return;
@@ -162,7 +216,15 @@ export const WorkspaceComposer = memo(function WorkspaceComposer({
     <MemoComposer
       draft={capture.draft}
       isPending={isCreatingMemo || isCaptureSubmissionPending}
+      showVisibility={hasTeam}
       onDraftChange={capture.updateDraft}
+      onVisibilityChange={(visibility) => {
+        setVisibilityPref((current) => {
+          const next = { ...current, [space]: visibility };
+          writeVisibilityPref(next);
+          return next;
+        });
+      }}
       onSubmit={handleCaptureSubmit}
     />
   );

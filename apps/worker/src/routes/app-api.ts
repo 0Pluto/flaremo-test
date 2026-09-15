@@ -6,6 +6,7 @@ import {
   FLAREMO_API_VERSION,
   listMemosQuerySchema,
   listNotificationsQuerySchema,
+  memoSpaceSchema,
   memoStatsQuerySchema,
   randomMemoQuerySchema,
   relatedMemosQuerySchema,
@@ -33,6 +34,7 @@ import {
   getMemoStats,
   getRandomMemo,
   getSemanticSearchMemos,
+  getViewerTeamInfo,
   getWalkNextMemo,
   incrementUsageCounter,
   isInstanceOwner,
@@ -107,6 +109,9 @@ appApi.get("/me", async (c) => {
       name: user.name,
       email: resolvedAuthUser?.email ?? user.email,
       username: resolvedAuthUser?.username ?? user.id.replace(/^users\//, ""),
+      // Drives the workspace sidebar: the team space entry renders only when
+      // the viewer holds a membership, labelled with the organization name.
+      team: await getViewerTeamInfo(db, authUserId),
     });
   } catch (error) {
     return jsonError(c, error);
@@ -184,7 +189,11 @@ appApi.get("/memos", zValidator("query", listMemosQuerySchema), async (c) => {
 appApi.get("/stats", zValidator("query", memoStatsQuerySchema), async (c) => {
   try {
     const { db, user } = await getRequestContext(c);
-    return c.json(await getMemoStats(db, user, c.req.valid("query")));
+    return c.json(
+      await getMemoStats(db, user, c.req.valid("query"), {
+        space: c.req.valid("query").space,
+      }),
+    );
   } catch (error) {
     return jsonError(c, error);
   }
@@ -225,7 +234,11 @@ appApi.get(
       const hits = await semanticSearchMemos(
         db,
         user,
-        { provider, index, namespaces: memoSearchNamespaces(c.env, user) },
+        {
+          provider,
+          index,
+          namespaces: memoSearchNamespaces(c.env, user, query.space),
+        },
         query.q,
         query.limit,
       );
@@ -552,14 +565,22 @@ appApi.delete("/memos/:id", async (c) => {
   }
 });
 
-appApi.get("/tags", async (c) => {
-  try {
-    const { db, user } = await getRequestContext(c);
-    return c.json({ tags: await listTagHierarchy(db, user) });
-  } catch (error) {
-    return jsonError(c, error);
-  }
-});
+appApi.get(
+  "/tags",
+  zValidator("query", z.object({ space: memoSpaceSchema.optional() })),
+  async (c) => {
+    try {
+      const { db, user } = await getRequestContext(c);
+      return c.json({
+        tags: await listTagHierarchy(db, user, {
+          space: c.req.valid("query").space,
+        }),
+      });
+    } catch (error) {
+      return jsonError(c, error);
+    }
+  },
+);
 
 appApi.get(
   "/notifications",

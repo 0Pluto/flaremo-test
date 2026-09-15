@@ -45,6 +45,7 @@ export function LoginPage() {
           q: undefined,
           tag: undefined,
           view: undefined,
+          space: undefined,
           untagged: undefined,
           compose: undefined,
         }}

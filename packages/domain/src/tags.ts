@@ -1,3 +1,4 @@
+import type { MemoSpace } from "@flaremo/contracts";
 import type { FlareMoDb, MemoPayload, MemoRow, UserRow } from "@flaremo/db";
 import { memoRevisions, memos, memoTags } from "@flaremo/db";
 import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
@@ -6,6 +7,7 @@ import { NotFoundError, ValidationError } from "./errors";
 import { createResourceId } from "./ids";
 import { insertMemosSseEvent } from "./memos-sse";
 import { insertMemosWebhookEvent } from "./memos-webhooks";
+import { scopedReadScope, type TeamViewer } from "./team-permissions";
 
 // D1 batches stay well under the per-request statement budget, so a rename
 // over hundreds of memos is split into memo-chunks instead of one unbounded
@@ -89,14 +91,16 @@ type MutableTagNode = Omit<TagHierarchyNode, "children" | "count"> & {
 };
 
 /**
- * Build a hierarchical tag tree from the user's memo tags. Every memo tag
- * contributes to its leaf path's count; intermediate nodes aggregate counts
- * from their descendants so `工作` reports the combined count of `工作`,
- * `工作/项目A`, etc. The returned tree is sorted by path.
+ * Build a hierarchical tag tree from the memo tags the viewer can read. Every
+ * memo tag contributes to its leaf path's count; intermediate nodes aggregate
+ * counts from their descendants so `工作` reports the combined count of `工作`,
+ * `工作/项目A`, etc. The returned tree is sorted by path. Without a space the
+ * tree keeps the historical own-corpus semantics.
  */
 export async function listTagHierarchy(
   db: FlareMoDb,
-  user: UserRow,
+  user: TeamViewer,
+  options: { space?: MemoSpace } = {},
 ): Promise<TagHierarchyNode[]> {
   const rows = await db
     .select({
@@ -106,10 +110,15 @@ export async function listTagHierarchy(
     .from(memoTags)
     .innerJoin(memos, eq(memoTags.memoId, memos.id))
     .where(
-      and(
-        eq(memoTags.userId, user.id),
-        inArray(memos.status, ["normal", "archived"]),
-      ),
+      options.space
+        ? and(
+            scopedReadScope(user, options.space),
+            inArray(memos.status, ["normal", "archived"]),
+          )
+        : and(
+            eq(memoTags.userId, user.id),
+            inArray(memos.status, ["normal", "archived"]),
+          ),
     )
     .orderBy(asc(memoTags.tag));
   return buildTagTree(

@@ -225,6 +225,15 @@ export const MemoCard = memo(function MemoCard({
           className="bg-brand-gradient absolute top-4 bottom-4 left-0 w-[3px] rounded-full"
         />
       )}
+      {!memo.pinned && memo.visibility !== "private" && (
+        // Team identity strip: shared notes carry a left marker so the mixed
+        // timeline reads personal vs team at a glance; pinned notes already
+        // occupy the slot with the brand gradient.
+        <span
+          aria-hidden="true"
+          className="absolute top-4 bottom-4 left-0 w-[3px] rounded-full bg-emerald-400/60 dark:bg-emerald-400/40"
+        />
+      )}
       <div className="flex w-full items-center justify-between gap-2">
         <Link
           className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
@@ -240,7 +249,11 @@ export const MemoCard = memo(function MemoCard({
           <span className="truncate tabular-nums">
             {formatMemoRelativeTime(memo.display_time, locale)}
           </span>
-          {memo.creator_name && <span>· {memo.creator_name}</span>}
+          {/* Author belongs to the shared spaces: a personal note has no
+              audience besides its author, so the name is noise there. */}
+          {memo.visibility !== "private" && memo.creator_name && (
+            <span>· {memo.creator_name}</span>
+          )}
         </Link>
         <div className="flex shrink-0 items-center gap-1">
           {memo.visibility !== "private" && (

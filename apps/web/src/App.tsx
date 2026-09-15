@@ -11,10 +11,12 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
+  getCurrentFlareMoUser,
   getMemoStats,
   getTagHierarchy,
   getVectorUsage,
   listMemos,
+  type MemoSpace,
   type MemoStatsResponse,
   type MemoVisibility,
   semanticSearchMemos,
@@ -70,6 +72,7 @@ export function FlareMoApp() {
   const navigate = useNavigate({ from: "/" });
   const search = indexRoute.useSearch();
   const view = search.view ?? "all";
+  const space = search.space ?? "all";
   const activeTag = search.tag;
   const untagged = Boolean(search.untagged);
   const query = search.q ?? "";
@@ -82,6 +85,19 @@ export function FlareMoApp() {
       void navigate({
         replace: true,
         search: (current) => ({ ...current, view: nextView }),
+      });
+    },
+    [navigate],
+  );
+  const setSpace = useCallback(
+    (nextSpace: MemoSpace) => {
+      void navigate({
+        replace: true,
+        // "all" is the default scope, so it stays off the URL entirely.
+        search: (current) => ({
+          ...current,
+          space: nextSpace === "all" ? undefined : nextSpace,
+        }),
       });
     },
     [navigate],
@@ -168,9 +184,15 @@ export function FlareMoApp() {
     [],
   );
   const semanticResultsQuery = useQuery({
-    queryKey: ["semantic-search", searchQuery],
+    queryKey: ["semantic-search", space, searchQuery],
     enabled: isSemanticSearch,
-    queryFn: ({ signal }) => semanticSearchMemos(searchQuery, 20, signal),
+    queryFn: ({ signal }) =>
+      semanticSearchMemos(
+        searchQuery,
+        20,
+        signal,
+        space === "all" ? undefined : space,
+      ),
     retry: false,
   });
   const semanticMemos = useMemo(
@@ -233,7 +255,7 @@ export function FlareMoApp() {
   }, []);
 
   const memosQuery = useInfiniteQuery({
-    queryKey: ["memos", view, searchQuery, activeTag, untagged],
+    queryKey: ["memos", space, view, searchQuery, activeTag, untagged],
     initialPageParam: undefined as string | undefined,
     enabled: !isSemanticSearch,
     queryFn: ({ pageParam, signal }) =>
@@ -246,6 +268,7 @@ export function FlareMoApp() {
           state: isSearching ? undefined : viewToMemoState(view),
           tag: activeTag,
           untagged,
+          space: space === "all" ? undefined : space,
         },
         signal,
       ),
@@ -253,13 +276,19 @@ export function FlareMoApp() {
     retry: false,
   });
   const statsQuery = useQuery({
-    queryKey: ["memo-stats", timeZone],
-    queryFn: () => getMemoStats(timeZone),
+    queryKey: ["memo-stats", space, timeZone],
+    queryFn: () => getMemoStats(timeZone, space),
     retry: false,
   });
   const tagHierarchyQuery = useQuery({
-    queryKey: ["tag-hierarchy"],
-    queryFn: () => getTagHierarchy(),
+    queryKey: ["tag-hierarchy", space],
+    queryFn: () => getTagHierarchy(space),
+    retry: false,
+  });
+  const currentUserQuery = useQuery({
+    queryKey: ["flaremo-user"],
+    queryFn: getCurrentFlareMoUser,
+    staleTime: 60_000,
     retry: false,
   });
 
@@ -358,6 +387,9 @@ export function FlareMoApp() {
     <FlareMoExplorer
       activeTag={activeTag}
       activeView={view}
+      activeSpace={space}
+      team={currentUserQuery.data?.team ?? null}
+      onSpaceChange={setSpace}
       headerAction={
         <div className="mr-8 flex items-center gap-1 lg:mr-0">
           <NotificationBell />
@@ -525,6 +557,8 @@ export function FlareMoApp() {
               <WorkspaceComposer
                 visible={view === "all"}
                 composeRequested={composeRequested}
+                space={space}
+                hasTeam={Boolean(currentUserQuery.data?.team)}
               />
               {hasFilters && (
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground motion-safe:animate-rise">

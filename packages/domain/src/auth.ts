@@ -263,11 +263,16 @@ export async function getOwnerAuthUserId(
 export async function getViewerTeamMembership(
   db: FlareMoDb,
   authUserId: string,
-): Promise<{ role: TeamRole; organizationId: string } | null> {
+): Promise<{
+  role: TeamRole;
+  organizationId: string;
+  organizationName: string;
+} | null> {
   const row = await db
     .select({
       role: authMembers.role,
       organizationId: authOrganizations.id,
+      organizationName: authOrganizations.name,
     })
     .from(authMembers)
     .innerJoin(
@@ -282,7 +287,11 @@ export async function getViewerTeamMembership(
     )
     .get();
   if (!row) return null;
-  return { role: row.role as TeamRole, organizationId: row.organizationId };
+  return {
+    role: row.role as TeamRole,
+    organizationId: row.organizationId,
+    organizationName: row.organizationName,
+  };
 }
 
 export async function getFlaremoUserByAuthUserId(
@@ -305,6 +314,19 @@ export async function getFlaremoUserByAuthUserId(
     teamRole: membership?.role ?? null,
     teamOrganizationId: membership?.organizationId ?? null,
   };
+}
+
+/**
+ * The deployment team as the UI sees it: id plus display name. Null when the
+ * viewer has no membership — the sidebar hides the team space entirely.
+ */
+export async function getViewerTeamInfo(
+  db: FlareMoDb,
+  authUserId: string,
+): Promise<{ id: string; name: string } | null> {
+  const membership = await getViewerTeamMembership(db, authUserId);
+  if (!membership) return null;
+  return { id: membership.organizationId, name: membership.organizationName };
 }
 
 export async function getAuthUserIdByFlaremoUserId(

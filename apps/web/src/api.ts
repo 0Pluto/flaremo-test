@@ -82,6 +82,7 @@ export type ListMemoParams = {
   include_deleted?: boolean;
   page_size?: number;
   page_token?: string;
+  space?: MemoSpace;
 };
 
 export type AppInfo = {
@@ -144,7 +145,12 @@ export type CurrentFlareMoUser = {
   name: string;
   email: string;
   username: string;
+  /** Present when the viewer holds a team membership; drives the space UI. */
+  team: { id: string; name: string } | null;
 };
+
+/** Workspace partition of the memo corpus (see docs/team-space-ux.md). */
+export type MemoSpace = "all" | "personal" | "team";
 
 export type AdminUser = {
   id: string;
@@ -179,6 +185,7 @@ export async function listMemos(
   if (params.untagged) query.set("untagged", "true");
   if (params.include_deleted) query.set("include_deleted", "true");
   if (params.page_token) query.set("page_token", params.page_token);
+  if (params.space && params.space !== "all") query.set("space", params.space);
 
   return apiRequest<ListMemosResponse>(`/api/app/memos?${query.toString()}`, {
     signal,
@@ -189,10 +196,12 @@ export async function semanticSearchMemos(
   query: string,
   limit = 10,
   signal?: AbortSignal,
+  space?: Exclude<MemoSpace, "all">,
 ) {
   const params = new URLSearchParams();
   params.set("q", query);
   params.set("limit", String(limit));
+  if (space) params.set("space", space);
   return apiRequest<{ memos: MemoDto[]; degraded: boolean }>(
     `/api/app/search/semantic?${params.toString()}`,
     { signal },
@@ -203,8 +212,11 @@ export async function getVectorUsage() {
   return apiRequest<VectorUsageReport>("/api/app/usage/vector");
 }
 
-export async function getTagHierarchy() {
-  return apiRequest<TagHierarchyResponse>("/api/app/tags");
+export async function getTagHierarchy(space?: MemoSpace) {
+  const query = new URLSearchParams();
+  if (space && space !== "all") query.set("space", space);
+  const suffix = query.size > 0 ? `?${query.toString()}` : "";
+  return apiRequest<TagHierarchyResponse>(`/api/app/tags${suffix}`);
 }
 
 export async function renameTag(input: { from: string; to: string }) {
@@ -221,8 +233,11 @@ export async function deleteTag(tag: string) {
   );
 }
 
-export async function getMemoStats(timeZone: string) {
+// Stats always carry the space: the response's counts.spaces powers the
+// sidebar badges for all three entries from this single request.
+export async function getMemoStats(timeZone: string, space?: MemoSpace) {
   const query = new URLSearchParams({ time_zone: timeZone });
+  if (space) query.set("space", space);
   return apiRequest<MemoStatsResponse>(`/api/app/stats?${query.toString()}`);
 }
 

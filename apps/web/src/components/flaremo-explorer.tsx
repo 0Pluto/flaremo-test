@@ -10,9 +10,12 @@ import {
   FootprintsIcon,
   HashIcon,
   InboxIcon,
+  LayersIcon,
+  LockIcon,
   MicIcon,
   PencilIcon,
   Trash2Icon,
+  UsersIcon,
 } from "lucide-react";
 import {
   memo,
@@ -24,6 +27,7 @@ import {
 } from "react";
 import {
   getCaptureStatus,
+  type MemoSpace,
   type MemoStatsResponse,
   type TagHierarchyNode,
 } from "@/api";
@@ -68,6 +72,8 @@ function readTimeView(): TimeView {
 type FlareMoExplorerProps = {
   activeTag?: string;
   activeView: ExplorerView;
+  activeSpace: MemoSpace;
+  team: { id: string; name: string } | null;
   footer?: ReactNode;
   headerAction?: ReactNode;
   hierarchy: TagHierarchyNode[];
@@ -75,6 +81,7 @@ type FlareMoExplorerProps = {
   untagged?: boolean;
   onDeleteTag: (tag: string) => void;
   onRenameTag: (from: string, to: string) => void;
+  onSpaceChange: (space: MemoSpace) => void;
   onTagChange: (tag?: string) => void;
   onUntaggedChange: (untagged: boolean) => void;
   onViewChange: (view: ExplorerView) => void;
@@ -84,6 +91,8 @@ type FlareMoExplorerProps = {
 export const FlareMoExplorer = memo(function FlareMoExplorer({
   activeTag,
   activeView,
+  activeSpace,
+  team,
   footer,
   headerAction,
   hierarchy,
@@ -91,6 +100,7 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
   untagged = false,
   onDeleteTag,
   onRenameTag,
+  onSpaceChange,
   onTagChange,
   onUntaggedChange,
   onViewChange,
@@ -105,6 +115,32 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
     staleTime: 30_000,
     retry: false,
   });
+  const spaceItems = [
+    {
+      count: stats.counts.normal,
+      icon: LayersIcon,
+      label: t("space.all"),
+      value: "all" as const,
+    },
+    {
+      count: stats.counts.spaces?.personal,
+      icon: LockIcon,
+      label: t("space.personal"),
+      value: "personal" as const,
+    },
+    // No membership, no team space — the whole entry disappears instead of
+    // rendering an always-empty view.
+    ...(team
+      ? [
+          {
+            count: stats.counts.spaces?.team,
+            icon: UsersIcon,
+            label: t("space.team"),
+            value: "team" as const,
+          },
+        ]
+      : []),
+  ];
   const navItems = [
     {
       count: stats.counts.normal,
@@ -230,7 +266,44 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
         </div>
       </section>
 
-      <nav aria-label={t("sidebar.navigation")} className="flex flex-col gap-1">
+      <nav aria-label={t("space.label")} className="flex flex-col gap-1">
+        {spaceItems.map((item) => (
+          <button
+            aria-current={activeSpace === item.value ? "page" : undefined}
+            className={cn(
+              "relative flex h-9 items-center gap-3 rounded-lg px-2.5 text-left motion-safe:transition-[background-color,color,transform] motion-safe:duration-150",
+              activeSpace === item.value
+                ? "bg-accent font-medium text-accent-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground motion-safe:hover:translate-x-0.5",
+            )}
+            key={item.value}
+            type="button"
+            onClick={() => {
+              onSpaceChange(item.value);
+              onNavigate?.();
+            }}
+          >
+            {activeSpace === item.value && (
+              <span
+                aria-hidden="true"
+                className="bg-brand-gradient absolute top-2 bottom-2 left-0 w-[3px] rounded-full"
+              />
+            )}
+            <item.icon />
+            <span className="min-w-0 flex-1 truncate">{item.label}</span>
+            {item.count !== undefined && (
+              <span className="text-xs tabular-nums opacity-60">
+                {item.count}
+              </span>
+            )}
+          </button>
+        ))}
+      </nav>
+
+      <nav
+        aria-label={t("sidebar.navigation")}
+        className="mt-5 flex flex-col gap-1 border-t border-border/60 pt-4"
+      >
         {navItems.map((item) => (
           <button
             aria-current={activeView === item.view ? "page" : undefined}

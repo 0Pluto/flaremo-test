@@ -16,6 +16,7 @@ export function SubpageHeader() {
               q: undefined,
               tag: undefined,
               view: undefined,
+              space: undefined,
               untagged: undefined,
               compose: undefined,
             }}

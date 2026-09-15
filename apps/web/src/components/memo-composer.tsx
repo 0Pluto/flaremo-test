@@ -3,14 +3,22 @@ import {
   ImageIcon,
   ListIcon,
   Loader2Icon,
+  LockIcon,
   PaperclipIcon,
   SendIcon,
+  UsersIcon,
   XIcon,
 } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { uploadAttachment } from "@/api";
+import { type MemoVisibility, uploadAttachment } from "@/api";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/i18n";
@@ -25,8 +33,11 @@ import { extractTags } from "@/lib/memo";
 type MemoComposerProps = {
   draft: MemoCaptureInput;
   isPending: boolean;
+  /** Rendered only when the viewer holds a team membership. */
+  showVisibility?: boolean;
   onDraftChange: (draft: MemoCaptureInput) => void;
   onSubmit: (input: MemoCaptureInput) => Promise<void>;
+  onVisibilityChange?: (visibility: MemoVisibility) => void;
 };
 
 const fileKeys = new WeakMap<File, string>();
@@ -45,8 +56,10 @@ function getFileKey(file: File) {
 export function MemoComposer({
   draft,
   isPending,
+  showVisibility = false,
   onDraftChange,
   onSubmit,
+  onVisibilityChange,
 }: MemoComposerProps) {
   const { t } = useI18n();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -304,28 +317,79 @@ export function MemoComposer({
             <ListIcon />
           </Button>
         </div>
-        <Button
-          className="h-8 shrink-0 self-center px-3"
-          disabled={isPending || isUploadingImages || !canSubmit}
-          type="submit"
-          variant="brand"
-        >
-          {isPending ? (
-            <>
-              <Loader2Icon
-                className="motion-safe:animate-spin"
+        <div className="flex shrink-0 items-center gap-1.5 self-center">
+          {showVisibility && (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    aria-label={t("composer.visibility.aria")}
+                    className="h-8 px-2 text-xs"
+                    disabled={isPending}
+                    size="sm"
+                    type="button"
+                    variant="ghost"
+                  />
+                }
+              >
+                {draft.visibility === "protected" ? (
+                  <UsersIcon data-icon="inline-start" />
+                ) : (
+                  <LockIcon data-icon="inline-start" />
+                )}
+                <span>
+                  {draft.visibility === "protected"
+                    ? t("composer.visibility.team")
+                    : t("composer.visibility.personal")}
+                </span>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => {
+                    if (draft.visibility === "protected") return;
+                    commitDraft({ visibility: "private" });
+                    onVisibilityChange?.("private");
+                  }}
+                >
+                  <LockIcon />
+                  {t("composer.visibility.personal")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    if (draft.visibility !== "protected") return;
+                    commitDraft({ visibility: "protected" });
+                    onVisibilityChange?.("protected");
+                  }}
+                >
+                  <UsersIcon />
+                  {t("composer.visibility.team")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          <Button
+            className="h-8 px-3"
+            disabled={isPending || isUploadingImages || !canSubmit}
+            type="submit"
+            variant="brand"
+          >
+            {isPending ? (
+              <>
+                <Loader2Icon
+                  className="motion-safe:animate-spin"
+                  data-icon="inline-start"
+                />
+                {t("composer.sending")}
+              </>
+            ) : (
+              <SendIcon
+                className="motion-safe:animate-scale-in"
                 data-icon="inline-start"
               />
-              {t("composer.sending")}
-            </>
-          ) : (
-            <SendIcon
-              className="motion-safe:animate-scale-in"
-              data-icon="inline-start"
-            />
-          )}
-          <span>{t("composer.send")}</span>
-        </Button>
+            )}
+            <span>{t("composer.send")}</span>
+          </Button>
+        </div>
       </div>
     </form>
   );

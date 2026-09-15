@@ -9,6 +9,7 @@ import {
 import { memoSearchScopes } from "./search-query";
 
 export const memoVisibilitySchema = z.enum(["private", "protected", "public"]);
+export const memoSpaceSchema = z.enum(["all", "personal", "team"]);
 export const memoStatusSchema = z.enum([
   "normal",
   "archived",
@@ -73,6 +74,7 @@ export const listMemosQuerySchema = z.object({
   order_by: memoOrderBySchema.default("created_at desc"),
   state: memoStatusSchema.optional(),
   visibility: memoVisibilitySchema.optional(),
+  space: memoSpaceSchema.optional(),
   q: z
     .string()
     .optional()
@@ -89,6 +91,9 @@ export const listMemosQuerySchema = z.object({
 
 export const memoStatsQuerySchema = z.object({
   time_zone: z.string().trim().min(1).max(100).default("UTC"),
+  // Space-partitioned sidebar stats; absent means the viewer's own corpus
+  // (the historical, Memos-compatible semantics).
+  space: memoSpaceSchema.optional(),
 });
 
 export const dailyReviewQuerySchema = z.object({
@@ -168,6 +173,13 @@ export const memoStatsResponseSchema = z.object({
     archived: z.number().int().nonnegative(),
     trashed: z.number().int().nonnegative(),
     total: z.number().int().nonnegative(),
+    /** Normal-state counts per space, only present on space-scoped queries. */
+    spaces: z
+      .object({
+        personal: z.number().int().nonnegative(),
+        team: z.number().int().nonnegative(),
+      })
+      .optional(),
   }),
   active_days: z.number().int().nonnegative(),
   tags: z.array(
@@ -481,6 +493,7 @@ export type UpdateMemoInput = z.infer<typeof updateMemoSchema>;
 export type ListMemosQuery = z.infer<typeof listMemosQuerySchema>;
 export type MemoStatsQuery = z.infer<typeof memoStatsQuerySchema>;
 export type MemoVisibility = z.infer<typeof memoVisibilitySchema>;
+export type MemoSpace = z.infer<typeof memoSpaceSchema>;
 export type MemoState = z.infer<typeof memoStatusSchema>;
 export type MemoOrderBy = z.infer<typeof memoOrderBySchema>;
 export type MemoDto = z.infer<typeof memoDtoSchema>;

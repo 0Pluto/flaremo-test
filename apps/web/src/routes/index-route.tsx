@@ -1,5 +1,6 @@
 import { createRoute } from "@tanstack/react-router";
 import type { ComponentType } from "react";
+import type { MemoSpace as Space } from "@/api";
 import type { ExplorerView as ViewMode } from "@/components/flaremo-explorer";
 import { AuthenticatedRoute } from "@/routes/authenticated-route";
 import { rootRoute } from "@/routes/root-route";
@@ -34,6 +35,7 @@ export const indexRoute = createRoute({
   component: WorkspaceRoutePage,
   validateSearch: (search: Record<string, unknown>) => ({
     view: isViewMode(search.view) ? search.view : undefined,
+    space: isSpace(search.space) ? search.space : undefined,
     q: typeof search.q === "string" && search.q ? search.q : undefined,
     tag: typeof search.tag === "string" && search.tag ? search.tag : undefined,
     untagged:
@@ -47,4 +49,8 @@ export const indexRoute = createRoute({
 
 function isViewMode(value: unknown): value is ViewMode {
   return value === "all" || value === "archived" || value === "trashed";
+}
+
+function isSpace(value: unknown): value is Space {
+  return value === "all" || value === "personal" || value === "team";
 }
