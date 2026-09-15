@@ -58,21 +58,19 @@ export function LocaleSwitcher({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label="选择语言 / Select language"
-          className={cn(
-            "inline-flex h-8 items-center gap-1.5 rounded-full border border-line/70 bg-surface/90 px-2.5 text-xs font-medium text-ink shadow-2xs transition-colors hover:bg-wash hover:border-line focus:outline-none focus:ring-1 focus:ring-signal/40 cursor-pointer",
-            className,
-          )}
-        >
-          <Globe className="size-3.5 text-mist shrink-0" />
-          <span className="truncate">
-            {short ? LOCALE_SHORT_LABELS[current] : LOCALE_LABELS[current]}
-          </span>
-          <ChevronDown className="size-3 text-fog shrink-0 opacity-70" />
-        </button>
+      <DropdownMenuTrigger
+        type="button"
+        aria-label="选择语言 / Select language"
+        className={cn(
+          "inline-flex h-8 items-center gap-1.5 rounded-full border border-line/70 bg-surface/90 px-2.5 text-xs font-medium text-ink shadow-2xs transition-colors hover:bg-wash hover:border-line focus:outline-none focus:ring-1 focus:ring-signal/40 cursor-pointer",
+          className,
+        )}
+      >
+        <Globe className="size-3.5 text-mist shrink-0" />
+        <span className="truncate">
+          {short ? LOCALE_SHORT_LABELS[current] : LOCALE_LABELS[current]}
+        </span>
+        <ChevronDown className="size-3 text-fog shrink-0 opacity-70" />
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-44 p-1.5">

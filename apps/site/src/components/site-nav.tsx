@@ -134,19 +134,17 @@ function ThemeToggle({ className }: { className?: string }) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label="切换主题 / Switch theme"
-          className={cn(
-            "inline-flex size-8 items-center justify-center text-mist transition-colors hover:bg-wash hover:text-ink focus:outline-none cursor-pointer",
-            className,
-          )}
-        >
-          {mode === "light" && <Sun className="size-3.5 text-amber-500" />}
-          {mode === "dark" && <Moon className="size-3.5 text-signal" />}
-          {mode === "system" && <Monitor className="size-3.5 text-mist" />}
-        </button>
+      <DropdownMenuTrigger
+        type="button"
+        aria-label="切换主题 / Switch theme"
+        className={cn(
+          "inline-flex size-8 items-center justify-center text-mist transition-colors hover:bg-wash hover:text-ink focus:outline-none cursor-pointer",
+          className,
+        )}
+      >
+        {mode === "light" && <Sun className="size-3.5 text-amber-500" />}
+        {mode === "dark" && <Moon className="size-3.5 text-signal" />}
+        {mode === "system" && <Monitor className="size-3.5 text-mist" />}
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-40 p-1.5">
@@ -323,14 +321,14 @@ export function SiteNav({ locale, currentPath }: SiteNavProps) {
 
           {/* 快速进入应用主 CTA */}
           <Button
-            asChild
+            render={
+              <a href="https://app.flaremo.app" rel="noopener noreferrer" />
+            }
             size="xs"
             variant="flame"
             className="h-8 px-3.5 rounded-full shadow-xs shrink-0 font-semibold text-xs"
           >
-            <a href="https://app.flaremo.app" rel="noopener noreferrer">
-              {labels.signIn}
-            </a>
+            {labels.signIn}
           </Button>
         </div>
       </div>

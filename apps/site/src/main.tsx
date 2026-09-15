@@ -2,6 +2,7 @@ import { RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot, hydrateRoot } from "react-dom/client";
 import { createAppRouter } from "@/router";
+import "@fontsource-variable/noto-sans-arabic";
 import "@/styles/tokens.css";
 
 const router = createAppRouter();

@@ -34,7 +34,7 @@ export function DocsDetailPage() {
           className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-signal hover:underline"
           to={getLocalizedPath("/docs", locale)}
         >
-          <ChevronLeft className="size-4" />
+          <ChevronLeft className="size-4 rtl:-rotate-180" />
           {locale === "zh" ? "回到文档总览" : "Back to docs"}
         </Link>
       </main>
@@ -49,7 +49,7 @@ export function DocsDetailPage() {
           className="inline-flex items-center gap-1 text-xs font-semibold text-mist hover:text-ink transition-colors"
           to={getLocalizedPath("/docs", locale)}
         >
-          <ChevronLeft className="size-3.5" />
+          <ChevronLeft className="size-3.5 rtl:-rotate-180" />
           <span>{locale === "zh" ? "文档总览" : "Docs Overview"}</span>
         </Link>
 

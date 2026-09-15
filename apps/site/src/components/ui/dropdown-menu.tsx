@@ -1,31 +1,22 @@
+import { Menu } from "@base-ui/react/menu";
 import { Check, Circle } from "lucide-react";
-import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 import type * as React from "react";
 import { cn } from "@/lib/utils";
 
-function DropdownMenu({
-  ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
-  return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
+function DropdownMenu({ ...props }: React.ComponentProps<typeof Menu.Root>) {
+  return <Menu.Root data-slot="dropdown-menu" {...props} />;
 }
 
 function DropdownMenuPortal({
   ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.Portal>) {
-  return (
-    <DropdownMenuPrimitive.Portal data-slot="dropdown-menu-portal" {...props} />
-  );
+}: React.ComponentProps<typeof Menu.Portal>) {
+  return <Menu.Portal data-slot="dropdown-menu-portal" {...props} />;
 }
 
 function DropdownMenuTrigger({
   ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.Trigger>) {
-  return (
-    <DropdownMenuPrimitive.Trigger
-      data-slot="dropdown-menu-trigger"
-      {...props}
-    />
-  );
+}: React.ComponentProps<typeof Menu.Trigger>) {
+  return <Menu.Trigger data-slot="dropdown-menu-trigger" {...props} />;
 }
 
 function DropdownMenuContent({
@@ -33,44 +24,49 @@ function DropdownMenuContent({
   sideOffset = 6,
   align = "end",
   ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
+}: React.ComponentProps<typeof Menu.Popup> & {
+  sideOffset?: number;
+  align?: "start" | "center" | "end";
+}) {
   return (
-    <DropdownMenuPrimitive.Portal>
-      <DropdownMenuPrimitive.Content
-        data-slot="dropdown-menu-content"
+    <Menu.Portal>
+      <Menu.Positioner
         sideOffset={sideOffset}
         align={align}
-        className={cn(
-          "z-50 min-w-36 overflow-hidden rounded-xl border border-line/80 bg-surface/95 p-1 text-ink shadow-pop-xl backdrop-blur-md outline-none",
-          "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2",
-          className,
-        )}
-        {...props}
-      />
-    </DropdownMenuPrimitive.Portal>
+        className="outline-none z-50"
+      >
+        <Menu.Popup
+          data-slot="dropdown-menu-content"
+          className={cn(
+            "min-w-36 overflow-hidden rounded-xl border border-line/80 bg-surface/95 p-1 text-ink shadow-pop-xl backdrop-blur-md outline-none origin-[var(--transform-origin)]",
+            "data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2",
+            className,
+          )}
+          {...props}
+        />
+      </Menu.Positioner>
+    </Menu.Portal>
   );
 }
 
 function DropdownMenuGroup({
   ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.Group>) {
-  return (
-    <DropdownMenuPrimitive.Group data-slot="dropdown-menu-group" {...props} />
-  );
+}: React.ComponentProps<typeof Menu.Group>) {
+  return <Menu.Group data-slot="dropdown-menu-group" {...props} />;
 }
 
 function DropdownMenuItem({
   className,
   inset,
   ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.Item> & {
+}: React.ComponentProps<typeof Menu.Item> & {
   inset?: boolean;
 }) {
   return (
-    <DropdownMenuPrimitive.Item
+    <Menu.Item
       data-slot="dropdown-menu-item"
       className={cn(
-        "relative flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-ink outline-none transition-colors hover:bg-wash focus:bg-wash focus:text-ink data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        "relative flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-ink outline-none transition-colors hover:bg-wash focus:bg-wash focus:text-ink data-disabled:pointer-events-none data-disabled:opacity-50",
         inset && "pl-8",
         className,
       )}
@@ -84,24 +80,24 @@ function DropdownMenuCheckboxItem({
   children,
   checked,
   ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.CheckboxItem>) {
+}: React.ComponentProps<typeof Menu.CheckboxItem>) {
   return (
-    <DropdownMenuPrimitive.CheckboxItem
+    <Menu.CheckboxItem
       data-slot="dropdown-menu-checkbox-item"
       className={cn(
-        "relative flex cursor-pointer select-none items-center rounded-lg py-1.5 pl-8 pr-2.5 text-xs font-medium text-ink outline-none transition-colors hover:bg-wash focus:bg-wash data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        "relative flex cursor-pointer select-none items-center rounded-lg py-1.5 pl-8 pr-2.5 text-xs font-medium text-ink outline-none transition-colors hover:bg-wash focus:bg-wash data-disabled:pointer-events-none data-disabled:opacity-50",
         className,
       )}
       checked={checked}
       {...props}
     >
       <span className="absolute left-2.5 flex size-3.5 items-center justify-center">
-        <DropdownMenuPrimitive.ItemIndicator>
+        <Menu.CheckboxItemIndicator keepMounted>
           <Check className="size-3.5 text-signal" />
-        </DropdownMenuPrimitive.ItemIndicator>
+        </Menu.CheckboxItemIndicator>
       </span>
       {children}
-    </DropdownMenuPrimitive.CheckboxItem>
+    </Menu.CheckboxItem>
   );
 }
 
@@ -109,23 +105,23 @@ function DropdownMenuRadioItem({
   className,
   children,
   ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.RadioItem>) {
+}: React.ComponentProps<typeof Menu.RadioItem>) {
   return (
-    <DropdownMenuPrimitive.RadioItem
+    <Menu.RadioItem
       data-slot="dropdown-menu-radio-item"
       className={cn(
-        "relative flex cursor-pointer select-none items-center rounded-lg py-1.5 pl-8 pr-2.5 text-xs font-medium text-ink outline-none transition-colors hover:bg-wash focus:bg-wash data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        "relative flex cursor-pointer select-none items-center rounded-lg py-1.5 pl-8 pr-2.5 text-xs font-medium text-ink outline-none transition-colors hover:bg-wash focus:bg-wash data-disabled:pointer-events-none data-disabled:opacity-50",
         className,
       )}
       {...props}
     >
       <span className="absolute left-2.5 flex size-3.5 items-center justify-center">
-        <DropdownMenuPrimitive.ItemIndicator>
+        <Menu.RadioItemIndicator keepMounted>
           <Circle className="size-2 fill-current text-signal" />
-        </DropdownMenuPrimitive.ItemIndicator>
+        </Menu.RadioItemIndicator>
       </span>
       {children}
-    </DropdownMenuPrimitive.RadioItem>
+    </Menu.RadioItem>
   );
 }
 
@@ -133,28 +129,31 @@ function DropdownMenuLabel({
   className,
   inset,
   ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.Label> & {
+}: React.ComponentProps<typeof Menu.GroupLabel> & {
   inset?: boolean;
 }) {
+  // Base UI 要求 GroupLabel 必须位于 Group 内（Radix 允许裸用），wrapper 内补齐
   return (
-    <DropdownMenuPrimitive.Label
-      data-slot="dropdown-menu-label"
-      className={cn(
-        "px-2.5 py-1 text-[11px] font-semibold text-fog",
-        inset && "pl-8",
-        className,
-      )}
-      {...props}
-    />
+    <Menu.Group data-slot="dropdown-menu-label-group">
+      <Menu.GroupLabel
+        data-slot="dropdown-menu-label"
+        className={cn(
+          "px-2.5 py-1 text-[11px] font-semibold text-fog",
+          inset && "pl-8",
+          className,
+        )}
+        {...props}
+      />
+    </Menu.Group>
   );
 }
 
 function DropdownMenuSeparator({
   className,
   ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.Separator>) {
+}: React.ComponentProps<typeof Menu.Separator>) {
   return (
-    <DropdownMenuPrimitive.Separator
+    <Menu.Separator
       data-slot="dropdown-menu-separator"
       className={cn("-mx-1 my-1 h-px bg-line/60", className)}
       {...props}

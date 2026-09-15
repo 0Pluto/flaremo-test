@@ -65,7 +65,7 @@ export function DocsIndexPage() {
                         {doc.title}
                       </div>
                     </div>
-                    <ChevronRight className="size-4 text-fog transition-transform group-hover:translate-x-1 group-hover:text-signal" />
+                    <ChevronRight className="size-4 text-fog transition-transform group-hover:translate-x-1 group-hover:text-signal rtl:-rotate-180 rtl:group-hover:-translate-x-1" />
                   </Link>
                 ))}
               </div>

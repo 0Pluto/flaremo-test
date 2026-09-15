@@ -1,3 +1,4 @@
+import { DirectionProvider } from "@base-ui/react/direction-provider";
 import { Outlet, useLocation } from "@tanstack/react-router";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
@@ -9,14 +10,16 @@ export function RootLayout() {
   const locale = getLocaleFromPath(pathname);
 
   return (
-    <ThemeProvider>
-      <div className="flex min-h-screen flex-col bg-paper text-ink antialiased selection:bg-signal/20 selection:text-signal-ink transition-colors duration-200">
-        <SiteNav currentPath={pathname} locale={locale} />
-        <main className="flex-1">
-          <Outlet />
-        </main>
-        <SiteFooter locale={locale} />
-      </div>
-    </ThemeProvider>
+    <DirectionProvider direction={locale === "ar" ? "rtl" : "ltr"}>
+      <ThemeProvider>
+        <div className="flex min-h-screen flex-col bg-paper text-ink antialiased selection:bg-signal/20 selection:text-signal-ink transition-colors duration-200">
+          <SiteNav currentPath={pathname} locale={locale} />
+          <main className="flex-1">
+            <Outlet />
+          </main>
+          <SiteFooter locale={locale} />
+        </div>
+      </ThemeProvider>
+    </DirectionProvider>
   );
 }

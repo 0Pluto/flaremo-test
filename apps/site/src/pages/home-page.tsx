@@ -150,10 +150,15 @@ function Hero({
           {/* Headline */}
           <Reveal delay={0.08}>
             <h1 className="text-[clamp(1.75rem,5.2vw,4.25rem)] font-extrabold tracking-tight text-ink leading-[1.14]">
-              <span className="block sm:whitespace-nowrap">
+              {/* nowrap 仅对允许整行展示的语言生效（CJK/拉丁）；阿语等长词换行语言不锁行 */}
+              <span
+                className={`block${locale === "en" || locale === "zh" ? " sm:whitespace-nowrap" : ""}`}
+              >
                 {home.heroTitleLine1}
               </span>
-              <span className="mt-1.5 block sm:mt-2.5 bg-gradient-to-r from-amber-500 via-signal to-signal-deep bg-clip-text text-transparent sm:whitespace-nowrap">
+              <span
+                className={`mt-1.5 block sm:mt-2.5 bg-gradient-to-r from-amber-500 via-signal to-signal-deep bg-clip-text text-transparent${locale === "en" || locale === "zh" ? " sm:whitespace-nowrap" : ""}`}
+              >
                 {home.heroTitleLine2}
               </span>
             </h1>
@@ -169,22 +174,29 @@ function Hero({
           {/* Actions */}
           <Reveal delay={0.24}>
             <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-              <Button asChild size="lg" variant="flame" className="shadow-pop">
-                <a href={getLocalizedPath("/docs/deploy", locale)}>
-                  <span>{home.primaryCta}</span>
-                  <ArrowRight className="size-4" />
-                </a>
+              <Button
+                render={<a href={getLocalizedPath("/docs/deploy", locale)} />}
+                size="lg"
+                variant="flame"
+                className="shadow-pop"
+              >
+                <span>{home.primaryCta}</span>
+                <ArrowRight className="size-4 rtl:-rotate-180" />
               </Button>
 
-              <Button asChild size="lg" variant="secondary">
-                <a
-                  href="https://github.com/realchendahuang/FlareMo"
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  <span>{home.secondaryCta}</span>
-                  <ExternalLink className="size-3.5 text-mist" />
-                </a>
+              <Button
+                render={
+                  <a
+                    href="https://github.com/realchendahuang/FlareMo"
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  />
+                }
+                size="lg"
+                variant="secondary"
+              >
+                <span>{home.secondaryCta}</span>
+                <ExternalLink className="size-3.5 text-mist" />
               </Button>
             </div>
           </Reveal>
@@ -764,21 +776,28 @@ function CtaSection({
             {subtitle}
           </p>
           <div className="pt-4 flex flex-wrap justify-center gap-3">
-            <Button asChild size="lg" variant="flame" className="shadow-pop">
-              <a href={getLocalizedPath("/docs/deploy", locale)}>
-                <span>{buttonText}</span>
-                <ArrowRight className="size-4" />
-              </a>
+            <Button
+              render={<a href={getLocalizedPath("/docs/deploy", locale)} />}
+              size="lg"
+              variant="flame"
+              className="shadow-pop"
+            >
+              <span>{buttonText}</span>
+              <ArrowRight className="size-4 rtl:-rotate-180" />
             </Button>
-            <Button asChild size="lg" variant="secondary">
-              <a
-                href="https://github.com/realchendahuang/FlareMo"
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                <span>{secondaryCta}</span>
-                <ExternalLink className="size-3.5 text-mist" />
-              </a>
+            <Button
+              render={
+                <a
+                  href="https://github.com/realchendahuang/FlareMo"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                />
+              }
+              size="lg"
+              variant="secondary"
+            >
+              <span>{secondaryCta}</span>
+              <ExternalLink className="size-3.5 text-mist" />
             </Button>
           </div>
         </div>
