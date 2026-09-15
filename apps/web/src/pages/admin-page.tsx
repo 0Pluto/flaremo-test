@@ -261,16 +261,18 @@ export function AdminPanel() {
                         </div>
                         {user.role !== "owner" && (
                           <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                aria-label={t("admin.memberActions")}
-                                size="icon-sm"
-                                type="button"
-                                variant="ghost"
-                              >
-                                <MoreHorizontalIcon />
-                              </Button>
-                            </DropdownMenuTrigger>
+                            <DropdownMenuTrigger
+                              render={
+                                <Button
+                                  aria-label={t("admin.memberActions")}
+                                  size="icon-sm"
+                                  type="button"
+                                  variant="ghost"
+                                >
+                                  <MoreHorizontalIcon />
+                                </Button>
+                              }
+                            />
                             <DropdownMenuContent align="end">
                               {isTeamOwner && (
                                 <DropdownMenuItem

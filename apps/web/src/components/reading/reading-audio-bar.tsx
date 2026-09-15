@@ -51,7 +51,9 @@ export function ReadingAudioBar({ className }: { className?: string }) {
           aria-label={t("reading.seek")}
           className="mx-1 min-w-0 flex-1"
           max={max}
-          onValueChange={([value]) => audio.seek(value)}
+          onValueChange={(value) =>
+            audio.seek(Array.isArray(value) ? value[0] : value)
+          }
           step={1}
           value={[Math.min(currentTime, max)]}
         />

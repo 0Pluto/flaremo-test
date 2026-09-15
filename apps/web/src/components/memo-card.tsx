@@ -248,16 +248,18 @@ export const MemoCard = memo(function MemoCard({
           )}
           {(canManage || canGovern) && (
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  aria-label={t("common.actions")}
-                  className="opacity-100 motion-safe:transition-opacity md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
-                  size="icon-sm"
-                  variant="ghost"
-                >
-                  <MoreHorizontalIcon />
-                </Button>
-              </DropdownMenuTrigger>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    aria-label={t("common.actions")}
+                    className="opacity-100 motion-safe:transition-opacity md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+                    size="icon-sm"
+                    variant="ghost"
+                  >
+                    <MoreHorizontalIcon />
+                  </Button>
+                }
+              />
               <DropdownMenuContent align="end">
                 <DropdownMenuGroup>
                   {isTrashed ? (
@@ -271,7 +273,7 @@ export const MemoCard = memo(function MemoCard({
                       {canManage && (
                         <DropdownMenuItem
                           variant="destructive"
-                          onSelect={() => setIsDeleteDialogOpen(true)}
+                          onClick={() => setIsDeleteDialogOpen(true)}
                         >
                           <Trash2Icon />
                           {t("memo.deleteForever")}

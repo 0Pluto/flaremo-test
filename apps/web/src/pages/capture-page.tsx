@@ -685,11 +685,13 @@ function DiscardButton({
   const { t } = useI18n();
   return (
     <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button variant="outline" disabled={disabled}>
-          {t("capture.discard")}
-        </Button>
-      </AlertDialogTrigger>
+      <AlertDialogTrigger
+        render={
+          <Button variant="outline" disabled={disabled}>
+            {t("capture.discard")}
+          </Button>
+        }
+      />
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{t("capture.discard")}</AlertDialogTitle>

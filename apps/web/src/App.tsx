@@ -363,18 +363,18 @@ export function FlareMoApp() {
           <NotificationBell />
           <UpdateStatus />
           <Button
-            asChild
+            render={
+              <Link
+                onClick={onNavigate}
+                title={t("auth.accountTitle")}
+                to="/account"
+              />
+            }
             aria-label={t("auth.accountTitle")}
             size="icon-sm"
             variant="ghost"
           >
-            <Link
-              onClick={onNavigate}
-              title={t("auth.accountTitle")}
-              to="/account"
-            >
-              <SettingsIcon />
-            </Link>
+            <SettingsIcon />
           </Button>
         </div>
       }
@@ -400,31 +400,35 @@ export function FlareMoApp() {
           >
             <DownloadIcon />
           </Button>
-          <Button asChild size="icon-sm" variant="ghost">
-            <label
-              aria-label={t("common.import")}
-              htmlFor={importInputId}
-              title={t("common.import")}
-            >
-              <UploadIcon />
-              <Input
-                accept="application/json"
-                className="hidden"
-                id={importInputId}
-                type="file"
-                onChange={async (event) => {
-                  const file = event.target.files?.[0];
-                  event.target.value = "";
-                  if (!file) return;
-                  try {
-                    const text = await file.text();
-                    void handleImportFile(JSON.parse(text) as unknown);
-                  } catch {
-                    toast.error(t("toast.invalidImport"));
-                  }
-                }}
+          <Button
+            render={
+              <label
+                aria-label={t("common.import")}
+                htmlFor={importInputId}
+                title={t("common.import")}
               />
-            </label>
+            }
+            size="icon-sm"
+            variant="ghost"
+          >
+            <UploadIcon />
+            <Input
+              accept="application/json"
+              className="hidden"
+              id={importInputId}
+              type="file"
+              onChange={async (event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (!file) return;
+                try {
+                  const text = await file.text();
+                  void handleImportFile(JSON.parse(text) as unknown);
+                } catch {
+                  toast.error(t("toast.invalidImport"));
+                }
+              }}
+            />
           </Button>
         </div>
       }
@@ -457,16 +461,18 @@ export function FlareMoApp() {
           >
             <div className="flex h-14 items-center gap-2 px-5 lg:px-3">
               <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
-                <SheetTrigger asChild>
-                  <Button
-                    aria-label={t("sidebar.toggle")}
-                    className="lg:hidden"
-                    size="icon-sm"
-                    variant="ghost"
-                  >
-                    <MenuIcon />
-                  </Button>
-                </SheetTrigger>
+                <SheetTrigger
+                  render={
+                    <Button
+                      aria-label={t("sidebar.toggle")}
+                      className="lg:hidden"
+                      size="icon-sm"
+                      variant="ghost"
+                    >
+                      <MenuIcon />
+                    </Button>
+                  }
+                />
                 <SheetContent
                   className="w-[312px] overflow-hidden p-0"
                   side="left"

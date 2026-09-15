@@ -191,8 +191,11 @@ test("restores a memo revision without reloading the detail page", async ({
     .click();
   await page.getByRole("tab", { name: /content|内容/i }).click();
 
-  await expect(page.getByText(original, { exact: true })).toBeVisible();
-  await expect(page.getByText(updated, { exact: true })).toHaveCount(0);
+  // Base UI keeps a closing tab panel in the DOM during its exit transition,
+  // so scope assertions to the active panel instead of the whole page.
+  const contentPanel = page.getByRole("tabpanel", { name: /content|内容/i });
+  await expect(contentPanel.getByText(original, { exact: true })).toBeVisible();
+  await expect(contentPanel.getByText(updated, { exact: true })).toHaveCount(0);
 });
 
 test("loads memo attachments without per-memo request waterfalls", async ({

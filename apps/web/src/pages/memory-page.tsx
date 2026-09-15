@@ -467,16 +467,18 @@ function MemoryCard({
             </Button>
           )}
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                aria-label={t("common.actions")}
-                className="ml-auto"
-                size="icon-sm"
-                variant="ghost"
-              >
-                <MoreHorizontalIcon />
-              </Button>
-            </DropdownMenuTrigger>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  aria-label={t("common.actions")}
+                  className="ml-auto"
+                  size="icon-sm"
+                  variant="ghost"
+                >
+                  <MoreHorizontalIcon />
+                </Button>
+              }
+            />
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setEditing(true)}>
                 <PencilIcon />
@@ -493,7 +495,7 @@ function MemoryCard({
               </DropdownMenuItem>
               <DropdownMenuItem
                 variant="destructive"
-                onSelect={() => setConfirmDelete(true)}
+                onClick={() => setConfirmDelete(true)}
               >
                 <Trash2Icon />
                 {t("common.delete")}

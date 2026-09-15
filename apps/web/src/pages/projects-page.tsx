@@ -427,15 +427,17 @@ function ProjectRow({
           <Badge variant="secondary">{project.task_count_open}</Badge>
         )}
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              className="opacity-0 group-hover:opacity-100 focus:opacity-100"
-              size="icon-sm"
-              variant="ghost"
-            >
-              <MoreHorizontalIcon />
-            </Button>
-          </DropdownMenuTrigger>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                className="opacity-0 group-hover:opacity-100 focus:opacity-100"
+                size="icon-sm"
+                variant="ghost"
+              >
+                <MoreHorizontalIcon />
+              </Button>
+            }
+          />
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => setEditing(true)}>
               <PencilIcon data-icon="inline-start" />
@@ -701,15 +703,17 @@ function TaskCard({
               {task.title}
             </span>
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  className="opacity-0 group-hover:opacity-100 focus:opacity-100"
-                  size="icon-sm"
-                  variant="ghost"
-                >
-                  <MoreHorizontalIcon />
-                </Button>
-              </DropdownMenuTrigger>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    className="opacity-0 group-hover:opacity-100 focus:opacity-100"
+                    size="icon-sm"
+                    variant="ghost"
+                  >
+                    <MoreHorizontalIcon />
+                  </Button>
+                }
+              />
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>{t("projects.setStatus")}</DropdownMenuLabel>
                 {STATUS_COLUMNS.map((status) => (

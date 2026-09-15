@@ -9,20 +9,24 @@ export function SubpageHeader() {
   const { t } = useI18n();
   return (
     <header className="flex items-center justify-between gap-3">
-      <Button asChild size="sm" variant="ghost">
-        <Link
-          search={{
-            q: undefined,
-            tag: undefined,
-            view: undefined,
-            untagged: undefined,
-            compose: undefined,
-          }}
-          to="/"
-        >
-          <ArrowLeftIcon data-icon="inline-start" />
-          {t("common.back")}
-        </Link>
+      <Button
+        render={
+          <Link
+            search={{
+              q: undefined,
+              tag: undefined,
+              view: undefined,
+              untagged: undefined,
+              compose: undefined,
+            }}
+            to="/"
+          />
+        }
+        size="sm"
+        variant="ghost"
+      >
+        <ArrowLeftIcon data-icon="inline-start" />
+        {t("common.back")}
       </Button>
       <FlareMoLogo markClassName="size-5" />
     </header>

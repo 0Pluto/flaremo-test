@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Slider as SliderPrimitive } from "radix-ui";
+import { Slider as SliderPrimitive } from "@base-ui/react/slider";
 
 import { cn } from "@/lib/utils";
 
@@ -34,23 +34,25 @@ function Slider({
       )}
       {...props}
     >
-      <SliderPrimitive.Track
-        data-slot="slider-track"
-        className="relative h-1.5 w-full grow overflow-hidden rounded-full bg-muted"
-      >
-        <SliderPrimitive.Range
-          data-slot="slider-range"
-          className="absolute h-full bg-flame-400"
-        />
-      </SliderPrimitive.Track>
-      {Array.from({ length: _values.length }, (_, index) => (
-        <SliderPrimitive.Thumb
-          data-slot="slider-thumb"
-          // biome-ignore lint/suspicious/noArrayIndexKey: thumb identity is positional.
-          key={index}
-          className="block size-3.5 shrink-0 rounded-full border border-flame-400 bg-background shadow-sm transition-[color,box-shadow] outline-none hover:ring-4 hover:ring-flame-400/25 focus-visible:ring-4 focus-visible:ring-flame-400/25 disabled:pointer-events-none"
-        />
-      ))}
+      <SliderPrimitive.Control className="flex w-full touch-none items-center outline-none">
+        <SliderPrimitive.Track
+          data-slot="slider-track"
+          className="relative h-1.5 w-full grow overflow-hidden rounded-full bg-muted"
+        >
+          <SliderPrimitive.Indicator
+            data-slot="slider-range"
+            className="absolute h-full bg-flame-400"
+          />
+        </SliderPrimitive.Track>
+        {Array.from({ length: _values.length }, (_, index) => (
+          <SliderPrimitive.Thumb
+            data-slot="slider-thumb"
+            // biome-ignore lint/suspicious/noArrayIndexKey: thumb identity is positional.
+            key={index}
+            className="block size-3.5 shrink-0 rounded-full border border-flame-400 bg-background shadow-sm transition-[color,box-shadow] outline-none hover:ring-4 hover:ring-flame-400/25 focus-visible:ring-4 focus-visible:ring-flame-400/25 disabled:pointer-events-none"
+          />
+        ))}
+      </SliderPrimitive.Control>
     </SliderPrimitive.Root>
   );
 }

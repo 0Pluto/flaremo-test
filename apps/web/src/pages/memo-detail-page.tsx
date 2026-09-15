@@ -532,16 +532,18 @@ function MemoDetail({
                       <ClipboardIcon />
                     </Button>
                     <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          aria-label={t("detail.revokeShare")}
-                          disabled={revokePending}
-                          size="icon-sm"
-                          variant="ghost"
-                        >
-                          <UnlinkIcon />
-                        </Button>
-                      </AlertDialogTrigger>
+                      <AlertDialogTrigger
+                        render={
+                          <Button
+                            aria-label={t("detail.revokeShare")}
+                            disabled={revokePending}
+                            size="icon-sm"
+                            variant="ghost"
+                          >
+                            <UnlinkIcon />
+                          </Button>
+                        }
+                      />
                       <AlertDialogContent size="sm">
                         <AlertDialogHeader>
                           <AlertDialogTitle>

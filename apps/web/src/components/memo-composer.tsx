@@ -263,29 +263,34 @@ export function MemoComposer({
           >
             <HashIcon />
           </Button>
-          <Button asChild disabled={isPending} size="icon-sm" variant="ghost">
-            <label
-              aria-label={t("composer.addAttachment")}
-              htmlFor="flaremo-attachment-input"
-            >
-              <ImageIcon />
-              <Input
-                className="hidden"
-                id="flaremo-attachment-input"
-                multiple
-                type="file"
-                disabled={isPending}
-                onChange={(event) => {
-                  const files = Array.from(event.target.files ?? []);
-                  event.target.value = "";
-                  if (files.length === 0) return;
-                  onDraftChange({
-                    ...draft,
-                    files: [...draft.files, ...files],
-                  });
-                }}
+          <Button
+            render={
+              <label
+                aria-label={t("composer.addAttachment")}
+                htmlFor="flaremo-attachment-input"
               />
-            </label>
+            }
+            disabled={isPending}
+            size="icon-sm"
+            variant="ghost"
+          >
+            <ImageIcon />
+            <Input
+              className="hidden"
+              id="flaremo-attachment-input"
+              multiple
+              type="file"
+              disabled={isPending}
+              onChange={(event) => {
+                const files = Array.from(event.target.files ?? []);
+                event.target.value = "";
+                if (files.length === 0) return;
+                onDraftChange({
+                  ...draft,
+                  files: [...draft.files, ...files],
+                });
+              }}
+            />
           </Button>
           <div className="hidden h-4 w-px bg-border sm:block" />
           <Button

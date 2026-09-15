@@ -83,22 +83,24 @@ export function NotificationBell() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          aria-label={t("notifications.title")}
-          className="relative"
-          size="icon-sm"
-          title={t("notifications.title")}
-          variant="ghost"
-        >
-          <BellIcon />
-          {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground tabular-nums">
-              {unreadCount > 99 ? "99+" : unreadCount}
-            </span>
-          )}
-        </Button>
-      </DropdownMenuTrigger>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            aria-label={t("notifications.title")}
+            className="relative"
+            size="icon-sm"
+            title={t("notifications.title")}
+            variant="ghost"
+          >
+            <BellIcon />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground tabular-nums">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
+          </Button>
+        }
+      />
       <DropdownMenuContent align="end" className="w-72">
         {notificationsQuery.isError && !notificationsQuery.data ? (
           <div className="flex flex-col items-center gap-2 px-2 py-5">
@@ -127,7 +129,7 @@ export function NotificationBell() {
               <DropdownMenuItem
                 className="flex items-start gap-2 px-2 py-2"
                 key={notification.name}
-                onSelect={() => openNotification(notification)}
+                onClick={() => openNotification(notification)}
               >
                 <Icon className="mt-0.5 shrink-0 text-muted-foreground" />
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">

@@ -69,26 +69,28 @@ export function UpdateStatus() {
 
   return (
     <Dialog>
-      <DialogTrigger asChild>
-        <Button
-          aria-label={t("update.title")}
-          className="relative px-2"
-          size="sm"
-          title={t("update.title")}
-          variant="ghost"
-        >
-          <RefreshCwIcon />
-          {appInfo && (
-            <span className="text-xs font-medium">v{appInfo.version}</span>
-          )}
-          {updateAvailable && (
-            <span
-              aria-hidden="true"
-              className="absolute top-1 right-1 size-1.5 rounded-full bg-primary"
-            />
-          )}
-        </Button>
-      </DialogTrigger>
+      <DialogTrigger
+        render={
+          <Button
+            aria-label={t("update.title")}
+            className="relative px-2"
+            size="sm"
+            title={t("update.title")}
+            variant="ghost"
+          >
+            <RefreshCwIcon />
+            {appInfo && (
+              <span className="text-xs font-medium">v{appInfo.version}</span>
+            )}
+            {updateAvailable && (
+              <span
+                aria-hidden="true"
+                className="absolute top-1 right-1 size-1.5 rounded-full bg-primary"
+              />
+            )}
+          </Button>
+        }
+      />
       <DialogContent>
         <DialogHeader>
           <div className="flex items-center gap-2 pr-7">
@@ -116,30 +118,35 @@ export function UpdateStatus() {
 
         <DialogFooter>
           {release && updateAvailable ? (
-            <Button asChild variant="outline">
-              <a href={release.url} rel="noreferrer" target="_blank">
-                {t("update.releaseNotes")}
-                <ExternalLinkIcon />
-              </a>
+            <Button
+              render={<a href={release.url} rel="noreferrer" target="_blank" />}
+              variant="outline"
+            >
+              {t("update.releaseNotes")}
+              <ExternalLinkIcon />
             </Button>
           ) : null}
           {updateAvailable ? (
-            <Button asChild disabled={!updateUrl}>
-              <a
-                href={updateUrl ?? appInfo?.update_guide_url}
-                rel="noreferrer"
-                target="_blank"
-              >
-                {t("update.guide")}
-                <ExternalLinkIcon />
-              </a>
+            <Button
+              render={
+                <a
+                  href={updateUrl ?? appInfo?.update_guide_url}
+                  rel="noreferrer"
+                  target="_blank"
+                />
+              }
+              disabled={!updateUrl}
+            >
+              {t("update.guide")}
+              <ExternalLinkIcon />
             </Button>
           ) : release ? (
-            <Button asChild variant="outline">
-              <a href={release.url} rel="noreferrer" target="_blank">
-                {t("update.releaseNotes")}
-                <ExternalLinkIcon />
-              </a>
+            <Button
+              render={<a href={release.url} rel="noreferrer" target="_blank" />}
+              variant="outline"
+            >
+              {t("update.releaseNotes")}
+              <ExternalLinkIcon />
             </Button>
           ) : null}
         </DialogFooter>
