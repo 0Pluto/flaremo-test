@@ -180,16 +180,12 @@
     --border: oklch(1 0 0 / 9%);
     --input: oklch(1 0 0 / 14%);
     --ring: var(--brand-400);
-    --shadow-xs: 0 1px 2px oklch(0 0 0 / 0.3);
-    --shadow-sm:
-        0 1px 3px oklch(0 0 0 / 0.35),
-        0 1px 2px -1px oklch(0 0 0 / 0.35);
-    --shadow-md:
-        0 4px 12px -2px oklch(0 0 0 / 0.4),
-        0 2px 4px -2px oklch(0 0 0 / 0.3);
-    --shadow-lg:
-        0 12px 32px -8px oklch(0 0 0 / 0.5),
-        0 4px 8px -4px oklch(0 0 0 / 0.35);
+    /* 暗色不用阴影表达层级（表面明度阶梯 + 发丝线）；token 置近零以免散落各处
+       的 shadow-* 类在暗色下投影（docs/design-system.md 形状与层级） */
+    --shadow-xs: 0 0 0 transparent;
+    --shadow-sm: 0 0 0 transparent;
+    --shadow-md: 0 0 0 transparent;
+    --shadow-lg: 0 0 0 transparent;
 }
 
 /* Accent presets, derived from Radix Colors v3 (single shared ramp per preset;

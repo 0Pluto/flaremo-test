@@ -23,7 +23,7 @@ FlareMo 的视觉语言叫 Ember：界面保持安静，暖调中性色承担约
 ## 形状与层级
 
 - 圆角基准 `--radius: 0.75rem`：控件 8px(md)、卡片/composer 12px(xl)、浮层 14px、标签 chip 全圆角。
-- 层级规则：页面 `bg-background` → 卡片 `bg-card + shadow-xs` → 浮层 `bg-popover + shadow-lg`。亮色模式用暖调阴影（`--shadow-xs/sm/md/lg`)；暗色模式不用阴影表达层级，用表面明度阶梯（0.175 / 0.215 / 0.235)。
+- 层级规则：页面 `bg-background` → 卡片 `bg-card + shadow-xs` → 浮层 `bg-popover + shadow-lg`。亮色模式用暖调阴影（`--shadow-xs/sm/md/lg`)；暗色模式不用阴影表达层级——`.dark` 的 shadow token 置近零，靠表面明度阶梯（实测值 0.155 / 0.21 / 0.235）+ 发丝线区分层级。
 - 分隔用发丝线 `border-border/60`，不要用粗重边框。
 
 ## 动效
