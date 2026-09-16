@@ -1,4 +1,6 @@
+import type { Editor } from "@tiptap/react";
 import {
+  CheckSquareIcon,
   HashIcon,
   ImageIcon,
   ListIcon,
@@ -9,9 +11,10 @@ import {
   UsersIcon,
   XIcon,
 } from "lucide-react";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { type MemoVisibility, uploadAttachment } from "@/api";
+import { RichComposerEditor } from "@/components/rich-composer-editor";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -20,13 +23,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/i18n";
-import {
-  extractImageFiles,
-  inlineImageMarkdown,
-  insertSnippetAt,
-} from "@/lib/image-insert";
+import { inlineImageMarkdown } from "@/lib/image-insert";
 import type { MemoCaptureInput } from "@/lib/local-memo-capture";
 import { extractTags } from "@/lib/memo";
 
@@ -62,7 +60,7 @@ export function MemoComposer({
   onVisibilityChange,
 }: MemoComposerProps) {
   const { t } = useI18n();
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<Editor | null>(null);
   const canSubmit = Boolean(draft.content.trim() || draft.files.length > 0);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
   // Uploads read the latest draft through a ref: the async chain would
@@ -77,16 +75,17 @@ export function MemoComposer({
   const preuploadMarkdownRef = useRef(new Map<string, string>());
 
   // Pasted/dropped images upload immediately (unbound; the send flow claims
-  // them afterwards) and their references land at the recorded caret once the
-  // upload settles. Tasks chain so two rapid pastes never drift positions.
-  const enqueueInlineUploads = (files: File[], caret: number) => {
+  // them afterwards) and their references land at the recorded document
+  // position once the upload settles. Tasks chain so two rapid pastes never
+  // drift positions.
+  const enqueueInlineUploads = (files: File[], position: number) => {
     if (files.length === 0) return;
     pendingUploadsRef.current += files.length;
     setIsUploadingImages(true);
     uploadChainRef.current = uploadChainRef.current
       .catch(() => undefined)
       .then(async () => {
-        let cursor = caret;
+        let cursor = position;
         try {
           for (const file of files) {
             let attachment: Awaited<ReturnType<typeof uploadAttachment>>;
@@ -96,31 +95,28 @@ export function MemoComposer({
               toast.error(t("composer.imageUploadFailed"));
               break;
             }
-            // Read after the upload: the user may have kept typing while the
-            // network was pending. Never replace that text with an old draft.
-            const current = draftRef.current;
-            const next = insertSnippetAt(
-              current.content,
-              cursor,
-              inlineImageMarkdown(attachment.id, attachment.filename),
-            );
-            cursor = next.caret;
+            const editor = editorRef.current;
+            if (!editor) break;
             const markdown = inlineImageMarkdown(
               attachment.id,
               attachment.filename,
             );
+            // Insert at the position captured when the paste happened (the
+            // user may have kept typing while the network was pending). The
+            // size delta advances the cursor so consecutive files keep order.
+            const sizeBefore = editor.state.doc.content.size;
+            editor
+              .chain()
+              .insertContentAt(cursor, markdown, { contentType: "markdown" })
+              .run();
+            cursor += editor.state.doc.content.size - sizeBefore;
             preuploadMarkdownRef.current.set(attachment.name, markdown);
-            const nextDraft = {
-              ...current,
-              content: next.content,
-              tags: extractTags(next.content),
+            commitDraft({
               preuploadedAttachmentNames: [
-                ...(current.preuploadedAttachmentNames ?? []),
+                ...(draftRef.current.preuploadedAttachmentNames ?? []),
                 attachment.name,
               ],
-            };
-            draftRef.current = nextDraft;
-            onDraftChange(nextDraft);
+            });
           }
         } finally {
           // A failed batch also releases the files skipped after the failure.
@@ -129,15 +125,6 @@ export function MemoComposer({
         }
       });
   };
-
-  // The composer grows with the draft instead of scrolling, up to a cap.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: re-measure the height whenever the draft text changes.
-  useLayoutEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    textarea.style.height = "auto";
-    textarea.style.height = `${Math.min(textarea.scrollHeight, 320)}px`;
-  }, [draft.content]);
 
   // All edits rebuild from draftRef, not the render-time prop: an inline
   // upload chain can land between the render and this event, and building
@@ -161,10 +148,6 @@ export function MemoComposer({
       preuploadedAttachmentNames: kept,
     });
   };
-  const appendText = (value: string) => {
-    const base = draftRef.current.content;
-    updateContent(`${base}${base && !base.endsWith("\n") ? " " : ""}${value}`);
-  };
   const submit = async () => {
     // Images still uploading have no reference in the content yet; sending
     // now would lose them to the orphan GC.
@@ -177,6 +160,12 @@ export function MemoComposer({
       // The mutation owns user-facing error feedback; keep the draft intact.
     }
   };
+  const withEditor = (action: (editor: Editor) => void) => {
+    if (isPending) return;
+    const editor = editorRef.current;
+    if (!editor) return;
+    action(editor);
+  };
 
   return (
     <form
@@ -186,54 +175,17 @@ export function MemoComposer({
         void submit();
       }}
     >
-      <Textarea
-        aria-label={t("composer.ariaLabel")}
-        className="min-h-32 resize-none overflow-y-auto rounded-t-xl border-0 px-4 pt-4 pb-2 text-[15px] leading-7 shadow-none focus-visible:ring-0"
+      <RichComposerEditor
+        ariaLabel={t("composer.ariaLabel")}
+        content={draft.content}
         disabled={isPending}
-        id="flaremo-composer-input"
+        editorRef={editorRef}
+        onContentChange={updateContent}
+        onImageFiles={enqueueInlineUploads}
+        onSubmitRequest={() => {
+          if (!isUploadingImages) void submit();
+        }}
         placeholder={t("composer.placeholder")}
-        ref={textareaRef}
-        value={draft.content}
-        onChange={(event) => updateContent(event.target.value)}
-        onKeyDown={(event) => {
-          // Enter sends; IME composition and Shift+Enter never submit.
-          if (
-            event.key === "Enter" &&
-            !event.shiftKey &&
-            !event.nativeEvent.isComposing
-          ) {
-            event.preventDefault();
-            if (!isUploadingImages) void submit();
-            return;
-          }
-          if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-            event.preventDefault();
-            if (!isUploadingImages) void submit();
-          }
-        }}
-        onDragOver={(event) => {
-          if (event.dataTransfer.types.includes("Files")) {
-            event.preventDefault();
-          }
-        }}
-        onDrop={(event) => {
-          const files = extractImageFiles(event.dataTransfer.files);
-          if (files.length === 0) return;
-          event.preventDefault();
-          enqueueInlineUploads(
-            files,
-            event.currentTarget.selectionStart ?? draft.content.length,
-          );
-        }}
-        onPaste={(event) => {
-          const files = extractImageFiles(event.clipboardData.files);
-          if (files.length === 0) return;
-          event.preventDefault();
-          enqueueInlineUploads(
-            files,
-            event.currentTarget.selectionStart ?? draft.content.length,
-          );
-        }}
       />
       {draft.files.length > 0 && (
         <div className="flex flex-wrap gap-2 px-4 pb-2">
@@ -272,7 +224,14 @@ export function MemoComposer({
             size="icon-sm"
             type="button"
             variant="ghost"
-            onClick={() => appendText("#")}
+            onClick={() =>
+              withEditor((editor) => {
+                editor
+                  .chain()
+                  .insertContentAt(editor.state.selection.to, "#")
+                  .run();
+              })
+            }
           >
             <HashIcon />
           </Button>
@@ -312,9 +271,27 @@ export function MemoComposer({
             size="icon-sm"
             type="button"
             variant="ghost"
-            onClick={() => appendText("- ")}
+            onClick={() =>
+              withEditor((editor) => {
+                editor.chain().focus().toggleBulletList().run();
+              })
+            }
           >
             <ListIcon />
+          </Button>
+          <Button
+            aria-label={t("composer.taskList")}
+            disabled={isPending}
+            size="icon-sm"
+            type="button"
+            variant="ghost"
+            onClick={() =>
+              withEditor((editor) => {
+                editor.chain().focus().toggleTaskList().run();
+              })
+            }
+          >
+            <CheckSquareIcon />
           </Button>
         </div>
         <div className="flex shrink-0 items-center gap-1.5 self-center">

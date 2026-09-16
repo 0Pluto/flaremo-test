@@ -50,6 +50,7 @@ import { useDataTransfer } from "@/hooks/use-data-transfer";
 import { useMemoMutations, viewToMemoState } from "@/hooks/use-memo-mutations";
 import { type TranslationKey, useI18n } from "@/i18n";
 import { dayFilterFromQuery, formatDayTitle } from "@/lib/calendar-date";
+import { focusComposerInput } from "@/lib/composer-focus";
 import { cn } from "@/lib/utils";
 import { AppRoutes } from "@/router-tree";
 import { indexRoute, registerWorkspaceComponent } from "@/routes/index-route";
@@ -237,10 +238,9 @@ export function FlareMoApp() {
         !event.ctrlKey &&
         !event.altKey
       ) {
-        const composer = document.getElementById("flaremo-composer-input");
-        if (composer instanceof HTMLTextAreaElement) {
+        if (document.getElementById("flaremo-composer-input")) {
           event.preventDefault();
-          composer.focus();
+          focusComposerInput();
         }
       }
       // "?" lists the available keyboard shortcuts.

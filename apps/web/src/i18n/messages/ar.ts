@@ -255,6 +255,7 @@ const messages = {
   "composer.addAttachment": "إضافة مرفق",
   "composer.addTag": "إضافة وسم",
   "composer.bulletList": "قائمة",
+  "composer.taskList": "قائمة المهام",
   "composer.send": "إرسال",
   "composer.visibility.personal": "شخصي",
   "composer.visibility.team": "الفريق",

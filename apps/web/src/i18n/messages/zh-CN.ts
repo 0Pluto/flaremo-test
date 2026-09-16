@@ -233,6 +233,7 @@ const messages = {
   "composer.addAttachment": "添加附件",
   "composer.addTag": "添加标签",
   "composer.bulletList": "列表",
+  "composer.taskList": "待办列表",
   "composer.send": "发送",
   "composer.visibility.personal": "个人",
   "composer.visibility.team": "团队",

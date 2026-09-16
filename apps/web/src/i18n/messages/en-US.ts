@@ -257,6 +257,7 @@ const messages = {
   "composer.addAttachment": "Add attachment",
   "composer.addTag": "Add tag",
   "composer.bulletList": "Bullet list",
+  "composer.taskList": "Task list",
   "composer.send": "Send",
   "composer.visibility.personal": "Personal",
   "composer.visibility.team": "Team",

@@ -260,6 +260,7 @@ const messages = {
   "composer.addAttachment": "첨부 파일 추가",
   "composer.addTag": "태그 추가",
   "composer.bulletList": "목록",
+  "composer.taskList": "할 일 목록",
   "composer.send": "보내기",
   "composer.visibility.personal": "개인",
   "composer.visibility.team": "팀",

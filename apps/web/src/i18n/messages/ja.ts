@@ -259,6 +259,7 @@ const messages = {
   "composer.addAttachment": "添付ファイルを追加",
   "composer.addTag": "タグを追加",
   "composer.bulletList": "リスト",
+  "composer.taskList": "チェックリスト",
   "composer.send": "送信",
   "composer.visibility.personal": "個人",
   "composer.visibility.team": "チーム",

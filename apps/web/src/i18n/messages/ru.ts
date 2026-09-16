@@ -262,6 +262,7 @@ const messages = {
   "composer.addAttachment": "Прикрепить файл",
   "composer.addTag": "Добавить тег",
   "composer.bulletList": "Список",
+  "composer.taskList": "Список задач",
   "composer.send": "Отправить",
   "composer.visibility.personal": "Личное",
   "composer.visibility.team": "Команда",
