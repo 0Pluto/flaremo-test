@@ -6,8 +6,8 @@
 
 ## 1. 实况总览
 
-- 分支 `feat/composer-wysiwyg`（worktree `~/code/fm/FlareMo-wysiwyg`，HEAD `0fdba15`）：**6 个提交**，领先 main；main 领先 2 个提交（`99563f6` P3 audio loop、`6f754aa` docs）。
-- 原 P0/P1/P2 分期**全部落地**，且有四项超出原稿：包体分割（TipTap 拆 async chunk，主包 gzip 166KB 回基线，编辑器 chunk 141KB）、卡片行内编辑迁移同一编辑器（Cmd+Enter 保存/Esc 取消，明文 Enter 不提交）、粘贴/拖拽上传占位 chip、随车修复「缺 Image 节点致粘贴图静默丢失」的 bug。真机走查通过，107 测试绿（截至分支最后提交）。
+- 分支 `feat/composer-wysiwyg`（worktree `~/code/fm/FlareMo-wysiwyg`）：原 6 个提交**已于 2026-09-17 由并行会话 rebase 到 main（`6f754aa`）之上**，rebase 冲突实况与 §3.1 预演一致（仅 `memo-card.tsx`），并随车把 pcm 30 分钟用例超时上限 30s→60s。
+- 原 P0/P1/P2 分期**全部落地**，且有四项超出原稿：包体分割（TipTap 拆 async chunk，主包 gzip 166KB 回基线，编辑器 chunk 141KB）、卡片行内编辑迁移同一编辑器（Cmd+Enter 保存/Esc 取消，明文 Enter 不提交）、粘贴/拖拽上传占位 chip、随车修复「缺 Image 节点致粘贴图静默丢失」的 bug。真机走查通过，107 测试绿（截至 P2 提交；rebase 后待重跑定向测试复核）。
 - 工作区状态：`FlareMo-wysiwyg` worktree **干净**；主检出 `~/code/fm/FlareMo`（main）**有未提交改动**，属并行 voice rollout §5 会话（mediaSession、角色感知文案、webmanifest、i18n +4 key、`capture-page.tsx`、`wrangler.jsonc.example`），**不是本任务的，不动它**。
 
 ## 2. 关键实现事实（逐项核实过）
@@ -21,11 +21,9 @@
 
 ## 3. 剩余工作：P3 收口清单（按执行顺序）
 
-### 3.1 rebase 到 main
+### 3.1 rebase 到 main（✅ 已由并行会话完成）
 
-- 预演过 merge-tree：**唯一冲突文件 `apps/web/src/components/memo-card.tsx`**——冲突源是 main 侧 `99563f6` P3 audio loop 加的 voice card；分支侧同文件是卡片编辑迁移。两侧改动语义独立，手工拼接即可。
-- i18n 八文件、`capture-page.tsx`、`pnpm-lock.yaml` 均可自动合并。
-- 在 `FlareMo-wysiwyg` worktree 内 rebase，不触碰主检出的脏工作区。
+- 预演过 merge-tree：**唯一冲突文件 `apps/web/src/components/memo-card.tsx`**，实况与预演一致；i18n 八文件、`capture-page.tsx`、`pnpm-lock.yaml` 自动合并。此步已无剩余工作。
 
 ### 3.2 e2e 用例适配（3 个 spec，改选择器与断言）
 
