@@ -49,6 +49,11 @@ import {
   newLocalCapture,
 } from "@/lib/audio-capture/local-session";
 import { openMicrophone, type Microphone } from "@/lib/audio-capture/microphone";
+import { createCaptureAudioSink } from "@/lib/audio-capture/encoder";
+import {
+  transcribeCapturedAudio,
+  type BatchProgress,
+} from "@/lib/audio-capture/batch";
 import type { CaptureState } from "@/lib/audio-capture/types";
 import { CaptureTranscriptAccumulator } from "@/lib/audio-capture/transcript";
 import { vibrate } from "@/lib/haptics";
@@ -83,6 +88,18 @@ export function CapturePage() {
           new WebSocket(
             `${location.origin.replace(/^http/, "ws")}/api/app/capture/ws`,
           ),
+        // Batch ASR (rollout §3.3): used only when /status reports a batch
+        // provider; the controller decides the mode per session.
+        batch: {
+          createSink: () => createCaptureAudioSink(),
+          transcribe: (audio, input) =>
+            transcribeCapturedAudio(audio, {
+              language: input.language,
+              startedAtMs: input.startedAtMs,
+              onProgress: input.onProgress,
+              signal: input.signal,
+            }),
+        },
       }),
   );
   const snapshot = useSyncExternalStore(
@@ -98,7 +115,8 @@ export function CapturePage() {
   const [logLeaving, setLogLeaving] = useState(false);
   // P2 wires batch-mode ASR here (rollout §2.3/§3.3); the skeleton style
   // ships now.
-  const transcribing = false;
+  const transcribing = snapshot.state === "transcribing";
+  const transcribeProgress: BatchProgress | null = snapshot.transcribing;
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
   const [draftError, setDraftError] = useState(false);
@@ -122,7 +140,13 @@ export function CapturePage() {
   );
   const tail = useRef<HTMLDivElement>(null);
   const active = captureIsActive(snapshot.state);
-  const unsaved = active || review || Boolean(recovery);
+  // Batch transcription keeps the session unsaved until it resolves; leaving
+  // mid-flight cancels the attempt instead of losing it silently.
+  const unsaved =
+    active ||
+    snapshot.state === "transcribing" ||
+    review ||
+    Boolean(recovery);
   const blocker = useBlocker({
     disabled: !unsaved,
     enableBeforeUnload: true,
@@ -354,6 +378,8 @@ export function CapturePage() {
   const stopAndLeave = async () => {
     if (blocker.status !== "blocked" || leaving) return;
     const proceed = blocker.proceed;
+    if (controller.getSnapshot().state === "transcribing")
+      controller.cancelTranscription();
     const wasActive = captureIsActive(controller.getSnapshot().state);
     setLeaving(true);
     try {
@@ -426,7 +452,9 @@ export function CapturePage() {
               ? t("capture.paused")
               : snapshot.state === "recording"
                 ? t("capture.recording")
-                : t("capture.description");
+                : snapshot.state === "transcribing"
+                  ? t("capture.transcribing")
+                  : t("capture.description");
   const buttonState: CaptureButtonState =
     snapshot.state === "recording" || snapshot.state === "stopping"
       ? "recording"
@@ -442,7 +470,9 @@ export function CapturePage() {
       ? true
       : buttonState === "idle"
         ? !loaded || !status.data?.available
-        : snapshot.state === "stopping" || snapshot.state === "reconnecting";
+        : snapshot.state === "stopping" ||
+          snapshot.state === "reconnecting" ||
+          snapshot.state === "transcribing";
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-2xl flex-col gap-6 bg-background px-4 py-6 sm:px-6">
@@ -490,9 +520,14 @@ export function CapturePage() {
         </p>
       )}
       {snapshot.error && (
-        <p role="alert" className="rounded-lg border p-3 text-sm">
-          {t(`capture.${snapshot.error}`)}
-        </p>
+        <div role="alert" className="space-y-3 rounded-lg border p-3 text-sm">
+          <p>{t(`capture.${snapshot.error}`)}</p>
+          {snapshot.error === "transcribeFailed" && !saving && (
+            <Button variant="outline" size="sm" onClick={() => controller.retryTranscription()}>
+              {t("capture.retryTranscription")}
+            </Button>
+          )}
+        </div>
       )}
       {(snapshot.gap || local.gap) && (
         <p role="status" className="text-sm text-muted-foreground">
@@ -717,7 +752,25 @@ export function CapturePage() {
                 <div ref={tail} />
               </div>
               {transcribing && (
-                <CaptureTranscribing label={t("capture.transcribing")} />
+                <div className="space-y-3">
+                  <CaptureTranscribing
+                    label={
+                      transcribeProgress && transcribeProgress.total > 1
+                        ? t("capture.transcribingCount", {
+                            done: transcribeProgress.done,
+                            total: transcribeProgress.total,
+                          })
+                        : t("capture.transcribing")
+                    }
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => controller.cancelTranscription()}
+                  >
+                    {t("capture.cancelTranscribing")}
+                  </Button>
+                </div>
               )}
             </>
           )}

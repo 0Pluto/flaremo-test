@@ -6,6 +6,8 @@ export type CaptureState =
   | "paused"
   | "reconnecting"
   | "stopping"
+  /** Batch ASR: audio recorded, waiting for the provider (rollout §3.3). */
+  | "transcribing"
   | "review"
   | "error";
 
