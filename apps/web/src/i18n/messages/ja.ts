@@ -619,6 +619,12 @@ const messages = {
   "admin.branding.markRemoved": "ロゴを削除しました。",
   "admin.branding.failed": "ブランド設定の保存に失敗しました。",
   "admin.branding.accent": "アクセントカラー",
+  "admin.branding.accentCustom": "カスタム",
+  "admin.branding.accentPick": "色を選択",
+  "admin.branding.accentHex": "16 進数カラーコード",
+  "admin.branding.accentHint": "サイト全体に即時適用され、自動保存されます。",
+  "admin.branding.accentHexHint":
+    "6 桁の 16 進数カラー（例: #7c3aed）を入力してください。",
   "admin.branding.accent_flame": "フレーム",
   "admin.branding.accent_ocean": "オーシャン",
   "admin.branding.accent_indigo": "インディゴ",

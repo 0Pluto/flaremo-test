@@ -137,3 +137,68 @@ test("the owner picks an accent preset and it applies across sessions", async ({
   await resetContext.close();
   await ownerContext.close();
 });
+
+test("the owner derives a theme from a custom hex seed", async ({
+  browser,
+}) => {
+  const ownerContext = await browser.newContext({
+    storageState: E2E_AUTH_STATE,
+  });
+  const ownerPage = await ownerContext.newPage();
+  await ownerPage.goto(`${E2E_BASE_URL}/account`);
+  const brandingTab = ownerPage.getByRole("tab", {
+    name: /品牌外观|Branding/,
+  });
+  await brandingTab.click();
+
+  await ownerPage.getByRole("button", { name: /自定义|Custom/ }).click();
+  const hexInput = ownerPage.getByLabel(/十六进制色值|Hex color value/);
+  await hexInput.fill("#7c3aed");
+
+  // Live preview: the custom attribute + an inline ramp variable land as
+  // soon as the seed is valid.
+  await expect(ownerPage.locator("html")).toHaveAttribute(
+    "data-accent",
+    "custom",
+  );
+  await expect(ownerPage.locator("html")).toHaveCSS("--brand-500", /rgb/);
+
+  // Debounced save flushes; a fresh anonymous context resolves custom too.
+  await expect
+    .poll(async () => {
+      const state = await ownerPage.evaluate(() => ({
+        accent: document.documentElement.dataset.accent,
+        seed: document.documentElement.style.getPropertyValue("--brand-500"),
+      }));
+      return state;
+    })
+    .toBeDefined();
+  await ownerPage.waitForTimeout(900);
+  const anonymousContext = await browser.newContext();
+  const anonymousPage = await anonymousContext.newPage();
+  await anonymousPage.goto(`${E2E_BASE_URL}/login`);
+  await expect(anonymousPage.locator("html")).toHaveAttribute(
+    "data-accent",
+    "custom",
+  );
+  await expect(anonymousPage.locator("html")).toHaveCSS("--brand-500", /rgb/);
+  await anonymousContext.close();
+
+  // Reset so later specs and other suites observe the default accent.
+  const resetContext = await browser.newContext({
+    storageState: E2E_AUTH_STATE,
+  });
+  const resetPage = await resetContext.newPage();
+  await resetPage.goto(`${E2E_BASE_URL}/account`);
+  await resetPage.getByRole("tab", { name: /品牌外观|Branding/ }).click();
+  await resetPage.getByRole("button", { name: /火焰|Flame/ }).click();
+  await expect(resetPage.locator("html")).not.toHaveAttribute(
+    "data-accent",
+    /.+/,
+  );
+  await expect(
+    resetPage.locator("html").evaluate((html) => html.style.length),
+  ).resolves.toBe(0);
+  await resetContext.close();
+  await ownerContext.close();
+});

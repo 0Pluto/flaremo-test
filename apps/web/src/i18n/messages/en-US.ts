@@ -608,6 +608,12 @@ const messages = {
   "admin.branding.markRemoved": "Logo removed.",
   "admin.branding.failed": "Failed to save branding.",
   "admin.branding.accent": "Accent color",
+  "admin.branding.accentCustom": "Custom",
+  "admin.branding.accentPick": "Pick a color",
+  "admin.branding.accentHex": "Hex color value",
+  "admin.branding.accentHint":
+    "Applied across the site instantly and saved automatically.",
+  "admin.branding.accentHexHint": "Enter a 6-digit hex value, e.g. #7c3aed.",
   "admin.branding.accent_flame": "Flame",
   "admin.branding.accent_ocean": "Ocean",
   "admin.branding.accent_indigo": "Indigo",

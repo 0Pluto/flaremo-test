@@ -1,6 +1,7 @@
 import type { FlareMoDb } from "@flaremo/db";
 import {
   assertMemberQuota,
+  BRANDING_ACCENT_HEX_PATTERN,
   BRANDING_ACCENT_PRESETS,
   BRANDING_MARK_CONTENT_TYPES,
   BRANDING_MARK_MAX_BYTES,
@@ -8,6 +9,7 @@ import {
   type BrandingMark,
   beginFlaremoMemberRemoval,
   brandingMarkR2Key,
+  CUSTOM_BRANDING_ACCENT,
   clearBrandingMark,
   createFlaremoMemberWithLink,
   createMemberRemovalJob,
@@ -135,7 +137,17 @@ const updateBrandingSchema = z.object({
     .max(BRANDING_PRODUCT_NAME_MAX_CHARS)
     .nullable()
     .optional(),
-  accent: z.enum(BRANDING_ACCENT_PRESETS).nullable().optional(),
+  accent: z
+    .enum([...BRANDING_ACCENT_PRESETS, CUSTOM_BRANDING_ACCENT])
+    .nullable()
+    .optional(),
+  // Seed hex for the custom accent; validated + stored lowercased in domain.
+  accent_hex: z
+    .string()
+    .trim()
+    .regex(BRANDING_ACCENT_HEX_PATTERN)
+    .nullable()
+    .optional(),
 });
 
 adminApi.get("/branding", async (c) => {
@@ -152,6 +164,7 @@ adminApi.get("/branding", async (c) => {
           ? null
           : branding.product,
       accent: branding.accent,
+      accent_hex: branding.accentHex,
       mark_light_url: markUrl("light", branding.marks.light),
       mark_dark_url: markUrl("dark", branding.marks.dark),
     });
@@ -172,10 +185,26 @@ adminApi.put(
         branding = await setBrandingProductName(db, patch.product_name);
       }
       if (patch.accent !== undefined) {
-        branding = await setBrandingAccent(db, patch.accent);
+        branding = await setBrandingAccent(
+          db,
+          patch.accent,
+          patch.accent_hex !== undefined ? patch.accent_hex : undefined,
+        );
+      } else if (patch.accent_hex !== undefined) {
+        // Hex-only update retargets the existing custom seed's color.
+        const current = await getBranding(db);
+        if (current.accent === CUSTOM_BRANDING_ACCENT) {
+          branding = await setBrandingAccent(db, "custom", patch.accent_hex);
+        } else {
+          branding = current;
+        }
       }
       branding ??= await getBranding(db);
-      return c.json({ product: branding.product, accent: branding.accent });
+      return c.json({
+        product: branding.product,
+        accent: branding.accent,
+        accent_hex: branding.accentHex,
+      });
     } catch (error) {
       return jsonError(c, error);
     }

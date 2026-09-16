@@ -620,6 +620,13 @@ const messages = {
   "admin.branding.markRemoved": "Логотип убран.",
   "admin.branding.failed": "Не удалось сохранить бренд.",
   "admin.branding.accent": "Цвет акцента",
+  "admin.branding.accentCustom": "Свой",
+  "admin.branding.accentPick": "Выбрать цвет",
+  "admin.branding.accentHex": "Код цвета (HEX)",
+  "admin.branding.accentHint":
+    "Мгновенно применяется на всём сайте и сохраняется автоматически.",
+  "admin.branding.accentHexHint":
+    "Введите 6-значный HEX-код, например #7c3aed.",
   "admin.branding.accent_flame": "Пламя",
   "admin.branding.accent_ocean": "Океан",
   "admin.branding.accent_indigo": "Индиго",

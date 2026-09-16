@@ -675,11 +675,13 @@ export type BrandingAccent =
   | "jade"
   | "teal"
   | "crimson"
-  | "amber";
+  | "amber"
+  | "custom";
 
 export type BrandingInfo = {
   product: string;
   accent: string;
+  accent_hex?: string | null;
   mark_light_url: string | null;
   mark_dark_url: string | null;
 };
@@ -687,6 +689,7 @@ export type BrandingInfo = {
 export type AdminBranding = {
   product_name: string | null;
   accent: string;
+  accent_hex: string | null;
   mark_light_url: string | null;
   mark_dark_url: string | null;
 };
@@ -729,14 +732,18 @@ export async function updateAdminBrandingProductName(
   );
 }
 
-export async function updateAdminBrandingAccent(accent: string | null) {
-  return apiRequest<{ product: string; accent: string }>(
-    "/api/app/admin/branding",
-    {
-      method: "PUT",
-      body: JSON.stringify({ accent }),
-    },
-  );
+export async function updateAdminBrandingAccent(
+  accent: string | null,
+  accent_hex?: string | null,
+) {
+  return apiRequest<{
+    product: string;
+    accent: string;
+    accent_hex: string | null;
+  }>("/api/app/admin/branding", {
+    method: "PUT",
+    body: JSON.stringify({ accent, accent_hex: accent_hex ?? null }),
+  });
 }
 
 export async function uploadAdminBrandingMark(

@@ -29,7 +29,7 @@ import {
   uploadAdminBrandingMark,
 } from "@/api";
 import {
-  BRANDING_ACCENTS,
+  BRANDING_ACCENT_CHOICES,
   type BrandingAccent,
   setAccentAttribute,
 } from "@/branding";
@@ -65,6 +65,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/i18n";
+import { normalizeHexColor } from "@/lib/brand-ramp";
 import { errorMessage } from "@/lib/error";
 
 export function AdminPanel() {
@@ -489,7 +490,7 @@ const ACCEPTED_MARK_TYPES = "image/png,image/webp,image/svg+xml";
 const MEMBER_PAGE_SIZE = 20;
 
 /** Swatch dots are fixed hex so the palette reads the same in any theme. */
-const ACCENT_SWATCH_HEX: Record<BrandingAccent, string> = {
+const ACCENT_SWATCH_HEX: Record<Exclude<BrandingAccent, "custom">, string> = {
   flame: "#ff6a00",
   ocean: "#0090ff",
   indigo: "#3e63dd",
@@ -502,20 +503,44 @@ const ACCENT_SWATCH_HEX: Record<BrandingAccent, string> = {
 
 function AccentPicker({
   value,
+  customHex,
   disabled,
   onSelect,
 }: {
   value: string;
+  customHex: string | null;
   disabled: boolean;
   onSelect: (accent: BrandingAccent) => void;
 }) {
   const { t } = useI18n();
+  const isCustom = value === "custom";
   return (
     <fieldset
       aria-label={t("admin.branding.accent")}
       className="flex flex-wrap gap-2 border-0 p-0"
     >
-      {BRANDING_ACCENTS.map((accent) => {
+      {BRANDING_ACCENT_CHOICES.map((accent) => {
+        if (accent === "custom") {
+          return (
+            <button
+              key={accent}
+              aria-label={t("admin.branding.accentCustom")}
+              aria-pressed={isCustom}
+              className="size-6 shrink-0 rounded-full border transition-all focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-50 data-[active=true]:ring-[2px] data-[active=true]:ring-ring data-[active=true]:ring-offset-2 data-[active=true]:ring-offset-background"
+              data-active={isCustom}
+              disabled={disabled}
+              style={{
+                background:
+                  isCustom && customHex
+                    ? customHex
+                    : "conic-gradient(from 140deg, #f43f5e, #f97316, #facc15, #4ade80, #22d3ee, #818cf8, #e879f9, #f43f5e)",
+              }}
+              title={t("admin.branding.accentCustom")}
+              type="button"
+              onClick={() => onSelect(accent)}
+            />
+          );
+        }
         const active = accent === value;
         return (
           <button
@@ -546,10 +571,110 @@ function filterMembers(users: AdminUser[], search: string): AdminUser[] {
   );
 }
 
+/**
+ * Seed-color editor for the custom accent. Any valid 6-digit hex applies to
+ * the whole page instantly (the derived ramp paints live); the PUT is
+ * debounced, and closing the dialog flushes a valid unsaved draft.
+ */
+function CustomAccentDialog({
+  draft,
+  onDraftChange,
+  onOpenChange,
+  onSave,
+  open,
+}: {
+  draft: string;
+  onDraftChange: (value: string) => void;
+  onOpenChange: (open: boolean) => void;
+  onSave: (hex: string) => Promise<unknown>;
+  open: boolean;
+}) {
+  const { t } = useI18n();
+  const lastSavedRef = useRef<string | null>(null);
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+
+  const saveRef = useRef(onSave);
+  saveRef.current = onSave;
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const hex = normalizeHexColor(draft);
+    if (!hex) return undefined;
+    // Live preview beats the network: repaint the whole page immediately,
+    // persist on a debounce so typing never floods the API.
+    setAccentAttribute("custom", hex);
+    if (hex === lastSavedRef.current) return undefined;
+    const timer = setTimeout(() => {
+      lastSavedRef.current = hex;
+      void saveRef.current(hex);
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [draft, open]);
+
+  const flush = () => {
+    const hex = normalizeHexColor(draftRef.current);
+    if (hex && hex !== lastSavedRef.current) {
+      lastSavedRef.current = hex;
+      void onSave(hex);
+    }
+  };
+
+  const valid = normalizeHexColor(draft);
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) flush();
+        onOpenChange(next);
+      }}
+    >
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{t("admin.branding.accentCustom")}</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <input
+              aria-label={t("admin.branding.accentPick")}
+              className="size-12 shrink-0 cursor-pointer rounded-lg border bg-transparent p-1"
+              type="color"
+              value={valid ?? "#ff6a00"}
+              onChange={(event) => onDraftChange(event.target.value)}
+            />
+            <Input
+              aria-label={t("admin.branding.accentHex")}
+              autoComplete="off"
+              className="font-mono"
+              placeholder="#7c3aed"
+              spellCheck={false}
+              value={draft}
+              aria-invalid={draft.length > 0 && !valid}
+              onChange={(event) => onDraftChange(event.target.value)}
+            />
+          </div>
+          <p className="text-muted-foreground text-xs">
+            {valid
+              ? t("admin.branding.accentHint")
+              : t("admin.branding.accentHexHint")}
+          </p>
+        </div>
+        <DialogFooter>
+          <Button type="button" onClick={() => onOpenChange(false)}>
+            {t("common.close")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function BrandingCard() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customDraft, setCustomDraft] = useState("");
   const [productName, setProductName] = useState("");
   const lightInputRef = useRef<HTMLInputElement>(null);
   const darkInputRef = useRef<HTMLInputElement>(null);
@@ -578,16 +703,24 @@ export function BrandingCard() {
   });
 
   const saveAccentMutation = useMutation({
-    mutationFn: (accent: BrandingAccent) => updateAdminBrandingAccent(accent),
-    onMutate: (accent) => {
+    mutationFn: ({
+      accent,
+      accentHex,
+    }: {
+      accent: BrandingAccent;
+      accentHex?: string | null;
+    }) => updateAdminBrandingAccent(accent, accentHex ?? null),
+    onMutate: ({ accent, accentHex }) => {
       // Swatches are instant-apply: paint the choice while the PUT runs.
-      setAccentAttribute(accent);
+      setAccentAttribute(accent, accentHex ?? undefined);
     },
-    onSuccess: (_data, accent) => {
+    onSuccess: (_data, { accent, accentHex }) => {
       queryClient.setQueryData<AdminBranding>(["admin-branding"], (current) =>
-        current ? { ...current, accent } : current,
+        current
+          ? { ...current, accent, accent_hex: accentHex ?? null }
+          : current,
       );
-      setAccentAttribute(accent);
+      setAccentAttribute(accent, accentHex ?? undefined);
     },
     onError: (error) =>
       toast.error(errorMessage(error, t("admin.branding.failed"))),
@@ -700,9 +833,25 @@ export function BrandingCard() {
           <div className="flex flex-col gap-1.5">
             <p className="text-sm font-medium">{t("admin.branding.accent")}</p>
             <AccentPicker
+              customHex={brandingQuery.data?.accent_hex ?? null}
               disabled={saveAccentMutation.isPending}
               value={brandingQuery.data?.accent ?? "flame"}
-              onSelect={(accent) => void saveAccentMutation.mutateAsync(accent)}
+              onSelect={(accent) => {
+                if (accent === "custom") {
+                  setCustomDraft(
+                    brandingQuery.data?.accent_hex ??
+                      (brandingQuery.data?.accent
+                        ? (ACCENT_SWATCH_HEX[
+                            brandingQuery.data
+                              .accent as keyof typeof ACCENT_SWATCH_HEX
+                          ] ?? "#ff6a00")
+                        : "#ff6a00"),
+                  );
+                  setCustomOpen(true);
+                  return;
+                }
+                void saveAccentMutation.mutateAsync({ accent });
+              }}
             />
           </div>
           <div className="flex items-center gap-3">
@@ -790,6 +939,15 @@ export function BrandingCard() {
           </div>
         </DialogContent>
       </Dialog>
+      <CustomAccentDialog
+        draft={customDraft}
+        onDraftChange={setCustomDraft}
+        onOpenChange={setCustomOpen}
+        open={customOpen}
+        onSave={(hex) =>
+          saveAccentMutation.mutateAsync({ accent: "custom", accentHex: hex })
+        }
+      />
     </Card>
   );
 }

@@ -596,6 +596,12 @@ const messages = {
   "admin.branding.markRemoved": "أُزيل الشعار.",
   "admin.branding.failed": "فشل حفظ إعدادات الهوية.",
   "admin.branding.accent": "لون التمييز",
+  "admin.branding.accentCustom": "مخصص",
+  "admin.branding.accentPick": "اختر لوناً",
+  "admin.branding.accentHex": "قيمة سداسية عشرية",
+  "admin.branding.accentHint": "يُطبَّق على الموقع بالكامل فورًا ويُحفظ تلقائيًا.",
+  "admin.branding.accentHexHint":
+    "أدخل قيمة سداسية عشرية من 6 خانات، مثل #7c3aed.",
   "admin.branding.accent_flame": "اللهب",
   "admin.branding.accent_ocean": "المحيط",
   "admin.branding.accent_indigo": "النيلي",

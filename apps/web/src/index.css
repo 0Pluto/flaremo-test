@@ -286,6 +286,16 @@
     --primary-foreground: oklch(0.20 0.03 30);
 }
 
+/* Custom accent: the ramp itself is injected as inline style variables by
+   BrandingProvider (derived from the seed hex in JS); these slots only route
+   the two theme-dependent foregrounds, which inline styles can't vary. */
+:root[data-accent='custom'] {
+    --primary-foreground: var(--brand-custom-fg-light, oklch(0.99 0.003 75));
+}
+.dark[data-accent='custom'] {
+    --primary-foreground: var(--brand-custom-fg-dark, oklch(0.20 0.03 30));
+}
+
 
 @layer base {
   * {

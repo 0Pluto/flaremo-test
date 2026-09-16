@@ -132,3 +132,15 @@
 - **favicon**：`apps/web/scripts/generate-accent-brand.mjs`（sharp）对现有 mark PNG 逐像素 oklch 色相旋转+色度缩放，产出 7×2 张到 `public/brand/<accent>/`；`theme-provider` 新增 `setFaviconAccent`，BrandingProvider 在 accent 生效时接线；`index.html` 陈旧 meta theme-color 初始值已顺手对齐。
 - **e2e 归队**：branding.spec 之前没被任何 playwright 项目匹配（孤儿文件），已挂回 auth-ui 项目；accent 用例（选 jade→断言 html[data-accent]→匿名上下文持久→重置 flame）本地全绿。
 - **验收**：16 组（8 预置×明暗）Playwright 截图走查（登录页 auth-frame + 合成 token 样本条：CTA/badge/switch/进度条/链接/焦点环/400/700 色块），flame 基线像素级无回归，amber 对比度问题在过程中发现并修复（button.tsx 的 text-white 是唯一硬编码白字）。
+
+## 附录 2：自定义种子色（2026-09-16 二期）
+
+决策稿原定「预置起步、种子色进阶」，同日完成二期。交互：
+
+- 色板第 9 格为「自定义」：未激活时显示彩虹锥形渐变，激活后显示当前种子色。点击打开弹窗，内含原生取色器（`input[type=color]`，桌面端带吸管）+ 6 位 hex 输入框。
+- **输入即预览**：合法 hex（支持 3/6 位）输入后全站立即重绘（`setAccentAttribute("custom", hex)`）；持久化防抖 600ms，关弹窗 flush 未保存的合法草稿。
+- **推导器** `apps/web/src/lib/brand-ramp.ts`：种子只贡献 hue+chroma，L 走 flame 轨道固定值（0.96→0.47），每档色度按 flame 曲线比例缩放并做 sRGB gamut 钳制（二分 maxChroma）；前景色按 WCAG 对比度对**渲染后**色值自适应（白字为默认，亮底才翻深字）。固定 L 轨道保证任何色相的实底都是中调（实测 24 色相全扫白字对比 ≥3），因此白字普适，与 flame 基线观感一致。
+- **服务端**：accent 枚举加 `custom`，新增 `accent_hex`（`#[0-9a-fA-F]{6}` 大小写不敏感，存小写）；`accent=custom` 必须带合法 hex，`accent≠custom` 时 hex 必须为 null；hex 单独 PUT 只在当前已是 custom 时生效。非法/缺 hex 的 custom 读取时回落 flame。
+- **应用**：BrandingProvider 检测 custom+hex 后把 9 档色阶 + coral + `--brand-gradient-foreground` 以 inline style 写入 html（inline 优先级高于预置块），两个主题相关的 `--primary-foreground` 走 CSS 槽位 `--brand-custom-fg-light/dark`（inline 无法按主题切换）。切回预置时清全部 inline 变量。
+- **边界**：favicon 对 custom 保持 flame 默认图（无法预渲染任意色）；无新依赖（oklch 数学为纯手写，与 favicon 脚本同源）。
+- 验证：ramp 单测 9 条（含退化种子/AA 对比度矩阵/24 色相扫描）、domain+worker accent 测试绿、构建绿。e2e（custom 种子持久化）已写入 branding.spec，按 opt-in 规则未跑。

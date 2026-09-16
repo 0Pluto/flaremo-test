@@ -634,6 +634,13 @@ const messages = {
   "admin.branding.markRemoved": "Logo retiré.",
   "admin.branding.failed": "Échec de l'enregistrement de la marque.",
   "admin.branding.accent": "Couleur d'accent",
+  "admin.branding.accentCustom": "Personnalisée",
+  "admin.branding.accentPick": "Choisir une couleur",
+  "admin.branding.accentHex": "Valeur hexadécimale",
+  "admin.branding.accentHint":
+    "Appliqué instantanément sur tout le site et enregistré automatiquement.",
+  "admin.branding.accentHexHint":
+    "Saisissez une valeur hexadécimale à 6 chiffres (ex. #7c3aed).",
   "admin.branding.accent_flame": "Flamme",
   "admin.branding.accent_ocean": "Océan",
   "admin.branding.accent_indigo": "Indigo",

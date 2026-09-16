@@ -26,10 +26,12 @@ export const BRANDING_PRODUCT_NAME_MAX_CHARS = 40;
 export const DEFAULT_FLAREMO_PRODUCT_NAME = "FlareMo";
 
 /**
- * Curated accent presets the instance can pick from. Values live in the web
- * app's CSS (`:root[data-accent=...]` blocks, Radix Colors–derived ramps);
- * the server only carries the preset id and always falls back to the default
- * on unknown/missing values so hand-edited settings can't break the UI.
+ * Curated accent presets the instance can pick from, plus "custom": a seed
+ * hex (stored alongside as `accent_hex`) from which the web app derives a
+ * full ramp at load time. Preset ramps live in the web app's CSS
+ * (`:root[data-accent=...]` blocks, Radix Colors–derived). The server only
+ * carries the id + seed and always falls back to the default on unknown or
+ * inconsistent values so hand-edited settings can't break the UI.
  */
 export const BRANDING_ACCENT_PRESETS = [
   "flame",
@@ -41,12 +43,31 @@ export const BRANDING_ACCENT_PRESETS = [
   "crimson",
   "amber",
 ] as const;
-export type BrandingAccent = (typeof BRANDING_ACCENT_PRESETS)[number];
+export const CUSTOM_BRANDING_ACCENT = "custom";
+export type BrandingAccent =
+  | (typeof BRANDING_ACCENT_PRESETS)[number]
+  | typeof CUSTOM_BRANDING_ACCENT;
 export const DEFAULT_BRANDING_ACCENT: BrandingAccent = "flame";
 
-export function normalizeBrandingAccent(value: unknown): BrandingAccent {
-  return BRANDING_ACCENT_PRESETS.some((preset) => preset === value)
-    ? (value as BrandingAccent)
+export const BRANDING_ACCENT_HEX_PATTERN = /^#[0-9a-f]{6}$/i;
+
+export function normalizeBrandingAccentHex(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const hex = value.trim().toLowerCase();
+  return BRANDING_ACCENT_HEX_PATTERN.test(hex) ? hex : null;
+}
+
+export function normalizeBrandingAccent(
+  accent: unknown,
+  accentHex: unknown,
+): BrandingAccent {
+  if (accent === CUSTOM_BRANDING_ACCENT) {
+    return normalizeBrandingAccentHex(accentHex)
+      ? CUSTOM_BRANDING_ACCENT
+      : DEFAULT_BRANDING_ACCENT;
+  }
+  return BRANDING_ACCENT_PRESETS.some((preset) => preset === accent)
+    ? (accent as BrandingAccent)
     : DEFAULT_BRANDING_ACCENT;
 }
 
@@ -61,12 +82,14 @@ export type BrandingMark = {
 export type ResolvedBranding = {
   product: string;
   accent: BrandingAccent;
+  accentHex: string | null;
   marks: { light: BrandingMark | null; dark: BrandingMark | null };
 };
 
 type StoredBranding = {
   product_name?: string | null;
   accent?: string | null;
+  accent_hex?: string | null;
   marks?: {
     light?: BrandingMark | null;
     dark?: BrandingMark | null;
@@ -130,6 +153,7 @@ export async function getBranding(db: FlareMoDb): Promise<ResolvedBranding> {
     return {
       product: DEFAULT_FLAREMO_PRODUCT_NAME,
       accent: DEFAULT_BRANDING_ACCENT,
+      accentHex: null,
       marks: { light: null, dark: null },
     };
   }
@@ -138,7 +162,8 @@ export async function getBranding(db: FlareMoDb): Promise<ResolvedBranding> {
   return {
     product:
       normalizeProductName(value.product_name) ?? DEFAULT_FLAREMO_PRODUCT_NAME,
-    accent: normalizeBrandingAccent(value.accent),
+    accent: normalizeBrandingAccent(value.accent, value.accent_hex),
+    accentHex: normalizeBrandingAccentHex(value.accent_hex),
     marks: {
       light: normalizeMark(value.marks?.light),
       dark: normalizeMark(value.marks?.dark),
@@ -166,7 +191,8 @@ export async function setBrandingProductName(
   const next: StoredBranding = {
     ...value,
     product_name: normalizeProductName(rawName),
-    accent: normalizeBrandingAccent(value.accent),
+    accent: normalizeBrandingAccent(value.accent, value.accent_hex),
+    accent_hex: normalizeBrandingAccentHex(value.accent_hex),
     marks: {
       light: normalizeMark(value.marks?.light),
       dark: normalizeMark(value.marks?.dark),
@@ -180,13 +206,28 @@ export async function setBrandingProductName(
 export async function setBrandingAccent(
   db: FlareMoDb,
   rawAccent: string | null,
+  rawAccentHex?: string | null,
 ): Promise<ResolvedBranding> {
   if (
     rawAccent !== null &&
+    rawAccent !== CUSTOM_BRANDING_ACCENT &&
     !BRANDING_ACCENT_PRESETS.includes(rawAccent as never)
   ) {
     throw new ValidationError(
-      `Accent must be one of: ${BRANDING_ACCENT_PRESETS.join(", ")}.`,
+      `Accent must be one of: ${BRANDING_ACCENT_PRESETS.join(", ")}, custom.`,
+    );
+  }
+  if (
+    rawAccent === CUSTOM_BRANDING_ACCENT &&
+    !normalizeBrandingAccentHex(rawAccentHex)
+  ) {
+    throw new ValidationError(
+      "A custom accent requires a 6-digit hex color (#rrggbb).",
+    );
+  }
+  if (rawAccent !== CUSTOM_BRANDING_ACCENT && rawAccentHex != null) {
+    throw new ValidationError(
+      "accent_hex is only valid with the custom accent.",
     );
   }
   const owner = await getFlaremoUserById(db, OWNER_FLAREMO_USER_ID);
@@ -196,6 +237,10 @@ export async function setBrandingAccent(
     ...value,
     product_name: normalizeProductName(value.product_name),
     accent: rawAccent,
+    accent_hex:
+      rawAccent === CUSTOM_BRANDING_ACCENT
+        ? normalizeBrandingAccentHex(rawAccentHex)
+        : null,
     marks: {
       light: normalizeMark(value.marks?.light),
       dark: normalizeMark(value.marks?.dark),

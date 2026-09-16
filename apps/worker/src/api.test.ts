@@ -868,6 +868,73 @@ describe("FlareMo Worker API", () => {
     expect((await json<{ accent: string }>(reset)).accent).toBe("flame");
   });
 
+  it("stores a custom seed accent and enforces the hex contract", async () => {
+    const withoutHex = await fetchApp(
+      "http://flaremo.test/api/app/admin/branding",
+      {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ accent: "custom" }),
+      },
+    );
+    expect(withoutHex.status).toBe(400);
+
+    const hexOnly = await fetchApp(
+      "http://flaremo.test/api/app/admin/branding",
+      {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ accent_hex: "#7c3aed" }),
+      },
+    );
+    // Hex without the custom accent is a no-op, not an error.
+    expect(hexOnly.status).toBe(200);
+    expect((await json<{ accent: string }>(hexOnly)).accent).toBe("flame");
+
+    const put = await fetchApp("http://flaremo.test/api/app/admin/branding", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ accent: "custom", accent_hex: "#7C3AED" }),
+    });
+    expect(put.status).toBe(200);
+    const saved = await json<{ accent: string; accent_hex: string }>(put);
+    expect(saved.accent).toBe("custom");
+    expect(saved.accent_hex).toBe("#7c3aed");
+
+    const anonymous = await fetchApp(
+      "http://flaremo.test/api/app/branding",
+      { method: "GET" },
+      { authenticated: false },
+    );
+    const published = await json<{
+      accent: string;
+      accent_hex: string | null;
+    }>(anonymous);
+    expect(published.accent).toBe("custom");
+    expect(published.accent_hex).toBe("#7c3aed");
+
+    const reseed = await fetchApp(
+      "http://flaremo.test/api/app/admin/branding",
+      {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ accent_hex: "#0ea5e9" }),
+      },
+    );
+    expect((await json<{ accent_hex: string }>(reseed)).accent_hex).toBe(
+      "#0ea5e9",
+    );
+
+    const reset = await fetchApp("http://flaremo.test/api/app/admin/branding", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ accent: "flame", accent_hex: null }),
+    });
+    expect(
+      await json<{ accent: string; accent_hex: string | null }>(reset),
+    ).toMatchObject({ accent: "flame", accent_hex: null });
+  });
+
   it("uploads, serves, and removes a custom logo mark", async () => {
     // Minimal 1x1 PNG.
     const png = Uint8Array.from(

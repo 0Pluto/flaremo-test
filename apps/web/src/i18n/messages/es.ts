@@ -627,6 +627,13 @@ const messages = {
   "admin.branding.markRemoved": "Logo quitado.",
   "admin.branding.failed": "No se pudo guardar la marca.",
   "admin.branding.accent": "Color de acento",
+  "admin.branding.accentCustom": "Personalizado",
+  "admin.branding.accentPick": "Elegir un color",
+  "admin.branding.accentHex": "Valor hexadecimal",
+  "admin.branding.accentHint":
+    "Se aplica en todo el sitio al instante y se guarda automáticamente.",
+  "admin.branding.accentHexHint":
+    "Introduce un valor hexadecimal de 6 dígitos (p. ej. #7c3aed).",
   "admin.branding.accent_flame": "Llama",
   "admin.branding.accent_ocean": "Océano",
   "admin.branding.accent_indigo": "Índigo",

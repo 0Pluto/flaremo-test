@@ -51,12 +51,18 @@ describe("instance branding accent", () => {
 
   it("normalizes unknown and missing accents back to the default", () => {
     expect(DEFAULT_BRANDING_ACCENT).toBe("flame");
-    expect(normalizeBrandingAccent(undefined)).toBe("flame");
-    expect(normalizeBrandingAccent(null)).toBe("flame");
-    expect(normalizeBrandingAccent("hacker-green")).toBe("flame");
+    expect(normalizeBrandingAccent(undefined, undefined)).toBe("flame");
+    expect(normalizeBrandingAccent(null, null)).toBe("flame");
+    expect(normalizeBrandingAccent("hacker-green", null)).toBe("flame");
     for (const preset of BRANDING_ACCENT_PRESETS) {
-      expect(normalizeBrandingAccent(preset)).toBe(preset);
+      expect(normalizeBrandingAccent(preset, null)).toBe(preset);
     }
+  });
+
+  it("custom accent requires a valid seed hex", () => {
+    expect(normalizeBrandingAccent("custom", undefined)).toBe("flame");
+    expect(normalizeBrandingAccent("custom", "#GGGGGG")).toBe("flame");
+    expect(normalizeBrandingAccent("custom", "#7C3AED")).toBe("custom");
   });
 
   it("a fresh instance resolves the default accent", async () => {
@@ -87,5 +93,15 @@ describe("instance branding accent", () => {
     await setBrandingAccent(db, "teal");
     const branding = await setBrandingAccent(db, null);
     expect(branding.accent).toBe("flame");
+  });
+
+  it("stores a custom seed and rejects custom without a hex", async () => {
+    await expect(setBrandingAccent(db, "custom")).rejects.toThrow(
+      ValidationError,
+    );
+    const branding = await setBrandingAccent(db, "custom", "#7C3AED");
+    expect(branding.accent).toBe("custom");
+    expect(branding.accentHex).toBe("#7c3aed");
+    expect((await getBranding(db)).accent).toBe("custom");
   });
 });
