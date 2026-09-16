@@ -11,6 +11,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
+  getCaptureStatus,
   getCurrentFlareMoUser,
   getMemoStats,
   getTagHierarchy,
@@ -291,6 +292,12 @@ export function FlareMoApp() {
     staleTime: 60_000,
     retry: false,
   });
+  const captureStatusQuery = useQuery({
+    queryKey: ["capture-status", currentUserQuery.data?.id ?? ""],
+    queryFn: getCaptureStatus,
+    staleTime: 30_000,
+    retry: false,
+  });
 
   const memos = useMemo(
     () => memosQuery.data?.pages.flatMap((page) => page.memos) ?? [],
@@ -562,6 +569,8 @@ export function FlareMoApp() {
                 composeRequested={composeRequested}
                 space={space}
                 hasTeam={Boolean(currentUserQuery.data?.team)}
+                tags={stats.tags}
+                captureAvailable={Boolean(captureStatusQuery.data?.available)}
               />
               {hasFilters && (
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground motion-safe:animate-rise">

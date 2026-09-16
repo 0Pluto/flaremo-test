@@ -54,11 +54,15 @@ export const WorkspaceComposer = memo(function WorkspaceComposer({
   composeRequested,
   space,
   hasTeam,
+  tags,
+  captureAvailable,
 }: {
   visible: boolean;
   composeRequested: boolean;
   space: MemoSpace;
   hasTeam: boolean;
+  tags?: Array<{ name: string; count: number }>;
+  captureAvailable?: boolean;
 }) {
   const { t } = useI18n();
   const navigate = useNavigate({ from: "/" });
@@ -217,6 +221,8 @@ export const WorkspaceComposer = memo(function WorkspaceComposer({
       draft={capture.draft}
       isPending={isCreatingMemo || isCaptureSubmissionPending}
       showVisibility={hasTeam}
+      tags={tags}
+      captureAvailable={captureAvailable}
       onDraftChange={capture.updateDraft}
       onVisibilityChange={(visibility) => {
         setVisibilityPref((current) => {
