@@ -365,7 +365,7 @@ const messages = {
     "ログインの有効期限が切れました。再度サインインしてください",
   "toast.requestFailed": "操作に失敗しました。再試行してください",
   "auth.loginTitle": "FlareMo にサインイン",
-  "auth.brandTitle": "すべての瞬間を、探せる記憶に。",
+  "auth.brandTitle": "知っていることを、静かにしまっておく場所。",
   "auth.forgotPasswordHint": "パスワードをお忘れですか？",
   "auth.username": "ユーザー名",
   "auth.password": "パスワード",

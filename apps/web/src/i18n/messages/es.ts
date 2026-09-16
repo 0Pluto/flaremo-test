@@ -372,8 +372,7 @@ const messages = {
   "toast.accessRequired": "Tu sesión expiró. Vuelve a iniciar sesión.",
   "toast.requestFailed": "La acción falló. Inténtalo de nuevo.",
   "auth.loginTitle": "Iniciar sesión en FlareMo",
-  "auth.brandTitle":
-    "Convierte cada instante en un recuerdo que puedes encontrar.",
+  "auth.brandTitle": "Un hogar tranquilo para todo lo que sabes.",
   "auth.forgotPasswordHint": "¿Olvidaste tu contraseña?",
   "auth.username": "Usuario",
   "auth.password": "Contraseña",

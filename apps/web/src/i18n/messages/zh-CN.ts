@@ -333,7 +333,7 @@ const messages = {
   "toast.accessRequired": "登录状态已失效，请重新登录",
   "toast.requestFailed": "操作失败，请重试",
   "auth.loginTitle": "登录 FlareMo",
-  "auth.brandTitle": "把每个瞬间，变成可找回的记忆。",
+  "auth.brandTitle": "给已知的一切，一个安静的家。",
   "auth.forgotPasswordHint": "忘记密码？",
   "auth.username": "用户名",
   "auth.password": "密码",

@@ -364,7 +364,7 @@ const messages = {
   "toast.accessRequired": "로그인이 만료되었습니다. 다시 로그인해 주세요",
   "toast.requestFailed": "작업에 실패했습니다. 다시 시도해 주세요",
   "auth.loginTitle": "FlareMo에 로그인",
-  "auth.brandTitle": "모든 순간을, 다시 찾을 수 있는 기억으로.",
+  "auth.brandTitle": "아는 모든 것을 위한 조용한 공간.",
   "auth.forgotPasswordHint": "비밀번호를 잊으셨나요?",
   "auth.username": "사용자 이름",
   "auth.password": "비밀번호",

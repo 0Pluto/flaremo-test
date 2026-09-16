@@ -371,8 +371,7 @@ const messages = {
   "toast.accessRequired": "Votre session a expiré. Veuillez vous reconnecter.",
   "toast.requestFailed": "L'action a échoué. Veuillez réessayer.",
   "auth.loginTitle": "Se connecter à FlareMo",
-  "auth.brandTitle":
-    "Faites de chaque instant un souvenir qu'on peut retrouver.",
+  "auth.brandTitle": "Un foyer silencieux pour tout ce que vous savez.",
   "auth.forgotPasswordHint": "Mot de passe oublié ?",
   "auth.username": "Nom d'utilisateur",
   "auth.password": "Mot de passe",

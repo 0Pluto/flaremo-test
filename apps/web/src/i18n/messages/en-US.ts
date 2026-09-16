@@ -362,7 +362,7 @@ const messages = {
   "toast.accessRequired": "Your sign-in has expired. Please sign in again.",
   "toast.requestFailed": "Action failed. Please try again.",
   "auth.loginTitle": "Sign in to FlareMo",
-  "auth.brandTitle": "Turn every moment into memory you can find.",
+  "auth.brandTitle": "A quiet home for everything you know.",
   "auth.forgotPasswordHint": "Forgot your password?",
   "auth.username": "Username",
   "auth.password": "Password",

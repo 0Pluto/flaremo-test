@@ -357,7 +357,7 @@ const messages = {
   "toast.accessRequired": "انتهت جلستك. سجّل الدخول من جديد.",
   "toast.requestFailed": "فشل الإجراء. أعد المحاولة.",
   "auth.loginTitle": "تسجيل الدخول إلى FlareMo",
-  "auth.brandTitle": "حوّل كل لحظة إلى ذاكرة يمكنك استرجاعها.",
+  "auth.brandTitle": "منزل هادئ لكل ما تعرفه.",
   "auth.forgotPasswordHint": "نسيت كلمة المرور؟",
   "auth.username": "اسم المستخدم",
   "auth.password": "كلمة المرور",

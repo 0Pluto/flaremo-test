@@ -368,7 +368,7 @@ const messages = {
   "toast.accessRequired": "Ваша сессия истекла. Войдите заново.",
   "toast.requestFailed": "Действие не удалось. Попробуйте снова.",
   "auth.loginTitle": "Вход в FlareMo",
-  "auth.brandTitle": "Превратите каждый момент в память, которую можно найти.",
+  "auth.brandTitle": "Тихий дом для всего, что вы знаете.",
   "auth.forgotPasswordHint": "Забыли пароль?",
   "auth.username": "Имя пользователя",
   "auth.password": "Пароль",
