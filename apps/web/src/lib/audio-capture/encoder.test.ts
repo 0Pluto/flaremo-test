@@ -147,7 +147,10 @@ describe("Opus container (real WASM encoder)", () => {
       audio.slices.length,
     );
     sink.dispose();
-  });
+    // Real WASM opus encode of a full recording is CPU-bound; on a busy laptop
+    // it blows well past the 5s default. The value under test is the container
+    // structure, not encode speed.
+  }, 60_000);
 });
 
 describe("Opus fallback", () => {
