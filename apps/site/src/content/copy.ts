@@ -46,7 +46,7 @@ const EN_HOME: HomeContent = {
   heroTitleLine1: "Zero Servers. Forever Yours.",
   heroTitleLine2: "Your Second Brain on the Edge.",
   heroSubtitle:
-    "Next-generation knowledge management built natively on Cloudflare Edge (Workers, D1, R2). Zero VPS maintenance, full Memos API ecosystem support, and persistent MCP memory for your AI copilots.",
+    "Minimal, never shallow. Quiet, never loud. Knowledge management built natively on Cloudflare Edge (Workers, D1, R2). Zero VPS maintenance, full Memos API ecosystem support, and persistent MCP memory for your AI copilots.",
   primaryCta: "Read Deploy Guide",
   secondaryCta: "GitHub Source",
   statMemos: "~2.5M text memos",
@@ -170,7 +170,7 @@ const ZH_HOME: HomeContent = {
   heroTitleLine1: "零服务器，永久拥有",
   heroTitleLine2: "跑在边缘网络的第二大脑",
   heroSubtitle:
-    "基于 Cloudflare 边缘网络（Workers + D1 + R2）原生构建的新一代知识库：无需 VPS、免运维，完整兼容 Memos 生态，还能作为 AI Agent 的长期记忆。灵感随手记下，永久沉淀。",
+    "简约，不简单；克制，不放肆。基于 Cloudflare 边缘网络（Workers + D1 + R2）原生构建的知识库：无需 VPS、免运维，完整兼容 Memos 生态，还能作为 AI Agent 的长期记忆。灵感随手记下，永久沉淀。",
   primaryCta: "快速开始部署",
   secondaryCta: "GitHub 源码",
   statMemos: "约 250 万条纯文本笔记",
@@ -293,7 +293,7 @@ const JA_HOME: HomeContent = {
   heroTitleLine1: "サーバー不要、一生モノの所有権。",
   heroTitleLine2: "エッジネットワークで動く第二の脳。",
   heroSubtitle:
-    "Cloudflare Workers、D1、R2 を活用した次世代ナレッジベース。VPS 管理ゼロ、Memos API 互換、AI エージェントの長期記憶を手のひらに。",
+    "シンプルに、しかし深く。静かに、しかし妥協なく。Cloudflare Workers、D1、R2 を活用したナレッジベース。VPS 管理ゼロ、Memos API 互換、AI エージェントの長期記憶を手のひらに。",
   primaryCta: "デプロイガイドを読む",
   secondaryCta: "GitHub ソースコード",
   statMemos: "約250万件のメモ",
@@ -412,11 +412,11 @@ const JA_HOME: HomeContent = {
 };
 
 const FR_HOME: HomeContent = {
-  heroEyebrow: "Zéro serveur · Latence sub-50ms · Hébergement gratuit à vie",
+  heroEyebrow: "Zéro serveur · Latence sub-100ms · Hébergement gratuit à vie",
   heroTitleLine1: "Zéro serveur. Pour toujours à vous.",
   heroTitleLine2: "Votre second cerveau sur l'Edge.",
   heroSubtitle:
-    "Gestionnaire de connaissances moderne propulsé par Cloudflare (Workers, D1, R2). Zéro maintenance VPS, compatible Memos API et mémoire persistante pour vos agents IA.",
+    "Minimal, jamais superficiel. Discret, jamais criard. Gestionnaire de connaissances propulsé par Cloudflare (Workers, D1, R2). Zéro maintenance VPS, compatible Memos API et mémoire persistante pour vos agents IA.",
   primaryCta: "Guide de déploiement",
   secondaryCta: "Code source GitHub",
   statMemos: "~2,5 millions de notes",
@@ -537,11 +537,11 @@ const FR_HOME: HomeContent = {
 
 const ES_HOME: HomeContent = {
   heroEyebrow:
-    "Cero servidores · Borde global sub-50ms · Autohospedaje gratuito",
+    "Cero servidores · Borde global sub-100ms · Autohospedaje gratuito",
   heroTitleLine1: "Cero servidores. Tuyo para siempre.",
   heroTitleLine2: "Tu segundo cerebro en el Edge.",
   heroSubtitle:
-    "Sistema de gestión del conocimiento de nueva generación basado en Cloudflare (Workers, D1, R2). Sin mantenimiento de VPS, compatible con Memos API y memoria duradera para IA.",
+    "Mínimo, nunca superficial. Sereno, nunca estridente. Sistema de gestión del conocimiento basado en Cloudflare (Workers, D1, R2). Sin mantenimiento de VPS, compatible con Memos API y memoria duradera para IA.",
   primaryCta: "Guía de despliegue",
   secondaryCta: "Código en GitHub",
   statMemos: "~2,5 millones de notas",
@@ -661,11 +661,11 @@ const ES_HOME: HomeContent = {
 };
 
 const KO_HOME: HomeContent = {
-  heroEyebrow: "서버리스 · 50ms 미만 글로벌 엣지 · 평생 무료 셀프 호스팅",
+  heroEyebrow: "서버리스 · 100ms 미만 글로벌 엣지 · 평생 무료 셀프 호스팅",
   heroTitleLine1: "서버 제로, 영구 소유.",
   heroTitleLine2: "엣지 네트워크에서 작동하는 두 번째 뇌.",
   heroSubtitle:
-    "Cloudflare Workers, D1, R2 기반의 차세대 지식 관리 시스템. VPS 유지보수 없이, Memos API 생태계와 AI 에이전트 MCP 장기 기억을 영구 소유하세요.",
+    "심플하게, 얕지 않게. 조용하게, 과하지 않게. Cloudflare Workers, D1, R2 기반의 지식 관리 시스템. VPS 유지보수 없이, Memos API 생태계와 AI 에이전트 MCP 장기 기억을 영구 소유하세요.",
   primaryCta: "배포 가이드 읽기",
   secondaryCta: "GitHub 소스코드",
   statMemos: "약 250만 건의 메모",
@@ -784,11 +784,11 @@ const KO_HOME: HomeContent = {
 };
 
 const RU_HOME: HomeContent = {
-  heroEyebrow: "Ноль серверов · Глобальный Edge <50мс · Бесплатный хостинг",
+  heroEyebrow: "Ноль серверов · Глобальный Edge <100мс · Бесплатный хостинг",
   heroTitleLine1: "Ноль серверов. Навсегда ваше.",
   heroTitleLine2: "Второй мозг на глобальном Edge.",
   heroSubtitle:
-    "Управление знаниями нового поколения на базе Cloudflare (Workers, D1, R2). Никаких VPS, поддержка экосистемы Memos API и постоянная память для ИИ-агентов.",
+    "Минималистично, но не пусто. Сдержанно, но не робко. Управление знаниями на базе Cloudflare (Workers, D1, R2). Никаких VPS, поддержка экосистемы Memos API и постоянная память для ИИ-агентов.",
   primaryCta: "Руководство по установке",
   secondaryCta: "Исходный код на GitHub",
   statMemos: "~2.5 млн заметок",
@@ -908,11 +908,11 @@ const RU_HOME: HomeContent = {
 };
 
 const AR_HOME: HomeContent = {
-  heroEyebrow: "بدون خوادم · استجابة فائقة السرعة · استضافة ذاتية مجانية للأبد",
+  heroEyebrow: "بدون خوادم · استجابة سريعة · استضافة ذاتية مجانية للأبد",
   heroTitleLine1: "بدون خوادم. ملكك إلى الأبد.",
   heroTitleLine2: "دماغك الثاني على شبكة الحافة العالمية.",
   heroSubtitle:
-    "نظام إدارة معرفة متطور مبني على Cloudflare Edge (Workers, D1, R2). لا صيانة للخوادم، متوافق مع Memos API وذاكرة دائمة لوكلاء الذكاء الاصطناعي.",
+    "بسيط بلا سطحية. هادئ بلا صخب. نظام إدارة معرفة مبني على Cloudflare Edge (Workers, D1, R2). لا صيانة للخوادم، متوافق مع Memos API وذاكرة دائمة لوكلاء الذكاء الاصطناعي.",
   primaryCta: "دليل النشر والتشغيل",
   secondaryCta: "الشيفرة على GitHub",
   statMemos: "نحو 2.5 مليون ملاحظة",

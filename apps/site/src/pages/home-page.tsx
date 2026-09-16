@@ -129,20 +129,11 @@ function Hero({
 
   return (
     <section className="relative pt-12 md:pt-20">
-      {/* 顶部环境柔光 */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 flex justify-center overflow-hidden"
-      >
-        <div className="h-[420px] w-[700px] rounded-full bg-gradient-to-b from-signal/15 to-transparent blur-3xl opacity-70 dark:opacity-40" />
-      </div>
-
       <div className="container-x space-y-12">
         <div className="mx-auto max-w-3xl space-y-6 text-center">
           {/* Eyebrow Pill */}
           <PopIn className="inline-flex">
             <div className="inline-flex items-center gap-2 rounded-full border border-signal/30 bg-signal/10 px-3.5 py-1 text-xs font-semibold text-signal-ink shadow-2xs backdrop-blur-md">
-              <span className="size-2 rounded-full bg-signal animate-pulse" />
               <span>{home.heroEyebrow}</span>
             </div>
           </PopIn>
