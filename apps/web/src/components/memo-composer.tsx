@@ -2,6 +2,7 @@ import {
   HashIcon,
   ImageIcon,
   ListIcon,
+  ListTodoIcon,
   Loader2Icon,
   LockIcon,
   MicIcon,
@@ -576,6 +577,16 @@ export function MemoComposer({
             onClick={() => appendText("- ")}
           >
             <ListIcon />
+          </Button>
+          <Button
+            aria-label={t("composer.checklist")}
+            disabled={isPending}
+            size="icon-sm"
+            type="button"
+            variant="ghost"
+            onClick={() => appendText("- [ ] ")}
+          >
+            <ListTodoIcon />
           </Button>
           {captureAvailable && (
             <Button

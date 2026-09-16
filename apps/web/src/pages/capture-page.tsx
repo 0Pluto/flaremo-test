@@ -1,7 +1,4 @@
-import {
-  CAPTURE_MAX_DURATION_MS,
-  CAPTURE_MAX_TEXT,
-} from "@flaremo/contracts";
+import { CAPTURE_MAX_DURATION_MS, CAPTURE_MAX_TEXT } from "@flaremo/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBlocker, useNavigate } from "@tanstack/react-router";
 import { Loader2Icon, Mic, Square } from "lucide-react";
@@ -602,7 +599,9 @@ export function CapturePage() {
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {t("capture.charsUsed", {
-                    count: (local.text.length + snapshot.partial.length).toLocaleString(),
+                    count: (
+                      local.text.length + snapshot.partial.length
+                    ).toLocaleString(),
                     max: CAPTURE_MAX_TEXT.toLocaleString(),
                   })}
                 </p>

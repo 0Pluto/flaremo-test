@@ -14,7 +14,12 @@ import {
   ShieldIcon,
   Trash2Icon,
 } from "lucide-react";
-import { memo, useMemo, useState } from "react";
+import {
+  memo,
+  type MouseEvent as ReactMouseEvent,
+  useMemo,
+  useState,
+} from "react";
 import { toast } from "sonner";
 import type { Attachment, Memo, MemoState, MemoVisibility, Share } from "@/api";
 import { getMemoContext, getRelatedMemos, uploadAttachment } from "@/api";
@@ -65,6 +70,7 @@ import {
   formatMemoTime,
   getMemoResourceId,
 } from "@/lib/memo";
+import { countTaskItems, toggleTaskItem } from "@/lib/task-list";
 import { cn } from "@/lib/utils";
 
 /** Bodies beyond this size collapse in the timeline. */
@@ -153,6 +159,26 @@ export const MemoCard = memo(function MemoCard({
     () => createImageDimensionResolver(attachments),
     [attachments],
   );
+  // Task-list checkboxes are clickable for editors: a click rewrites the
+  // item's `[ ]`/`[x]` marker and flows through the memo update mutation
+  // (optimistic, so the box settles instantly).
+  const taskCount = useMemo(() => countTaskItems(memo.content), [memo.content]);
+  const toggleTask = (event: ReactMouseEvent<HTMLDivElement>) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement) || target.type !== "checkbox") {
+      return;
+    }
+    event.preventDefault();
+    const boxes = event.currentTarget.querySelectorAll<HTMLInputElement>(
+      'input[type="checkbox"]',
+    );
+    const index = Array.prototype.indexOf.call(boxes, target);
+    if (index < 0) return;
+    void onUpdate(id, {
+      content: toggleTaskItem(memo.content, index),
+      visibility: memo.visibility,
+    });
+  };
 
   // Editing an existing memo: pasted images upload bound to the memo right
   // away, so a cancelled edit leaves nothing to clean up except an
@@ -433,14 +459,18 @@ export const MemoCard = memo(function MemoCard({
       ) : (
         <div>
           <div className="relative">
+            {/* biome-ignore lint/a11y/noStaticElementInteractions: the delegation only intercepts the markdown checkboxes, which are reachable natively. */}
+            {/* biome-ignore lint/a11y/useKeyWithClickEvents: checkboxes toggle with Space/Enter through native input click events, which this handler also serves. */}
             <div
               className={cn(
                 collapsed && "max-h-52 overflow-hidden",
                 !collapsed && "transition-[max-height]",
               )}
+              onClick={canManage && taskCount > 0 ? toggleTask : undefined}
             >
               <LazyMemoContent
                 content={memo.content}
+                interactiveTaskLists={canManage && taskCount > 0}
                 resolveImageDimensions={resolveImageDimensions}
               />
             </div>

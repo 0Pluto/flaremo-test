@@ -43,12 +43,14 @@ export const LazyMemoContent = memo(function LazyMemoContent({
   content,
   onTimestampClick,
   withHeadingIds,
+  interactiveTaskLists,
   resolveImageDimensions,
 }: {
   className?: string;
   content: string;
   onTimestampClick?: (seconds: number) => void;
   withHeadingIds?: boolean;
+  interactiveTaskLists?: boolean;
   resolveImageDimensions?: (
     src: string,
   ) => { width: number; height: number } | undefined;
@@ -63,6 +65,7 @@ export const LazyMemoContent = memo(function LazyMemoContent({
         <MarkdownMemoContent
           className={className}
           content={content}
+          interactiveTaskLists={interactiveTaskLists}
           onTimestampClick={onTimestampClick}
           resolveImageDimensions={resolveImageDimensions}
           withHeadingIds={withHeadingIds}

@@ -47,6 +47,8 @@ const messages = {
   "common.search": "بحث",
   "search.placeholder": "ابحث في الملاحظات…",
   "search.semanticPlaceholder": "ابحث: صِف ما تريد باللغة الطبيعية…",
+  "search.noResultsHint":
+    "لم تظهر نتائج للكلمات المفتاحية؟ جرّب البحث الدلالي — ابحث بالمعنى.",
   "search.semanticToggle": "البحث الدلالي",
   "search.results": "نتائج البحث",
   "search.clear": "مسح البحث",
@@ -194,6 +196,8 @@ const messages = {
   "calendar.toastRescheduledPast":
     "أُعيدت الجدولة إلى {date} (تاريخ في الماضي).",
   "calendar.actionFailed": "فشل الإجراء، أعد المحاولة.",
+  "review.onThisDayBanner":
+    "في مثل هذا اليوم · {count} ملاحظات من السنوات الماضية",
   "review.oneYearAgoToday": "قبل سنة، في مثل هذا اليوم",
   "review.yearsAgoToday": "قبل {count} سنوات، في مثل هذا اليوم",
   "review.dailyEmptyTitle": "لا ملاحظات من هذا اليوم بعد",
@@ -236,6 +240,7 @@ const messages = {
   "composer.addAttachment": "إضافة مرفق",
   "composer.addTag": "إضافة وسم",
   "composer.bulletList": "قائمة",
+  "composer.checklist": "قائمة مهام",
   "composer.send": "إرسال",
   "composer.visibility.personal": "شخصي",
   "composer.visibility.team": "الفريق",
@@ -297,7 +302,7 @@ const messages = {
   "list.loadMore": "تحميل المزيد",
   "explorer.records": "الملاحظات",
   "explorer.tags": "الوسوم",
-  "explorer.days": "أيام",
+  "explorer.streak": "أيام متتالية",
   "explorer.expand": "توسيع",
   "explorer.collapse": "طي",
   "explorer.noTags": "لا وسوم بعد — ابدأ التنظيم بوسم #",

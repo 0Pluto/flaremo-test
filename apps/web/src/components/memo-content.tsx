@@ -72,6 +72,7 @@ export const MemoContent = memo(function MemoContent({
   content,
   onTimestampClick,
   withHeadingIds = false,
+  interactiveTaskLists = false,
   resolveImageDimensions,
 }: {
   className?: string;
@@ -87,6 +88,12 @@ export const MemoContent = memo(function MemoContent({
    * under StrictMode's double render.
    */
   withHeadingIds?: boolean;
+  /**
+   * Renders task-list checkboxes enabled so a click can be intercepted
+   * upstream (the card layer rewrites the Markdown). Without it they stay
+   * disabled decorations, as remark-gfm emits them.
+   */
+  interactiveTaskLists?: boolean;
   /**
    * Maps a body image's src to its attachment's intrinsic dimensions so the
    * rendered box is reserved before the bytes load (no layout shift).
@@ -163,6 +170,15 @@ export const MemoContent = memo(function MemoContent({
           h4: heading("h4"),
           h5: heading("h5"),
           h6: heading("h6"),
+          input({ node: _node, disabled: _disabled, ...props }) {
+            if (!interactiveTaskLists) {
+              return <input {...props} disabled type="checkbox" />;
+            }
+            // The card layer owns toggling (event delegation on the
+            // container); readOnly keeps React's controlled-input contract
+            // while the click handler prevents the default flip.
+            return <input {...props} readOnly type="checkbox" />;
+          },
           img({ node: _node, ...props }) {
             const dimensions = resolveImageDimensions?.(
               typeof props.src === "string" ? props.src : "",
