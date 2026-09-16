@@ -32,7 +32,16 @@ FlareMo 部署到 Cloudflare Workers。Worker 同时承载前端静态资源和 
 pnpm install
 ```
 
-复制配置模板并创建 D1 和 R2：
+复制配置模板，把 `FLAREMO_PUBLIC_URL` 设置为你的公开访问 origin，再创建 D1 和 R2：
+
+```bash
+cp wrangler.jsonc.example wrangler.jsonc
+pnpm provision:remote
+```
+
+`pnpm provision:remote` 会创建缺失的 D1、R2、Queue 和 Vectorize 资源，并把 D1 的 `database_id` 自动写回 `wrangler.jsonc`；幂等，已存在的资源会跳过。
+
+也可以手动执行等价命令：
 
 ```bash
 cp wrangler.jsonc.example wrangler.jsonc
@@ -40,7 +49,7 @@ pnpm exec wrangler d1 create flaremo
 pnpm exec wrangler r2 bucket create flaremo-attachments
 ```
 
-`wrangler.jsonc.example` 里的账号相关值需要替换：把 D1 输出的 `database_id` 写入 `wrangler.jsonc`，并把 `FLAREMO_PUBLIC_URL` 设置为你的公开访问 origin；bucket、queue 和 Vectorize index 名称可以保留为建议默认值。
+手动创建时需要把 D1 输出的 `database_id` 写入 `wrangler.jsonc`；bucket、queue 和 Vectorize index 名称可以保留为建议默认值。
 
 部署；这个命令会先构建前端、应用远端 migrations，再发布 Worker：
 

@@ -96,6 +96,7 @@ if (
 }
 
 async function main() {
+  const checkOnly = process.argv.includes("--check");
   const skipResources = process.argv.includes("--skip-resources");
   const configPath = resolve("wrangler.jsonc");
   let source = readFileSync(configPath, "utf8");
@@ -112,6 +113,28 @@ async function main() {
       source = patchDatabaseId(source, resources.databaseId, existing);
       writeFileSync(configPath, source);
     }
+  } else if (checkOnly) {
+    const originalDatabaseId = resources.databaseId;
+    const missing = verifyResources(resources);
+    if (missing.length > 0) {
+      throw new Error(
+        `Missing Cloudflare resources (run again with provisioning enabled to create them):\n- ${missing.join("\n- ")}`,
+      );
+    }
+    if (
+      isPlaceholderDatabaseId(originalDatabaseId) &&
+      resources.databaseId !== originalDatabaseId
+    ) {
+      source = patchDatabaseId(
+        source,
+        originalDatabaseId,
+        resources.databaseId,
+      );
+      writeFileSync(configPath, source);
+    }
+    console.log(
+      "All Cloudflare resources exist (check mode; nothing was created).",
+    );
   } else {
     const databaseId = ensureD1(resources.databaseName, resources.databaseId);
     if (databaseId !== resources.databaseId) {
@@ -136,7 +159,53 @@ async function main() {
     console.log(`Using FLAREMO_PUBLIC_URL=${publicUrl}`);
   }
 
-  console.log("Cloudflare resources are ready.");
+  console.log(
+    checkOnly
+      ? "Cloudflare resources are ready (check mode; nothing was created)."
+      : "Cloudflare resources are ready.",
+  );
+}
+
+// Read-only pass for dry-run and skip-provision deploys: every resource must
+// already exist and the API token must be able to list them. List failures
+// throw so a token-permission problem is not misreported as a missing resource.
+// When the D1 id is found, it is stored on resources for the caller to patch
+// into the config; nothing is created and no cloud resource is modified.
+function verifyResources(resources) {
+  const missing = [];
+  if (isPlaceholderDatabaseId(resources.databaseId)) {
+    const existing = findD1(resources.databaseName);
+    if (existing) {
+      resources.databaseId = existing;
+    } else {
+      missing.push(`D1 database ${resources.databaseName}`);
+    }
+  }
+  if (!bucketExists(resources.bucketName, { strict: true })) {
+    missing.push(`R2 bucket ${resources.bucketName}`);
+  }
+  for (const queue of resources.queues) {
+    if (!queueExists(queue, { strict: true })) {
+      missing.push(`Queue ${queue}`);
+    }
+  }
+  const indexes = listVectorize();
+  for (const indexName of resources.indexes) {
+    const existing = indexes.find((item) => item?.name === indexName);
+    if (!existing) {
+      missing.push(`Vectorize index ${indexName}`);
+      continue;
+    }
+    const existingDimensions = Number(
+      existing.config?.dimensions ?? existing.dimensions,
+    );
+    if (existingDimensions && existingDimensions !== resources.dimensions) {
+      throw new Error(
+        `Vectorize index ${indexName} exists with ${existingDimensions} dimensions; FlareMo needs ${resources.dimensions}.`,
+      );
+    }
+  }
+  return missing;
 }
 
 function parseConfig(source, configPath) {
@@ -204,9 +273,14 @@ function ensureR2(name) {
   throw new Error(`Could not create R2 bucket ${name}:\n${created.output}`);
 }
 
-function bucketExists(name) {
+function bucketExists(name, { strict = false } = {}) {
   const listed = wrangler(["r2", "bucket", "list"], { allowFailure: true });
-  if (listed.status !== 0) return false;
+  if (listed.status !== 0) {
+    if (strict) {
+      throw new Error(`Could not list R2 buckets:\n${listed.output}`);
+    }
+    return false;
+  }
   return listedResourceExists(listed.output, name);
 }
 
@@ -227,18 +301,27 @@ function ensureQueue(name) {
   throw new Error(`Could not create Queue ${name}:\n${created.output}`);
 }
 
-function queueExists(name) {
+function queueExists(name, { strict = false } = {}) {
   const listed = wrangler(["queues", "list"], { allowFailure: true });
-  if (listed.status !== 0) return false;
+  if (listed.status !== 0) {
+    if (strict) {
+      throw new Error(`Could not list Queues:\n${listed.output}`);
+    }
+    return false;
+  }
   return listedResourceExists(listed.output, name);
 }
 
-function ensureVectorize(name, dimensions, metric) {
+function listVectorize() {
   const listed = wrangler(["vectorize", "list", "--json"]);
   if (listed.status !== 0) {
     throw new Error(`Could not list Vectorize indexes:\n${listed.output}`);
   }
-  const indexes = parseJsonOutput(listed.output);
+  return parseJsonOutput(listed.output);
+}
+
+function ensureVectorize(name, dimensions, metric) {
+  const indexes = listVectorize();
   const existing = indexes.find((item) => item?.name === name);
   if (existing) {
     const existingDimensions = Number(
@@ -353,17 +436,21 @@ export function isAlreadyExists(output) {
 }
 
 function wrangler(args, { allowFailure = false } = {}) {
-  const result = spawnSync("pnpm", ["exec", "wrangler", ...args], {
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      CI: "true",
-      WRANGLER_SEND_METRICS: "false",
+  const result = spawnSync(
+    "pnpm",
+    ["exec", "wrangler", ...args, "--config", "./wrangler.jsonc"],
+    {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        CI: "true",
+        WRANGLER_SEND_METRICS: "false",
+      },
+      input: "n\n",
+      shell: process.platform === "win32",
+      stdio: ["pipe", "pipe", "pipe"],
     },
-    input: "n\n",
-    shell: process.platform === "win32",
-    stdio: ["pipe", "pipe", "pipe"],
-  });
+  );
   const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
   if (result.status !== 0 && !allowFailure) {
     return { status: result.status ?? 1, output };

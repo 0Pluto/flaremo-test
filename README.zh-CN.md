@@ -147,6 +147,8 @@ pnpm exec wrangler d1 create flaremo
 pnpm exec wrangler r2 bucket create flaremo-attachments
 ```
 
+也可以改用一条命令 `pnpm provision:remote`：自动创建缺失的 D1 / R2 / Queue / Vectorize 资源并把 D1 的 `database_id` 写入 `wrangler.jsonc`，幂等，已存在的资源会跳过。
+
 #### 2. 初始化配置文件与安全密钥
 复制配置模板：
 ```bash

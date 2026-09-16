@@ -7,6 +7,8 @@ const commands = [
   ["pnpm", ["capture:production:test"]],
   ["pnpm", ["provision:test"]],
   ["pnpm", ["secrets:test"]],
+  ["pnpm", ["smoke:test"]],
+  ["pnpm", ["write-wrangler-config:test"]],
   ["pnpm", ["format:check"]],
   ["pnpm", ["check"]],
   ["pnpm", ["test"]],

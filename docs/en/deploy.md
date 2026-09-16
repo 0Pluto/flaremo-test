@@ -29,11 +29,21 @@ The repository does not track `wrangler.jsonc` (manual deployers keep their conf
 ```bash
 pnpm install
 cp wrangler.jsonc.example wrangler.jsonc
+pnpm provision:remote
+```
+
+`pnpm provision:remote` creates the missing D1, R2, Queue, and Vectorize resources and writes the D1 `database_id` back into `wrangler.jsonc`. It is idempotent — existing resources are skipped.
+
+The manual equivalent is:
+
+```bash
+pnpm install
+cp wrangler.jsonc.example wrangler.jsonc
 pnpm exec wrangler d1 create flaremo
 pnpm exec wrangler r2 bucket create flaremo-attachments
 ```
 
-Replace the account-specific values in `wrangler.jsonc.example`: write the generated D1 `database_id` into `wrangler.jsonc` and set `FLAREMO_PUBLIC_URL` to your public origin. The bucket, queue, and Vectorize index names can stay as the suggested defaults.
+When you create the resources manually, write the generated D1 `database_id` into `wrangler.jsonc` and set `FLAREMO_PUBLIC_URL` to your public origin. The bucket, queue, and Vectorize index names can stay as the suggested defaults.
 
 Then run:
 

@@ -59,7 +59,7 @@ Account ID 在 Cloudflare Dashboard 首页右侧。
 
 打开仓库 `Actions` → `Deploy to Cloudflare` → `Run workflow`：
 
-1. 第一次建议勾选 `dry_run`：只构建和 Wrangler dry-run，不执行远端 D1 migration、不发布、不同步 secret。
+1. 第一次建议勾选 `dry_run`：构建、Wrangler dry-run，并对 D1 / R2 / Queue / Vectorize 资源和 API Token 权限做**只读校验**。不创建任何资源，不执行远端 D1 migration、不发布、不同步 secret；资源缺失或 Token 权限不足会在这一步直接报出来。
 2. `provision` 保持勾选：创建缺失的 D1、R2、Queue、Vectorize。已存在的资源会跳过，不会再建一套。
 3. dry-run 通过后，再运行一次：**不要**勾 `dry_run`，`provision` 仍勾选。
 
@@ -70,6 +70,7 @@ Account ID 在 Cloudflare Dashboard 首页右侧。
 3. 若未配置 `FLAREMO_PUBLIC_URL`，用账号 workers.dev 子域写成 `https://flaremo.<子域>.workers.dev`。
 4. 执行 `pnpm deploy`：构建前端、应用远端 D1 migrations、发布 Worker。
 5. 把 GitHub Secrets 里的 `BETTER_AUTH_SECRET` 和 `FLAREMO_BOOTSTRAP_SECRET` 同步到 Worker。日志里的密钥显示为 `***`。
+6. 冒烟检查：访问 `FLAREMO_PUBLIC_URL` 确认 Worker 正在服务，重试约一分钟；仍不可达则把 run 标红。
 
 若这两个 GitHub Secret 未设置，同步步骤会跳过，不阻断发布；但 `/setup` 和登录会失败，需要补上 Secret 后再跑一次（不要勾 `dry_run`），或在 Cloudflare Dashboard 的 Worker → Settings → Variables and Secrets 里手动添加。
 

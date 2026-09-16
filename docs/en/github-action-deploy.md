@@ -59,7 +59,7 @@ For a custom domain, bind it to the Worker in Cloudflare, set repository **Varia
 
 Open `Actions` → `Deploy to Cloudflare` → `Run workflow`:
 
-1. On the first attempt, enable `dry_run`: build and Wrangler dry-run only. No remote D1 migration, publish, or secret sync.
+1. On the first attempt, enable `dry_run`: build, Wrangler dry-run, and a **read-only check** of the D1 / R2 / Queue / Vectorize resources plus API token permissions. Nothing is created; remote D1 migration, publish, and secret sync are skipped. Missing resources or insufficient token permissions are reported right here.
 2. Leave `provision` enabled: create missing D1, R2, Queue, and Vectorize resources. Existing names are skipped.
 3. After dry-run succeeds, run again **without** `dry_run`, with `provision` still enabled.
 
@@ -70,6 +70,7 @@ A production run will:
 3. If `FLAREMO_PUBLIC_URL` is unset, write `https://flaremo.<subdomain>.workers.dev`.
 4. Run `pnpm deploy`: build the web app, apply remote D1 migrations, publish the Worker.
 5. Copy GitHub Secrets `BETTER_AUTH_SECRET` and `FLAREMO_BOOTSTRAP_SECRET` onto the Worker. Logs show `***`.
+6. Smoke check: request `FLAREMO_PUBLIC_URL` to confirm the Worker serves traffic, retrying for about a minute; a site that stays unreachable marks the run red.
 
 If those two GitHub Secrets are missing, the sync step skips and deploy still finishes; `/setup` and login will fail until you add the Secrets and run again without `dry_run`, or add them in Cloudflare Dashboard → Worker → Settings → Variables and Secrets.
 

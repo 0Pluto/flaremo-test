@@ -136,6 +136,8 @@ pnpm exec wrangler d1 create flaremo
 pnpm exec wrangler r2 bucket create flaremo-attachments
 ```
 
+Or run `pnpm provision:remote` instead: it creates the missing D1 / R2 / Queue / Vectorize resources and writes the D1 `database_id` into `wrangler.jsonc` for you. It is idempotent — existing resources are skipped.
+
 #### 2. Configure Settings & Secrets
 ```bash
 cp wrangler.jsonc.example wrangler.jsonc
