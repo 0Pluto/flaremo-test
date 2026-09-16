@@ -3143,13 +3143,17 @@ describe("FlareMo Worker API", () => {
     expect((await readAsOwner(privateMemo.id)).status).toBe(404);
     const teamResponse = await readAsOwner(teamMemo.id);
     expect(teamResponse.status).toBe(200);
+    // Content authority (docs/content-authority.md): the owner governs another
+    // member's team memo (archive/trash/hard delete) but can never edit it.
     expect(
       await teamResponse.json<{
         can_manage: boolean;
+        can_govern: boolean;
         memo: { creator_name?: string };
       }>(),
     ).toMatchObject({
-      can_manage: true,
+      can_manage: false,
+      can_govern: true,
       memo: { creator_name: "Team Member" },
     });
 
@@ -3180,9 +3184,14 @@ describe("FlareMo Worker API", () => {
     // The removed member's team memo is adopted by the owner account, so the
     // owner can keep managing it; the content itself is untouched.
     expect(
-      (await retainedResponse.json<{ memo: { creator_name?: string } }>()).memo
-        .creator_name,
-    ).toBe("Owner");
+      await retainedResponse.json<{
+        can_manage: boolean;
+        memo: { creator_name?: string };
+      }>(),
+    ).toMatchObject({
+      can_manage: true,
+      memo: { creator_name: "Owner" },
+    });
   });
 
   it("protects the last active administrator through the admin API", async () => {

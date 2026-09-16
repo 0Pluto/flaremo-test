@@ -26,6 +26,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useI18n } from "@/i18n";
+import type { TranslationKey } from "@/i18n/key";
 
 type CredentialField =
   | "appId"
@@ -35,7 +36,8 @@ type CredentialField =
   | "volcAppId"
   | "volcAccessToken"
   | "volcBoostingTable"
-  | "volcCorrectTable";
+  | "volcCorrectTable"
+  | "baseUrl";
 const TENCENT_FIELDS: CredentialField[] = ["appId", "secretId", "secretKey"];
 const VOLCENGINE_FIELDS: CredentialField[] = [
   "volcAppId",
@@ -43,7 +45,8 @@ const VOLCENGINE_FIELDS: CredentialField[] = [
   "volcBoostingTable",
   "volcCorrectTable",
 ];
-const PROVIDERS = ["tencent", "dashscope", "volcengine"] as const;
+const MINIMAX_FIELDS: CredentialField[] = ["apiKey", "baseUrl"];
+const PROVIDERS = ["tencent", "dashscope", "volcengine", "minimax"] as const;
 type Provider = (typeof PROVIDERS)[number];
 
 // Mounted only after a fresh, user-scoped owner permission check succeeds.
@@ -64,6 +67,7 @@ export function VoicePanel() {
     volcAccessToken: "",
     volcBoostingTable: "",
     volcCorrectTable: "",
+    baseUrl: "",
   });
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -121,6 +125,7 @@ export function VoicePanel() {
         volcAccessToken: "",
         volcBoostingTable: "",
         volcCorrectTable: "",
+        baseUrl: "",
       });
       const value = await cache.fetchQuery({
         queryKey: ["voice-settings"],
@@ -149,7 +154,20 @@ export function VoicePanel() {
 
   const previewFor = (field: CredentialField) => {
     if (provider !== (config?.provider ?? provider)) return "";
-    return config?.previews?.[field] ?? "";
+    // Wire spells the MiniMax endpoint key `minimaxBaseUrl`; the panel state
+    // key stays `baseUrl` (single mapping point, rollout §3.4).
+    const wireField = field === "baseUrl" ? ("minimaxBaseUrl" as const) : field;
+    return config?.previews?.[wireField] ?? "";
+  };
+
+  const fieldLabel = (field: CredentialField) => {
+    if (provider === "minimax")
+      return field === "apiKey"
+        ? t("voiceSettings.minimaxApiKey")
+        : t("voiceSettings.minimaxBaseUrl");
+    // Minimax labels are handled above; the remaining credential fields map
+    // 1:1 onto existing voiceSettings keys (baseUrl is minimax-only).
+    return t(`voiceSettings.${field}` as TranslationKey);
   };
 
   return (
@@ -185,12 +203,20 @@ export function VoicePanel() {
                 event.preventDefault();
                 void run(
                   "save",
-                  () =>
-                    saveVoiceSettings({
+                  () => {
+                    const { baseUrl, ...rest } = fields;
+                    return saveVoiceSettings({
                       revision: config.revision,
                       enabled,
-                      credentials: { provider, model, ...fields },
-                    }),
+                      credentials: {
+                        provider,
+                        model,
+                        ...rest,
+                        // Wire contract: minimax endpoint key (strict schema).
+                        minimaxBaseUrl: baseUrl,
+                      },
+                    });
+                  },
                   t("voiceSettings.saved"),
                 );
               }}
@@ -214,6 +240,7 @@ export function VoicePanel() {
                       volcAccessToken: "",
                       volcBoostingTable: "",
                       volcCorrectTable: "",
+                      baseUrl: "",
                     });
                   }}
                 >
@@ -223,6 +250,9 @@ export function VoicePanel() {
                   <ToggleGroupItem value="dashscope">DashScope</ToggleGroupItem>
                   <ToggleGroupItem value="volcengine">
                     {t("voiceSettings.volcengine")}
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="minimax">
+                    {t("voiceSettings.minimax")}
                   </ToggleGroupItem>
                 </ToggleGroup>
               </div>
@@ -243,20 +273,22 @@ export function VoicePanel() {
                 ? TENCENT_FIELDS
                 : provider === "volcengine"
                   ? VOLCENGINE_FIELDS
-                  : (["apiKey"] as const)
+                  : provider === "minimax"
+                    ? MINIMAX_FIELDS
+                    : (["apiKey"] as const)
               ).map((field) => (
                 <label
                   className="flex flex-col gap-1.5 text-sm font-medium"
                   key={field}
                   htmlFor={`voice-${field}`}
                 >
-                  {t(`voiceSettings.${field}`)}
+                  {fieldLabel(field)}
                   <Input
-                    autoComplete="new-password"
+                    autoComplete={field === "baseUrl" ? "off" : "new-password"}
                     disabled={editingDisabled}
                     id={`voice-${field}`}
                     placeholder={previewFor(field)}
-                    type="password"
+                    type={field === "baseUrl" ? "text" : "password"}
                     value={fields[field]}
                     onChange={(event) =>
                       setFields({ ...fields, [field]: event.target.value })

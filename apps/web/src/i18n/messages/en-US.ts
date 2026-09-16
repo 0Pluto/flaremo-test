@@ -28,6 +28,10 @@ const messages = {
   "voiceSettings.secretKey": "Tencent Cloud SecretKey",
   "voiceSettings.apiKey": "DashScope API Key",
   "voiceSettings.volcengine": "Doubao / Volcano Engine",
+  "voiceSettings.minimax": "MiniMax",
+  "voiceSettings.minimaxApiKey": "MiniMax API Key",
+  "voiceSettings.minimaxBaseUrl":
+    "MiniMax base URL (optional; domestic by default)",
   "voiceSettings.volcAppId": "Volcano Engine AppID",
   "voiceSettings.volcAccessToken": "Volcano Engine Access Token",
   "voiceSettings.volcBoostingTable": "Boosting table name (optional)",
@@ -94,7 +98,10 @@ const messages = {
     "Microphone active · connecting transcription. Please wait to speak…",
   "capture.stopping": "Microphone off · receiving the last sentence…",
   "capture.foreground":
-    "Keep this page in the foreground. Switching tabs or locking the screen stops recording. Original audio is not saved.",
+    "Keep this page in the foreground. Switching tabs or locking the screen stops recording. Original audio is kept by default; you can turn that off when saving.",
+  "capture.keepAudio": "Save original audio",
+  "capture.audioNotSaved":
+    "Saved the transcript, but the original audio could not be uploaded.",
   "capture.leaveTitle": "Leave voice capture?",
   "capture.leaveRecording":
     "Recording is active. Stopping and leaving keeps unsaved text in a local draft on this device.",
@@ -115,6 +122,10 @@ const messages = {
     "Recording was interrupted and the microphone is off. Review the captured text; the ending may be incomplete.",
   "capture.unavailable":
     "Transcription is not configured or is temporarily unavailable. Try again later.",
+  "capture.unavailableOwnerLink":
+    "Go to Account → Voice recognition settings to enable it.",
+  "capture.unavailableMember":
+    "Please ask the instance owner to enable voice recognition from the account page.",
   "capture.wakeLockFailed":
     "Failed to keep the screen awake; locking the screen may interrupt the recording.",
   "capture.connectionFailed":
@@ -159,6 +170,15 @@ const messages = {
   "capture.charsUsed": "{count} / {max} characters",
   "capture.saveSucceeded": "Saved.",
   "capture.transcribing": "Transcribing…",
+  "capture.transcribingCount": "Transcribing chunk {done} of {total}…",
+  "capture.transcribeFailed":
+    "Transcription failed. The recognized text could not be produced; edit the draft manually or discard it.",
+  "capture.cancelTranscribing": "Cancel transcription",
+  "capture.retryTranscription": "Retry transcription",
+  "capture.pause": "Pause recording",
+  "capture.resume": "Resume recording",
+  "capture.paused": "Paused · the clock keeps running",
+  "capture.waveform": "Live microphone waveform",
   "nav.calendar": "Calendar",
   "calendar.title": "Calendar",
   "calendar.today": "Back to today",
@@ -240,7 +260,7 @@ const messages = {
   "composer.addAttachment": "Add attachment",
   "composer.addTag": "Add tag",
   "composer.bulletList": "Bullet list",
-  "composer.checklist": "Checklist",
+  "composer.taskList": "Task list",
   "composer.send": "Send",
   "composer.visibility.personal": "Personal",
   "composer.visibility.team": "Team",
@@ -256,6 +276,7 @@ const messages = {
   "shortcuts.send": "Send the current draft",
   "shortcuts.linebreak": "Insert a line break while composing",
   "shortcuts.saveEdit": "Save the memo being edited",
+  "shortcuts.capture": "Start or stop voice recording (on /capture)",
   "composer.removeFile": "Remove {filename}",
   "composer.imageUploadFailed": "Image upload failed. Try again.",
   "attachment.unavailable":

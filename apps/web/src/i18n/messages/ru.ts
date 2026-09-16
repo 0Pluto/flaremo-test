@@ -28,6 +28,10 @@ const messages = {
   "voiceSettings.secretKey": "SecretKey Tencent Cloud",
   "voiceSettings.apiKey": "API-ключ DashScope",
   "voiceSettings.volcengine": "Doubao / Volcano Engine",
+  "voiceSettings.minimax": "MiniMax",
+  "voiceSettings.minimaxApiKey": "API-ключ MiniMax",
+  "voiceSettings.minimaxBaseUrl":
+    "Базовый URL MiniMax (необязательно; по умолчанию китайский узел)",
   "voiceSettings.volcAppId": "AppID Volcano Engine",
   "voiceSettings.volcAccessToken": "Токен доступа Volcano Engine",
   "voiceSettings.volcBoostingTable": "Имя таблицы горячих слов (опционально)",
@@ -95,7 +99,10 @@ const messages = {
     "Микрофон включён · подключаемся к распознаванию. Говорите, когда будете готовы…",
   "capture.stopping": "Микрофон выключен · принимаем последнюю фразу…",
   "capture.foreground":
-    "Держите эту страницу на переднем плане. Переключение вкладки или блокировка экрана остановят запись. Исходный звук не сохраняется.",
+    "Держите эту страницу на переднем плане. Переключение вкладки или блокировка экрана остановят запись. Исходный звук сохраняется по умолчанию; это можно отключить при сохранении.",
+  "capture.keepAudio": "Сохранять исходный звук",
+  "capture.audioNotSaved":
+    "Текст сохранён, но исходный звук не удалось загрузить.",
   "capture.leaveTitle": "Выйти из голосовой записи?",
   "capture.leaveRecording":
     "Идёт запись. Если остановить её и выйти, несохранённый текст останется в локальном черновике на этом устройстве.",
@@ -116,6 +123,10 @@ const messages = {
     "Запись прервана, микрофон выключен. Проверьте распознанный текст — конец может быть неполным.",
   "capture.unavailable":
     "Распознавание не настроено или временно недоступно. Попробуйте позже.",
+  "capture.unavailableOwnerLink":
+    "Включите её в разделе «Аккаунт → Настройки распознавания речи».",
+  "capture.unavailableMember":
+    "Попросите владельца экземпляра включить распознавание речи.",
   "capture.wakeLockFailed":
     "Не удалось не дать экрану погаснуть; блокировка экрана может прервать запись.",
   "capture.connectionFailed":
@@ -161,6 +172,15 @@ const messages = {
   "capture.charsUsed": "{count} / {max} символов",
   "capture.saveSucceeded": "Сохранено.",
   "capture.transcribing": "Транскрибация…",
+  "capture.transcribingCount": "Транскрибация фрагмента {done} из {total}…",
+  "capture.transcribeFailed":
+    "Не удалось выполнить транскрибацию. Отредактируйте черновик вручную или откажитесь от записи.",
+  "capture.cancelTranscribing": "Отменить транскрибацию",
+  "capture.retryTranscription": "Повторить транскрибацию",
+  "capture.pause": "Приостановить запись",
+  "capture.resume": "Продолжить запись",
+  "capture.paused": "Пауза · таймер продолжает идти",
+  "capture.waveform": "Живая осциллограмма микрофона",
   "nav.calendar": "Календарь",
   "calendar.title": "Календарь",
   "calendar.today": "Вернуться к сегодня",
@@ -245,7 +265,7 @@ const messages = {
   "composer.addAttachment": "Прикрепить файл",
   "composer.addTag": "Добавить тег",
   "composer.bulletList": "Список",
-  "composer.checklist": "Чек-лист",
+  "composer.taskList": "Список задач",
   "composer.send": "Отправить",
   "composer.visibility.personal": "Личное",
   "composer.visibility.team": "Команда",
@@ -261,6 +281,7 @@ const messages = {
   "shortcuts.send": "Отправить текущий ввод",
   "shortcuts.linebreak": "Перенос строки во время ввода",
   "shortcuts.saveEdit": "Сохранить редактируемую заметку",
+  "shortcuts.capture": "Начать или остановить голосовую запись (на /capture)",
   "composer.removeFile": "Убрать {filename}",
   "composer.imageUploadFailed":
     "Не удалось загрузить изображение. Повторите попытку.",

@@ -146,19 +146,15 @@ export function canReadMemo(user: TeamViewer | null, memo: MemoRow): boolean {
 }
 
 /**
- * Edit the memo's content, payload, pinned flag, or visibility. Own memos
- * only; another author's memo requires the memo's own team owner. Governance
- * stays inside the memo's organization — an owner of organization A must
- * never rewrite or delete organization B's memos, matching the read boundary.
+ * Edit the memo's content, payload, pinned flag, or visibility. Author-only,
+ * without exception: rewriting someone else's words is authorship, never
+ * governance — not even the team owner may do it (docs/content-authority.md).
+ * Removal is the governance path: administrators archive/trash via
+ * canGovernMemo, the owner additionally hard-deletes via canDeleteMemo.
  */
 export function canEditMemo(user: TeamViewer | null, memo: MemoRow): boolean {
   if (!user || user.status !== "active") return false;
-  if (memo.userId === user.id) return true;
-  return (
-    isTeamOwner(user) &&
-    memo.teamId !== null &&
-    memo.teamId === user.teamOrganizationId
-  );
+  return memo.userId === user.id;
 }
 
 /**
@@ -176,7 +172,24 @@ export function canGovernMemo(user: TeamViewer | null, memo: MemoRow): boolean {
   );
 }
 
-export const canDeleteMemo = canEditMemo;
+/**
+ * Hard-delete the memo. Own memos only; another author's memo requires the
+ * owner of the memo's own team. Hard delete is the irreversible end of the
+ * governance ladder — trash (canGovernMemo) is reversible within the recycle
+ * bin TTL, so it stops at administrator while permanent removal stays an
+ * owner-level accountability layer. Governance stays inside the memo's
+ * organization — an owner of organization A must never delete organization
+ * B's memos, matching the read boundary.
+ */
+export function canDeleteMemo(user: TeamViewer | null, memo: MemoRow): boolean {
+  if (!user || user.status !== "active") return false;
+  if (memo.userId === user.id) return true;
+  return (
+    isTeamOwner(user) &&
+    memo.teamId !== null &&
+    memo.teamId === user.teamOrganizationId
+  );
+}
 
 export function assertCanEditMemo(user: TeamViewer, memo: MemoRow): void {
   if (!canEditMemo(user, memo)) {

@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import type { Editor } from "@tiptap/react";
 import {
   ArchiveIcon,
   CircleIcon,
@@ -7,6 +8,7 @@ import {
   Globe2Icon,
   Loader2Icon,
   LockIcon,
+  MicIcon,
   MoreHorizontalIcon,
   PinIcon,
   RotateCcwIcon,
@@ -17,7 +19,9 @@ import {
 import {
   memo,
   type MouseEvent as ReactMouseEvent,
+  Suspense,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { toast } from "sonner";
@@ -26,6 +30,7 @@ import { getMemoContext, getRelatedMemos, uploadAttachment } from "@/api";
 import { AttachmentGallery } from "@/components/attachment-gallery";
 import { LazyMemoContent } from "@/components/lazy-memo-content";
 import { MemoSearchExcerpt } from "@/components/memo-search-excerpt";
+import { RichComposerEditor } from "@/components/rich-composer-editor-lazy";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,24 +58,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/i18n";
 import {
   createImageDimensionResolver,
   filterUnreferencedAttachments,
 } from "@/lib/attachment-refs";
 import {
-  extractImageFiles,
-  inlineImageMarkdown,
-  insertSnippetAt,
-} from "@/lib/image-insert";
-import {
   extractTags,
   formatMemoRelativeTime,
   formatMemoTime,
   getMemoResourceId,
 } from "@/lib/memo";
+import { uploadAndInsertImages } from "@/lib/rich-editor-upload";
 import { countTaskItems, toggleTaskItem } from "@/lib/task-list";
+import { formatClock } from "@/lib/transcript";
 import { cn } from "@/lib/utils";
 
 /** Bodies beyond this size collapse in the timeline. */
@@ -182,32 +183,22 @@ export const MemoCard = memo(function MemoCard({
 
   // Editing an existing memo: pasted images upload bound to the memo right
   // away, so a cancelled edit leaves nothing to clean up except an
-  // unreferenced (but owned) attachment in the gallery.
-  const insertInlineImages = async (files: File[], caret: number) => {
+  // unreferenced (but owned) attachment in the gallery. Each file shows an
+  // "uploading…" chip until its reference lands at the chip's position.
+  const insertInlineImages = (files: File[], position: number) => {
     if (files.length === 0) return;
     setIsUploadingInline(true);
-    try {
-      let content = draftContent;
-      let cursor = Math.min(Math.max(caret, 0), content.length);
-      for (const file of files) {
-        const attachment = await uploadAttachment({ file, memo: memo.name });
-        const next = insertSnippetAt(
-          content,
-          cursor,
-          inlineImageMarkdown(attachment.id, attachment.filename),
-        );
-        content = next.content;
-        cursor = next.caret;
-      }
-      setDraftContent(content);
-    } catch {
-      toast.error(t("composer.imageUploadFailed"));
-    } finally {
-      setIsUploadingInline(false);
-    }
+    void uploadAndInsertImages({
+      editorRef: editEditorRef,
+      files,
+      position,
+      upload: (file) => uploadAttachment({ file, memo: memo.name }),
+      onError: () => toast.error(t("composer.imageUploadFailed")),
+    }).finally(() => setIsUploadingInline(false));
   };
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [draftContent, setDraftContent] = useState(memo.content);
+  const editEditorRef = useRef<Editor | null>(null);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [shareVisibility, setShareVisibility] = useState<MemoVisibility>(
     memo.visibility,
@@ -308,6 +299,7 @@ export const MemoCard = memo(function MemoCard({
           )}
         </Link>
         <div className="flex shrink-0 items-center gap-1">
+          {memo.source === "voice" && <VoiceBadge memo={memo} />}
           {memo.visibility !== "private" && (
             <VisibilityBadge visibility={memo.visibility} />
           )}
@@ -391,45 +383,28 @@ export const MemoCard = memo(function MemoCard({
       </div>
       {isEditing ? (
         <div className="flex flex-col gap-3 motion-safe:animate-fade">
-          <Textarea
-            autoFocus
-            className="min-h-32 resize-none text-[15px] leading-7 focus-visible:ring-brand-400/40"
-            value={draftContent}
-            onChange={(event) => setDraftContent(event.target.value)}
-            onKeyDown={(event) => {
-              if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-                event.preventDefault();
+          <Suspense
+            fallback={
+              <div className="min-h-32 bg-muted/30" aria-hidden="true" />
+            }
+          >
+            <RichComposerEditor
+              ariaLabel={t("common.edit")}
+              autoFocus
+              content={draftContent}
+              disabled={isSaving}
+              editorRef={editEditorRef}
+              onContentChange={setDraftContent}
+              onEscape={() => setIsEditing(false)}
+              onImageFiles={insertInlineImages}
+              inputId="flaremo-card-editor-input"
+              onSubmitRequest={() => {
                 if (!isUploadingInline) void saveEditing();
-              }
-              if (event.key === "Escape") {
-                event.preventDefault();
-                setIsEditing(false);
-              }
-            }}
-            onDragOver={(event) => {
-              if (event.dataTransfer.types.includes("Files")) {
-                event.preventDefault();
-              }
-            }}
-            onDrop={(event) => {
-              const files = extractImageFiles(event.dataTransfer.files);
-              if (files.length === 0) return;
-              event.preventDefault();
-              void insertInlineImages(
-                files,
-                event.currentTarget.selectionStart ?? draftContent.length,
-              );
-            }}
-            onPaste={(event) => {
-              const files = extractImageFiles(event.clipboardData.files);
-              if (files.length === 0) return;
-              event.preventDefault();
-              void insertInlineImages(
-                files,
-                event.currentTarget.selectionStart ?? draftContent.length,
-              );
-            }}
-          />
+              }}
+              placeholder={t("composer.placeholder")}
+              submitOnEnter={false}
+            />
+          </Suspense>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Button
@@ -648,6 +623,26 @@ export const MemoCard = memo(function MemoCard({
     </article>
   );
 });
+
+/**
+ * The timeline's voice-capture face (rollout §4.3, D5): a mic badge with the
+ * recording length. Playback stays on the detail page — the card only
+ * identifies the note as spoken.
+ */
+function VoiceBadge({ memo }: { memo: Memo }) {
+  const { t } = useI18n();
+  const duration = memo.payload.durationSeconds;
+  return (
+    <Badge className="rounded-md" variant="outline" title={t("capture.title")}>
+      <MicIcon />
+      {typeof duration === "number" &&
+        Number.isFinite(duration) &&
+        duration > 0 && (
+          <span className="tabular-nums">{formatClock(duration)}</span>
+        )}
+    </Badge>
+  );
+}
 
 function VisibilityBadge({ visibility }: { visibility: MemoVisibility }) {
   const { t } = useI18n();

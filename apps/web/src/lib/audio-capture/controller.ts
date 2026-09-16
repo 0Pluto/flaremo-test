@@ -3,6 +3,7 @@ import {
   CAPTURE_MAX_TEXT,
   captureServerMessageSchema,
 } from "@flaremo/contracts";
+import type { CaptureAudioSink, CapturedAudio } from "./encoder";
 import type { Microphone } from "./microphone";
 import type { CaptureSentence, CaptureState } from "./types";
 
@@ -19,7 +20,8 @@ export type CaptureError =
   | "unavailable"
   | "connectionFailed"
   | "finishFailed"
-  | "limitReached";
+  | "limitReached"
+  | "transcribeFailed";
 export type CaptureSnapshot = {
   state: CaptureState;
   sentences: CaptureSentence[];
@@ -30,6 +32,8 @@ export type CaptureSnapshot = {
   microphoneActive: boolean;
   error: CaptureError | null;
   gap: boolean;
+  /** Batch mode progress while state is "transcribing" (rollout §3.3). */
+  transcribing: { done: number; total: number } | null;
 };
 export type CaptureDependencies = {
   microphone: (
@@ -37,14 +41,31 @@ export type CaptureDependencies = {
     signal: AbortSignal,
     interrupt: () => void,
   ) => Promise<Microphone>;
-  status: () => Promise<{ available: boolean }>;
+  status: () => Promise<{
+    available: boolean;
+    kind?: "streaming" | "batch" | null;
+  }>;
   socket: () => WebSocket;
+  /** Batch ASR (MiniMax): encode locally, then record-then-transcribe. */
+  batch?: {
+    createSink: () => Promise<CaptureAudioSink>;
+    transcribe: (
+      audio: CapturedAudio,
+      input: {
+        language: string;
+        startedAtMs: number;
+        onProgress: (progress: { done: number; total: number }) => void;
+        signal: AbortSignal;
+      },
+    ) => Promise<CaptureSentence[]>;
+  };
 };
 export function captureIsActive(state: CaptureState) {
   return [
     "requesting_permission",
     "connecting",
     "recording",
+    "paused",
     "reconnecting",
     "stopping",
   ].includes(state);
@@ -61,6 +82,7 @@ export class CaptureController {
     microphoneActive: false,
     error: null,
     gap: false,
+    transcribing: null,
   };
   private readonly listeners = new Set<() => void>();
   private readonly ids = new Set<string>();
@@ -76,10 +98,34 @@ export class CaptureController {
   private lastAudio = 0;
   private pendingFrames: ArrayBuffer[] = [];
   private pendingBytes = 0;
+  // D1 (voice-capture-rollout §2.4): a user pause must survive a reconnect
+  // (the socket can silently drop while paused), so it lives outside the
+  // published state.
+  private paused = false;
+  // Batch mode (rollout §3.3): the sink taps the same zero-filled frame
+  // stream while it is being created, and the recording clock starts with
+  // the first encoded frame so transcript timestamps stay wall-clock true.
+  private batchSink: CaptureAudioSink | undefined;
+  private batchSinkPromise: Promise<CaptureAudioSink | null> | undefined;
+  private batchBuffering = false;
+  private batchMode = false;
+  private batchStartedAt: number | null = null;
+  private batchTimer: ReturnType<typeof setInterval> | undefined;
+  private transcribeAbort: AbortController | undefined;
+  // Kept after a failed attempt so the user can retry the transcription
+  // without re-recording (rollout §3.3 error path).
+  private batchAudio: CapturedAudio | undefined;
   constructor(deps: CaptureDependencies) {
     this.deps = deps;
   }
   getSnapshot = () => this.snapshot;
+  /**
+   * The encoded audio of the finished recording, kept after transcription
+   * succeeds so the capture page can upload it to R2 before saving (rollout
+   * §4.1). Cleared on start/reset (new session or discard), never on success:
+   * blobs are cheap to hold and the upload may legitimately happen later.
+   */
+  getCapturedAudio = (): CapturedAudio | null => this.batchAudio ?? null;
   subscribe = (listener: () => void) => {
     this.listeners.add(listener);
     return () => {
@@ -99,6 +145,15 @@ export class CaptureController {
     this.retry = 0;
     this.pendingFrames = [];
     this.pendingBytes = 0;
+    this.paused = false;
+    this.batchMode = false;
+    this.batchSink = undefined;
+    this.batchStartedAt = null;
+    this.batchAudio = undefined;
+    this.batchBuffering = Boolean(this.deps.batch);
+    this.batchSinkPromise = this.deps.batch
+      ? this.deps.batch.createSink().catch(() => null)
+      : undefined;
     const abort = new AbortController();
     this.abort = abort;
     this.update({
@@ -111,6 +166,7 @@ export class CaptureController {
       microphoneActive: false,
       error: null,
       gap: false,
+      transcribing: null,
     });
     try {
       const mic = await this.deps.microphone(
@@ -128,6 +184,21 @@ export class CaptureController {
       }
       this.mic = mic;
       this.lastAudio = Date.now();
+      // The batch sink must exist before the first frame arrives, so its
+      // creation starts with the session; the mic handle is already live.
+      if (this.batchSinkPromise) {
+        this.batchSink = (await this.batchSinkPromise) ?? undefined;
+        this.batchBuffering = false;
+        if (abort.signal.aborted) {
+          this.batchSink?.dispose();
+          this.batchSink = undefined;
+          return;
+        }
+        const buffered = this.pendingFrames;
+        this.pendingFrames = [];
+        this.pendingBytes = 0;
+        for (const frame of buffered) this.pushToSink(frame);
+      }
       this.update({
         microphoneActive: true,
         state: "connecting",
@@ -161,6 +232,29 @@ export class CaptureController {
       clearTimeout(statusDeadline);
       if (abort.signal.aborted || this.snapshot.state === "stopping") return;
       if (!status.available) return this.end("unavailable");
+      // Batch mode (rollout §3.3): no socket; frames feed the local encoder
+      // and the provider is only contacted after Stop.
+      if (status.kind === "batch") {
+        if (!this.deps.batch || !this.batchSink) return this.end("unavailable");
+        this.batchMode = true;
+        this.update({
+          state: "recording",
+          startedAt: this.batchStartedAt ?? Date.now(),
+        });
+        this.batchTimer = setInterval(() => {
+          const startedAt = this.snapshot.startedAt;
+          if (
+            startedAt !== null &&
+            Date.now() - startedAt >= CAPTURE_MAX_DURATION_MS
+          )
+            void this.stop("limitReached");
+        }, 5_000);
+        return;
+      }
+      // Streaming confirmed: the unused batch sink is dropped.
+      this.batchBuffering = false;
+      this.batchSink?.dispose();
+      this.batchSink = undefined;
       const socket = this.deps.socket();
       this.socket = socket;
       this.ready = false;
@@ -200,7 +294,7 @@ export class CaptureController {
             // Preserve the session's original start across reconnects so the
             // recorded start time and the total-duration cap stay truthful.
             this.update({
-              state: "recording",
+              state: this.paused ? "paused" : "recording",
               startedAt: this.snapshot.startedAt ?? Date.now(),
             });
             this.heartbeat = setInterval(() => {
@@ -248,24 +342,44 @@ export class CaptureController {
   }
   private audio(frame: ArrayBuffer) {
     this.lastAudio = Date.now();
+    // Batch mode taps the same frame stream; paused frames are zero-filled
+    // exactly like the streaming path so the provider never receives (or
+    // transcribes) speech from a paused segment (D1).
+    if (this.batchMode || (this.batchBuffering && this.deps.batch)) {
+      const payload = this.paused ? new ArrayBuffer(frame.byteLength) : frame;
+      if (this.batchBuffering || !this.batchSink) this.buffer(payload);
+      else this.pushToSink(payload);
+      return;
+    }
     if (
       !this.ready ||
       (this.snapshot.state !== "recording" &&
+        this.snapshot.state !== "paused" &&
         this.snapshot.state !== "stopping")
     ) {
       if (
         this.snapshot.state === "connecting" ||
         this.snapshot.state === "reconnecting"
       )
-        this.buffer(frame);
+        // A pause survives reconnects, so silence — not captured speech —
+        // must be buffered while paused even without a live socket.
+        this.buffer(this.paused ? new ArrayBuffer(frame.byteLength) : frame);
       return;
     }
     const socket = this.socket;
     if (socket?.readyState !== 1) return;
-    if (socket.bufferedAmount + frame.byteLength > 64_000)
+    // While paused the user's speech must neither reach the ASR provider
+    // (no transcript, no billed speech) nor break the audio timeline: the
+    // frame cadence continues with zero-filled PCM so server-side timestamps
+    // keep matching wall-clock time, and resuming stays gap-free (D1).
+    const payload =
+      this.snapshot.state === "paused"
+        ? new ArrayBuffer(frame.byteLength)
+        : frame;
+    if (socket.bufferedAmount + payload.byteLength > 64_000)
       return this.lost(socket);
     try {
-      socket.send(frame);
+      socket.send(payload);
     } catch {
       this.lost(socket);
     }
@@ -350,6 +464,21 @@ export class CaptureController {
       void this.connect(abort);
     }, delay);
   }
+  /** User-intent pause: only between live recording and resuming (D1). */
+  pause() {
+    if (this.snapshot.state !== "recording" || this.paused) return;
+    this.paused = true;
+    this.update({ state: "paused", partial: "" });
+  }
+  resume() {
+    if (!this.paused || this.snapshot.state !== "paused") return;
+    this.paused = false;
+    // A socket lost while paused reconnects without leaving the paused state;
+    // if it is somehow gone anyway, fall back to the reconnect path.
+    this.update({
+      state: this.ready ? "recording" : "reconnecting",
+    });
+  }
   async stop(error: CaptureError | null = null) {
     if (
       !captureIsActive(this.snapshot.state) ||
@@ -377,6 +506,12 @@ export class CaptureController {
       mic.dispose();
     }
     if (this.getSnapshot().state !== "stopping") return;
+    if (this.batchMode) {
+      clearInterval(this.batchTimer);
+      this.batchTimer = undefined;
+      await this.transcribeBatch(error);
+      return;
+    }
     if (this.ready && this.socket?.readyState === 1) {
       this.timer = setTimeout(() => this.end("finishFailed"), 12_000);
       try {
@@ -389,10 +524,117 @@ export class CaptureController {
   interrupt() {
     if (captureIsActive(this.snapshot.state)) void this.stop("interrupted");
   }
+  /** User exit while the batch transcription is in flight (rollout §3.3):
+   * the attempt is abandoned; the session returns to review with whatever
+   * text exists so it can be typed or discarded (no partial batch results). */
+  cancelTranscription() {
+    if (this.snapshot.state !== "transcribing") return;
+    const signal = this.transcribeAbort;
+    this.transcribeAbort = undefined;
+    signal?.abort();
+    // The attempt was abandoned by user intent: no retry offer afterwards.
+    this.batchAudio = undefined;
+    this.update({ state: "review", transcribing: null, partial: "" });
+  }
+  /** Retry after a failed batch transcription (rollout §3.3): the encoded
+   * audio of the finished recording is re-uploaded as-is. */
+  retryTranscription() {
+    if (this.snapshot.state !== "review") return;
+    const audio = this.batchAudio;
+    const startedAt = this.snapshot.startedAt;
+    if (!audio || startedAt === null) return;
+    void this.runTranscribe(audio, startedAt, null);
+  }
+  private pushToSink(frame: ArrayBuffer) {
+    // The recording clock starts with the first encoded frame, keeping the
+    // millisecond timeline aligned with wall-clock time.
+    if (this.batchStartedAt === null) this.batchStartedAt = Date.now();
+    try {
+      this.batchSink?.push(frame);
+    } catch {
+      this.end("transcribeFailed");
+    }
+  }
+  private async transcribeBatch(stopError: CaptureError | null) {
+    const sink = this.batchSink;
+    this.batchSink = undefined;
+    const batch = this.deps.batch;
+    const startedAt = this.snapshot.startedAt;
+    if (!sink || !batch || startedAt === null) return this.end(stopError);
+    let audio: CapturedAudio;
+    try {
+      audio = await sink.finalize();
+    } catch {
+      return this.end("transcribeFailed");
+    } finally {
+      sink.dispose();
+    }
+    this.batchAudio = audio;
+    await this.runTranscribe(audio, startedAt, stopError);
+  }
+  private async runTranscribe(
+    audio: CapturedAudio,
+    startedAt: number,
+    stopError: CaptureError | null,
+  ) {
+    const batch = this.deps.batch;
+    if (!batch) return this.end(stopError);
+    if (!audio.slices.length) return this.end(stopError);
+    this.update({ state: "transcribing", partial: "", error: stopError });
+    const signal = new AbortController();
+    this.transcribeAbort = signal;
+    try {
+      const sentences = await batch.transcribe(audio, {
+        language: "zh",
+        startedAtMs: startedAt,
+        onProgress: (transcribing) => {
+          if (
+            this.snapshot.state === "transcribing" &&
+            this.transcribeAbort === signal
+          )
+            this.update({ transcribing });
+        },
+        signal: signal.signal,
+      });
+      if (this.transcribeAbort !== signal) return; // Cancelled by the user.
+      this.acceptBatch(sentences);
+      // The audio stays available for the page's R2 upload (getCapturedAudio);
+      // only a discard/new session clears it.
+      this.end();
+    } catch {
+      if (this.transcribeAbort !== signal) return;
+      this.end("transcribeFailed");
+    } finally {
+      if (this.transcribeAbort === signal) this.transcribeAbort = undefined;
+    }
+  }
+  private acceptBatch(sentences: CaptureSentence[]) {
+    let added = 0;
+    for (const sentence of sentences) {
+      if (this.ids.has(sentence.id)) continue;
+      if (
+        this.textLength + sentence.text.length + 20 > CAPTURE_MAX_TEXT ||
+        this.ids.size >= 4000
+      )
+        break;
+      this.ids.add(sentence.id);
+      this.textLength += sentence.text.length + 20;
+      this.snapshot.sentences.push(sentence);
+      added++;
+    }
+    if (added)
+      this.update({
+        sentenceVersion: this.snapshot.sentenceVersion + 1,
+        partial: "",
+      });
+  }
   private end(error: CaptureError | null = this.snapshot.error) {
     this.dispose();
     this.pendingFrames = [];
     this.pendingBytes = 0;
+    this.paused = false;
+    this.batchBuffering = false;
+    this.batchMode = false;
     this.update({
       state:
         this.snapshot.startedAt !== null || this.snapshot.sentences.length
@@ -404,10 +646,13 @@ export class CaptureController {
       microphoneActive: false,
       partial: "",
       stoppedAt: this.snapshot.stoppedAt ?? Date.now(),
+      transcribing: null,
     });
   }
   reset() {
     this.dispose();
+    this.paused = false;
+    this.batchAudio = undefined;
     this.update({
       state: "idle",
       sentences: [],
@@ -418,6 +663,7 @@ export class CaptureController {
       microphoneActive: false,
       error: null,
       gap: false,
+      transcribing: null,
     });
   }
   dispose = () => {
@@ -425,5 +671,11 @@ export class CaptureController {
     this.mic?.dispose();
     this.mic = undefined;
     this.closeSocket();
+    clearInterval(this.batchTimer);
+    this.batchTimer = undefined;
+    this.transcribeAbort?.abort();
+    this.transcribeAbort = undefined;
+    this.batchSink?.dispose();
+    this.batchSink = undefined;
   };
 }

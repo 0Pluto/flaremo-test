@@ -1,8 +1,9 @@
 import { CAPTURE_MAX_DURATION_MS, CAPTURE_MAX_TEXT } from "@flaremo/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useBlocker, useNavigate } from "@tanstack/react-router";
+import { Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { Loader2Icon, Mic, Square } from "lucide-react";
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -10,8 +11,23 @@ import {
   useSyncExternalStore,
 } from "react";
 import { toast } from "sonner";
-import { createMemo, getCaptureStatus, updateMemo } from "@/api";
+import {
+  type Attachment,
+  bindMemoAttachments,
+  createMemo,
+  getCaptureStatus,
+  getCurrentFlareMoUser,
+  updateMemo,
+  uploadAttachment,
+} from "@/api";
 import { authClient } from "@/auth-client";
+import {
+  CaptureButton,
+  type CaptureButtonState,
+  CapturePauseButton,
+} from "@/components/capture/capture-button";
+import { CaptureTranscribing } from "@/components/capture/capture-transcribing";
+import { CaptureWaveform } from "@/components/capture/capture-waveform";
 import { SubpageHeader } from "@/components/subpage-header";
 import {
   AlertDialog,
@@ -25,11 +41,17 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { useI18n } from "@/i18n";
+import {
+  type BatchProgress,
+  transcribeCapturedAudio,
+} from "@/lib/audio-capture/batch";
 import {
   CaptureController,
   captureIsActive,
 } from "@/lib/audio-capture/controller";
+import { createCaptureAudioSink } from "@/lib/audio-capture/encoder";
 import {
   CaptureDraftStore,
   captureDraftId,
@@ -37,9 +59,48 @@ import {
   loadCapture,
   newLocalCapture,
 } from "@/lib/audio-capture/local-session";
-import { openMicrophone } from "@/lib/audio-capture/microphone";
+import {
+  type Microphone,
+  openMicrophone,
+} from "@/lib/audio-capture/microphone";
 import { CaptureTranscriptAccumulator } from "@/lib/audio-capture/transcript";
+import type { CaptureState } from "@/lib/audio-capture/types";
 import { vibrate } from "@/lib/haptics";
+import { cn } from "@/lib/utils";
+
+/** The Worker's attachment cap (attachment-http.ts MAX_ATTACHMENT_BYTES). */
+const CAPTURE_MAX_AUDIO_BYTES = 25 * 1024 * 1024;
+const CAPTURE_KEEP_AUDIO_KEY = "capture.keepAudio";
+
+function readKeepAudio(): boolean {
+  try {
+    return localStorage.getItem(CAPTURE_KEEP_AUDIO_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Uploads the encoded session recording through the same attachment pipeline
+ * the composer uses (R2 + /api/v1/attachments, rollout §4.1). Exactly one
+ * retry, and the retry reuses the client id so a first attempt that actually
+ * landed cannot duplicate the file. Null means the caller degrades to a
+ * transcript-only memo (D4) — text is never blocked by audio.
+ */
+async function uploadCaptureAudio(
+  file: File,
+  clientId: string,
+): Promise<Attachment | null> {
+  try {
+    return await uploadAttachment({ file, clientId });
+  } catch {
+    try {
+      return await uploadAttachment({ file, clientId });
+    } catch {
+      return null;
+    }
+  }
+}
 
 export function CapturePage() {
   const { t } = useI18n();
@@ -55,15 +116,42 @@ export function CapturePage() {
     staleTime: 30_000,
     retry: false,
   });
+  // Role-aware unavailable copy (rollout §5): the App shell already caches
+  // the viewer under this key, so this rides along without a new request.
+  const meQuery = useQuery({
+    queryKey: ["current-flaremo-user"],
+    queryFn: getCurrentFlareMoUser,
+    staleTime: 60_000,
+    retry: false,
+  });
+  const canManageVoiceService = meQuery.data?.can_manage_voice_service === true;
   const [controller] = useState(
     () =>
       new CaptureController({
-        microphone: openMicrophone,
+        // The page keeps the live microphone handle for the waveform while
+        // the controller owns its lifecycle (start/stop/dispose).
+        microphone: async (onFrame, signal, interrupt) => {
+          const mic = await openMicrophone(onFrame, signal, interrupt);
+          micRef.current = mic;
+          return mic;
+        },
         status: getCaptureStatus,
         socket: () =>
           new WebSocket(
             `${location.origin.replace(/^http/, "ws")}/api/app/capture/ws`,
           ),
+        // Batch ASR (rollout §3.3): used only when /status reports a batch
+        // provider; the controller decides the mode per session.
+        batch: {
+          createSink: () => createCaptureAudioSink(),
+          transcribe: (audio, input) =>
+            transcribeCapturedAudio(audio, {
+              language: input.language,
+              startedAtMs: input.startedAtMs,
+              onProgress: input.onProgress,
+              signal: input.signal,
+            }),
+        },
       }),
   );
   const snapshot = useSyncExternalStore(
@@ -74,10 +162,22 @@ export function CapturePage() {
   const [recovery, setRecovery] = useState<LocalCapture | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [review, setReview] = useState(false);
+  // True for one beat when the live log hands over to the review form, so the
+  // log can fade out instead of vanishing in a ternary hard cut (§2.3).
+  const [logLeaving, setLogLeaving] = useState(false);
+  // P2 wires batch-mode ASR here (rollout §2.3/§3.3); the skeleton style
+  // ships now.
+  const transcribing = snapshot.state === "transcribing";
+  const transcribeProgress: BatchProgress | null = snapshot.transcribing;
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
   const [draftError, setDraftError] = useState(false);
   const [cleanupError, setCleanupError] = useState(false);
+  // "Save original audio" (rollout §4.1): on by default, remembered across
+  // sessions in localStorage so enterprise members can opt out for good.
+  const [keepAudio, setKeepAudio] = useState(readKeepAudio);
+  const keepAudioRef = useRef(keepAudio);
+  keepAudioRef.current = keepAudio;
   const [now, setNow] = useState(Date.now());
   const savingRef = useRef(false);
   const savedRef = useRef(false);
@@ -87,12 +187,25 @@ export function CapturePage() {
   const submittedMemoRef = useRef<Parameters<typeof createMemo>[0] | null>(
     null,
   );
+  // Audio attachment claimed before the memo existed (rollout §4.1): the
+  // upload result survives a lost create response so a retry binds the same
+  // file instead of uploading it twice; boundRef skips an already-applied bind.
+  const uploadedAudioRef = useRef<Attachment | null>(null);
+  const audioBoundRef = useRef(false);
   const localRef = useRef(local);
   localRef.current = local;
   const transcript = useRef(new CaptureTranscriptAccumulator());
+  const micRef = useRef<Microphone | null>(null);
+  const getWaveform = useCallback(
+    () => micRef.current?.getWaveform?.() ?? null,
+    [],
+  );
   const tail = useRef<HTMLDivElement>(null);
   const active = captureIsActive(snapshot.state);
-  const unsaved = active || review || Boolean(recovery);
+  // Batch transcription keeps the session unsaved until it resolves; leaving
+  // mid-flight cancels the attempt instead of losing it silently.
+  const unsaved =
+    active || snapshot.state === "transcribing" || review || Boolean(recovery);
   const blocker = useBlocker({
     disabled: !unsaved,
     enableBeforeUnload: true,
@@ -197,6 +310,18 @@ export function CapturePage() {
       tail.current?.scrollIntoView({ block: "nearest" });
   }, [snapshot.partial, snapshot.sentenceVersion]);
 
+  // Recording → review: fade the live log out (animate-fade reversed, 140ms
+  // ≤ the 320ms entrance budget) while the review form rises in.
+  const previousStateRef = useRef<CaptureState>("idle");
+  useEffect(() => {
+    const wasActive = captureIsActive(previousStateRef.current);
+    previousStateRef.current = snapshot.state;
+    if (snapshot.state !== "review" || !wasActive) return;
+    setLogLeaving(true);
+    const timer = window.setTimeout(() => setLogLeaving(false), 160);
+    return () => window.clearTimeout(timer);
+  }, [snapshot.state]);
+
   const start = () => {
     vibrate(5);
     savedRef.current = false;
@@ -205,10 +330,48 @@ export function CapturePage() {
     setCleanupError(false);
     savedMemoRef.current = null;
     submittedMemoRef.current = null;
+    uploadedAudioRef.current = null;
+    audioBoundRef.current = false;
     transcript.current.reset();
     setLocal(newLocalCapture());
     void controller.start();
   };
+  // Page-level Enter drives start/stop/resume while the page owns focus.
+  // Space is deliberately unbound (scroll conflict); fields and buttons keep
+  // their native Enter behavior, and open dialogs win.
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Enter") return;
+      const target = event.target;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        target instanceof HTMLButtonElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
+      )
+        return;
+      if (document.querySelector('[role="dialog"][data-state="open"]')) return;
+      const state = controller.getSnapshot().state;
+      if (state === "recording") {
+        event.preventDefault();
+        vibrate(5);
+        void controller.stop();
+      } else if (state === "paused") {
+        event.preventDefault();
+        controller.resume();
+      } else if (
+        (state === "idle" || state === "error") &&
+        loaded &&
+        status.data?.available
+      ) {
+        event.preventDefault();
+        start();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [controller, loaded, start, status.data?.available]);
   const discard = async () => {
     const cleared = await store.clear();
     if (!cleared) {
@@ -218,6 +381,8 @@ export function CapturePage() {
     savedRef.current = true;
     savedMemoRef.current = null;
     submittedMemoRef.current = null;
+    uploadedAudioRef.current = null;
+    audioBoundRef.current = false;
     transcript.current.reset();
     controller.reset();
     setReview(false);
@@ -227,6 +392,36 @@ export function CapturePage() {
     setDraftError(false);
     setCleanupError(false);
   };
+  // Uploads the encoded session recording to R2 before the memo exists (the
+  // composer's preupload pattern): the attachment id lands in the payload at
+  // create time and the bind claims the file right after (rollout §4.1).
+  const resolveAudioAttachment = async (): Promise<Attachment | null> => {
+    if (uploadedAudioRef.current) return uploadedAudioRef.current;
+    const audio = keepAudioRef.current ? controller.getCapturedAudio() : null;
+    const recording = audio?.recording;
+    if (!recording || recording.size === 0) return null;
+    if (recording.size > CAPTURE_MAX_AUDIO_BYTES) {
+      toast.warning(t("capture.audioNotSaved"));
+      return null;
+    }
+    const extension = audio.mimeType === "audio/ogg" ? "ogg" : "wav";
+    const file = new File(
+      [recording],
+      `voice-${new Date(local.startedAt).toISOString().replace(/[:.]/g, "-")}.${extension}`,
+      { type: audio.mimeType },
+    );
+    const attachment = await uploadCaptureAudio(
+      file,
+      `${local.clientId}:audio`,
+    );
+    if (!attachment) {
+      // D4: the transcript is the value; the recording is the enhancement.
+      toast.warning(t("capture.audioNotSaved"));
+      return null;
+    }
+    uploadedAudioRef.current = attachment;
+    return attachment;
+  };
   const save = async () => {
     if (savingRef.current || !local.text.trim()) return;
     savingRef.current = true;
@@ -235,6 +430,7 @@ export function CapturePage() {
     try {
       let memo = savedMemoRef.current;
       if (!memo) {
+        const audioAttachment = await resolveAudioAttachment();
         const content = `# ${t("capture.title")}\n\n${t("capture.recordedAt")}: ${new Date(local.startedAt).toLocaleString()}\n\n${t("capture.duration")}: ${formatDuration(local.duration)}\n\n${local.gap ? `${t("capture.gap")}\n\n` : ""}---\n\n${local.text.trim()}`;
         const input: Parameters<typeof createMemo>[0] = {
           content,
@@ -243,12 +439,22 @@ export function CapturePage() {
           payload: {
             tags: Array.from(new Set(["voice", ...local.tags])),
             client_id: local.clientId,
+            durationSeconds: local.duration,
+            ...(audioAttachment
+              ? { audioAttachmentId: audioAttachment.id }
+              : {}),
           },
         };
         const previousInput = submittedMemoRef.current;
         submittedMemoRef.current = input;
         memo = await createOrReconcileCaptureMemo(input, previousInput);
         savedMemoRef.current = memo;
+      }
+      if (uploadedAudioRef.current && !audioBoundRef.current) {
+        // Claim the preuploaded recording: the bind replaces the memo's
+        // attachment list, which is empty for a fresh capture memo.
+        await bindMemoAttachments(memo.name, [uploadedAudioRef.current.name]);
+        audioBoundRef.current = true;
       }
       const cleared = await store.clear();
       if (!cleared) {
@@ -276,6 +482,8 @@ export function CapturePage() {
   const stopAndLeave = async () => {
     if (blocker.status !== "blocked" || leaving) return;
     const proceed = blocker.proceed;
+    if (controller.getSnapshot().state === "transcribing")
+      controller.cancelTranscription();
     const wasActive = captureIsActive(controller.getSnapshot().state);
     setLeaving(true);
     try {
@@ -344,9 +552,31 @@ export function CapturePage() {
           ? t("capture.reconnecting")
           : snapshot.state === "stopping"
             ? t("capture.stopping")
-            : snapshot.state === "recording"
-              ? t("capture.recording")
-              : t("capture.description");
+            : snapshot.state === "paused"
+              ? t("capture.paused")
+              : snapshot.state === "recording"
+                ? t("capture.recording")
+                : snapshot.state === "transcribing"
+                  ? t("capture.transcribing")
+                  : t("capture.description");
+  const buttonState: CaptureButtonState =
+    snapshot.state === "recording" || snapshot.state === "stopping"
+      ? "recording"
+      : snapshot.state === "paused"
+        ? "paused"
+        : snapshot.state === "idle" ||
+            snapshot.state === "error" ||
+            snapshot.state === "review"
+          ? "idle"
+          : "connecting";
+  const bigButtonDisabled =
+    buttonState === "connecting"
+      ? true
+      : buttonState === "idle"
+        ? !loaded || !status.data?.available
+        : snapshot.state === "stopping" ||
+          snapshot.state === "reconnecting" ||
+          snapshot.state === "transcribing";
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-2xl flex-col gap-6 bg-background px-4 py-6 sm:px-6">
@@ -394,9 +624,18 @@ export function CapturePage() {
         </p>
       )}
       {snapshot.error && (
-        <p role="alert" className="rounded-lg border p-3 text-sm">
-          {t(`capture.${snapshot.error}`)}
-        </p>
+        <div role="alert" className="space-y-3 rounded-lg border p-3 text-sm">
+          <p>{t(`capture.${snapshot.error}`)}</p>
+          {snapshot.error === "transcribeFailed" && !saving && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => controller.retryTranscription()}
+            >
+              {t("capture.retryTranscription")}
+            </Button>
+          )}
+        </div>
       )}
       {(snapshot.gap || local.gap) && (
         <p role="status" className="text-sm text-muted-foreground">
@@ -456,6 +695,15 @@ export function CapturePage() {
                 {statusText}
               </p>
             )}
+            {snapshot.microphoneActive && !review && (
+              <div className="mt-3">
+                <CaptureWaveform
+                  active={snapshot.microphoneActive}
+                  getWaveform={getWaveform}
+                  label={t("capture.waveform")}
+                />
+              </div>
+            )}
             {elapsed > 0 && (
               <div
                 role="progressbar"
@@ -487,8 +735,8 @@ export function CapturePage() {
               </p>
             )}
           </div>
-          {review ? (
-            <>
+          {review && (
+            <div className="space-y-6 motion-safe:animate-rise">
               <label className="flex flex-col gap-2 text-sm font-medium">
                 {t("capture.transcript")}
                 <textarea
@@ -546,6 +794,25 @@ export function CapturePage() {
                   <option value="public">{t("capture.public")}</option>
                 </select>
               </label>
+              <div className="flex items-center justify-between gap-3 rounded-lg border bg-card p-3">
+                <span className="text-sm">{t("capture.keepAudio")}</span>
+                <Switch
+                  checked={keepAudio}
+                  disabled={saving || cleanupError}
+                  onCheckedChange={(checked) => {
+                    const value = Boolean(checked);
+                    setKeepAudio(value);
+                    try {
+                      localStorage.setItem(
+                        CAPTURE_KEEP_AUDIO_KEY,
+                        value ? "on" : "off",
+                      );
+                    } catch {
+                      /* Storage unavailable: the session default stands. */
+                    }
+                  }}
+                />
+              </div>
               {saveError && <p role="alert">{t("capture.saveFailed")}</p>}
               {cleanupError && <p role="alert">{t("capture.cleanupFailed")}</p>}
               <div className="flex gap-3">
@@ -574,14 +841,20 @@ export function CapturePage() {
                   )}
                 </Button>
               </div>
-            </>
-          ) : (
+            </div>
+          )}
+          {(!review || logLeaving) && (
             <>
               <div
                 role="log"
                 aria-label={t("capture.transcript")}
                 aria-live="off"
-                className="max-h-[45dvh] min-h-56 overflow-y-auto whitespace-pre-wrap rounded-xl border bg-card p-4 text-base leading-relaxed"
+                className={cn(
+                  "max-h-[45dvh] min-h-56 overflow-y-auto whitespace-pre-wrap rounded-xl border bg-card p-4 text-base leading-relaxed",
+                  review &&
+                    logLeaving &&
+                    "motion-safe:animate-fade [animation-direction:reverse]",
+                )}
               >
                 {snapshot.sentences.length > 100 && (
                   <p className="text-sm text-muted-foreground">
@@ -589,11 +862,14 @@ export function CapturePage() {
                   </p>
                 )}
                 {snapshot.sentences.slice(-100).map((sentence) => (
-                  <p className="mb-3" key={sentence.id}>
+                  <p
+                    className="mb-3 motion-safe:animate-rise"
+                    key={sentence.id}
+                  >
                     {sentence.text}
                   </p>
                 ))}
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground/70 motion-safe:animate-partial-pulse">
                   {snapshot.partial ||
                     (!snapshot.sentences.length ? t("capture.empty") : "")}
                 </p>
@@ -607,38 +883,72 @@ export function CapturePage() {
                 </p>
                 <div ref={tail} />
               </div>
+              {transcribing && (
+                <div className="space-y-3">
+                  <CaptureTranscribing
+                    label={
+                      transcribeProgress && transcribeProgress.total > 1
+                        ? t("capture.transcribingCount", {
+                            done: transcribeProgress.done,
+                            total: transcribeProgress.total,
+                          })
+                        : t("capture.transcribing")
+                    }
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => controller.cancelTranscription()}
+                  >
+                    {t("capture.cancelTranscribing")}
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+          {!review && (
+            <>
               <p aria-live="polite" className="sr-only">
                 {snapshot.sentences.at(-1)?.text ?? ""}
               </p>
-              {active ? (
-                <Button
-                  variant="destructive"
-                  size="lg"
-                  className="h-11"
-                  onClick={() => {
+              <div className="flex items-center justify-center gap-3">
+                {snapshot.state === "recording" && (
+                  <CapturePauseButton
+                    onPaused={() => {
+                      vibrate(5);
+                      controller.pause();
+                    }}
+                    label={t("capture.pause")}
+                  />
+                )}
+                {snapshot.state === "paused" && (
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="size-12 rounded-full text-destructive"
+                    aria-label={t("capture.stop")}
+                    onClick={() => {
+                      vibrate(5);
+                      void controller.stop();
+                    }}
+                  >
+                    <Square className="fill-current" />
+                  </Button>
+                )}
+                <CaptureButton
+                  state={buttonState}
+                  disabled={bigButtonDisabled}
+                  onStart={start}
+                  onStop={() => {
                     vibrate(5);
                     void controller.stop();
                   }}
-                  disabled={snapshot.state === "stopping"}
-                >
-                  <Square />
-                  {t(
-                    snapshot.state === "stopping"
-                      ? "capture.stopping"
-                      : "capture.stop",
-                  )}
-                </Button>
-              ) : (
-                <Button
-                  variant="brand"
-                  size="lg"
-                  onClick={start}
-                  disabled={!loaded || !status.data?.available}
-                >
-                  <Mic />
-                  {t("capture.start")}
-                </Button>
-              )}
+                  onResume={() => controller.resume()}
+                  startLabel={t("capture.start")}
+                  stopLabel={t("capture.stop")}
+                  resumeLabel={t("capture.resume")}
+                />
+              </div>
               {status.isError && !status.data ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <p role="status">{t("list.errorDescription")}</p>
@@ -653,9 +963,19 @@ export function CapturePage() {
                   </Button>
                 </div>
               ) : !status.isPending && !status.data?.available ? (
-                <p role="status" className="text-sm text-muted-foreground">
-                  {t("capture.unavailable")}
-                </p>
+                <div className="flex flex-col items-center gap-2 text-center text-sm text-muted-foreground">
+                  <p role="status">{t("capture.unavailable")}</p>
+                  {canManageVoiceService ? (
+                    <Link
+                      className="underline underline-offset-4 hover:text-foreground"
+                      to="/account"
+                    >
+                      {t("capture.unavailableOwnerLink")}
+                    </Link>
+                  ) : (
+                    <p>{t("capture.unavailableMember")}</p>
+                  )}
+                </div>
               ) : null}
             </>
           )}

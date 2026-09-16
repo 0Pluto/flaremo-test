@@ -7,6 +7,7 @@ import { MemoComposer } from "@/components/memo-composer";
 import { useMemoMutations } from "@/hooks/use-memo-mutations";
 import { useNewMemoCapture } from "@/hooks/use-new-memo-capture";
 import { useI18n } from "@/i18n";
+import { focusComposerInput } from "@/lib/composer-focus";
 import {
   enqueueMemoSubmission,
   flushQueuedMemoSubmissions,
@@ -152,11 +153,7 @@ export const WorkspaceComposer = memo(function WorkspaceComposer({
   // strip the flag so a later reload does not steal focus again.
   useEffect(() => {
     if (!composeRequested || !visible) return;
-    const composer = document.getElementById("flaremo-composer-input");
-    if (composer instanceof HTMLTextAreaElement) {
-      composer.focus();
-      composer.setSelectionRange(composer.value.length, composer.value.length);
-    }
+    focusComposerInput();
     void navigate({
       replace: true,
       search: (current) => ({ ...current, compose: undefined }),

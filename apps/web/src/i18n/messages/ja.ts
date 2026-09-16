@@ -28,6 +28,10 @@ const messages = {
   "voiceSettings.secretKey": "Tencent Cloud SecretKey",
   "voiceSettings.apiKey": "DashScope API キー",
   "voiceSettings.volcengine": "Doubao / Volcano Engine",
+  "voiceSettings.minimax": "MiniMax",
+  "voiceSettings.minimaxApiKey": "MiniMax API キー",
+  "voiceSettings.minimaxBaseUrl":
+    "MiniMax ベース URL（省略可、既定は中国国内ノード）",
   "voiceSettings.volcAppId": "Volcano Engine AppID",
   "voiceSettings.volcAccessToken": "Volcano Engine アクセストークン",
   "voiceSettings.volcBoostingTable": "熱語テーブル名（任意）",
@@ -94,7 +98,10 @@ const messages = {
     "マイク有効 · 文字起こしサービスに接続中です。そのままお話しください…",
   "capture.stopping": "マイク停止 · 最後の一文を受信しています…",
   "capture.foreground":
-    "このページを前面に保ってください。タブを切り替えたり画面をロックすると録音が止まります。元の音声は保存されません。",
+    "このページを前面に保ってください。タブを切り替えたり画面をロックすると録音が止まります。元の音声は既定で保存され、保存時にオフにできます。",
+  "capture.keepAudio": "元の音声を保存",
+  "capture.audioNotSaved":
+    "文字起こしは保存しましたが、元の音声をアップロードできませんでした。",
   "capture.leaveTitle": "音声メモを中断しますか？",
   "capture.leaveRecording":
     "録音中です。停止して離れると、未保存のテキストはこの端末のローカル下書きに残ります。",
@@ -115,6 +122,10 @@ const messages = {
     "録音が中断され、マイクをオフにしました。取り込めたテキストを確認してください。末尾が不完全な可能性があります。",
   "capture.unavailable":
     "文字起こしは未設定か、一時的に利用できません。しばらくしてから再試行してください。",
+  "capture.unavailableOwnerLink":
+    "「アカウント → 音声認識設定」で有効にできます。",
+  "capture.unavailableMember":
+    "インスタンスのオーナーに音声認識の有効化を依頼してください。",
   "capture.wakeLockFailed":
     "画面のスリープ防止に失敗しました。ロックすると録音が中断される場合があります。",
   "capture.connectionFailed":
@@ -159,6 +170,15 @@ const messages = {
   "capture.charsUsed": "{count} / {max} 文字",
   "capture.saveSucceeded": "保存しました。",
   "capture.transcribing": "文字起こし中…",
+  "capture.transcribingCount": "文字起こし中… {done} / {total} 段落目",
+  "capture.transcribeFailed":
+    "文字起こしに失敗しました。認識テキストを生成できなかったため、下書きを手動で編集するか破棄してください。",
+  "capture.cancelTranscribing": "文字起こしをキャンセル",
+  "capture.retryTranscription": "文字起こしを再試行",
+  "capture.pause": "録音を一時停止",
+  "capture.resume": "録音を再開",
+  "capture.paused": "一時停止中 · タイマーは継続中",
+  "capture.waveform": "マイクのライブ波形",
   "nav.calendar": "カレンダー",
   "calendar.title": "カレンダー",
   "calendar.today": "今日に戻る",
@@ -242,7 +262,7 @@ const messages = {
   "composer.addAttachment": "添付ファイルを追加",
   "composer.addTag": "タグを追加",
   "composer.bulletList": "リスト",
-  "composer.checklist": "チェックリスト",
+  "composer.taskList": "チェックリスト",
   "composer.send": "送信",
   "composer.visibility.personal": "個人",
   "composer.visibility.team": "チーム",
@@ -258,6 +278,7 @@ const messages = {
   "shortcuts.send": "現在の入力を送信",
   "shortcuts.linebreak": "入力欄内で改行",
   "shortcuts.saveEdit": "編集中のノートを保存",
+  "shortcuts.capture": "音声記録の開始/停止（/capture ページ）",
   "composer.removeFile": "{filename} を削除",
   "composer.imageUploadFailed":
     "画像のアップロードに失敗しました。再試行してください",

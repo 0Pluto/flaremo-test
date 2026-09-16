@@ -60,6 +60,7 @@ import {
   formatDayTitle,
   todayKey,
 } from "@/lib/calendar-date";
+import { focusComposerInput } from "@/lib/composer-focus";
 import { cn } from "@/lib/utils";
 import { AppRoutes } from "@/router-tree";
 import { indexRoute, registerWorkspaceComponent } from "@/routes/index-route";
@@ -247,10 +248,9 @@ export function FlareMoApp() {
         !event.ctrlKey &&
         !event.altKey
       ) {
-        const composer = document.getElementById("flaremo-composer-input");
-        if (composer instanceof HTMLTextAreaElement) {
+        if (document.getElementById("flaremo-composer-input")) {
           event.preventDefault();
-          composer.focus();
+          focusComposerInput();
         }
       }
       // "?" lists the available keyboard shortcuts.
@@ -794,6 +794,7 @@ export function FlareMoApp() {
                 ["shortcuts.send", "Enter"],
                 ["shortcuts.linebreak", "Shift + Enter"],
                 ["shortcuts.saveEdit", "⌘Enter"],
+                ["shortcuts.capture", "Enter (on /capture)"],
               ] as const
             ).map(([key, combo]) => (
               <div

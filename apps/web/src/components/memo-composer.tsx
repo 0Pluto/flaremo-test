@@ -1,8 +1,9 @@
+import type { Editor } from "@tiptap/react";
 import {
+  CheckSquareIcon,
   HashIcon,
   ImageIcon,
   ListIcon,
-  ListTodoIcon,
   Loader2Icon,
   LockIcon,
   MicIcon,
@@ -12,14 +13,15 @@ import {
   XIcon,
 } from "lucide-react";
 import {
+  Suspense,
   useEffect,
-  useLayoutEffect,
   useRef,
   useState,
   useSyncExternalStore,
 } from "react";
 import { toast } from "sonner";
 import { getCaptureStatus, type MemoVisibility, uploadAttachment } from "@/api";
+import { RichComposerEditor } from "@/components/rich-composer-editor-lazy";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -28,21 +30,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/i18n";
+import { transcribeCapturedAudio } from "@/lib/audio-capture/batch";
 import { CaptureController } from "@/lib/audio-capture/controller";
+import { createCaptureAudioSink } from "@/lib/audio-capture/encoder";
 import { openMicrophone } from "@/lib/audio-capture/microphone";
 import { joinFinalSentences } from "@/lib/audio-capture/plain-text";
-import {
-  extractImageFiles,
-  inlineImageMarkdown,
-  insertSnippetAt,
-} from "@/lib/image-insert";
 import type { MemoCaptureInput } from "@/lib/local-memo-capture";
 import { extractTags } from "@/lib/memo";
+import { uploadAndInsertImages } from "@/lib/rich-editor-upload";
 import {
-  type ActiveTagToken,
-  extractActiveTagToken,
   filterTagSuggestions,
   type TagSuggestion,
 } from "@/lib/tag-autocomplete";
@@ -54,7 +51,7 @@ type MemoComposerProps = {
   showVisibility?: boolean;
   /** Known tags with usage counts, powering the "#" autocomplete. */
   tags?: TagSuggestion[];
-  /** Streaming ASR is configured on the instance. */
+  /** Streaming/batch ASR is configured on the instance. */
   captureAvailable?: boolean;
   onDraftChange: (draft: MemoCaptureInput) => void;
   onSubmit: (input: MemoCaptureInput) => Promise<void>;
@@ -64,10 +61,14 @@ type MemoComposerProps = {
 const fileKeys = new WeakMap<File, string>();
 let nextFileKey = 0;
 
-function formatVoiceClock(totalSeconds: number) {
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+/**
+ * Placeholder while the editor chunk streams in on the very first visit; the
+ * idle prefetch makes this flash last one frame in practice.
+ */
+function ComposerEditorSkeleton() {
+  return (
+    <div className="min-h-32 rounded-t-xl bg-muted/30" aria-hidden="true" />
+  );
 }
 
 function getFileKey(file: File) {
@@ -78,6 +79,12 @@ function getFileKey(file: File) {
   nextFileKey += 1;
   fileKeys.set(file, key);
   return key;
+}
+
+function formatVoiceClock(totalSeconds: number) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
 export function MemoComposer({
@@ -91,25 +98,19 @@ export function MemoComposer({
   onVisibilityChange,
 }: MemoComposerProps) {
   const { t } = useI18n();
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<Editor | null>(null);
   const canSubmit = Boolean(draft.content.trim() || draft.files.length > 0);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
-  // "#" autocomplete: the in-progress tag token under the caret plus the
-  // highlighted row. Highlight resets whenever the token changes.
-  const [activeTagToken, setActiveTagToken] = useState<ActiveTagToken | null>(
-    null,
-  );
-  const [tagHighlight, setTagHighlight] = useState(0);
-  // Caret to restore after an accepted suggestion rewrites the content.
-  const pendingCaretRef = useRef<number | null>(null);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: the reset keys are the token identity, not values the effect reads.
-  useEffect(() => {
-    setTagHighlight(0);
-  }, [activeTagToken?.start, activeTagToken?.token]);
-
-  // Quick voice capture: one shared streaming-ASR session per composer.
-  // The controller persists with the composer (workspace filters keep it
-  // mounted) so a draft survives a visit to the archive or trash.
+  // "#" autocomplete: the in-progress tag token under the caret (reported by
+  // the editor's transactions) plus the highlighted row.
+  const [activeTagToken, setActiveTagToken] = useState<{
+    from: number;
+    text: string;
+  } | null>(null);
+  // Quick voice capture: one streaming/batch ASR session per composer, wired
+  // the same way as the capture page. The controller persists with the
+  // composer (workspace filters keep it mounted) so a draft survives a visit
+  // to the archive or trash.
   const [captureController] = useState(
     () =>
       new CaptureController({
@@ -119,6 +120,18 @@ export function MemoComposer({
           new WebSocket(
             `${location.origin.replace(/^http/, "ws")}/api/app/capture/ws`,
           ),
+        // Batch ASR (rollout §3.3): used only when /status reports a batch
+        // provider; the controller decides the mode per session.
+        batch: {
+          createSink: () => createCaptureAudioSink(),
+          transcribe: (audio, input) =>
+            transcribeCapturedAudio(audio, {
+              language: input.language,
+              startedAtMs: input.startedAtMs,
+              onProgress: input.onProgress,
+              signal: input.signal,
+            }),
+        },
       }),
   );
   const capture = useSyncExternalStore(
@@ -127,12 +140,6 @@ export function MemoComposer({
   );
   const voiceActive = capture.state !== "idle" && capture.state !== "error";
   const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    if (!voiceActive) return;
-    const timer = setInterval(() => setNow(Date.now()), 500);
-    return () => clearInterval(timer);
-  }, [voiceActive]);
-  useEffect(() => () => captureController.dispose(), [captureController]);
   // Uploads read the latest draft through a ref: the async chain would
   // otherwise insert into a stale closure while the user keeps typing.
   const draftRef = useRef(draft);
@@ -144,52 +151,33 @@ export function MemoComposer({
   // deleted image would be re-bound on submit).
   const preuploadMarkdownRef = useRef(new Map<string, string>());
 
-  // Pasted/dropped images upload immediately (unbound; the send flow claims
-  // them afterwards) and their references land at the recorded caret once the
-  // upload settles. Tasks chain so two rapid pastes never drift positions.
-  const enqueueInlineUploads = (files: File[], caret: number) => {
+  // Pasted/dropped images show an inline "uploading…" chip immediately, then
+  // their references land where the chip sits once the upload settles. Tasks
+  // chain so two rapid pastes never interleave.
+  const enqueueInlineUploads = (files: File[], position: number) => {
     if (files.length === 0) return;
     pendingUploadsRef.current += files.length;
     setIsUploadingImages(true);
     uploadChainRef.current = uploadChainRef.current
       .catch(() => undefined)
       .then(async () => {
-        let cursor = caret;
         try {
-          for (const file of files) {
-            let attachment: Awaited<ReturnType<typeof uploadAttachment>>;
-            try {
-              attachment = await uploadAttachment({ file });
-            } catch {
-              toast.error(t("composer.imageUploadFailed"));
-              break;
-            }
-            // Read after the upload: the user may have kept typing while the
-            // network was pending. Never replace that text with an old draft.
-            const current = draftRef.current;
-            const next = insertSnippetAt(
-              current.content,
-              cursor,
-              inlineImageMarkdown(attachment.id, attachment.filename),
-            );
-            cursor = next.caret;
-            const markdown = inlineImageMarkdown(
-              attachment.id,
-              attachment.filename,
-            );
-            preuploadMarkdownRef.current.set(attachment.name, markdown);
-            const nextDraft = {
-              ...current,
-              content: next.content,
-              tags: extractTags(next.content),
-              preuploadedAttachmentNames: [
-                ...(current.preuploadedAttachmentNames ?? []),
-                attachment.name,
-              ],
-            };
-            draftRef.current = nextDraft;
-            onDraftChange(nextDraft);
-          }
+          await uploadAndInsertImages({
+            editorRef,
+            files,
+            position,
+            upload: (file) => uploadAttachment({ file }),
+            onUploaded: (attachment, markdown) => {
+              preuploadMarkdownRef.current.set(attachment.name, markdown);
+              commitDraft({
+                preuploadedAttachmentNames: [
+                  ...(draftRef.current.preuploadedAttachmentNames ?? []),
+                  attachment.name,
+                ],
+              });
+            },
+            onError: () => toast.error(t("composer.imageUploadFailed")),
+          });
         } finally {
           // A failed batch also releases the files skipped after the failure.
           pendingUploadsRef.current -= files.length;
@@ -197,28 +185,6 @@ export function MemoComposer({
         }
       });
   };
-
-  // The composer grows with the draft instead of scrolling, up to a cap.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: re-measure the height whenever the draft text changes.
-  useLayoutEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    textarea.style.height = "auto";
-    textarea.style.height = `${Math.min(textarea.scrollHeight, 320)}px`;
-    // An accepted suggestion rewrites the text; put the caret past "#tag ".
-    const caret = pendingCaretRef.current;
-    if (caret != null) {
-      pendingCaretRef.current = null;
-      textarea.focus();
-      textarea.setSelectionRange(caret, caret);
-    }
-  }, [draft.content]);
-
-  const tagSuggestions =
-    tags && activeTagToken
-      ? filterTagSuggestions(tags, activeTagToken.token)
-      : [];
-  const showTagSuggestions = tagSuggestions.length > 0 && !isPending;
 
   // All edits rebuild from draftRef, not the render-time prop: an inline
   // upload chain can land between the render and this event, and building
@@ -242,28 +208,32 @@ export function MemoComposer({
       preuploadedAttachmentNames: kept,
     });
   };
-  const appendText = (value: string) => {
-    const base = draftRef.current.content;
-    updateContent(`${base}${base && !base.endsWith("\n") ? " " : ""}${value}`);
+  const submit = async () => {
+    // Images still uploading have no reference in the content yet; sending
+    // now would lose them to the orphan GC. A live voice session belongs to
+    // the draft in progress, not to a memo being sent.
+    if (!canSubmit || isUploadingImages || voiceActive) {
+      return;
+    }
+    try {
+      await onSubmit(draft);
+    } catch {
+      // The mutation owns user-facing error feedback; keep the draft intact.
+    }
   };
-  const syncTagToken = () => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    const caret = textarea.selectionStart ?? draftRef.current.content.length;
-    setActiveTagToken(extractActiveTagToken(draftRef.current.content, caret));
+  const withEditor = (action: (editor: Editor) => void) => {
+    if (isPending) return;
+    const editor = editorRef.current;
+    if (!editor) return;
+    action(editor);
   };
-  const acceptTagSuggestion = (name: string) => {
-    if (!activeTagToken) return;
-    const textarea = textareaRef.current;
-    const caret =
-      textarea?.selectionStart ??
-      activeTagToken.start + 1 + activeTagToken.token.length;
-    const content = draftRef.current.content;
-    const replaced = `${content.slice(0, activeTagToken.start)}#${name} ${content.slice(caret)}`;
-    pendingCaretRef.current = activeTagToken.start + name.length + 2;
-    setActiveTagToken(null);
-    updateContent(replaced);
-  };
+
+  useEffect(() => {
+    if (!voiceActive) return;
+    const timer = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(timer);
+  }, [voiceActive]);
+  useEffect(() => () => captureController.dispose(), [captureController]);
 
   // A finished session flows straight into the draft: review state carries
   // the final sentences, everything else collapses back to idle. The draft
@@ -282,23 +252,30 @@ export function MemoComposer({
       const base = draftRef.current.content;
       const separator = base && !base.endsWith("\n") ? " " : "";
       const next = `${base}${separator}${text}`;
-      pendingCaretRef.current = next.length;
       updateContentRef.current(next);
     }
     captureController.reset();
   }, [capture.state, capture.sentences, capture.error, captureController, t]);
-  const submit = async () => {
-    // Images still uploading have no reference in the content yet; sending
-    // now would lose them to the orphan GC. A live voice session belongs to
-    // the draft in progress, not to a memo being sent.
-    if (!canSubmit || isUploadingImages || voiceActive) {
-      return;
-    }
-    try {
-      await onSubmit(draft);
-    } catch {
-      // The mutation owns user-facing error feedback; keep the draft intact.
-    }
+
+  const tagSuggestions =
+    tags && activeTagToken
+      ? filterTagSuggestions(tags, activeTagToken.text)
+      : [];
+  const showTagSuggestions = tagSuggestions.length > 0 && !isPending;
+
+  const acceptTagSuggestion = (name: string) => {
+    if (!activeTagToken) return;
+    const editor = editorRef.current;
+    if (!editor) return;
+    const caret = activeTagToken.from + 1 + activeTagToken.text.length;
+    editor
+      .chain()
+      .focus()
+      .insertContentAt(
+        { from: activeTagToken.from, to: caret },
+        { type: "text", text: `#${name} ` },
+      )
+      .run();
   };
 
   return (
@@ -309,89 +286,21 @@ export function MemoComposer({
         void submit();
       }}
     >
-      <Textarea
-        aria-controls={
-          showTagSuggestions ? "composer-tag-suggestions" : undefined
-        }
-        aria-expanded={showTagSuggestions || undefined}
-        aria-label={t("composer.ariaLabel")}
-        className="min-h-32 resize-none overflow-y-auto rounded-t-xl border-0 px-4 pt-4 pb-2 text-[15px] leading-7 shadow-none focus-visible:ring-0"
-        disabled={isPending}
-        id="flaremo-composer-input"
-        placeholder={t("composer.placeholder")}
-        ref={textareaRef}
-        value={draft.content}
-        onChange={(event) => {
-          updateContent(event.target.value);
-          const caret =
-            event.currentTarget.selectionStart ?? event.target.value.length;
-          setActiveTagToken(extractActiveTagToken(event.target.value, caret));
-        }}
-        onClick={syncTagToken}
-        onKeyUp={syncTagToken}
-        onKeyDown={(event) => {
-          if (showTagSuggestions && !event.nativeEvent.isComposing) {
-            const last = tagSuggestions.length - 1;
-            if (event.key === "ArrowDown") {
-              event.preventDefault();
-              setTagHighlight((index) => (index >= last ? 0 : index + 1));
-              return;
-            }
-            if (event.key === "ArrowUp") {
-              event.preventDefault();
-              setTagHighlight((index) => (index <= 0 ? last : index - 1));
-              return;
-            }
-            if (event.key === "Enter" || event.key === "Tab") {
-              event.preventDefault();
-              acceptTagSuggestion(tagSuggestions[tagHighlight]?.name ?? "");
-              return;
-            }
-            if (event.key === "Escape") {
-              event.preventDefault();
-              setActiveTagToken(null);
-              return;
-            }
-          }
-          // Enter sends; IME composition and Shift+Enter never submit.
-          if (
-            event.key === "Enter" &&
-            !event.shiftKey &&
-            !event.nativeEvent.isComposing
-          ) {
-            event.preventDefault();
-            if (!isUploadingImages) void submit();
-            return;
-          }
-          if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-            event.preventDefault();
-            if (!isUploadingImages) void submit();
-          }
-        }}
-        onDragOver={(event) => {
-          if (event.dataTransfer.types.includes("Files")) {
-            event.preventDefault();
-          }
-        }}
-        onDrop={(event) => {
-          const files = extractImageFiles(event.dataTransfer.files);
-          if (files.length === 0) return;
-          event.preventDefault();
-          enqueueInlineUploads(
-            files,
-            event.currentTarget.selectionStart ?? draft.content.length,
-          );
-        }}
-        onPaste={(event) => {
-          const files = extractImageFiles(event.clipboardData.files);
-          if (files.length === 0) return;
-          event.preventDefault();
-          enqueueInlineUploads(
-            files,
-            event.currentTarget.selectionStart ?? draft.content.length,
-          );
-        }}
-      />
+      <Suspense fallback={<ComposerEditorSkeleton />}>
+        <RichComposerEditor
+          ariaLabel={t("composer.ariaLabel")}
+          content={draft.content}
+          disabled={isPending}
+          editorRef={editorRef}
+          onContentChange={updateContent}
+          onImageFiles={enqueueInlineUploads}
+          onTagTokenChange={tags ? setActiveTagToken : undefined}
+          onSubmitRequest={() => {
+            if (!isUploadingImages && !voiceActive) void submit();
+          }}
+          placeholder={t("composer.placeholder")}
+        />
+      </Suspense>
       {voiceActive && (
         <div className="absolute inset-x-4 bottom-12 z-30 flex items-center gap-3 rounded-lg border border-border bg-popover px-3 py-2.5 shadow-md motion-safe:animate-rise">
           {capture.state === "recording" || capture.state === "reconnecting" ? (
@@ -428,11 +337,20 @@ export function MemoComposer({
                   ? t("capture.requestingPermission")
                   : capture.state === "connecting"
                     ? t("capture.connecting")
-                    : t("capture.stopping")}
+                    : capture.state === "paused"
+                      ? t("capture.paused")
+                      : capture.state === "transcribing"
+                        ? capture.transcribing
+                          ? t("capture.transcribingCount", {
+                              done: capture.transcribing.done,
+                              total: capture.transcribing.total,
+                            })
+                          : t("capture.transcribing")
+                        : t("capture.stopping")}
               </span>
             </>
           )}
-          {capture.state !== "stopping" && (
+          {capture.state !== "stopping" && capture.state !== "transcribing" && (
             <Button
               className="h-8 shrink-0 px-2.5 text-xs"
               size="sm"
@@ -443,37 +361,34 @@ export function MemoComposer({
               {t("composer.voiceCancel")}
             </Button>
           )}
-          <Button
-            className="h-8 shrink-0 px-2.5 text-xs"
-            size="sm"
-            type="button"
-            variant="brand"
-            onClick={() => void captureController.stop()}
-          >
-            {t("composer.voiceStop")}
-          </Button>
+          {capture.state !== "stopping" && capture.state !== "transcribing" && (
+            <Button
+              className="h-8 shrink-0 px-2.5 text-xs"
+              size="sm"
+              type="button"
+              variant="brand"
+              onClick={() => void captureController.stop()}
+            >
+              {t("composer.voiceStop")}
+            </Button>
+          )}
         </div>
       )}
       {showTagSuggestions && (
         <div
           className="absolute inset-x-4 bottom-12 z-30 max-h-56 overflow-y-auto rounded-lg border border-border bg-popover py-1 shadow-md motion-safe:animate-rise"
-          id="composer-tag-suggestions"
+          data-testid="composer-tag-suggestions"
         >
-          {tagSuggestions.map((suggestion, index) => (
+          {tagSuggestions.map((suggestion) => (
             <button
-              className={`flex w-full items-center justify-between gap-3 rounded-md px-3.5 py-1.5 text-left text-sm motion-safe:transition-colors ${
-                index === tagHighlight
-                  ? "bg-muted text-foreground"
-                  : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-              }`}
+              className="flex w-full items-center justify-between gap-3 rounded-md px-3.5 py-1.5 text-left text-sm text-muted-foreground motion-safe:transition-colors hover:bg-muted/60 hover:text-foreground"
               key={suggestion.name}
               type="button"
               onMouseDown={(event) => {
-                // Keep textarea focus/selection so the rewritten caret lands.
+                // Keep editor focus/selection so the rewritten caret lands.
                 event.preventDefault();
                 acceptTagSuggestion(suggestion.name);
               }}
-              onMouseEnter={() => setTagHighlight(index)}
             >
               <span className="truncate">
                 <span className="text-muted-foreground">#</span>
@@ -523,18 +438,15 @@ export function MemoComposer({
             size="icon-sm"
             type="button"
             variant="ghost"
-            onClick={() => {
-              const content = draftRef.current.content;
-              const separator =
-                content && !content.endsWith("\n") && !content.endsWith(" ")
-                  ? " "
-                  : "";
-              const next = `${content}${separator}#`;
-              const caret = next.length;
-              pendingCaretRef.current = caret;
-              updateContent(next);
-              setActiveTagToken(extractActiveTagToken(next, caret));
-            }}
+            onClick={() =>
+              withEditor((editor) => {
+                editor
+                  .chain()
+                  .focus()
+                  .insertContentAt(editor.state.selection.to, "#")
+                  .run();
+              })
+            }
           >
             <HashIcon />
           </Button>
@@ -574,19 +486,27 @@ export function MemoComposer({
             size="icon-sm"
             type="button"
             variant="ghost"
-            onClick={() => appendText("- ")}
+            onClick={() =>
+              withEditor((editor) => {
+                editor.chain().focus().toggleBulletList().run();
+              })
+            }
           >
             <ListIcon />
           </Button>
           <Button
-            aria-label={t("composer.checklist")}
+            aria-label={t("composer.taskList")}
             disabled={isPending}
             size="icon-sm"
             type="button"
             variant="ghost"
-            onClick={() => appendText("- [ ] ")}
+            onClick={() =>
+              withEditor((editor) => {
+                editor.chain().focus().toggleTaskList().run();
+              })
+            }
           >
-            <ListTodoIcon />
+            <CheckSquareIcon />
           </Button>
           {captureAvailable && (
             <Button
@@ -598,7 +518,6 @@ export function MemoComposer({
               variant="ghost"
               onClick={() => {
                 if (voiceActive) return;
-                setActiveTagToken(null);
                 void captureController.start();
               }}
             >

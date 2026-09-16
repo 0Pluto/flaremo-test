@@ -29,6 +29,10 @@ const messages = {
   "voiceSettings.secretKey": "Tencent Cloud SecretKey",
   "voiceSettings.apiKey": "DashScope API 키",
   "voiceSettings.volcengine": "Doubao / Volcano Engine",
+  "voiceSettings.minimax": "MiniMax",
+  "voiceSettings.minimaxApiKey": "MiniMax API 키",
+  "voiceSettings.minimaxBaseUrl":
+    "MiniMax 기본 URL(선택 사항, 기본값은 중국 내 서버)",
   "voiceSettings.volcAppId": "Volcano Engine AppID",
   "voiceSettings.volcAccessToken": "Volcano Engine 액세스 토큰",
   "voiceSettings.volcBoostingTable": "핫워드 테이블 이름(선택)",
@@ -96,7 +100,10 @@ const messages = {
     "마이크 켜짐 · 전사 서비스에 연결하는 중입니다. 조금 뒤 말씀해 주세요…",
   "capture.stopping": "마이크 꺼짐 · 마지막 문장을 받는 중…",
   "capture.foreground":
-    "이 페이지를 화면 앞에 두세요. 탭을 바꾸거나 화면을 잠그면 녹음이 중지됩니다. 원본 오디오는 저장되지 않습니다.",
+    "이 페이지를 화면 앞에 두세요. 탭을 바꾸거나 화면을 잠그면 녹음이 중지됩니다. 원본 오디오는 기본으로 저장되며 저장 시 끌 수 있습니다.",
+  "capture.keepAudio": "원본 오디오 저장",
+  "capture.audioNotSaved":
+    "전사 내용은 저장했지만 원본 오디오를 업로드하지 못했습니다.",
   "capture.leaveTitle": "음성 기록을 그만두시겠어요?",
   "capture.leaveRecording":
     "녹음 중입니다. 중지하고 나가면 저장하지 않은 텍스트가 이 기기의 로컬 임시본에 남습니다.",
@@ -117,6 +124,10 @@ const messages = {
     "녹음이 중단되어 마이크를 껐습니다. 받아온 텍스트를 확인하세요. 끝부분이 불완전할 수 있습니다.",
   "capture.unavailable":
     "전사 기능이 설정되지 않았거나 일시적으로 사용할 수 없습니다. 나중에 다시 시도해 주세요.",
+  "capture.unavailableOwnerLink":
+    "「계정 → 음성 인식 설정」에서 활성화할 수 있습니다.",
+  "capture.unavailableMember":
+    "인스턴스 소유자에게 음성 인식 활성화를 요청해 주세요.",
   "capture.wakeLockFailed":
     "화면 켜짐 유지에 실패했습니다. 화면이 잠기면 녹음이 중단될 수 있습니다.",
   "capture.connectionFailed":
@@ -161,6 +172,15 @@ const messages = {
   "capture.charsUsed": "{count} / {max}자",
   "capture.saveSucceeded": "저장했습니다.",
   "capture.transcribing": "전사 중…",
+  "capture.transcribingCount": "전사 중… {done} / {total} 구간",
+  "capture.transcribeFailed":
+    "전사에 실패했습니다. 인식 텍스트를 생성하지 못했으니 초안을 직접 편집하거나 버리세요.",
+  "capture.cancelTranscribing": "전사 취소",
+  "capture.retryTranscription": "전사 다시 시도",
+  "capture.pause": "녹음 일시정지",
+  "capture.resume": "녹음 계속",
+  "capture.paused": "일시정지 · 기록은 계속됩니다",
+  "capture.waveform": "실시간 마이크 파형",
   "nav.calendar": "캘린더",
   "calendar.title": "캘린더",
   "calendar.today": "오늘로 이동",
@@ -243,7 +263,7 @@ const messages = {
   "composer.addAttachment": "첨부 파일 추가",
   "composer.addTag": "태그 추가",
   "composer.bulletList": "목록",
-  "composer.checklist": "체크리스트",
+  "composer.taskList": "할 일 목록",
   "composer.send": "보내기",
   "composer.visibility.personal": "개인",
   "composer.visibility.team": "팀",
@@ -259,6 +279,7 @@ const messages = {
   "shortcuts.send": "현재 입력 전송",
   "shortcuts.linebreak": "입력 중 줄바꿈 삽입",
   "shortcuts.saveEdit": "편집 중인 노트 저장",
+  "shortcuts.capture": "음성 기록 시작/중지 (/capture 페이지)",
   "composer.removeFile": "{filename} 제거",
   "composer.imageUploadFailed": "이미지 업로드 실패. 다시 시도해 주세요",
   "attachment.unavailable":

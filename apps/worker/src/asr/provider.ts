@@ -1,5 +1,9 @@
 import type { FlareMoEnv } from "../env";
 import { createDashscopeProvider } from "./dashscope";
+import {
+  createMinimaxProvider,
+  normalizeMinimaxBaseUrl,
+} from "./minimax";
 import { createTencentProvider } from "./tencent";
 import type { StreamingAsrProvider } from "./types";
 import { createVolcengineProvider } from "./volcengine";
@@ -19,6 +23,8 @@ type AsrEnv = Pick<
   | "FLAREMO_ASR_VOLCENGINE_BOOSTING_TABLE"
   | "FLAREMO_ASR_VOLCENGINE_CORRECT_TABLE"
   | "FLAREMO_ASR_VOLCENGINE_RESOURCE_ID"
+  | "FLAREMO_ASR_MINIMAX_API_KEY"
+  | "FLAREMO_ASR_MINIMAX_BASE_URL"
 >;
 
 function normalizeHotwordId(value: string | undefined) {
@@ -55,6 +61,9 @@ export function getConfiguredAsr(env: AsrEnv): {
   id: "dashscope" | "tencent" | "volcengine";
   provider: StreamingAsrProvider;
 } | null {
+  // MiniMax is batch-only (record-then-transcribe); it never serves the
+  // live /capture WebSocket (see getConfiguredBatchAsr).
+  if ((env.FLAREMO_ASR_PROVIDER ?? "dashscope") === "minimax") return null;
   const model = env.FLAREMO_ASR_MODEL?.trim() || undefined;
   switch (env.FLAREMO_ASR_PROVIDER ?? "dashscope") {
     case "dashscope": {
@@ -121,4 +130,27 @@ export function getConfiguredAsr(env: AsrEnv): {
     default:
       return null;
   }
+}
+
+// Batch (MiniMax) configuration readiness, mirroring getConfiguredAsr: the
+// API key is required, the base URL is optional (defaults to the domestic
+// endpoint). No paid API is called.
+export function getConfiguredBatchAsr(env: AsrEnv): {
+  id: "minimax";
+  provider: ReturnType<typeof createMinimaxProvider>;
+} | null {
+  if ((env.FLAREMO_ASR_PROVIDER ?? "dashscope") !== "minimax") return null;
+  const apiKey = env.FLAREMO_ASR_MINIMAX_API_KEY?.trim();
+  if (!apiKey) return null;
+  // An unparsable base URL is a broken configuration, not a usable provider.
+  if (normalizeMinimaxBaseUrl(env.FLAREMO_ASR_MINIMAX_BASE_URL) === null)
+    return null;
+  const baseUrl = env.FLAREMO_ASR_MINIMAX_BASE_URL?.trim();
+  return {
+    id: "minimax",
+    provider: createMinimaxProvider({
+      apiKey,
+      ...(baseUrl ? { baseUrl } : {}),
+    }),
+  };
 }

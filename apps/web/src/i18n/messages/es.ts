@@ -30,6 +30,10 @@ const messages = {
   "voiceSettings.secretKey": "SecretKey de Tencent Cloud",
   "voiceSettings.apiKey": "Clave de API de DashScope",
   "voiceSettings.volcengine": "Doubao / Volcano Engine",
+  "voiceSettings.minimax": "MiniMax",
+  "voiceSettings.minimaxApiKey": "Clave API de MiniMax",
+  "voiceSettings.minimaxBaseUrl":
+    "URL base de MiniMax (opcional; nacional por defecto)",
   "voiceSettings.volcAppId": "AppID de Volcano Engine",
   "voiceSettings.volcAccessToken": "Token de acceso de Volcano Engine",
   "voiceSettings.volcBoostingTable": "Nombre de tabla de refuerzo (opcional)",
@@ -98,7 +102,10 @@ const messages = {
     "Micrófono activo · conectando la transcripción. Podrás hablar enseguida…",
   "capture.stopping": "Micrófono apagado · recibiendo la última frase…",
   "capture.foreground":
-    "Mantén esta página en primer plano. Cambiar de pestaña o bloquear la pantalla detiene la grabación. El audio original no se guarda.",
+    "Mantén esta página en primer plano. Cambiar de pestaña o bloquear la pantalla detiene la grabación. El audio original se guarda por defecto; puedes desactivarlo al guardar.",
+  "capture.keepAudio": "Guardar el audio original",
+  "capture.audioNotSaved":
+    "Se guardó la transcripción, pero no se pudo subir el audio original.",
   "capture.leaveTitle": "¿Salir de la captura de voz?",
   "capture.leaveRecording":
     "Hay una grabación en curso. Si la detienes y sales, el texto sin guardar queda en un borrador local de este dispositivo.",
@@ -119,6 +126,10 @@ const messages = {
     "La grabación se interrumpió y el micrófono está apagado. Revisa el texto capturado; el final podría estar incompleto.",
   "capture.unavailable":
     "La transcripción no está configurada o no está disponible temporalmente. Inténtalo más tarde.",
+  "capture.unavailableOwnerLink":
+    "Actívala en «Cuenta → Ajustes de reconocimiento de voz».",
+  "capture.unavailableMember":
+    "Pide al propietario de la instancia que active el reconocimiento de voz.",
   "capture.wakeLockFailed":
     "No se pudo mantener la pantalla encendida; bloquearla puede interrumpir la grabación.",
   "capture.connectionFailed":
@@ -164,6 +175,15 @@ const messages = {
   "capture.charsUsed": "{count} / {max} caracteres",
   "capture.saveSucceeded": "Guardado.",
   "capture.transcribing": "Transcribiendo…",
+  "capture.transcribingCount": "Transcribiendo el fragmento {done} de {total}…",
+  "capture.transcribeFailed":
+    "La transcripción falló. No se pudo generar el texto reconocido; edita el borrador a mano o descártalo.",
+  "capture.cancelTranscribing": "Cancelar transcripción",
+  "capture.retryTranscription": "Reintentar la transcripción",
+  "capture.pause": "Pausar la grabación",
+  "capture.resume": "Reanudar la grabación",
+  "capture.paused": "En pausa · el cronómetro sigue en marcha",
+  "capture.waveform": "Onda del micrófono en vivo",
   "nav.calendar": "Calendario",
   "calendar.title": "Calendario",
   "calendar.today": "Volver a hoy",
@@ -248,7 +268,7 @@ const messages = {
   "composer.addAttachment": "Agregar adjunto",
   "composer.addTag": "Agregar etiqueta",
   "composer.bulletList": "Lista",
-  "composer.checklist": "Lista de tareas",
+  "composer.taskList": "Lista de tareas",
   "composer.send": "Enviar",
   "composer.visibility.personal": "Personal",
   "composer.visibility.team": "Equipo",
@@ -264,6 +284,7 @@ const messages = {
   "shortcuts.send": "Enviar el texto actual",
   "shortcuts.linebreak": "Insertar un salto de línea mientras escribes",
   "shortcuts.saveEdit": "Guardar la nota en edición",
+  "shortcuts.capture": "Iniciar o detener la grabación de voz (en /capture)",
   "composer.removeFile": "Quitar {filename}",
   "composer.imageUploadFailed": "Falló la subida de la imagen. Reintenta.",
   "attachment.unavailable":

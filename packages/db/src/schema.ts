@@ -1090,6 +1090,7 @@ export const usageCounters = sqliteTable(
         "embedding_tokens",
         "embedding_calls",
         "search_queries",
+        "asr_seconds",
       ],
     }).notNull(),
     count: integer("count").notNull().default(0),

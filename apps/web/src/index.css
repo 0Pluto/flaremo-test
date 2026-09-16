@@ -91,6 +91,10 @@
     --animate-fade: flaremo-fade 140ms ease-out both;
     --animate-scale-in: flaremo-scale-in 140ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
     --animate-shimmer: flaremo-shimmer 1.6s linear infinite;
+    /* Real-state indicators (recording ring, live partial line): whitelisted
+       informational motion, not decoration. */
+    --animate-signal-ring: flaremo-signal-ring 1.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+    --animate-partial-pulse: flaremo-partial-pulse 1.6s ease-in-out infinite;
 }
 
 :root {
@@ -432,6 +436,111 @@
     @apply my-1 h-auto max-w-full rounded-xl border border-border/60;
   }
 
+  /* Composer rich-text body. Typography mirrors .memo-markdown so editing and
+     reading feel like the same surface, minus read-view extras (heading
+     anchors, image frames). The box grows with content up to a cap. */
+  .composer-editor-content {
+    @apply min-h-32 max-h-80 overflow-y-auto px-4 pt-4 pb-2 text-[15px] leading-7 outline-none;
+  }
+
+  .composer-editor-content p {
+    @apply my-0 min-h-7;
+  }
+
+  .composer-editor-content p + p {
+    @apply mt-3;
+  }
+
+  .composer-editor-content h1 {
+    @apply mt-3 text-xl font-semibold tracking-tight;
+  }
+
+  .composer-editor-content h2 {
+    @apply mt-3 text-lg font-semibold tracking-tight;
+  }
+
+  .composer-editor-content h3 {
+    @apply mt-3 text-base font-semibold;
+  }
+
+  .composer-editor-content ul {
+    @apply my-3 list-disc pl-6;
+  }
+
+  .composer-editor-content ol {
+    @apply my-3 list-decimal pl-6;
+  }
+
+  .composer-editor-content li + li {
+    @apply mt-1;
+  }
+
+  .composer-editor-content li > p {
+    @apply my-0;
+  }
+
+  .composer-editor-content blockquote {
+    @apply my-3 rounded-r-md border-l-2 border-brand-300 bg-brand-50 py-1 pr-3 pl-4 text-muted-foreground dark:border-brand-600 dark:bg-brand-400/5;
+  }
+
+  .composer-editor-content code {
+    @apply rounded-md bg-muted px-1.5 py-0.5 font-mono text-[0.85em];
+  }
+
+  .composer-editor-content pre {
+    @apply my-3 overflow-x-auto rounded-xl border border-border/60 bg-muted p-4;
+  }
+
+  .composer-editor-content pre code {
+    @apply bg-transparent p-0;
+  }
+
+  .composer-editor-content img {
+    @apply my-1 h-auto max-w-full rounded-xl border border-border/60;
+  }
+
+  /* GFM task lists: real interactive checkboxes in the editor. */
+  .composer-editor-content ul[data-type="taskList"] {
+    @apply my-3 list-none pl-1;
+  }
+
+  .composer-editor-content ul[data-type="taskList"] li {
+    @apply flex items-start gap-2;
+  }
+
+  .composer-editor-content ul[data-type="taskList"] li > label {
+    @apply mt-[5px] shrink-0 select-none;
+  }
+
+  .composer-editor-content ul[data-type="taskList"] li > label input[type="checkbox"] {
+    @apply size-4 accent-brand-500;
+  }
+
+  .composer-editor-content ul[data-type="taskList"] li[data-checked="true"] > div {
+    @apply text-muted-foreground line-through;
+  }
+
+  /* `#tag` chips are a typing-time decoration; storage keeps plain text. */
+  .composer-tag {
+    @apply rounded bg-brand-500/10 px-0.5 font-medium text-brand-600 dark:text-brand-300;
+  }
+
+  /* Inline "uploading…" feedback for a pasted/dropped image. Pure decoration:
+     the chip never enters the document model, so markdown stays clean. */
+  .composer-upload-chip {
+    @apply mr-1 inline-flex max-w-40 items-center gap-1.5 truncate rounded-md bg-muted px-2 py-0.5 align-middle text-xs text-muted-foreground;
+  }
+
+  .composer-upload-chip::before {
+    @apply inline-block size-3 shrink-0 rounded-full border-2 border-brand-400 border-t-transparent motion-safe:animate-spin;
+    content: "";
+  }
+
+  .composer-editor-content p.is-editor-empty:first-child::before {
+    @apply pointer-events-none float-left h-0 text-muted-foreground;
+    content: attr(data-placeholder);
+  }
+
   .memo-markdown figure {
     @apply mt-3;
   }
@@ -507,5 +616,27 @@
   }
   to {
     background-position: -200% 0;
+  }
+}
+
+@keyframes flaremo-signal-ring {
+  from {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  70%,
+  to {
+    opacity: 0;
+    transform: scale(1.55);
+  }
+}
+
+@keyframes flaremo-partial-pulse {
+  from,
+  to {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
   }
 }

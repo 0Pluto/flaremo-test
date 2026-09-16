@@ -1,5 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLinkIcon, RefreshCwIcon } from "lucide-react";
+import {
+  ArrowUpCircleIcon,
+  CircleCheckIcon,
+  ExternalLinkIcon,
+  RefreshCwIcon,
+} from "lucide-react";
 import { getAppInfo, getLatestRelease } from "@/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,11 +18,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useI18n } from "@/i18n";
+import { cn } from "@/lib/utils";
 import { compareVersions } from "@/lib/version";
 
-// Two states, two shapes. Up to date: one line + one link — most visits land
-// here, so nothing more earns its place. Update available: a current → latest
-// arrow with the release date, one primary action.
+// Two states, two shapes. Up to date: check icon + one line + one link — most
+// visits land here, so nothing more earns its place. Update available: a
+// current → latest arrow with the release date, one primary action.
 export function UpdateStatus() {
   const { locale, t } = useI18n();
   const appInfoQuery = useQuery({
@@ -104,21 +110,41 @@ export function UpdateStatus() {
       />
       <DialogContent>
         <DialogHeader>
-          <div className="flex items-center gap-2 pr-7">
-            <DialogTitle>
-              {updateAvailable && release
-                ? t("update.availableTitle", { version: release.version })
-                : t("update.title")}
-            </DialogTitle>
-            {updateAvailable && <Badge>{t("update.badge")}</Badge>}
+          <div className="flex items-start gap-3 pr-7">
+            {appInfo && release && (
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full",
+                  updateAvailable
+                    ? "bg-primary/10 text-primary"
+                    : "bg-success/10 text-success",
+                )}
+              >
+                {updateAvailable ? (
+                  <ArrowUpCircleIcon className="size-4" />
+                ) : (
+                  <CircleCheckIcon className="size-4" />
+                )}
+              </span>
+            )}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <DialogTitle>
+                  {updateAvailable && release
+                    ? t("update.availableTitle", { version: release.version })
+                    : t("update.title")}
+                </DialogTitle>
+                {updateAvailable && <Badge>{t("update.badge")}</Badge>}
+              </div>
+              <DialogDescription>
+                {(updateAvailable ? rangeLine : versionLine) ??
+                  (releaseQuery.isPending
+                    ? t("update.loading")
+                    : t("update.checkFailed"))}
+              </DialogDescription>
+            </div>
           </div>
-          <DialogDescription>
-            {rangeLine ??
-              versionLine ??
-              (releaseQuery.isPending
-                ? t("update.loading")
-                : t("update.checkFailed"))}
-          </DialogDescription>
         </DialogHeader>
 
         {updateAvailable && !appInfo?.update_workflow_url && (

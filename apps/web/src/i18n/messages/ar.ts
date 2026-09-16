@@ -28,6 +28,10 @@ const messages = {
   "voiceSettings.secretKey": "SecretKey الخاص بـ Tencent Cloud",
   "voiceSettings.apiKey": "مفتاح API الخاص بـ DashScope",
   "voiceSettings.volcengine": "Doubao / Volcano Engine",
+  "voiceSettings.minimax": "MiniMax",
+  "voiceSettings.minimaxApiKey": "مفتاح API الخاص بـ MiniMax",
+  "voiceSettings.minimaxBaseUrl":
+    "عنوان URL الأساسي لـ MiniMax (اختياري؛ الافتراضي هو الخدمة المحلية)",
   "voiceSettings.volcAppId": "AppID الخاص بـ Volcano Engine",
   "voiceSettings.volcAccessToken": "رمز الوصول الخاص بـ Volcano Engine",
   "voiceSettings.volcBoostingTable": "اسم جدول الكلمات الساخنة (اختياري)",
@@ -94,7 +98,9 @@ const messages = {
     "الميكروفون يعمل · جارٍ الاتصال بخدمة التفريغ. تحدث بعد قليل…",
   "capture.stopping": "الميكروفون متوقف · جارٍ استلام الجملة الأخيرة…",
   "capture.foreground":
-    "أبقِ هذه الصفحة في المقدمة. تبديل التبويبات أو قفل الشاشة يوقف التسجيل. لا يُحفظ الصوت الأصلي.",
+    "أبقِ هذه الصفحة في المقدمة. تبديل التبويبات أو قفل الشاشة يوقف التسجيل. يُحفظ الصوت الأصلي افتراضيًا ويمكنك إيقاف ذلك عند الحفظ.",
+  "capture.keepAudio": "حفظ الصوت الأصلي",
+  "capture.audioNotSaved": "تم حفظ النص، لكن تعذّر رفع الصوت الأصلي.",
   "capture.leaveTitle": "مغادرة التسجيل الصوتي؟",
   "capture.leaveRecording":
     "التسجيل جارٍ. إذا أوقفته وغادرت، يبقى النص غير المحفوظ في مسودة محلية على هذا الجهاز.",
@@ -115,6 +121,10 @@ const messages = {
     "انقطع التسجيل وأُوقف الميكروفون. راجع النص الملتقط؛ قد يكون النهاية غير مكتملة.",
   "capture.unavailable":
     "التفريغ النصي غير مُهيأ أو غير متاح مؤقتًا. أعد المحاولة لاحقًا.",
+  "capture.unavailableOwnerLink":
+    "يمكن تفعيلها من «الحساب → إعدادات التعرف على الصوت».",
+  "capture.unavailableMember":
+    "يرجى طلب تفعيل التعرف على الصوت من مالك المثيل.",
   "capture.wakeLockFailed":
     "فشل إبقاء الشاشة مضاءة؛ قد يقفل الشاشة مقاطعة التسجيل.",
   "capture.connectionFailed":
@@ -158,6 +168,15 @@ const messages = {
   "capture.charsUsed": "{count} / {max} حروف",
   "capture.saveSucceeded": "تم الحفظ.",
   "capture.transcribing": "جارٍ التفريغ النصي…",
+  "capture.transcribingCount": "جارٍ تفريغ المقطع {done} من {total}…",
+  "capture.transcribeFailed":
+    "فشل التفريغ النصي. تعذّر إنتاج النص المُتعرَّف عليه؛ حرّر المسودة يدويًا أو تخلَّ عنها.",
+  "capture.cancelTranscribing": "إلغاء التفريغ النصي",
+  "capture.retryTranscription": "إعادة محاولة التفريغ النصي",
+  "capture.pause": "إيقاف التسجيل مؤقتًا",
+  "capture.resume": "متابعة التسجيل",
+  "capture.paused": "متوقف مؤقتًا · يستمر العداد",
+  "capture.waveform": "موجة الميكروفون الحية",
   "nav.calendar": "التقويم",
   "calendar.title": "التقويم",
   "calendar.today": "العودة إلى اليوم",
@@ -240,7 +259,7 @@ const messages = {
   "composer.addAttachment": "إضافة مرفق",
   "composer.addTag": "إضافة وسم",
   "composer.bulletList": "قائمة",
-  "composer.checklist": "قائمة مهام",
+  "composer.taskList": "قائمة المهام",
   "composer.send": "إرسال",
   "composer.visibility.personal": "شخصي",
   "composer.visibility.team": "الفريق",
@@ -256,6 +275,7 @@ const messages = {
   "shortcuts.send": "إرسال النص الحالي",
   "shortcuts.linebreak": "إدراج سطر جديد أثناء الكتابة",
   "shortcuts.saveEdit": "حفظ الملاحظة قيد التعديل",
+  "shortcuts.capture": "بدء تسجيل الصوت أو إيقافه (في /capture)",
   "composer.removeFile": "إزالة {filename}",
   "composer.imageUploadFailed": "فشل رفع الصورة. أعد المحاولة.",
   "attachment.unavailable": "تعذر تحميل الملف؛ ربما حُذف.",
