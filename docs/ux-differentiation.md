@@ -1,6 +1,6 @@
 # UX 差异化决策稿：在熟悉的骨架上做得更精细
 
-> 2026-09-17 · 状态：P0 + P1 已实施（分支 `feat/ux-differentiation`） · 验收：tsc / vitest 113 绿 / pnpm build 通过
+> 2026-09-17 · 状态：P0–P3 全部实施完毕（分支 `feat/ux-differentiation`） · 验收：biome / tsc / vitest 122 绿 / pnpm build 通过
 
 ## 背景与结论
 
@@ -43,17 +43,23 @@
 2. **语音入口进 composer**：工具条加麦克风按钮，点击展开紧凑录音面板（复用 `lib/audio-capture`），录完转写文本插入草稿光标处；完整录音体验仍归 `/capture`（P2/P3 见 `voice-capture-rollout.md`）。
    —— 已实施：composer 工具条麦克风按钮（仅实例配置了 ASR 时显示），紧凑录音面板（计时 + 实时 partial + 停止并插入/取消），停止后最终句子经 `joinFinalSentences` 追加进草稿；录音中发送按钮禁用。
 3. **任务/日程入口**：清单按钮插入 `- [ ]`；卡片 checkbox 可勾选并联动 `tasks.dueAt` → 日历。（后置，待 Composer 前两项验收后做）
+   —— 已实施（部分）：composer 清单按钮插入 `- [ ] `；卡片 checkbox 对编辑者可点（`lib/task-list.ts` 定位第 N 个 marker 改写，走 memo 更新的乐观更新链，点击即时回显）。**tasks.dueAt → 日历联动未做**：checkbox 与任务系统怎么对应（自动建日程？仅勾选态？）是产品决策，见 `projects-tasks-audit.md`，待 Kim 拍板后再接。
 
-### P2 · 卡片与回顾的人性化
+### P2 · 卡片与回顾的人性化（已实施）
 
 4. 时间线顶部插入「往年今日」特殊卡（有则显示），回顾从"要去的地方"变成"会遇见的惊喜"。
+   —— 已实施：复用 daily-review 查询缓存（与回顾页同 key），无筛选的时间线顶部渲染 `review.onThisDayBanner` 横条，整卡可点直达 `/review/daily`。
 5. 音频卡 footer 内联 mini 播放条（复用 `reading-audio-bar`）。
+   —— **核查后无需实施**：`AttachmentGallery` 本来就在卡片内联渲染 `<audio controls>`，音频卡可直接播放，此前盘点有误。
 6. 关键词搜索无结果时主动提示并一键切换语义搜索。
+   —— 已实施：关键词搜索空结果且实例支持语义搜索时，时间线顶部出现提示条 + 一键切换按钮。
 
-### P3 · 统计区换自己的表达
+### P3 · 统计区换自己的表达（已实施）
 
 7. 第三格「天」→「连续 N 天」streak（激励导向），可与语音分钟数轮换。
+   —— 已实施：第三格改为 `currentStreak()`（今天未写不断签，昨天及之前断档才清零）；`explorer.days` key 全语言删除，新增 `explorer.streak`。语音分钟数轮换暂不做。
 8. 热力图可交互：hover 显示当日条数，点击跳当天。
+   —— 已实施：hover tooltip 原有保留；格子升级为按钮，点击以 `after:D before:D+1` 日过滤直达当天时间线（顺带清 tag/untagged 筛选）。
 
 ## 验收标准
 
