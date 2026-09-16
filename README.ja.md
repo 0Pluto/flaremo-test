@@ -140,10 +140,10 @@ pnpm exec wrangler secret put FLAREMO_BOOTSTRAP_SECRET --config ./wrangler.jsonc
 
 #### 3. デプロイの実行
 ```bash
-pnpm verify
 pnpm deploy:dry-run
 pnpm deploy
 ```
+（フルの `pnpm verify` ゲートは、メンテナーが明示的に要求した場合のみ実行します。）
 デプロイ完了後、ブラウザで `/setup` にアクセスし、`FLAREMO_BOOTSTRAP_SECRET` を入力して管理者アカウントを初期化します。
 
 ---

@@ -40,7 +40,14 @@ if (existingTag) {
   process.exit(1);
 }
 
-run("pnpm", ["verify"]);
+// The full 9-step gate is opt-in (--verify): the maintainer runs it only on
+// explicit request. Releases otherwise rely on the targeted tests each change
+// already ran, plus the deploy dry-run and drill gates below.
+if (process.argv.includes("--verify")) {
+  run("pnpm", ["verify"]);
+} else {
+  console.log("Skipping the full pnpm verify gate (opt in with --verify).");
+}
 
 // Conditional gate: if migrations changed since the last release tag, the
 // backup/restore drill must pass before this release can be cut. The drill

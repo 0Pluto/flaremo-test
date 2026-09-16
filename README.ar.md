@@ -130,10 +130,10 @@ pnpm exec wrangler secret put FLAREMO_BOOTSTRAP_SECRET --config ./wrangler.jsonc
 
 #### 3. النشر
 ```bash
-pnpm verify
 pnpm deploy:dry-run
 pnpm deploy
 ```
+(تُشغَّل بوابة `pnpm verify` الكاملة فقط عندما يطلب المشرف ذلك صراحةً.)
 افتح الرابط `/setup` على نطاقك لتهيئة حساب المالك باستخدام سر التثبيت الخاص بك.
 
 ---

@@ -45,10 +45,11 @@ pnpm deploy
 部署前建议跑：
 
 ```bash
-pnpm verify
 pnpm deploy:dry-run
 pnpm deploy:preflight
 ```
+
+（全量 `pnpm verify` 仅在维护者明确要求时运行。）
 
 `pnpm deploy:preflight` 会确认本地发布环境提供了至少 32 个字符的
 `BETTER_AUTH_SECRET`，并拒绝常见占位值。在 CI 构建环境（`CI=true`，如

@@ -128,10 +128,10 @@ pnpm exec wrangler secret put FLAREMO_BOOTSTRAP_SECRET --config ./wrangler.jsonc
 
 #### 3. Desplegar
 ```bash
-pnpm verify
 pnpm deploy:dry-run
 pnpm deploy
 ```
+(El gate completo `pnpm verify` solo se ejecuta cuando el mantenedor lo solicita explícitamente.)
 Abre `/setup` en tu dominio para inicializar tu cuenta de Propietario con el secreto de bootstrap.
 
 ---

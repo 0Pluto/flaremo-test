@@ -148,10 +148,11 @@ pnpm exec wrangler secret put FLAREMO_BOOTSTRAP_SECRET --config ./wrangler.jsonc
 
 #### 3. Deploy
 ```bash
-pnpm verify
 pnpm deploy:dry-run
 pnpm deploy
 ```
+
+(The full `pnpm verify` gate runs only when the maintainer explicitly asks for it.)
 Visit your production domain at `/setup` and enter the `FLAREMO_BOOTSTRAP_SECRET` to initialize your Owner account.
 
 Detailed guides: [Deployment Guide](./docs/deploy.md) · [Update Guide](./docs/update.md).

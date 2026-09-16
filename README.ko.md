@@ -126,10 +126,10 @@ pnpm exec wrangler secret put FLAREMO_BOOTSTRAP_SECRET --config ./wrangler.jsonc
 
 #### 3. 배포 실행
 ```bash
-pnpm verify
 pnpm deploy:dry-run
 pnpm deploy
 ```
+(전체 `pnpm verify` 게이트는 유지관리자가 명시적으로 요청할 때만 실행됩니다.)
 배포 완료 후 브라우저에서 `/setup`에 접속하여 설정한 `FLAREMO_BOOTSTRAP_SECRET`을 입력하고 관리자 계정을 생성합니다.
 
 ---

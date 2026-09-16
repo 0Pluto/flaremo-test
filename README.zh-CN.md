@@ -157,7 +157,6 @@ pnpm exec wrangler secret put FLAREMO_BOOTSTRAP_SECRET --config ./wrangler.jsonc
 #### 3. 部署上线
 ```bash
 # 验证构建与打包
-pnpm verify
 pnpm deploy:dry-run
 
 # 执行远端数据库迁移并部署 Worker
@@ -229,8 +228,8 @@ pnpm check
 # 单元测试与契约测试
 pnpm test
 
-# 生产发版前综合质检（完整门禁）
-pnpm verify
+# 全量门禁（9 步，含 E2E）：仅在维护者明确要求时运行
+# pnpm verify
 ```
 
 ---

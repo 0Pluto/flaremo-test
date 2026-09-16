@@ -128,10 +128,10 @@ pnpm exec wrangler secret put FLAREMO_BOOTSTRAP_SECRET --config ./wrangler.jsonc
 
 #### 3. Публикация
 ```bash
-pnpm verify
 pnpm deploy:dry-run
 pnpm deploy
 ```
+(Полный гейт `pnpm verify` выполняется только по явному запросу мейнтейнера.)
 Перейдите на страницу `/setup` на вашем домене и введите `FLAREMO_BOOTSTRAP_SECRET` для создания учетной записи владельца.
 
 ---
