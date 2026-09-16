@@ -37,10 +37,11 @@ pnpm dev
 生产部署：
 
 ```bash
-pnpm verify
 pnpm deploy:dry-run
 pnpm deploy
 ```
+
+`pnpm verify` 是 9 步全量门禁（含 e2e），敏捷开发期只在发版前、大重构后或维护者要求时跑。
 
 只验证 Cloudflare 配置和打包：
 
@@ -63,6 +64,7 @@ pnpm deploy:dry-run
 - `Temp/` 是参考仓库目录，不能提交。
 - 使用 GitHub Actions 时只允许两类 workflow：`.github/workflows/ci.yml`（瘦 CI：format / lint / typecheck / 单元测试，兕底与外部 PR 门禁）和 `.github/workflows/flaremo-update.yml`（只服务自部署用户自己的部署仓库，同步上游 Release 并创建升级 PR）。永远不用 GitHub Actions 做生产部署器（no CI/CD），不跑 E2E 进 CI；完整门禁 `pnpm verify` 仍由维护者发版前本地执行。不重新启用 Dependabot 或 Workers Builds。
 - 改路由、守卫、导航行为时必须同步补 e2e 用例（2026-09-10 事故教训：v0.15.3 守卫重构后门禁拦不住匿名首页无限加载，因为 e2e 只覆盖了深度链接没覆盖 `/`；门禁的有效性 = 测试覆盖率）。
+- 敏捷开发节奏（2026-09-16 维护者定调）：小步快跑，小改动不跑全量测试。验证只跑与改动直接相关的定向用例；部署不必等全量门禁。质量底线不变：改动涉及的测试必须绿、`pnpm format` 通过。
 
 ## Issue 和 PR 流程
 
@@ -83,33 +85,25 @@ issue -> branch -> commit -> push -> PR -> squash merge -> delete branch -> upda
 - 合并使用 squash merge；合并后删除远端任务分支。
 - 合并后本地执行 `git switch main && git pull --ff-only`，确认 `main` 已包含合并提交。
 
-验证强度按改动类型选择：
+验证强度按改动类型选择（默认只跑定向测试，不跑全量 `pnpm verify`）：
 
 - 纯文档、拼写、链接：`pnpm format:check`。
 - 部署、Wrangler、D1、R2、Access 相关文档或配置：`pnpm format:check` 和 `pnpm deploy:dry-run`。
-- API、domain service、Memos 兼容、测试夹具：`pnpm verify`。
-- UI 改动：`pnpm verify`，再用 `pnpm dev` 检查桌面和移动端。
-- 真实 Cloudflare 资源演练：`pnpm verify`、`pnpm deploy:dry-run`，再执行对应的远端 D1/R2/Access 验证。
+- API、domain service、Memos 兼容、测试夹具：改动文件对应的 vitest 用例（如 `pnpm exec vitest run apps/worker/src/api.test.ts -t "<用例名>"`）。
+- UI 改动：直接相关的 e2e spec（如 `pnpm exec playwright test tests/e2e/voice-settings-flow.spec.ts`），必要时 `pnpm dev` 目检桌面和移动端。
+- 全量 `pnpm verify`：仅发版前、跨模块大重构或维护者要求时执行。
 
 ## 验收口径
 
-改动完成前至少跑：
+敏捷开发期（2026-09-16 起）默认验收线：
 
-```bash
-pnpm verify
-```
+- 改动涉及的测试必须绿：只跑该改动相关的 vitest 文件和 e2e spec，不跑全量。
+- 提交前跑一次 `pnpm format`（很快）。
+- 部署不需要先跑全量门禁：直接部署（`deploy-kosx.mjs` 默认已跳过 verify），迁移、构建和线上冒烟仍由部署脚本执行。
+- 全量 `pnpm verify` 保留给：正式发版、跨模块大重构、维护者明确要求。
 
-涉及部署、Wrangler、D1、R2 或 Access 的改动，还要跑：
-
-```bash
-pnpm deploy:dry-run
-```
-
-涉及 UI 的改动，要启动本地服务检查桌面和移动端：
-
-```bash
-pnpm dev
-```
+涉及部署、Wrangler、D1、R2 或 Access 的改动，建议跑 `pnpm deploy:dry-run`。
+涉及 UI 的改动，用相关 e2e 或用 `pnpm dev` 目检桌面和移动端。
 
 ## 文档入口
 
