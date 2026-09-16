@@ -49,6 +49,7 @@ La respuesta es rotundamente sí:
 - **Almacenamiento empresarial integrado**: Cloudflare D1 almacena notas y metadatos; Cloudflare R2 aloja archivos adjuntos con replicación multirregional.
 - **Diseño nativo para IA**: Protocolo MCP y centro de memoria a largo plazo «Agent Memory», permitiendo que agentes como Claude, Cursor o ChatGPT lean y actualicen tu contexto.
 - **Privacidad individual y colaboración en equipo**: Espacio personal privado por defecto, transformable al instante en un área de trabajo compartida con roles y tres niveles de visibilidad.
+- **Mínimo, no simplificado**: interfaz serena y capacidad completa — nada de decoración estridente, ninguna función ausente.
 
 ---
 

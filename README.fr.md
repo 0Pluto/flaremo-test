@@ -49,6 +49,7 @@ La réponse est oui :
 - **Stockage de classe entreprise inclus** : Cloudflare D1 gère les notes et métadonnées, tandis que Cloudflare R2 stocke les pièces jointes avec réplication multi-régions.
 - **Conçu pour l'IA (AI-Native)** : Protocole MCP natif et hub « Agent Memory », permettant à vos agents IA (Claude, Cursor, Codex, ChatGPT) d'écrire et lire votre mémoire à long terme.
 - **Intimité individuelle et collaboration d'équipe** : Espace personnel confidentiel par défaut, transformable instantanément en espace partagé avec rôles et 3 niveaux de visibilité.
+- **Minimal, pas simplifié** : une interface silencieuse, des fonctions complètes — rien qui crie, rien qui manque.
 
 ---
 
