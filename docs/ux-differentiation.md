@@ -1,6 +1,6 @@
 # UX 差异化决策稿：在熟悉的骨架上做得更精细
 
-> 2026-09-17 · 状态：待实施 · 分支：`feat/ux-differentiation`
+> 2026-09-17 · 状态：P0 + P1 已实施（分支 `feat/ux-differentiation`） · 验收：tsc / vitest 113 绿 / pnpm build 通过
 
 ## 背景与结论
 
@@ -39,7 +39,9 @@
 ### P1 · Composer 打磨（本批实施）
 
 1. **`#` 标签自动补全**：输入 `#` 或 tag 词中段时弹出补全下拉（来源 `getMemoStats().tags`，含条数），Enter/点击选中补全，Esc/失焦关闭，方向键导航。这是日常输入最高频的缺失项。
+   —— 已实施：`lib/tag-autocomplete.ts`（token 提取 + 候选过滤，带单测）+ composer 内嵌候选面板（↑↓ 导航、Enter/Tab 选中、Esc 关闭、IME 安全、点击 # 按钮直接弹候选）。
 2. **语音入口进 composer**：工具条加麦克风按钮，点击展开紧凑录音面板（复用 `lib/audio-capture`），录完转写文本插入草稿光标处；完整录音体验仍归 `/capture`（P2/P3 见 `voice-capture-rollout.md`）。
+   —— 已实施：composer 工具条麦克风按钮（仅实例配置了 ASR 时显示），紧凑录音面板（计时 + 实时 partial + 停止并插入/取消），停止后最终句子经 `joinFinalSentences` 追加进草稿；录音中发送按钮禁用。
 3. **任务/日程入口**：清单按钮插入 `- [ ]`；卡片 checkbox 可勾选并联动 `tasks.dueAt` → 日历。（后置，待 Composer 前两项验收后做）
 
 ### P2 · 卡片与回顾的人性化
