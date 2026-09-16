@@ -35,7 +35,7 @@ token:`animate-rise`(200ms expo 入场）、`animate-fade`(140ms)、`animate-sca
 - 只动 `transform` 和 `opacity`；交互反馈 ≤140ms，入场 ≤320ms。
 - 列表入场用 stagger（每张卡延迟 `index * 35ms`，上限 8 张，见 `MemoCard` 的 `index` prop)。
 - hover 位移不超过 2px；按钮按压用已有的 `active:translate-y-px`。
-- 所有动效必须带 `motion-safe:` 前缀，尊重 `prefers-reduced-motion`。
+- 全局 reduced-motion 兜底为准（`index.css` 的 `prefers-reduced-motion: reduce` 块关停全部动画/过渡）；新增大型编排动画仍需显式 `motion-safe:` 前缀，零散 transition 不必逐处加前缀。
 - 不要在组件里写内联 `animate-[...]` 魔法字符串，统一用上面的 token。
 
 ## 组件约定

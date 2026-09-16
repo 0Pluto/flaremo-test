@@ -316,6 +316,17 @@
   ::selection {
     background: color-mix(in oklab, var(--brand-400) 28%, transparent);
     }
+  /* 全局 reduced-motion 兜底：prefers-reduced-motion 下关停全部动画与过渡，
+     组件级 motion-safe: 前缀只对新增大型编排动画强制 */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      }
+    }
 }
 
 ::-webkit-scrollbar {
