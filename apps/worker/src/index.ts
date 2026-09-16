@@ -17,6 +17,8 @@ import {
   finalizeFlaremoMemberRemoval,
   getFlaremoUserById,
   getQueuedMemberRemovalJobsByIds,
+  hardDeleteExpiredProjects,
+  hardDeleteExpiredTasks,
   listAttachmentCleanupCandidates,
   listExpiredTrashedMemos,
   listQueuedMemberRemovalJobs,
@@ -31,7 +33,7 @@ import {
   type UserPlanLimits,
   updateMemberRemovalJob,
 } from "@flaremo/domain";
-import { and, eq, inArray, lt, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { cleanupFlaremoArtifacts } from "./artifact-cleanup";
@@ -384,7 +386,10 @@ export async function runScheduledMaintenance(
   }
   // Expired trash purging: memos sitting in the recycle bin past the
   // retention window are hard-deleted together with their attachments, so
-  // storage does not accumulate on trashed-only usage. 0 disables the sweep.
+  // storage does not accumulate on trashed-only usage. Projects and tasks
+  // ride the same TTL: expired projects cascade-delete their tasks and the
+  // tasks' activity rows; standalone expired tasks cascade their own trail.
+  // 0 disables the sweep.
   let trashPurgeCount = 0;
   const retentionDays = parseTrashRetentionDays(
     env.FLAREMO_TRASH_RETENTION_DAYS,
@@ -399,6 +404,21 @@ export async function runScheduledMaintenance(
       if (!owner) continue;
       await hardDeleteMemoWithAttachments(env, db, owner, memoId);
       trashPurgeCount += 1;
+    }
+    // Projects first: the FK cascade removes their binned tasks and trails
+    // in the same statement, so the task sweep below only ever handles
+    // tasks deleted independently of their project.
+    const purgedProjects = await hardDeleteExpiredProjects(db, trashCutoff);
+    const purgedTasks = await hardDeleteExpiredTasks(db, trashCutoff);
+    if (purgedProjects > 0 || purgedTasks > 0) {
+      console.log(
+        JSON.stringify({
+          message: "projects/tasks trash purge complete",
+          projects: purgedProjects,
+          tasks: purgedTasks,
+          scheduledTime,
+        }),
+      );
     }
   }
   // Reconcile data-transfer tasks: expire stale queued/running tasks whose
@@ -459,6 +479,7 @@ export async function runScheduledMaintenance(
       .from(tasks)
       .where(
         and(
+          isNull(tasks.deletedAt),
           lt(tasks.dueAt, reviewDate),
           inArray(tasks.status, ["todo", "in_progress"]),
         ),
