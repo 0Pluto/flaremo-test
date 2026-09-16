@@ -74,6 +74,9 @@ for (const mobile of [false, true]) {
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
+    // A /me route callback may still be mid-fetch when the assertions pass;
+    // ignore those stragglers so they cannot fail the next test.
+    await page.unrouteAll({ behavior: "ignoreErrors" });
   });
 }
 
@@ -113,6 +116,7 @@ for (const role of ["member", "unavailable"]) {
       }),
     ).toHaveCount(0);
     expect(settingsRequests).toBe(0);
+    await page.unrouteAll({ behavior: "ignoreErrors" });
   });
 }
 
