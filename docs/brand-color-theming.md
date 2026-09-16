@@ -1,6 +1,6 @@
 # 实例主题色定制（Instance Accent Color）需求文档
 
-状态：决策稿（待 Kim 点头后实施）
+状态：已实施（2026-09-16 同日交付，验收见文末附录）
 日期：2026-09-16
 范围：FlareMo 主应用（apps/web）+ worker（apps/worker）+ packages/domain；不含官网（apps/site）
 
@@ -119,3 +119,16 @@
 - **风险：暖调中性色**——背景中性色带 1% 暖调（hue 75），配冷色系可能有极轻违和。chroma 0.003–0.008 级别，v1 不动；真机确认违和再在预置块内同改中性 hue（同一文件，成本为零）。
 - **开放问题 1**：8 套色样里 amber 的体验是加分还是鸡肋，真机见分晓；不达标则退 7 套。
 - **开放问题 2**：预置名译文风格（「火焰/Flame」双语名 or 纯中文），做 i18n 时定。
+
+## 附录：实施记录（2026-09-16）
+
+与决策稿的差异与落地要点：
+
+- **档位映射微调**：`--brand-50..300` 取 Radix light step 3/4/5/6，`--brand-400` 取 light step 8，`--brand-500..700` 取 step 9/10/11；coral 取 step 10（同 hue，保持 in-gamut）。amber 特例：600/700 取 step 11/12，`--brand-gradient-foreground` 与亮色 `--primary-foreground` 用深琥珀字。
+- **新增 `--brand-gradient-foreground`**：CTA 渐变（Button brand 变体、日历今日圆点）的文字色独立于 `--primary-foreground`——flame 暗色的 CTA 现状是白字（`--primary-foreground` 是深字），直接跟随会把 flame 基线搞回归；amber 亮暗两态的渐变底都偏亮，单独覆盖为深字。
+- **暗色特异块**：`.dark[data-accent='amber']` 恢复 `.dark` 的 `--primary-foreground`（预置块特异性 (0,2,0) 高于 `.dark` (0,1,0)，不补会被带进暗色）。
+- **全站 `text-white` 清零**：Button brand、日历今日圆点改走 `--brand-gradient-foreground`。
+- **BrandingCard**：色板直接放卡片内容区（免开编辑弹窗），点击即 PUT + 乐观应用（`setAccentAttribute`），swatch 用固定 hex。
+- **favicon**：`apps/web/scripts/generate-accent-brand.mjs`（sharp）对现有 mark PNG 逐像素 oklch 色相旋转+色度缩放，产出 7×2 张到 `public/brand/<accent>/`；`theme-provider` 新增 `setFaviconAccent`，BrandingProvider 在 accent 生效时接线；`index.html` 陈旧 meta theme-color 初始值已顺手对齐。
+- **e2e 归队**：branding.spec 之前没被任何 playwright 项目匹配（孤儿文件），已挂回 auth-ui 项目；accent 用例（选 jade→断言 html[data-accent]→匿名上下文持久→重置 flame）本地全绿。
+- **验收**：16 组（8 预置×明暗）Playwright 截图走查（登录页 auth-frame + 合成 token 样本条：CTA/badge/switch/进度条/链接/焦点环/400/700 色块），flame 基线像素级无回归，amber 对比度问题在过程中发现并修复（button.tsx 的 text-white 是唯一硬编码白字）。

@@ -1,6 +1,7 @@
 import type { FlareMoDb } from "@flaremo/db";
 import {
   assertMemberQuota,
+  BRANDING_ACCENT_PRESETS,
   BRANDING_MARK_CONTENT_TYPES,
   BRANDING_MARK_MAX_BYTES,
   BRANDING_PRODUCT_NAME_MAX_CHARS,
@@ -29,7 +30,9 @@ import {
   listFlaremoUsers,
   listMemberRemovalJobs,
   NotFoundError,
+  type ResolvedBranding,
   rebuildEmbeddingIndexes,
+  setBrandingAccent,
   setBrandingProductName,
   setUserRegistrationAllowed,
   updateMemberRemovalJob,
@@ -130,7 +133,9 @@ const updateBrandingSchema = z.object({
     .string()
     .trim()
     .max(BRANDING_PRODUCT_NAME_MAX_CHARS)
-    .nullable(),
+    .nullable()
+    .optional(),
+  accent: z.enum(BRANDING_ACCENT_PRESETS).nullable().optional(),
 });
 
 adminApi.get("/branding", async (c) => {
@@ -146,6 +151,7 @@ adminApi.get("/branding", async (c) => {
         branding.product === DEFAULT_FLAREMO_PRODUCT_NAME
           ? null
           : branding.product,
+      accent: branding.accent,
       mark_light_url: markUrl("light", branding.marks.light),
       mark_dark_url: markUrl("dark", branding.marks.dark),
     });
@@ -160,11 +166,16 @@ adminApi.put(
   async (c) => {
     try {
       const { db } = await ownerContext(c);
-      const branding = await setBrandingProductName(
-        db,
-        c.req.valid("json").product_name,
-      );
-      return c.json({ product: branding.product });
+      const patch = c.req.valid("json");
+      let branding: ResolvedBranding | null = null;
+      if (patch.product_name !== undefined) {
+        branding = await setBrandingProductName(db, patch.product_name);
+      }
+      if (patch.accent !== undefined) {
+        branding = await setBrandingAccent(db, patch.accent);
+      }
+      branding ??= await getBranding(db);
+      return c.json({ product: branding.product, accent: branding.accent });
     } catch (error) {
       return jsonError(c, error);
     }

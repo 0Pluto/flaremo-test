@@ -11,8 +11,8 @@ const badgeVariants = cva(
       variant: {
         default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
         // Tag chips and other quiet brand accents.
-        flame:
-          "bg-flame-100 text-flame-700 [a]:hover:bg-flame-200 dark:bg-flame-400/12 dark:text-flame-200 dark:[a]:hover:bg-flame-400/20",
+        brand:
+          "bg-brand-100 text-brand-700 [a]:hover:bg-brand-200 dark:bg-brand-400/12 dark:text-brand-200 dark:[a]:hover:bg-brand-400/20",
         secondary:
           "bg-secondary text-secondary-foreground [a]:hover:bg-secondary/80",
         destructive:

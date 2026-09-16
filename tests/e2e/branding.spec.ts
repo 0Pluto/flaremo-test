@@ -86,3 +86,54 @@ test("the owner can customize the product name and it reaches the login page", a
   ).toBeVisible();
   await resetContext.close();
 });
+
+test("the owner picks an accent preset and it applies across sessions", async ({
+  browser,
+}) => {
+  const ownerContext = await browser.newContext({
+    storageState: E2E_AUTH_STATE,
+  });
+  const ownerPage = await ownerContext.newPage();
+  await ownerPage.goto(`${E2E_BASE_URL}/account`);
+  const brandingTab = ownerPage.getByRole("tab", {
+    name: /品牌外观|Branding/,
+  });
+  await brandingTab.click();
+  const jadeSwatch = ownerPage.getByRole("button", {
+    name: /翡翠|Jade/,
+  });
+  await jadeSwatch.click();
+  // Instant-apply: the attribute lands before the PUT round-trip resolves.
+  await expect(ownerPage.locator("html")).toHaveAttribute(
+    "data-accent",
+    "jade",
+  );
+
+  // Persisted server-side: a fresh anonymous context resolves the preset too.
+  const anonymousContext = await browser.newContext();
+  const anonymousPage = await anonymousContext.newPage();
+  await anonymousPage.goto(`${E2E_BASE_URL}/login`);
+  await expect(anonymousPage.locator("html")).toHaveAttribute(
+    "data-accent",
+    "jade",
+  );
+  await anonymousContext.close();
+
+  // Reset so later specs and other suites observe the default accent.
+  const resetContext = await browser.newContext({
+    storageState: E2E_AUTH_STATE,
+  });
+  const resetPage = await resetContext.newPage();
+  await resetPage.goto(`${E2E_BASE_URL}/account`);
+  await resetPage.getByRole("tab", { name: /品牌外观|Branding/ }).click();
+  const flameSwatch = resetPage.getByRole("button", {
+    name: /火焰|Flame/,
+  });
+  await flameSwatch.click();
+  await expect(resetPage.locator("html")).not.toHaveAttribute(
+    "data-accent",
+    /.+/,
+  );
+  await resetContext.close();
+  await ownerContext.close();
+});

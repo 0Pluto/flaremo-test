@@ -51,6 +51,32 @@ function applyFavicon(theme: ResolvedTheme) {
   }
 }
 
+let faviconDefaultHrefs: { light: string; dark: string } | null = null;
+
+/**
+ * Points the themed favicon at the accent's recolored mark set. The default
+ * accent keeps the bundled paths so a flame instance never changes bytes;
+ * accent assets are pre-generated under /brand/<accent>/ at build time.
+ */
+export function setFaviconAccent(accent: string) {
+  const favicon = document.querySelector<HTMLLinkElement>(
+    "[data-flaremo-favicon]",
+  );
+  if (!favicon) return;
+
+  faviconDefaultHrefs ??= {
+    light: favicon.dataset.lightHref ?? "/brand/flaremo-mark-light-300.png",
+    dark: favicon.dataset.darkHref ?? "/brand/flaremo-mark-dark-320.png",
+  };
+  const defaults = faviconDefaultHrefs;
+  const dir = accent && accent !== "flame" ? `/brand/${accent}/` : "/brand/";
+  favicon.dataset.lightHref = defaults.light.replace(/^\/brand\//, dir);
+  favicon.dataset.darkHref = defaults.dark.replace(/^\/brand\//, dir);
+  applyFavicon(
+    document.documentElement.classList.contains("dark") ? "dark" : "light",
+  );
+}
+
 // Keep the browser chrome (Android address bar, iOS status bar) on the same
 // background the app actually renders, in both themes.
 const THEME_COLORS: Record<ResolvedTheme, string> = {

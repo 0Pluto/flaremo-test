@@ -1,4 +1,4 @@
-import type { FlareMoDb } from "@flaremo/db";
+import type { FlareMoDb, UserRow } from "@flaremo/db";
 import { OWNER_FLAREMO_USER_ID } from "./auth";
 import { NotFoundError, ValidationError } from "./errors";
 import { getStoredSetting, upsertStoredSetting } from "./settings";
@@ -25,6 +25,31 @@ export const BRANDING_MARK_CONTENT_TYPES = [
 export const BRANDING_PRODUCT_NAME_MAX_CHARS = 40;
 export const DEFAULT_FLAREMO_PRODUCT_NAME = "FlareMo";
 
+/**
+ * Curated accent presets the instance can pick from. Values live in the web
+ * app's CSS (`:root[data-accent=...]` blocks, Radix Colors–derived ramps);
+ * the server only carries the preset id and always falls back to the default
+ * on unknown/missing values so hand-edited settings can't break the UI.
+ */
+export const BRANDING_ACCENT_PRESETS = [
+  "flame",
+  "ocean",
+  "indigo",
+  "iris",
+  "jade",
+  "teal",
+  "crimson",
+  "amber",
+] as const;
+export type BrandingAccent = (typeof BRANDING_ACCENT_PRESETS)[number];
+export const DEFAULT_BRANDING_ACCENT: BrandingAccent = "flame";
+
+export function normalizeBrandingAccent(value: unknown): BrandingAccent {
+  return BRANDING_ACCENT_PRESETS.some((preset) => preset === value)
+    ? (value as BrandingAccent)
+    : DEFAULT_BRANDING_ACCENT;
+}
+
 export type BrandingMarkVariant = "light" | "dark";
 
 export type BrandingMark = {
@@ -35,11 +60,13 @@ export type BrandingMark = {
 
 export type ResolvedBranding = {
   product: string;
+  accent: BrandingAccent;
   marks: { light: BrandingMark | null; dark: BrandingMark | null };
 };
 
 type StoredBranding = {
   product_name?: string | null;
+  accent?: string | null;
   marks?: {
     light?: BrandingMark | null;
     dark?: BrandingMark | null;
@@ -102,6 +129,7 @@ export async function getBranding(db: FlareMoDb): Promise<ResolvedBranding> {
   if (!owner) {
     return {
       product: DEFAULT_FLAREMO_PRODUCT_NAME,
+      accent: DEFAULT_BRANDING_ACCENT,
       marks: { light: null, dark: null },
     };
   }
@@ -110,11 +138,21 @@ export async function getBranding(db: FlareMoDb): Promise<ResolvedBranding> {
   return {
     product:
       normalizeProductName(value.product_name) ?? DEFAULT_FLAREMO_PRODUCT_NAME,
+    accent: normalizeBrandingAccent(value.accent),
     marks: {
       light: normalizeMark(value.marks?.light),
       dark: normalizeMark(value.marks?.dark),
     },
   };
+}
+
+function loadStoredBranding(
+  db: FlareMoDb,
+  owner: UserRow,
+): Promise<StoredBranding> {
+  return getStoredSetting(db, owner, BRANDING_SETTING_KEY).then((stored) =>
+    readStoredBranding(stored?.value),
+  );
 }
 
 /** Set (or reset) the custom product name shown across the UI. */
@@ -124,11 +162,40 @@ export async function setBrandingProductName(
 ): Promise<ResolvedBranding> {
   const owner = await getFlaremoUserById(db, OWNER_FLAREMO_USER_ID);
   if (!owner) throw new NotFoundError("Owner not found");
-  const stored = await getStoredSetting(db, owner, BRANDING_SETTING_KEY);
-  const value = readStoredBranding(stored?.value);
+  const value = await loadStoredBranding(db, owner);
   const next: StoredBranding = {
     ...value,
     product_name: normalizeProductName(rawName),
+    accent: normalizeBrandingAccent(value.accent),
+    marks: {
+      light: normalizeMark(value.marks?.light),
+      dark: normalizeMark(value.marks?.dark),
+    },
+  };
+  await upsertStoredSetting(db, owner, BRANDING_SETTING_KEY, next);
+  return getBranding(db);
+}
+
+/** Pick the instance accent preset; null resets to the default flame. */
+export async function setBrandingAccent(
+  db: FlareMoDb,
+  rawAccent: string | null,
+): Promise<ResolvedBranding> {
+  if (
+    rawAccent !== null &&
+    !BRANDING_ACCENT_PRESETS.includes(rawAccent as never)
+  ) {
+    throw new ValidationError(
+      `Accent must be one of: ${BRANDING_ACCENT_PRESETS.join(", ")}.`,
+    );
+  }
+  const owner = await getFlaremoUserById(db, OWNER_FLAREMO_USER_ID);
+  if (!owner) throw new NotFoundError("Owner not found");
+  const value = await loadStoredBranding(db, owner);
+  const next: StoredBranding = {
+    ...value,
+    product_name: normalizeProductName(value.product_name),
+    accent: rawAccent,
     marks: {
       light: normalizeMark(value.marks?.light),
       dark: normalizeMark(value.marks?.dark),

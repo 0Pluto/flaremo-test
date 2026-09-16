@@ -214,8 +214,8 @@ export const MemoCard = memo(function MemoCard({
       className={cn(
         "group relative flex w-full flex-col gap-2 rounded-xl border border-border/50 bg-card/60 px-3.5 py-4 text-card-foreground [content-visibility:auto] [contain-intrinsic-size:auto_120px] motion-safe:animate-rise motion-safe:transition-[background-color,border-color,transform,box-shadow] motion-safe:duration-150 hover:border-border hover:bg-card hover:shadow-xs motion-safe:hover:-translate-y-px",
         memo.pinned &&
-          "border-flame-300/40 bg-flame-50/35 dark:border-flame-400/25 dark:bg-flame-400/5",
-        isEditing && "bg-card shadow-xs ring-1 ring-flame-400/40",
+          "border-brand-300/40 bg-brand-50/35 dark:border-brand-400/25 dark:bg-brand-400/5",
+        isEditing && "bg-card shadow-xs ring-1 ring-brand-400/40",
       )}
       style={{ animationDelay: `${Math.min(index, 7) * 35}ms` }}
     >
@@ -242,7 +242,7 @@ export const MemoCard = memo(function MemoCard({
           to="/memo/$memoId"
         >
           {memo.pinned ? (
-            <PinIcon className="text-flame-500 dark:text-flame-400" />
+            <PinIcon className="text-brand-500 dark:text-brand-400" />
           ) : (
             <CircleIcon className="opacity-35" />
           )}
@@ -341,7 +341,7 @@ export const MemoCard = memo(function MemoCard({
         <div className="flex flex-col gap-3 motion-safe:animate-fade">
           <Textarea
             autoFocus
-            className="min-h-32 resize-none text-[15px] leading-7 focus-visible:ring-flame-400/40"
+            className="min-h-32 resize-none text-[15px] leading-7 focus-visible:ring-brand-400/40"
             value={draftContent}
             onChange={(event) => setDraftContent(event.target.value)}
             onKeyDown={(event) => {
@@ -459,14 +459,14 @@ export const MemoCard = memo(function MemoCard({
                   onClick={() => onTagClick(tag)}
                 >
                   <Badge
-                    className="transition-colors hover:bg-flame-200 dark:hover:bg-flame-400/20"
-                    variant="flame"
+                    className="transition-colors hover:bg-brand-200 dark:hover:bg-brand-400/20"
+                    variant="brand"
                   >
                     #{tag}
                   </Badge>
                 </button>
               ) : (
-                <Badge key={tag} variant="flame">
+                <Badge key={tag} variant="brand">
                   #{tag}
                 </Badge>
               ),
@@ -524,7 +524,7 @@ export const MemoCard = memo(function MemoCard({
                   className={cn(
                     "flex items-start gap-2.5 rounded-lg border px-3 py-2.5 text-left text-sm motion-safe:transition-colors",
                     selected
-                      ? "border-flame-400/60 bg-flame-400/8"
+                      ? "border-brand-400/60 bg-brand-400/8"
                       : "border-transparent bg-muted/40 hover:bg-muted",
                   )}
                   key={value}
@@ -534,7 +534,7 @@ export const MemoCard = memo(function MemoCard({
                   <Icon
                     className={cn(
                       "mt-0.5 size-4 shrink-0",
-                      selected ? "text-flame-500" : "text-muted-foreground",
+                      selected ? "text-brand-500" : "text-muted-foreground",
                     )}
                   />
                   <span className="flex min-w-0 flex-col gap-0.5">

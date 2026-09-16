@@ -66,7 +66,7 @@ export function MiniCalendarReminders() {
     <>
       {dueToday > 0 && (
         <Link
-          className="mb-1.5 flex items-center gap-1.5 rounded-md px-1 py-1 text-xs font-medium text-flame-700 dark:text-flame-200 bg-flame-100 dark:bg-flame-400/12 motion-safe:transition-colors motion-safe:duration-150 hover:bg-flame-100/80 dark:hover:bg-flame-400/20 focus-visible:ring-2 focus-visible:ring-ring"
+          className="mb-1.5 flex items-center gap-1.5 rounded-md px-1 py-1 text-xs font-medium text-brand-700 dark:text-brand-200 bg-brand-100 dark:bg-brand-400/12 motion-safe:transition-colors motion-safe:duration-150 hover:bg-brand-100/80 dark:hover:bg-brand-400/20 focus-visible:ring-2 focus-visible:ring-ring"
           data-testid="mini-calendar-today-notice"
           to="/calendar"
         >

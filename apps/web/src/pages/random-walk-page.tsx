@@ -234,7 +234,7 @@ function WalkPostcard({
   const end = summary.latest ? spanPoint(summary.latest, t) : null;
 
   return (
-    <Card className="border-flame-300/40 ring-flame-400/20 dark:border-flame-400/25">
+    <Card className="border-brand-300/40 ring-brand-400/20 dark:border-brand-400/25">
       <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
         <p className="text-xs tracking-[0.3em] text-muted-foreground uppercase">
           {t("review.postcardTitle")}

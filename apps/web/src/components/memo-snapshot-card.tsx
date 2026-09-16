@@ -22,7 +22,7 @@ export function MemoSnapshotCard({
             {formatMemoTime(memo.create_time, locale)}
           </time>
           {badge && (
-            <span className="rounded-full bg-flame-100 px-2.5 py-1 text-xs font-medium text-flame-700 dark:bg-flame-400/12 dark:text-flame-200">
+            <span className="rounded-full bg-brand-100 px-2.5 py-1 text-xs font-medium text-brand-700 dark:bg-brand-400/12 dark:text-brand-200">
               {badge}
             </span>
           )}

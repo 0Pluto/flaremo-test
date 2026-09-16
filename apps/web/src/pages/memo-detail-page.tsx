@@ -348,7 +348,7 @@ function MemoDetail({
                       <Badge variant="outline">
                         {t(`memory.kind.${memory.kind}`)}
                       </Badge>
-                      <Badge variant="flame">
+                      <Badge variant="brand">
                         {t(`memory.verification.${memory.verification}`)}
                       </Badge>
                     </div>
@@ -607,12 +607,12 @@ function MemoRelationGraph({
               <span className="min-w-0 max-w-52 truncate">
                 {memo.content.split("\n")[0]}
               </span>
-              <span className="size-1.5 shrink-0 rounded-full bg-flame-400" />
+              <span className="size-1.5 shrink-0 rounded-full bg-brand-400" />
               <span className="h-0 w-4 shrink-0 border-t border-dashed border-border" />
             </Link>
           ))}
         </div>
-        <span className="rounded-lg bg-flame-500/10 px-2.5 py-1.5 text-xs font-medium text-flame-700 dark:text-flame-200">
+        <span className="rounded-lg bg-brand-500/10 px-2.5 py-1.5 text-xs font-medium text-brand-700 dark:text-brand-200">
           {t("detail.graphCenter")}
         </span>
         <div className="flex flex-col items-start gap-5">
@@ -624,7 +624,7 @@ function MemoRelationGraph({
               to="/memo/$memoId"
             >
               <span className="h-0 w-4 shrink-0 border-t border-border" />
-              <span className="size-1.5 shrink-0 rounded-full bg-flame-400" />
+              <span className="size-1.5 shrink-0 rounded-full bg-brand-400" />
               <span className="min-w-0 max-w-52 truncate">
                 {memo.content.split("\n")[0]}
               </span>

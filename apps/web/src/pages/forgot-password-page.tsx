@@ -47,7 +47,7 @@ export function ForgotPasswordPage() {
             {t("auth.forgotPasswordSent")}
           </p>
           <Link
-            className="text-sm font-medium text-flame-600 underline-offset-4 hover:underline"
+            className="text-sm font-medium text-brand-600 underline-offset-4 hover:underline"
             to="/login"
           >
             {t("auth.signIn")}

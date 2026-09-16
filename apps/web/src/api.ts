@@ -667,14 +667,26 @@ export async function listAdminUsers() {
   return apiRequest<{ users: AdminUser[] }>("/api/app/admin/users");
 }
 
+export type BrandingAccent =
+  | "flame"
+  | "ocean"
+  | "indigo"
+  | "iris"
+  | "jade"
+  | "teal"
+  | "crimson"
+  | "amber";
+
 export type BrandingInfo = {
   product: string;
+  accent: string;
   mark_light_url: string | null;
   mark_dark_url: string | null;
 };
 
 export type AdminBranding = {
   product_name: string | null;
+  accent: string;
   mark_light_url: string | null;
   mark_dark_url: string | null;
 };
@@ -708,10 +720,23 @@ export async function getAdminBranding() {
 export async function updateAdminBrandingProductName(
   product_name: string | null,
 ) {
-  return apiRequest<{ product: string }>("/api/app/admin/branding", {
-    method: "PUT",
-    body: JSON.stringify({ product_name }),
-  });
+  return apiRequest<{ product: string; accent: string }>(
+    "/api/app/admin/branding",
+    {
+      method: "PUT",
+      body: JSON.stringify({ product_name }),
+    },
+  );
+}
+
+export async function updateAdminBrandingAccent(accent: string | null) {
+  return apiRequest<{ product: string; accent: string }>(
+    "/api/app/admin/branding",
+    {
+      method: "PUT",
+      body: JSON.stringify({ accent }),
+    },
+  );
 }
 
 export async function uploadAdminBrandingMark(

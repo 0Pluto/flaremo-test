@@ -80,10 +80,10 @@ const STATUS_COLUMNS: TaskStatus[] = ["todo", "in_progress", "done"];
 
 const PRIORITY_BADGE: Record<
   TaskPriority,
-  "destructive" | "flame" | "secondary"
+  "destructive" | "brand" | "secondary"
 > = {
   high: "destructive",
-  medium: "flame",
+  medium: "brand",
   low: "secondary",
   none: "secondary",
 };
@@ -348,7 +348,7 @@ function StatusIcon({ status }: { status: TaskStatus }) {
     return <CheckCircle2Icon className="size-4 text-muted-foreground" />;
   }
   if (status === "in_progress") {
-    return <CircleDotIcon className="size-4 text-flame-500" />;
+    return <CircleDotIcon className="size-4 text-brand-500" />;
   }
   return <CircleIcon className="size-4 text-muted-foreground" />;
 }

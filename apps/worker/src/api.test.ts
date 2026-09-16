@@ -834,6 +834,40 @@ describe("FlareMo Worker API", () => {
     expect(health.product).toBe("KOS Notes");
   });
 
+  it("stores, publishes, and resets an accent preset", async () => {
+    const rejected = await fetchApp(
+      "http://flaremo.test/api/app/admin/branding",
+      {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ accent: "neon-magenta" }),
+      },
+    );
+    expect(rejected.status).toBe(400);
+
+    const put = await fetchApp("http://flaremo.test/api/app/admin/branding", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ accent: "iris" }),
+    });
+    expect(put.status).toBe(200);
+    expect((await json<{ accent: string }>(put)).accent).toBe("iris");
+
+    const anonymous = await fetchApp(
+      "http://flaremo.test/api/app/branding",
+      { method: "GET" },
+      { authenticated: false },
+    );
+    expect((await json<{ accent: string }>(anonymous)).accent).toBe("iris");
+
+    const reset = await fetchApp("http://flaremo.test/api/app/admin/branding", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ accent: null }),
+    });
+    expect((await json<{ accent: string }>(reset)).accent).toBe("flame");
+  });
+
   it("uploads, serves, and removes a custom logo mark", async () => {
     // Minimal 1x1 PNG.
     const png = Uint8Array.from(

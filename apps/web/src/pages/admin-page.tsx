@@ -13,6 +13,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
+  type AdminBranding,
   type AdminUser,
   type BrandingMarkVariant,
   clearAdminBrandingMark,
@@ -22,10 +23,16 @@ import {
   getCurrentFlareMoUser,
   listAdminUsers,
   requestAdminPasswordReset,
+  updateAdminBrandingAccent,
   updateAdminBrandingProductName,
   updateAdminUserRole,
   uploadAdminBrandingMark,
 } from "@/api";
+import {
+  BRANDING_ACCENTS,
+  type BrandingAccent,
+  setAccentAttribute,
+} from "@/branding";
 import { InfoTip } from "@/components/info-tip";
 import { SecretRevealDialog } from "@/components/secret-reveal-dialog";
 import {
@@ -481,6 +488,54 @@ export function AdminPanel() {
 const ACCEPTED_MARK_TYPES = "image/png,image/webp,image/svg+xml";
 const MEMBER_PAGE_SIZE = 20;
 
+/** Swatch dots are fixed hex so the palette reads the same in any theme. */
+const ACCENT_SWATCH_HEX: Record<BrandingAccent, string> = {
+  flame: "#ff6a00",
+  ocean: "#0090ff",
+  indigo: "#3e63dd",
+  iris: "#5b5bd6",
+  jade: "#29a383",
+  teal: "#12a594",
+  crimson: "#e93d82",
+  amber: "#ffc53d",
+};
+
+function AccentPicker({
+  value,
+  disabled,
+  onSelect,
+}: {
+  value: string;
+  disabled: boolean;
+  onSelect: (accent: BrandingAccent) => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <fieldset
+      aria-label={t("admin.branding.accent")}
+      className="flex flex-wrap gap-2 border-0 p-0"
+    >
+      {BRANDING_ACCENTS.map((accent) => {
+        const active = accent === value;
+        return (
+          <button
+            key={accent}
+            aria-label={t(`admin.branding.accent_${accent}`)}
+            aria-pressed={active}
+            className="size-6 shrink-0 rounded-full border transition-all focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-50 data-[active=true]:ring-[2px] data-[active=true]:ring-ring data-[active=true]:ring-offset-2 data-[active=true]:ring-offset-background"
+            data-active={active}
+            disabled={disabled}
+            style={{ backgroundColor: ACCENT_SWATCH_HEX[accent] }}
+            title={t(`admin.branding.accent_${accent}`)}
+            type="button"
+            onClick={() => onSelect(accent)}
+          />
+        );
+      })}
+    </fieldset>
+  );
+}
+
 function filterMembers(users: AdminUser[], search: string): AdminUser[] {
   const query = search.trim().toLowerCase();
   if (!query) return users;
@@ -517,6 +572,22 @@ export function BrandingCard() {
     onSuccess: () => {
       toast.success(t("admin.branding.saved"));
       void queryClient.invalidateQueries({ queryKey: ["admin-branding"] });
+    },
+    onError: (error) =>
+      toast.error(errorMessage(error, t("admin.branding.failed"))),
+  });
+
+  const saveAccentMutation = useMutation({
+    mutationFn: (accent: BrandingAccent) => updateAdminBrandingAccent(accent),
+    onMutate: (accent) => {
+      // Swatches are instant-apply: paint the choice while the PUT runs.
+      setAccentAttribute(accent);
+    },
+    onSuccess: (_data, accent) => {
+      queryClient.setQueryData<AdminBranding>(["admin-branding"], (current) =>
+        current ? { ...current, accent } : current,
+      );
+      setAccentAttribute(accent);
     },
     onError: (error) =>
       toast.error(errorMessage(error, t("admin.branding.failed"))),
@@ -625,22 +696,32 @@ export function BrandingCard() {
         </Button>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center gap-3">
-          <div className="flex size-12 shrink-0 items-center justify-center rounded-lg border bg-muted/40 dark:bg-muted/20">
-            {brandingQuery.data?.mark_dark_url ? (
-              <img
-                alt=""
-                className="size-8 object-contain"
-                src={brandingQuery.data.mark_dark_url}
-              />
-            ) : (
-              <ImageUpIcon className="size-4 text-muted-foreground" />
-            )}
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
+            <p className="text-sm font-medium">{t("admin.branding.accent")}</p>
+            <AccentPicker
+              disabled={saveAccentMutation.isPending}
+              value={brandingQuery.data?.accent ?? "flame"}
+              onSelect={(accent) => void saveAccentMutation.mutateAsync(accent)}
+            />
           </div>
-          <p className="min-w-0 truncate text-sm">
-            {brandingQuery.data?.product_name ||
-              t("admin.branding.statusDefault")}
-          </p>
+          <div className="flex items-center gap-3">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-lg border bg-muted/40 dark:bg-muted/20">
+              {brandingQuery.data?.mark_dark_url ? (
+                <img
+                  alt=""
+                  className="size-8 object-contain"
+                  src={brandingQuery.data.mark_dark_url}
+                />
+              ) : (
+                <ImageUpIcon className="size-4 text-muted-foreground" />
+              )}
+            </div>
+            <p className="min-w-0 truncate text-sm">
+              {brandingQuery.data?.product_name ||
+                t("admin.branding.statusDefault")}
+            </p>
+          </div>
         </div>
       </CardContent>
       <Dialog open={editOpen} onOpenChange={setEditOpen}>

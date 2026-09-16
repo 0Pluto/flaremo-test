@@ -407,7 +407,7 @@ function MemoryCard({
           <Badge variant="secondary">
             {t(`memory.scope.${memory.scope_type}`)}
           </Badge>
-          <Badge variant="flame">
+          <Badge variant="brand">
             {t(`memory.verification.${memory.verification}`)}
           </Badge>
           {memory.tier === "core" && <Badge>{t("memory.tier.core")}</Badge>}

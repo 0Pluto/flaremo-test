@@ -13,7 +13,7 @@ const buttonVariants = cva(
         // Brand gradient is reserved for the primary CTA of a view (e.g. the
         // composer send button) — at most one per screen.
         brand:
-          "bg-brand-gradient text-white shadow-sm hover:brightness-[1.06] hover:shadow-md active:brightness-95",
+          "bg-brand-gradient text-[color:var(--brand-gradient-foreground)] shadow-sm hover:brightness-[1.06] hover:shadow-md active:brightness-95",
         outline:
           "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         secondary:

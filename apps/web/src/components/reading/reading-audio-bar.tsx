@@ -108,7 +108,7 @@ export function ReadingAudioBar({ className }: { className?: string }) {
               className={cn(
                 "max-w-56 truncate rounded-md px-2 py-0.5 text-[0.7rem] transition-colors",
                 item.id === track.id
-                  ? "bg-flame-50 text-flame-700 dark:bg-flame-400/12 dark:text-flame-200"
+                  ? "bg-brand-50 text-brand-700 dark:bg-brand-400/12 dark:text-brand-200"
                   : "bg-muted text-muted-foreground hover:text-foreground",
               )}
               key={item.id}

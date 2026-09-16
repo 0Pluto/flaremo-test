@@ -154,19 +154,20 @@ export const FlareMoCalendar = memo(function FlareMoCalendar({
               className={cn(
                 "flex min-h-11 flex-col items-center rounded-md px-0.5 py-0.5 text-xs motion-safe:transition-colors motion-safe:duration-150",
                 day.inMonth ? "text-foreground" : "text-muted-foreground/40",
-                isToday && "ring-1 ring-flame-500",
+                isToday && "ring-1 ring-brand-500",
                 isSelected
                   ? "bg-accent text-accent-foreground"
                   : "hover:bg-muted",
                 onTaskDrop &&
                   dragOverKey === day.key &&
-                  "ring-2 ring-flame-500",
+                  "ring-2 ring-brand-500",
               )}
             >
               <span
                 className={cn(
                   "flex size-5 items-center justify-center rounded-full tabular-nums",
-                  isToday && "bg-flame-500 font-semibold text-white",
+                  isToday &&
+                    "bg-brand-500 font-semibold text-[color:var(--brand-gradient-foreground)]",
                 )}
               >
                 {day.key.slice(-2)}
@@ -313,13 +314,14 @@ export const FlareMoMiniCalendar = memo(function FlareMoMiniCalendar({
                   activeDay !== day.key &&
                   (day.key < today
                     ? "ring-2 ring-destructive/60 dark:ring-destructive/50"
-                    : "ring-2 ring-flame-500/70 dark:ring-flame-400/60"),
+                    : "ring-2 ring-brand-500/70 dark:ring-brand-400/60"),
               )}
             >
               <span
                 className={cn(
                   "flex size-5 items-center justify-center rounded-full tabular-nums",
-                  today === day.key && "bg-flame-500 font-semibold text-white",
+                  today === day.key &&
+                    "bg-brand-500 font-semibold text-[color:var(--brand-gradient-foreground)]",
                   heatStrength,
                 )}
               >

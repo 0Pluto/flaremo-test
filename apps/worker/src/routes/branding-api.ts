@@ -30,6 +30,7 @@ brandingApi.get("/", async (c) => {
         : null;
     return c.json({
       product: branding.product,
+      accent: branding.accent,
       mark_light_url: markUrl("light", branding.marks.light),
       mark_dark_url: markUrl("dark", branding.marks.dark),
     });

@@ -228,7 +228,7 @@ function UsageBar({
           // min-width keeps a near-empty bar readable as a starting stub
           // instead of collapsing into a stray dot.
           <div
-            className="h-full min-w-4 rounded-full bg-flame-500 transition-[width]"
+            className="h-full min-w-4 rounded-full bg-brand-500 transition-[width]"
             style={{ width: `${percent}%` }}
           />
         ) : null}
