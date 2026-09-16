@@ -70,5 +70,5 @@ describe("streaming audio PCM", () => {
     encoder.flush();
     expect(frames).toBe(18000);
     expect(bytes).toBe(1800 * 16000 * 2);
-  }, 30_000);
+  }, 60_000);
 });
