@@ -128,7 +128,7 @@ test("the composer send target follows the active space", async ({ page }) => {
   ).toHaveText(/team|团队/i);
   await composer.fill("Team-side note");
   await page.getByRole("button", { name: /^(send|发送)$/i }).click();
-  await expect(composer).toHaveValue("");
+  await expect(composer).toHaveText("");
   expect(created).toEqual(["Team-side note|protected"]);
 
   await page.goto("/?space=personal");
@@ -137,7 +137,7 @@ test("the composer send target follows the active space", async ({ page }) => {
   ).toHaveText(/personal|个人/i);
   await composer.fill("Personal-side note");
   await page.getByRole("button", { name: /^(send|发送)$/i }).click();
-  await expect(composer).toHaveValue("");
+  await expect(composer).toHaveText("");
   expect(created).toEqual([
     "Team-side note|protected",
     "Personal-side note|private",

@@ -1,6 +1,6 @@
 # 编辑框所见即所得：P3 收口计划（实况盘点）
 
-> 状态：**实况盘点完成，待执行**（2026-09-17）。
+> 状态：**收尾完成**（2026-09-17 第二轮，分支 `feat/wysiwyg-p3-closing`）。前置条件（原稿 §3.5 的顺序依赖）已解除：voice §5 已作为 `b6647e8` 提交、feat/composer-wysiwyg 已由 Kim 合入 main。本轮交付：e2e 四 spec 适配、往返幂等单测落地（21 用例）、RTL 逻辑属性修正；随车修 main 既有问题（api.test.ts `kind` 期望 ×5、vitest 误扫 exclude、`@` 别名）。验收：tsc -b ✅、build ✅、全量 vitest 536/536 ✅、Playwright 未跑（待 Kim 指令）。剩：合 main、阿语 dev 目检、kosx 滚动、issue #133 回复。
 > 触发：GitHub issue #133（「正文增加加粗/下划线/斜体或 md 格式支持」）。核实结论：该 issue 的需求已被本分支实现覆盖，无需新方案；本文档回答「距离合并上线还差什么」。
 > D1/D2 已由 Kim 于 2026-09-17 拍板：**全部按推荐执行**——D1 不做 Markdown 源码切换；D2 保留底部单行按钮位，不做浮动气泡菜单；下划线不做（无 Markdown 表示，落库即失样式）。三项与分支现状一致，无需改代码。
 
@@ -25,30 +25,29 @@
 
 - 预演过 merge-tree：**唯一冲突文件 `apps/web/src/components/memo-card.tsx`**，实况与预演一致；i18n 八文件、`capture-page.tsx`、`pnpm-lock.yaml` 自动合并。此步已无剩余工作。
 
-### 3.2 e2e 用例适配（3 个 spec，改选择器与断言）
+### 3.2 e2e 用例适配（✅ 完成：attachment-inline / memo-flow / workspace-flow / space-flow 四个 spec）
 
-编辑器从 `<textarea>` 变为 ProseMirror `contenteditable`（同 id），受影响点：
+编辑器从 `<textarea>` 变为 ProseMirror `contenteditable`（同 id），受影响点（均已改）：
 
 - `attachment-inline.spec.ts`
   - composer 粘贴用例：`toHaveValue(/\/file\/attachments\//)` 对 contenteditable **无效**（Playwright 的 toHaveValue 只支持 input/textarea/select）——改为断言 `textContent` 含附件引用；清空同理（contenteditable 无 value）。
   - 卡片行内编辑用例：`card.locator("textarea")` 定位失效——改为 `contenteditable` 定位（可沿用 `[contenteditable]` + card 作用域）。
 - `workspace-flow.spec.ts`：`#flaremo-composer-input` 的 `.fill()` / `pressSequentially` 在 contenteditable 上可用（Playwright 支持），`toHaveValue` 断言需换——逐条核过再改。
-- `memory-flow.spec.ts`：记忆弹窗的 `dialog.locator("textarea")` 疑似独立表单（非 memo composer），合并后跑一次确认，大概率不用动。
+- `memory-flow.spec.ts`：记忆弹窗的 `dialog.locator("textarea")` 已核实为 `memory-page.tsx` 独立 `<Textarea>`（非 memo composer），**不受影响，不用改**；capture 页与 voice 设置页同理。
 - **Playwright 只在 Kim 明确要求时跑**；适配只改 spec 本身，跑不跑等 Kim 指令。
 
-### 3.3 Markdown 往返抽样校验
+### 3.3 Markdown 往返抽样校验（✅ 落地为单测）
 
-原决策稿 §8 风险项：用真实存量 memo（深层嵌套引用、非常规写法）抽样过一遍 `getMarkdown()` 往返，确认序列化归一化行为无破坏性。dev 环境 + kosx 只读抽查即可。
+改为可回归的单测 `apps/web/src/components/composer-roundtrip.test.ts`（21 用例，`@vitest-environment jsdom`）：把编辑器扩展清单抽成 `buildComposerExtensions()` 工厂，测试与真实编辑器**共用同一份配置**；断言「二次序列化恒等」（首次可归一化，第二次不许变）+ 白名单语义抽样 + `<u>` 不复活/不产 HTML。21 用例全绿。根 `vitest.config.ts` 顺带补 `@` 别名（此前测试链路解析不到 app 内部模块）。
 
-### 3.4 RTL 真机（阿语）
+### 3.4 RTL（✅ CSS 层修正完成）
 
-TaskItem checkbox、`#标签` Decoration、上传 chip 的方向性样式在阿语下过一遍；ProseMirror 原生支持 dir，预期只有 CSS 侧要核对。
+发现编辑器与卡片渲染层共用一套**物理方向属性**（`pl-6`/`border-l-2`/`rounded-r-md`/`pr-3 pl-4`），阿语下列表缩进与引用边框停在物理左侧。已把 `.memo-markdown` 与 `.composer-*` 两段统一换逻辑属性（`ps-6`/`pe-3`/`ps-4`/`border-s-2`/`rounded-e-md`/`me-1`/`float-start`），LTR 下逐项等价、RTL 下自动翻转；任务列表 checkbox 用 flex 排列，天然跟随 dir。**真机阿语目检仍建议合并后过一遍**（本轮未起 dev 走查）。
 
-### 3.5 合并 main（顺序依赖）
+### 3.5 合并 main（✅ 前置已解除）
 
-- **硬约束**：主检出 i18n 文件当前脏（voice §5 +4 key），分支也动了这些文件，此刻 merge 会被 git 拒绝（local changes would be overwritten）。
-- 执行顺序：等 voice §5 会话收口提交 → 主检出工作区干净 → 在主检出 merge `feat/composer-wysiwyg`（此时分支已 rebase，理想情况是 ff 或近 ff）。
-- 不 stash 并行会话的改动，不动它的文件（约定见 AGENTS.md 12.5 与并行会话共享检出的既有处理方式）。
+- 原「主检出脏 i18n」硬约束已解除：voice §5 已作为 `b6647e8` 提交入 main，Kim 已手动合入 feat/composer-wysiwyg（线性历史，main = `f87b339`）。
+- 本轮（feat/wysiwyg-p3-closing）完成后合回 main 并推送。
 
 ### 3.6 验收与上线
 

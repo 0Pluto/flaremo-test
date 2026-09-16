@@ -382,11 +382,11 @@
   }
 
   .memo-markdown ul {
-    @apply list-disc pl-6;
+    @apply list-disc ps-6;
   }
 
   .memo-markdown ol {
-    @apply list-decimal pl-6;
+    @apply list-decimal ps-6;
   }
 
   .memo-markdown li + li {
@@ -402,7 +402,7 @@
   }
 
   .memo-markdown blockquote {
-    @apply rounded-r-md border-l-2 border-brand-300 bg-brand-50 py-1 pr-3 pl-4 text-muted-foreground dark:border-brand-600 dark:bg-brand-400/5;
+    @apply rounded-e-md border-s-2 border-brand-300 bg-brand-50 py-1 pe-3 ps-4 text-muted-foreground dark:border-brand-600 dark:bg-brand-400/5;
   }
 
   .memo-markdown code {
@@ -464,11 +464,11 @@
   }
 
   .composer-editor-content ul {
-    @apply my-3 list-disc pl-6;
+    @apply my-3 list-disc ps-6;
   }
 
   .composer-editor-content ol {
-    @apply my-3 list-decimal pl-6;
+    @apply my-3 list-decimal ps-6;
   }
 
   .composer-editor-content li + li {
@@ -480,7 +480,7 @@
   }
 
   .composer-editor-content blockquote {
-    @apply my-3 rounded-r-md border-l-2 border-brand-300 bg-brand-50 py-1 pr-3 pl-4 text-muted-foreground dark:border-brand-600 dark:bg-brand-400/5;
+    @apply my-3 rounded-e-md border-s-2 border-brand-300 bg-brand-50 py-1 pe-3 ps-4 text-muted-foreground dark:border-brand-600 dark:bg-brand-400/5;
   }
 
   .composer-editor-content code {
@@ -501,7 +501,7 @@
 
   /* GFM task lists: real interactive checkboxes in the editor. */
   .composer-editor-content ul[data-type="taskList"] {
-    @apply my-3 list-none pl-1;
+    @apply my-3 list-none ps-1;
   }
 
   .composer-editor-content ul[data-type="taskList"] li {
@@ -528,7 +528,7 @@
   /* Inline "uploading…" feedback for a pasted/dropped image. Pure decoration:
      the chip never enters the document model, so markdown stays clean. */
   .composer-upload-chip {
-    @apply mr-1 inline-flex max-w-40 items-center gap-1.5 truncate rounded-md bg-muted px-2 py-0.5 align-middle text-xs text-muted-foreground;
+    @apply me-1 inline-flex max-w-40 items-center gap-1.5 truncate rounded-md bg-muted px-2 py-0.5 align-middle text-xs text-muted-foreground;
   }
 
   .composer-upload-chip::before {
@@ -537,7 +537,7 @@
   }
 
   .composer-editor-content p.is-editor-empty:first-child::before {
-    @apply pointer-events-none float-left h-0 text-muted-foreground;
+    @apply pointer-events-none float-start h-0 text-muted-foreground;
     content: attr(data-placeholder);
   }
 

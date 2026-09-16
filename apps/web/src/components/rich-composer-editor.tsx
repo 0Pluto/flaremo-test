@@ -11,6 +11,31 @@ import { UploadPlaceholder } from "@/components/upload-placeholder-extension";
 import { extractImageFiles } from "@/lib/image-insert";
 import { extractActiveTagToken } from "@/lib/tag-autocomplete";
 
+/**
+ * The element whitelist mirrors what the card renderer supports. Only
+ * underline is dropped: it has no markdown representation, so anything
+ * written with it would be silently unstyled on send. Exported verbatim for
+ * the round-trip test, so the test exercises exactly what ships.
+ */
+export function buildComposerExtensions(placeholder: string) {
+  return [
+    StarterKit.configure({
+      underline: false,
+      heading: { levels: [1, 2, 3] },
+      link: { openOnClick: false },
+    }),
+    TaskList,
+    TaskItem.configure({ nested: false }),
+    // Body images: `![alt](/file/attachments/…)` references render in place.
+    // Inline so a marked image token can live inside its paragraph.
+    Image.configure({ inline: true }),
+    Placeholder.configure({ placeholder }),
+    Markdown,
+    TagHighlight,
+    UploadPlaceholder,
+  ];
+}
+
 export type RichComposerEditorProps = {
   /** Markdown source of truth; only reapplied when it changed upstream. */
   content: string;
@@ -103,25 +128,7 @@ export function RichComposerEditor({
     contentType: "markdown",
     content,
     editable: !disabled,
-    extensions: [
-      // The element whitelist mirrors what the card renderer supports. Only
-      // underline is dropped: it has no markdown representation, so anything
-      // written with it would be silently unstyled on send.
-      StarterKit.configure({
-        underline: false,
-        heading: { levels: [1, 2, 3] },
-        link: { openOnClick: false },
-      }),
-      TaskList,
-      TaskItem.configure({ nested: false }),
-      // Body images: `![alt](/file/attachments/…)` references render in place.
-      // Inline so a marked image token can live inside its paragraph.
-      Image.configure({ inline: true }),
-      Placeholder.configure({ placeholder }),
-      Markdown,
-      TagHighlight,
-      UploadPlaceholder,
-    ],
+    extensions: buildComposerExtensions(placeholder),
     editorProps: {
       attributes: {
         id: inputId,

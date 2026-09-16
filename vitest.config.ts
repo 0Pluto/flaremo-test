@@ -1,6 +1,14 @@
+import path from "node:path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      // Same alias the web app's vite config uses; keeps tests that import
+      // app components resolvable from the root config.
+      "@": path.resolve(import.meta.dirname, "apps/web/src"),
+    },
+  },
   test: {
     fileParallelism: false,
     // Miniflare owns D1/R2 state and opens Worker-compatible stream handles.
@@ -16,6 +24,10 @@ export default defineConfig({
       "**/dist/**",
       "**/.wrangler/**",
       "**/Temp/**",
+      // Playwright specs run under their own runner; scripts/*.test.mjs are
+      // node:test files. Both match vitest's glob but are not vitest suites.
+      "tests/e2e/**",
+      "scripts/**",
     ],
   },
 });
