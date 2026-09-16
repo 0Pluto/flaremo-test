@@ -331,22 +331,21 @@ export function AccountPage() {
   return (
     <div className="min-h-svh bg-background px-4 py-5 sm:py-8">
       <main className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-        <SubpageHeader />
-
-        <section className="flex flex-wrap items-end justify-between gap-3 border-b pb-4">
-          <div>
-            <h1 className="font-heading text-2xl font-semibold">
-              {t("auth.accountTitle")}
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {session.data?.user.email}
-            </p>
-          </div>
-          <Button variant="outline" onClick={() => void handleSignOut()}>
-            <LogOutIcon data-icon="inline-start" />
-            {t("auth.signOut")}
-          </Button>
-        </section>
+        <SubpageHeader
+          actions={
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => void handleSignOut()}
+            >
+              <LogOutIcon data-icon="inline-start" />
+              {t("auth.signOut")}
+            </Button>
+          }
+          className="border-b pb-4"
+          subtitle={session.data?.user.email}
+          title={t("auth.accountTitle")}
+        />
 
         <Tabs
           value={tab}

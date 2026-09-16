@@ -30,13 +30,7 @@ export function DailyReviewPage() {
   return (
     <div className="min-h-svh bg-background px-4 py-5 sm:py-8">
       <main className="mx-auto flex w-full max-w-[640px] flex-col gap-4">
-        <SubpageHeader />
-
-        <div className="px-1">
-          <h1 className="font-heading text-xl font-semibold">
-            {t("nav.dailyReview")}
-          </h1>
-        </div>
+        <SubpageHeader title={t("nav.dailyReview")} />
 
         {reviewQuery.isLoading && (
           <div className="flex flex-col gap-3">

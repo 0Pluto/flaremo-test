@@ -1,6 +1,6 @@
 import type { UseQueryResult } from "@tanstack/react-query";
+import { InfoIcon } from "lucide-react";
 import type { VectorUsageReport } from "@/api";
-import { InfoTip } from "@/components/info-tip";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { TranslationKey } from "@/i18n";
@@ -49,18 +49,16 @@ function VectorUsagePanel({
   );
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap gap-6 text-sm">
-        <span className="text-muted-foreground">
-          {t("usage.model")}: {report.model}
-        </span>
-        <span className="text-muted-foreground">
-          {t("usage.dimensions")}: {report.dimensions}
-        </span>
-        <span className="text-muted-foreground">
-          {t("usage.vectors")}: {totalVectors}
-        </span>
-      </div>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 rounded-lg bg-muted/50 px-4 py-3 text-sm">
+        <dt className="text-muted-foreground">{t("usage.model")}</dt>
+        <dd className="min-w-0 truncate">{report.model}</dd>
+        <dt className="text-muted-foreground">{t("usage.dimensions")}</dt>
+        <dd className="tabular-nums">{report.dimensions}</dd>
+        <dt className="text-muted-foreground">{t("usage.vectors")}</dt>
+        <dd className="tabular-nums">{totalVectors}</dd>
+      </dl>
       <UsageBar
+        hint={t("usage.storedHint")}
         label={t("usage.stored")}
         used={totalStored}
         limit={report.stored_limit}
@@ -71,9 +69,9 @@ function VectorUsagePanel({
         limit={report.queried_limit}
       />
       {report.plan && <PlanQuotaBars plan={report.plan} t={t} />}
-      <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <InfoTip text={t("usage.disclaimer")} />
-        <span className="sr-only">{t("usage.disclaimer")}</span>
+      <p className="flex items-start gap-1.5 border-t pt-4 text-xs text-muted-foreground">
+        <InfoIcon aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
+        <span>{t("usage.disclaimer")}</span>
       </p>
     </div>
   );
@@ -199,11 +197,13 @@ function PlanQuotaBars({
 
 function UsageBar({
   label,
+  hint,
   used,
   limit,
   formatValue,
 }: {
   label: string;
+  hint?: string;
   used: number;
   limit: number;
   formatValue?: (value: number) => string;
@@ -212,17 +212,26 @@ function UsageBar({
   const percent = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="flex items-baseline justify-between text-sm">
-        <span>{label}</span>
-        <span className="text-muted-foreground tabular-nums">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-sm">
+        <span className="flex items-baseline gap-2">
+          <span>{label}</span>
+          {hint ? (
+            <span className="text-xs text-muted-foreground">{hint}</span>
+          ) : null}
+        </span>
+        <span className="ml-auto text-muted-foreground tabular-nums">
           {format(used)} / {format(limit)}
         </span>
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-        <div
-          className="h-full rounded-full bg-flame-500 transition-[width]"
-          style={{ width: `${percent}%` }}
-        />
+        {percent > 0 ? (
+          // min-width keeps a near-empty bar readable as a starting stub
+          // instead of collapsing into a stray dot.
+          <div
+            className="h-full min-w-4 rounded-full bg-flame-500 transition-[width]"
+            style={{ width: `${percent}%` }}
+          />
+        ) : null}
       </div>
     </div>
   );

@@ -469,6 +469,7 @@ const messages = {
   "usage.dimensions": "Dimensions",
   "usage.vectors": "Vectors",
   "usage.stored": "Stored dimensions",
+  "usage.storedHint": "= vectors × dimensions",
   "usage.queried": "Queried dimensions this month",
   "usage.planTitle": "Deployment quota",
   "usage.planUserTitle": "Your quota",

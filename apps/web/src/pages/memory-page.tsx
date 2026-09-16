@@ -123,17 +123,15 @@ export function MemoryPage() {
   return (
     <div className="min-h-svh bg-background px-4 py-5 sm:py-8">
       <main className="mx-auto flex w-full max-w-[720px] flex-col gap-4">
-        <SubpageHeader />
-
-        <div className="flex items-end justify-between gap-3 px-1">
-          <h1 className="font-heading text-xl font-semibold">
-            {t("memory.title")}
-          </h1>
-          <Button size="sm" onClick={() => setCreating(true)}>
-            <PlusIcon data-icon="inline-start" />
-            {t("memory.newMemory")}
-          </Button>
-        </div>
+        <SubpageHeader
+          actions={
+            <Button size="sm" onClick={() => setCreating(true)}>
+              <PlusIcon data-icon="inline-start" />
+              {t("memory.newMemory")}
+            </Button>
+          }
+          title={t("memory.title")}
+        />
 
         <div className="relative">
           <SearchIcon

@@ -131,17 +131,15 @@ export function ProjectsPage() {
   return (
     <div className="min-h-svh bg-background px-4 py-5 sm:py-8">
       <main className="mx-auto flex w-full max-w-5xl flex-col gap-4">
-        <SubpageHeader />
-
-        <div className="flex items-end justify-between gap-3 px-1">
-          <h1 className="font-heading text-xl font-semibold">
-            {t("projects.title")}
-          </h1>
-          <Button size="sm" onClick={() => setCreatingProject(true)}>
-            <PlusIcon data-icon="inline-start" />
-            {t("projects.newProject")}
-          </Button>
-        </div>
+        <SubpageHeader
+          actions={
+            <Button size="sm" onClick={() => setCreatingProject(true)}>
+              <PlusIcon data-icon="inline-start" />
+              {t("projects.newProject")}
+            </Button>
+          }
+          title={t("projects.title")}
+        />
 
         <div className="flex flex-col gap-4 lg:flex-row">
           <aside className="flex w-full shrink-0 flex-col gap-1 lg:w-64">

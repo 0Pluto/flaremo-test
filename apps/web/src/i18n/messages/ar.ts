@@ -463,6 +463,7 @@ const messages = {
   "usage.dimensions": "الأبعاد",
   "usage.vectors": "المتجهات",
   "usage.stored": "الأبعاد المخزنة",
+  "usage.storedHint": "= عدد المتجهات × الأبعاد",
   "usage.queried": "الأبعاد المستعلم عنها هذا الشهر",
   "usage.planTitle": "حدود النشر",
   "usage.planUserTitle": "حدودك الشخصية",

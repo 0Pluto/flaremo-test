@@ -474,6 +474,7 @@ const messages = {
   "usage.dimensions": "次元数",
   "usage.vectors": "ベクトル数",
   "usage.stored": "保存済み次元",
+  "usage.storedHint": "= ベクトル数 × 次元数",
   "usage.queried": "今月のクエリ次元",
   "usage.planTitle": "デプロイ枠",
   "usage.planUserTitle": "個人枠",

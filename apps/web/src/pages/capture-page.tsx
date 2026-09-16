@@ -379,15 +379,10 @@ export function CapturePage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <SubpageHeader />
-      <div>
-        <h1 className="text-2xl font-semibold">
-          {t(review ? "capture.review" : "capture.title")}
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {t("capture.foreground")}
-        </p>
-      </div>
+      <SubpageHeader title={t(review ? "capture.review" : "capture.title")} />
+      <p className="-mt-3 text-sm text-muted-foreground">
+        {t("capture.foreground")}
+      </p>
       {draftError && (
         <p role="alert" className="rounded-lg border p-3 text-sm">
           {t("capture.draftUnavailable")}

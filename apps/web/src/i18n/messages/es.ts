@@ -482,6 +482,7 @@ const messages = {
   "usage.dimensions": "Dimensiones",
   "usage.vectors": "Vectores",
   "usage.stored": "Dimensiones almacenadas",
+  "usage.storedHint": "= vectores × dimensiones",
   "usage.queried": "Dimensiones consultadas este mes",
   "usage.planTitle": "Cuota del despliegue",
   "usage.planUserTitle": "Tu cuota",

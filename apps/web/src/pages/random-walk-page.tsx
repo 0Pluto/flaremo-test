@@ -95,13 +95,7 @@ export function RandomWalkPage() {
   return (
     <div className="min-h-svh bg-background px-4 py-5 sm:py-8">
       <main className="mx-auto flex w-full max-w-[640px] flex-col gap-4">
-        <SubpageHeader />
-
-        <div className="px-1">
-          <h1 className="font-heading text-xl font-semibold">
-            {t("nav.randomWalk")}
-          </h1>
-        </div>
+        <SubpageHeader title={t("nav.randomWalk")} />
 
         {finished ? (
           <WalkPostcard onRestart={restart} pending={pending} steps={steps} />

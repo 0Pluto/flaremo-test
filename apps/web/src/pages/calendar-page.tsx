@@ -121,53 +121,51 @@ export function CalendarPage() {
   return (
     <div className="min-h-svh bg-background px-4 py-5 sm:py-8">
       <main className="mx-auto flex w-full max-w-5xl flex-col gap-4">
-        <SubpageHeader />
-
-        <div className="flex items-end justify-between gap-3 px-1">
-          <h1 className="font-heading text-xl font-semibold">
-            {t("calendar.title")}
-          </h1>
-          <div className="flex items-center gap-2">
-            <div
-              aria-label={t("calendar.viewLabel")}
-              className="flex rounded-lg border border-border/60 p-0.5 text-xs"
-              role="tablist"
-            >
-              {(
-                [
-                  ["month", t("calendar.viewMonth")],
-                  ["agenda", t("calendar.viewAgenda")],
-                ] as const
-              ).map(([value, label]) => (
-                <button
-                  aria-selected={viewMode === value}
-                  className={cn(
-                    "rounded-md px-3 py-1 text-xs motion-safe:transition-colors motion-safe:duration-150",
-                    viewMode === value
-                      ? "bg-accent font-medium text-accent-foreground"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                  key={value}
-                  role="tab"
-                  type="button"
-                  onClick={() => setViewMode(value)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <Button
-              size="sm"
-              type="button"
-              onClick={() => {
-                setCursor(today);
-                setSelected(today);
-              }}
-            >
-              {t("calendar.today")}
-            </Button>
-          </div>
-        </div>
+        <SubpageHeader
+          actions={
+            <>
+              <div
+                aria-label={t("calendar.viewLabel")}
+                className="flex rounded-lg border border-border/60 p-0.5 text-xs"
+                role="tablist"
+              >
+                {(
+                  [
+                    ["month", t("calendar.viewMonth")],
+                    ["agenda", t("calendar.viewAgenda")],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    aria-selected={viewMode === value}
+                    className={cn(
+                      "rounded-md px-3 py-1 text-xs motion-safe:transition-colors motion-safe:duration-150",
+                      viewMode === value
+                        ? "bg-accent font-medium text-accent-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                    key={value}
+                    role="tab"
+                    type="button"
+                    onClick={() => setViewMode(value)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <Button
+                size="sm"
+                type="button"
+                onClick={() => {
+                  setCursor(today);
+                  setSelected(today);
+                }}
+              >
+                {t("calendar.today")}
+              </Button>
+            </>
+          }
+          title={t("calendar.title")}
+        />
 
         {viewMode === "agenda" ? (
           <AgendaView

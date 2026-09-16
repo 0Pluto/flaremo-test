@@ -470,6 +470,7 @@ const messages = {
   "usage.dimensions": "차원 수",
   "usage.vectors": "벡터 수",
   "usage.stored": "저장된 차원",
+  "usage.storedHint": "= 벡터 수 × 차원 수",
   "usage.queried": "이번 달 조회 차원",
   "usage.planTitle": "배포 한도",
   "usage.planUserTitle": "개인 한도",

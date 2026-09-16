@@ -430,6 +430,7 @@ const messages = {
   "usage.dimensions": "维度",
   "usage.vectors": "向量数",
   "usage.stored": "存储维度",
+  "usage.storedHint": "= 向量数 × 维度",
   "usage.queried": "本月查询维度",
   "usage.planTitle": "部署限额",
   "usage.planUserTitle": "个人限额",

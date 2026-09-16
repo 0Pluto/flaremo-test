@@ -476,6 +476,7 @@ const messages = {
   "usage.dimensions": "Размерности",
   "usage.vectors": "Векторы",
   "usage.stored": "Сохранённые размерности",
+  "usage.storedHint": "= векторов × размерностей",
   "usage.queried": "Запрошенные размерности за месяц",
   "usage.planTitle": "Квоты развёртывания",
   "usage.planUserTitle": "Ваши квоты",
