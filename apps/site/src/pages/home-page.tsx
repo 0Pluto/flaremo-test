@@ -147,7 +147,7 @@ function Hero({
                 {home.heroTitleLine1}
               </span>
               <span
-                className={`mt-1.5 block sm:mt-2.5 bg-gradient-to-r from-amber-500 via-signal to-signal-deep bg-clip-text text-transparent${locale === "en" || locale === "zh" ? " sm:whitespace-nowrap" : ""}`}
+                className={`mt-1.5 block sm:mt-2.5 text-brand-gradient${locale === "en" || locale === "zh" ? " sm:whitespace-nowrap" : ""}`}
               >
                 {home.heroTitleLine2}
               </span>
