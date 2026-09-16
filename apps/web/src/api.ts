@@ -1139,11 +1139,18 @@ export type VoiceSettings = {
   revision: string | null;
   enabled: boolean;
   configured: boolean;
-  source: "database" | "environment";
+  source: "database" | "environment" | "none";
   provider: "tencent" | "dashscope" | null;
   model: string;
   unreadable: boolean;
-  canStore: boolean;
+  previews: {
+    appId: string;
+    secretId: string;
+    secretKey: string;
+    apiKey: string;
+  } | null;
+  encrypted: boolean;
+  canEncrypt: boolean;
 };
 export const getVoiceSettings = () =>
   apiRequest<VoiceSettings>("/api/app/voice-settings");

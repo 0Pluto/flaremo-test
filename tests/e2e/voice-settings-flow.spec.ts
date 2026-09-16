@@ -19,8 +19,8 @@ for (const mobile of [false, true]) {
         response,
         json: {
           ...(await response.json()),
-          is_instance_owner: !mobile,
-          role: mobile ? "admin" : "owner",
+          is_instance_owner: true,
+          role: "owner",
           can_manage_voice_service: true,
         },
       });
@@ -31,12 +31,14 @@ for (const mobile of [false, true]) {
         json: {
           revision: null,
           enabled: false,
-          source: "environment",
+          source: "none",
           configured: false,
           provider: null,
           model: "",
           unreadable: false,
-          canStore: true,
+          previews: null,
+          encrypted: false,
+          canEncrypt: true,
         },
       });
     });
@@ -123,8 +125,8 @@ test("owner saves encrypted credentials through the UI and disables capture", as
   await page.locator("#voice-secretId").fill("e2e-not-a-real-secret-id");
   await page.locator("#voice-secretKey").fill("e2e-not-a-real-secret-key");
   await page
-    .getByRole("checkbox", { name: /Enable voice capture|启用语音记录/ })
-    .check();
+    .getByRole("switch", { name: /Enable voice capture|启用语音记录/ })
+    .click();
   await page
     .getByRole("button", { name: /Save settings|保存配置/, exact: true })
     .click();
@@ -138,10 +140,16 @@ test("owner saves encrypted credentials through the UI and disables capture", as
   expect(await status.json()).toEqual({
     available: true,
     streaming: true,
-    provider: null,
+    provider: "tencent",
   });
-  page.once("dialog", (dialog) => dialog.accept());
   await page
+    .getByRole("button", {
+      name: /Delete credentials and disable|删除凭据并停用/,
+      exact: true,
+    })
+    .click();
+  await page
+    .getByRole("alertdialog")
     .getByRole("button", {
       name: /Delete credentials and disable|删除凭据并停用/,
       exact: true,

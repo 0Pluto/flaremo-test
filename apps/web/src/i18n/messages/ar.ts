@@ -4,34 +4,41 @@
 import type { TranslationKey } from "../key";
 
 const messages = {
-  "voiceSettings.loadError": "Could not load voice settings. Refresh to retry.",
+  "voiceSettings.loadError":
+    "تعذّر تحميل إعدادات الصوت. حدّث الصفحة وأعد المحاولة.",
   "voiceSettings.error":
-    "Operation failed. Reload settings and check credentials, balance, and region.",
-  "voiceSettings.title": "Voice recognition settings",
+    "فشلت العملية. أعد تحميل الإعدادات وتحقق من بيانات الاعتماد والرصيد والمنطقة.",
+  "voiceSettings.title": "إعدادات التعرف على الصوت",
   "voiceSettings.description":
-    "Shared site service, configured only by administrators. Saved secrets are never displayed. Leave fields blank to keep credentials saved here.",
-  "voiceSettings.configured": "Credentials configured",
-  "voiceSettings.unconfigured": "Not configured",
-  "voiceSettings.masterKey":
-    "First set an independent FLAREMO_VOICE_CONFIG_KEY (at least 32 characters) in Worker Secrets for encrypted storage.",
+    "خدمة مشتركة على مستوى الموقع، لا يمكن ضبطها إلا من قِبل مالك النسخة. الأسرار المحفوظة لا تُعرض أبدًا. اترك الحقول فارغة للاحتفاظ ببيانات الاعتماد المحفوظة.",
+  "voiceSettings.configured": "بيانات الاعتماد مُعدّة",
+  "voiceSettings.unconfigured": "غير مُعدّة",
+  "voiceSettings.envManaged":
+    "تأتي بيانات الاعتماد حاليًا من متغيرات البيئة (FLAREMO_ASR_*). ما تحفظه هنا سيسري بعد إزالة تلك المتغيرات.",
+  "voiceSettings.plainStore":
+    "لا يوجد مفتاح تشفير (FLAREMO_VOICE_CONFIG_KEY)، لذا تُخزَّن بيانات الاعتماد نصًا صريحًا في قاعدة البيانات (D1 مشفّرة على القرص). اضبط المفتاح ثم احفظ مرة أخرى للترقية إلى التخزين المشفّر.",
   "voiceSettings.unreadable":
-    "Cannot decrypt saved credentials. Restore the encryption key, or delete and replace the credentials.",
-  "voiceSettings.saved": "Settings saved.",
-  "voiceSettings.provider": "Provider",
+    "تعذّر فك تشفير بيانات الاعتماد المحفوظة. استعد مفتاح التشفير، أو احذف بيانات الاعتماد وأعد إدخالها.",
+  "voiceSettings.saved": "تم حفظ الإعدادات.",
+  "voiceSettings.provider": "المزوّد",
   "voiceSettings.tencent": "Tencent Cloud",
-  "voiceSettings.model": "Recognition model (blank uses the default)",
-  "voiceSettings.enabled": "Enable voice capture",
-  "voiceSettings.save": "Save settings",
+  "voiceSettings.model": "نموذج التعرّف (فارغ = الافتراضي)",
+  "voiceSettings.appId": "AppID الخاص بـ Tencent Cloud",
+  "voiceSettings.secretId": "SecretId الخاص بـ Tencent Cloud",
+  "voiceSettings.secretKey": "SecretKey الخاص بـ Tencent Cloud",
+  "voiceSettings.apiKey": "مفتاح API الخاص بـ DashScope",
+  "voiceSettings.enabled": "تفعيل الملاحظات الصوتية",
+  "voiceSettings.save": "حفظ الإعدادات",
   "voiceSettings.testWarning":
-    "Connection tests use saved settings and may incur cloud charges. They do not verify transcription quality.",
-  "voiceSettings.testSuccess": "Connection test succeeded.",
-  "voiceSettings.test": "Test saved connection",
+    "تستخدم اختبارات الاتصال الإعدادات السارية وقد تتسبب برسوم سحابية، وهي لا تتحقق من جودة التفريغ النصي.",
+  "voiceSettings.testSuccess": "نجح اختبار الاتصال.",
+  "voiceSettings.test": "اختبار الاتصال المحفوظ",
   "voiceSettings.confirmDelete":
-    "Delete credentials and disable voice capture? Deployment environment keys will not be used as a fallback.",
-  "voiceSettings.deleted": "Credentials deleted. Voice capture disabled.",
-  "voiceSettings.delete": "Delete credentials and disable",
+    "حذف بيانات الاعتماد وتعطيل الملاحظات الصوتية؟ لن تتولى متغيرات البيئة الإعداد تلقائيًا بعد الحذف؛ ستحتاج إلى إعادة الضبط.",
+  "voiceSettings.deleted": "تم حذف بيانات الاعتماد. الملاحظات الصوتية معطّلة.",
+  "voiceSettings.delete": "حذف بيانات الاعتماد وتعطيل",
   "voiceSettings.migration":
-    "Enter all credentials when first switching to site settings or changing provider. Environment secrets are not imported automatically.",
+    "أدخل كل بيانات الاعتماد عند أول انتقال إلى إعدادات الموقع أو تغيير المزوّد. أسرار البيئة لا تُستورد تلقائيًا.",
   "common.search": "بحث",
   "search.placeholder": "ابحث في الملاحظات…",
   "search.semanticPlaceholder": "ابحث: صِف ما تريد باللغة الطبيعية…",

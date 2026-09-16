@@ -4,34 +4,41 @@
 import type { TranslationKey } from "../key";
 
 const messages = {
-  "voiceSettings.loadError": "Could not load voice settings. Refresh to retry.",
+  "voiceSettings.loadError":
+    "音声設定を読み込めませんでした。更新して再試行してください。",
   "voiceSettings.error":
-    "Operation failed. Reload settings and check credentials, balance, and region.",
-  "voiceSettings.title": "Voice recognition settings",
+    "操作に失敗しました。設定を再読み込みし、認証情報・残高・リージョンを確認してください。",
+  "voiceSettings.title": "音声認識設定",
   "voiceSettings.description":
-    "Shared site service, configured only by administrators. Saved secrets are never displayed. Leave fields blank to keep credentials saved here.",
-  "voiceSettings.configured": "Credentials configured",
-  "voiceSettings.unconfigured": "Not configured",
-  "voiceSettings.masterKey":
-    "First set an independent FLAREMO_VOICE_CONFIG_KEY (at least 32 characters) in Worker Secrets for encrypted storage.",
+    "サイト全体で共有されるサービスで、インスタンス所有者のみ設定できます。保存したシークレットは表示されません。空欄のまま保存すると既存の認証情報が維持されます。",
+  "voiceSettings.configured": "認証情報が設定済み",
+  "voiceSettings.unconfigured": "未設定",
+  "voiceSettings.envManaged":
+    "現在は環境変数（FLAREMO_ASR_*）の認証情報が有効です。ここで保存した設定は、環境変数を削除した後に有効になります。",
+  "voiceSettings.plainStore":
+    "暗号化キー（FLAREMO_VOICE_CONFIG_KEY）が未設定のため、認証情報はデータベースに平文で保存されます（D1 は保存時暗号化に対応）。キーを設定して再度保存すると暗号化保存に移行します。",
   "voiceSettings.unreadable":
-    "Cannot decrypt saved credentials. Restore the encryption key, or delete and replace the credentials.",
-  "voiceSettings.saved": "Settings saved.",
-  "voiceSettings.provider": "Provider",
+    "保存済みの認証情報を復号できません。暗号化キーを復元するか、認証情報を削除して再設定してください。",
+  "voiceSettings.saved": "設定を保存しました。",
+  "voiceSettings.provider": "プロバイダー",
   "voiceSettings.tencent": "Tencent Cloud",
-  "voiceSettings.model": "Recognition model (blank uses the default)",
-  "voiceSettings.enabled": "Enable voice capture",
-  "voiceSettings.save": "Save settings",
+  "voiceSettings.model": "認識モデル（空欄でデフォルト）",
+  "voiceSettings.appId": "Tencent Cloud AppID",
+  "voiceSettings.secretId": "Tencent Cloud SecretId",
+  "voiceSettings.secretKey": "Tencent Cloud SecretKey",
+  "voiceSettings.apiKey": "DashScope API キー",
+  "voiceSettings.enabled": "音声メモを有効化",
+  "voiceSettings.save": "設定を保存",
   "voiceSettings.testWarning":
-    "Connection tests use saved settings and may incur cloud charges. They do not verify transcription quality.",
-  "voiceSettings.testSuccess": "Connection test succeeded.",
-  "voiceSettings.test": "Test saved connection",
+    "接続テストは現在有効な設定を使用し、クラウド料金が発生する場合があります。文字起こし品質は検証しません。",
+  "voiceSettings.testSuccess": "接続テストに成功しました。",
+  "voiceSettings.test": "保存した接続をテスト",
   "voiceSettings.confirmDelete":
-    "Delete credentials and disable voice capture? Deployment environment keys will not be used as a fallback.",
-  "voiceSettings.deleted": "Credentials deleted. Voice capture disabled.",
-  "voiceSettings.delete": "Delete credentials and disable",
+    "認証情報を削除して音声メモを無効化しますか？削除後も環境変数は自動的に引き継がれません。再度設定が必要です。",
+  "voiceSettings.deleted": "認証情報を削除しました。音声メモは無効です。",
+  "voiceSettings.delete": "認証情報を削除して無効化",
   "voiceSettings.migration":
-    "Enter all credentials when first switching to site settings or changing provider. Environment secrets are not imported automatically.",
+    "サイト設定へ切り替え時やプロバイダー変更時は、すべての認証情報を入力してください。環境変数のシークレットは自動取り込みされません。",
   "common.search": "検索",
   "search.placeholder": "ノートを検索…",
   "search.semanticPlaceholder": "探す：自然言語で入力…",

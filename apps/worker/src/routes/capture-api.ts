@@ -9,13 +9,13 @@ import { rateLimitGuard } from "../rate-limit";
 export const captureApi = new Hono<HonoBindings>();
 captureApi.get("/status", async (c) => {
   try {
-    await getBrowserRequestContext(c);
-    const configured = await resolveVoiceService(c.env);
+    const { db } = await getBrowserRequestContext(c);
+    const configured = await resolveVoiceService(c.env, db);
     const available = Boolean(configured);
     return c.json(
       {
         available,
-        provider: null,
+        provider: configured?.id ?? null,
         streaming: available,
       },
       200,
@@ -27,11 +27,11 @@ captureApi.get("/status", async (c) => {
 });
 captureApi.get("/ws", async (c) => {
   try {
-    const { user } = await getBrowserRequestContext(c);
+    const { user, db } = await getBrowserRequestContext(c);
     const origin = c.req.header("origin");
     if (!origin || !getTrustedOrigins(c.env).includes(origin))
       return c.text("Forbidden", 403);
-    const configured = await resolveVoiceService(c.env);
+    const configured = await resolveVoiceService(c.env, db);
     if (!configured) return c.text("ASR unavailable", 503);
     if (c.req.header("upgrade")?.toLowerCase() !== "websocket")
       return c.text("Expected WebSocket upgrade", 426);
@@ -41,7 +41,7 @@ captureApi.get("/ws", async (c) => {
     pair[1].accept();
     bridgeCapture(pair[1], configured.provider, async () => {
       const context = await getBrowserRequestContext(c);
-      if (!(await resolveVoiceService(c.env)))
+      if (!(await resolveVoiceService(c.env, context.db)))
         throw new Error("Voice service disabled");
       return context;
     });

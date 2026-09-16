@@ -8,29 +8,35 @@ const messages = {
     "操作失败，请刷新配置后重试；检查凭据、余额和服务区域。",
   "voiceSettings.title": "语音识别设置",
   "voiceSettings.description":
-    "全站共享服务，仅管理员可配置。保存的密钥不会回显，留空保留已存凭据。",
+    "全站共享服务，仅实例所有者可配置。保存的密钥不会回显，留空保留已存凭据。",
   "voiceSettings.configured": "凭据已配置",
   "voiceSettings.unconfigured": "尚未配置",
-  "voiceSettings.masterKey":
-    "请先在 Worker Secrets 设置独立的 FLAREMO_VOICE_CONFIG_KEY（至少 32 字符），用于加密存储。",
+  "voiceSettings.envManaged":
+    "当前由环境变量（FLAREMO_ASR_*）提供凭据，此处保存的配置将在移除环境变量后生效。",
+  "voiceSettings.plainStore":
+    "未设置加密密钥（FLAREMO_VOICE_CONFIG_KEY），凭据将以明文存入数据库（D1 自带静态加密）；配置密钥后再次保存即可升级为加密存储。",
   "voiceSettings.unreadable":
     "无法解密原凭据。请恢复加密密钥，或删除凭据后重新配置。",
   "voiceSettings.saved": "配置已保存。",
   "voiceSettings.provider": "服务商",
   "voiceSettings.tencent": "腾讯云",
   "voiceSettings.model": "识别模型（留空使用默认）",
+  "voiceSettings.appId": "腾讯云 AppID",
+  "voiceSettings.secretId": "腾讯云 SecretId",
+  "voiceSettings.secretKey": "腾讯云 SecretKey",
+  "voiceSettings.apiKey": "DashScope API Key",
   "voiceSettings.enabled": "启用语音记录",
   "voiceSettings.save": "保存配置",
   "voiceSettings.testWarning":
-    "连接测试使用已保存的配置，可能产生少量云服务费用，不验证实际转写质量。",
+    "连接测试使用当前生效的配置，可能产生少量云服务费用，不验证实际转写质量。",
   "voiceSettings.testSuccess": "连接测试成功。",
   "voiceSettings.test": "测试已保存的连接",
   "voiceSettings.confirmDelete":
-    "删除凭据并停用语音服务？不会自动回退到部署环境中的 Key。",
+    "删除凭据并停用语音服务？删除后环境变量不会自动接管，需重新配置。",
   "voiceSettings.deleted": "凭据已删除，语音服务已停用。",
   "voiceSettings.delete": "删除凭据并停用",
   "voiceSettings.migration":
-    "首次改用站点设置或切换服务商时，请填写全部凭据；不会自动导入部署环境的密钥。",
+    "首次改用站点设置或切换服务商时，请填写全部凭据；部署环境的密钥不会自动导入。",
   "common.search": "搜索",
   "search.placeholder": "搜索记录…",
   "search.semanticPlaceholder": "找一找：用自然语言描述…",

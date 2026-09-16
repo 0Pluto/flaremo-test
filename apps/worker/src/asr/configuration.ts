@@ -1,4 +1,4 @@
-import { createDb } from "@flaremo/db";
+import type { FlareMoDb } from "@flaremo/db";
 import { readVoiceService } from "@flaremo/domain";
 import { z } from "zod";
 import type { FlareMoEnv } from "../env";
@@ -16,9 +16,17 @@ export const voiceCredentialsSchema = z
   .strict();
 export type VoiceCredentials = z.infer<typeof voiceCredentialsSchema>;
 const aad = new TextEncoder().encode("flaremo:voice-service:v1");
-async function encryptionKey(secret: string | undefined) {
-  if (!secret || secret.length < 32)
-    throw new Error("Voice encryption key unavailable");
+
+function hasEncryptionKey(secret: string | undefined) {
+  return Boolean(secret && secret.length >= 32);
+}
+
+/** UI hint: whether saved credentials can be encrypted at rest. */
+export function canEncryptVoiceCredentials(secret: string | undefined) {
+  return hasEncryptionKey(secret);
+}
+
+async function encryptionKey(secret: string) {
   const hash = await crypto.subtle.digest(
     "SHA-256",
     new TextEncoder().encode(secret),
@@ -28,14 +36,22 @@ async function encryptionKey(secret: string | undefined) {
     "decrypt",
   ]);
 }
+
+// Envelope v0 stores the credentials as JSON (D1 is encrypted at rest);
+// v1 is AES-GCM ciphertext bound to the static AAD. A v1 envelope without
+// the matching key fails closed on open.
 export async function sealVoiceCredentials(
   secret: string | undefined,
   value: VoiceCredentials,
 ) {
+  if (!secret || !hasEncryptionKey(secret)) {
+    return JSON.stringify({ v: 0, data: value });
+  }
+  const key = await encryptionKey(secret);
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const ciphertext = await crypto.subtle.encrypt(
     { name: "AES-GCM", iv, additionalData: aad },
-    await encryptionKey(secret),
+    key,
     new TextEncoder().encode(JSON.stringify(value)),
   );
   return JSON.stringify({
@@ -44,21 +60,27 @@ export async function sealVoiceCredentials(
     data: Array.from(new Uint8Array(ciphertext)),
   });
 }
+
 export async function openVoiceCredentials(
   secret: string | undefined,
   envelope: string,
 ) {
   const value = JSON.parse(envelope);
+  if (value.v === 0) return voiceCredentialsSchema.parse(value.data);
   if (value.v !== 1) throw new Error("Invalid credential version");
+  if (!secret || !hasEncryptionKey(secret))
+    throw new Error("Voice encryption key unavailable");
+  const key = await encryptionKey(secret);
   const plaintext = await crypto.subtle.decrypt(
     { name: "AES-GCM", iv: new Uint8Array(value.iv), additionalData: aad },
-    await encryptionKey(secret),
+    key,
     new Uint8Array(value.data),
   );
   return voiceCredentialsSchema.parse(
     JSON.parse(new TextDecoder().decode(plaintext)),
   );
 }
+
 export function configuredVoice(value: VoiceCredentials) {
   return getConfiguredAsr({
     FLAREMO_ASR_PROVIDER: value.provider,
@@ -69,8 +91,14 @@ export function configuredVoice(value: VoiceCredentials) {
     FLAREMO_ASR_DASHSCOPE_API_KEY: value.apiKey,
   });
 }
-export async function resolveVoiceService(env: FlareMoEnv) {
-  const row = await readVoiceService(createDb(env.DB));
+
+// Deployment-level environment credentials win when they fully resolve; the
+// database copy (saved from the settings UI) applies otherwise. Callers pass
+// the request-scoped database handle.
+export async function resolveVoiceService(env: FlareMoEnv, db: FlareMoDb) {
+  const fromEnv = getConfiguredAsr(env);
+  if (fromEnv) return fromEnv;
+  const row = await readVoiceService(db);
   if (!row) return null;
   if (!row.enabled || !row.ciphertext) return null;
   try {
@@ -78,6 +106,6 @@ export async function resolveVoiceService(env: FlareMoEnv) {
       await openVoiceCredentials(env.FLAREMO_VOICE_CONFIG_KEY, row.ciphertext),
     );
   } catch {
-    return null;
-  } // Never silently fall back to environment credentials.
+    return null; // Unreadable stored credentials fail closed.
+  }
 }

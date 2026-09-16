@@ -5,34 +5,42 @@
 import type { TranslationKey } from "../key";
 
 const messages = {
-  "voiceSettings.loadError": "Could not load voice settings. Refresh to retry.",
+  "voiceSettings.loadError":
+    "음성 설정을 불러오지 못했습니다. 새로고침 후 다시 시도하세요.",
   "voiceSettings.error":
-    "Operation failed. Reload settings and check credentials, balance, and region.",
-  "voiceSettings.title": "Voice recognition settings",
+    "작업이 실패했습니다. 설정을 다시 불러오고 자격 증명, 잔액, 리전을 확인하세요.",
+  "voiceSettings.title": "음성 인식 설정",
   "voiceSettings.description":
-    "Shared site service, configured only by administrators. Saved secrets are never displayed. Leave fields blank to keep credentials saved here.",
-  "voiceSettings.configured": "Credentials configured",
-  "voiceSettings.unconfigured": "Not configured",
-  "voiceSettings.masterKey":
-    "First set an independent FLAREMO_VOICE_CONFIG_KEY (at least 32 characters) in Worker Secrets for encrypted storage.",
+    "사이트 전체 공유 서비스로, 인스턴스 소유자만 설정할 수 있습니다. 저장된 시크릿은 표시되지 않습니다. 필드를 비워 두면 저장된 자격 증명이 유지됩니다.",
+  "voiceSettings.configured": "자격 증명 설정됨",
+  "voiceSettings.unconfigured": "구성되지 않음",
+  "voiceSettings.envManaged":
+    "현재 자격 증명은 환경 변수(FLAREMO_ASR_*)에서 제공됩니다. 여기에 저장한 설정은 환경 변수를 제거한 후 적용됩니다.",
+  "voiceSettings.plainStore":
+    "암호화 키(FLAREMO_VOICE_CONFIG_KEY)가 설정되지 않아 자격 증명이 데이터베이스에 평문으로 저장됩니다(D1은 저장 시 암호화 지원). 키를 설정하고 다시 저장하면 암호화 저장으로 전환됩니다.",
   "voiceSettings.unreadable":
-    "Cannot decrypt saved credentials. Restore the encryption key, or delete and replace the credentials.",
-  "voiceSettings.saved": "Settings saved.",
-  "voiceSettings.provider": "Provider",
+    "저장된 자격 증명을 복호화할 수 없습니다. 암호화 키를 복원하거나, 자격 증명을 삭제한 후 다시 입력하세요.",
+  "voiceSettings.saved": "설정이 저장되었습니다.",
+  "voiceSettings.provider": "공급자",
   "voiceSettings.tencent": "Tencent Cloud",
-  "voiceSettings.model": "Recognition model (blank uses the default)",
-  "voiceSettings.enabled": "Enable voice capture",
-  "voiceSettings.save": "Save settings",
+  "voiceSettings.model": "인식 모델(비우면 기본값)",
+  "voiceSettings.appId": "Tencent Cloud AppID",
+  "voiceSettings.secretId": "Tencent Cloud SecretId",
+  "voiceSettings.secretKey": "Tencent Cloud SecretKey",
+  "voiceSettings.apiKey": "DashScope API 키",
+  "voiceSettings.enabled": "음성 메모 활성화",
+  "voiceSettings.save": "설정 저장",
   "voiceSettings.testWarning":
-    "Connection tests use saved settings and may incur cloud charges. They do not verify transcription quality.",
-  "voiceSettings.testSuccess": "Connection test succeeded.",
-  "voiceSettings.test": "Test saved connection",
+    "연결 테스트는 현재 적용 중인 설정을 사용하며 클라우드 요금이 발생할 수 있습니다. 전사 품질은 검증하지 않습니다.",
+  "voiceSettings.testSuccess": "연결 테스트에 성공했습니다.",
+  "voiceSettings.test": "저장된 연결 테스트",
   "voiceSettings.confirmDelete":
-    "Delete credentials and disable voice capture? Deployment environment keys will not be used as a fallback.",
-  "voiceSettings.deleted": "Credentials deleted. Voice capture disabled.",
-  "voiceSettings.delete": "Delete credentials and disable",
+    "자격 증명을 삭제하고 음성 메모를 비활성화할까요? 삭제 후 환경 변수가 자동으로 대체되지 않으므로 다시 설정해야 합니다.",
+  "voiceSettings.deleted":
+    "자격 증명이 삭제되었습니다. 음성 메모가 비활성화되었습니다.",
+  "voiceSettings.delete": "자격 증명 삭제 및 비활성화",
   "voiceSettings.migration":
-    "Enter all credentials when first switching to site settings or changing provider. Environment secrets are not imported automatically.",
+    "사이트 설정으로 처음 전환하거나 공급자를 변경할 때는 모든 자격 증명을 입력하세요. 환경 변수 시크릿은 자동으로 가져오지 않습니다.",
   "common.search": "검색",
   "search.placeholder": "노트 검색…",
   "search.semanticPlaceholder": "찾기: 자연어로 설명…",

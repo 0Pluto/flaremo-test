@@ -4,34 +4,42 @@
 import type { TranslationKey } from "../key";
 
 const messages = {
-  "voiceSettings.loadError": "Could not load voice settings. Refresh to retry.",
+  "voiceSettings.loadError":
+    "Не удалось загрузить настройки голоса. Обновите страницу и повторите попытку.",
   "voiceSettings.error":
-    "Operation failed. Reload settings and check credentials, balance, and region.",
-  "voiceSettings.title": "Voice recognition settings",
+    "Операция не удалась. Перезагрузите настройки и проверьте учётные данные, баланс и регион.",
+  "voiceSettings.title": "Настройки распознавания речи",
   "voiceSettings.description":
-    "Shared site service, configured only by administrators. Saved secrets are never displayed. Leave fields blank to keep credentials saved here.",
-  "voiceSettings.configured": "Credentials configured",
-  "voiceSettings.unconfigured": "Not configured",
-  "voiceSettings.masterKey":
-    "First set an independent FLAREMO_VOICE_CONFIG_KEY (at least 32 characters) in Worker Secrets for encrypted storage.",
+    "Общий сервис сайта, настраиваемый только владельцем инстанса. Сохранённые секреты никогда не отображаются. Оставьте поля пустыми, чтобы сохранить прежние учётные данные.",
+  "voiceSettings.configured": "Учётные данные настроены",
+  "voiceSettings.unconfigured": "Не настроено",
+  "voiceSettings.envManaged":
+    "Сейчас учётные данные берутся из переменных окружения (FLAREMO_ASR_*). Сохранённые здесь настройки вступят в силу после их удаления.",
+  "voiceSettings.plainStore":
+    "Ключ шифрования (FLAREMO_VOICE_CONFIG_KEY) не задан, поэтому учётные данные хранятся в базе данных открытым текстом (D1 шифрует данные на диске). Задайте ключ и сохраните ещё раз, чтобы включить шифрование.",
   "voiceSettings.unreadable":
-    "Cannot decrypt saved credentials. Restore the encryption key, or delete and replace the credentials.",
-  "voiceSettings.saved": "Settings saved.",
-  "voiceSettings.provider": "Provider",
+    "Не удалось расшифровать сохранённые учётные данные. Восстановите ключ шифрования либо удалите учётные данные и введите их заново.",
+  "voiceSettings.saved": "Настройки сохранены.",
+  "voiceSettings.provider": "Поставщик",
   "voiceSettings.tencent": "Tencent Cloud",
-  "voiceSettings.model": "Recognition model (blank uses the default)",
-  "voiceSettings.enabled": "Enable voice capture",
-  "voiceSettings.save": "Save settings",
+  "voiceSettings.model": "Модель распознавания (пусто — по умолчанию)",
+  "voiceSettings.appId": "AppID Tencent Cloud",
+  "voiceSettings.secretId": "SecretId Tencent Cloud",
+  "voiceSettings.secretKey": "SecretKey Tencent Cloud",
+  "voiceSettings.apiKey": "API-ключ DashScope",
+  "voiceSettings.enabled": "Включить голосовые заметки",
+  "voiceSettings.save": "Сохранить настройки",
   "voiceSettings.testWarning":
-    "Connection tests use saved settings and may incur cloud charges. They do not verify transcription quality.",
-  "voiceSettings.testSuccess": "Connection test succeeded.",
-  "voiceSettings.test": "Test saved connection",
+    "Тест подключения использует действующие настройки и может повлечь расходы в облаке. Он не проверяет качество расшифровки.",
+  "voiceSettings.testSuccess": "Проверка соединения прошла успешно.",
+  "voiceSettings.test": "Проверить сохранённое подключение",
   "voiceSettings.confirmDelete":
-    "Delete credentials and disable voice capture? Deployment environment keys will not be used as a fallback.",
-  "voiceSettings.deleted": "Credentials deleted. Voice capture disabled.",
-  "voiceSettings.delete": "Delete credentials and disable",
+    "Удалить учётные данные и отключить голосовые заметки? После удаления переменные окружения не подхватятся автоматически; потребуется повторная настройка.",
+  "voiceSettings.deleted":
+    "Учётные данные удалены. Голосовые заметки отключены.",
+  "voiceSettings.delete": "Удалить учётные данные и отключить",
   "voiceSettings.migration":
-    "Enter all credentials when first switching to site settings or changing provider. Environment secrets are not imported automatically.",
+    "При первом переходе на настройки сайта или смене поставщика введите все учётные данные. Секреты из окружения не импортируются автоматически.",
   "common.search": "Поиск",
   "search.placeholder": "Поиск по заметкам…",
   "search.semanticPlaceholder": "Найти: опишите обычными словами…",

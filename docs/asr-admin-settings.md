@@ -1,5 +1,7 @@
 # 语音识别配置管理（ASR Admin Settings）— 需求与实施文档
 
+> 状态（2026-09-16）：本需求已通过外部贡献 PR #135（edison-land）+ 维护者整合落地。实现与本决策稿有四处偏差，均为有意收敛，详见文末「PR #135 整合结论」。运行时设计文档见 [voice-settings.md](./voice-settings.md)，以下保留原始决策稿作为依据记录。
+
 本文是「在管理 UI 上配置语音识别（ASR）凭证」的需求定义与实施规格。决策依据已锁定，实施按此执行；范围裁剪和后续演进见文末。
 
 背景：PR #131 交付的 `/capture` 语音记录依赖部署者在后台预配 `FLAREMO_ASR_*` 环境变量，侧边栏入口才可见。对自部署用户而言，为启用一个产品功能去 wrangler 控制台配 5 个变量，门槛过高且不可发现。本文将其改为 owner 可在 UI 上完成的配置，环境变量保留为逃生通道。
@@ -147,3 +149,14 @@ export async function resolveAsrConfig(env, db): Promise<...>;
 - 多 provider 并存与按质量自动选择（现合同单 provider，升级点在 `resolveAsrConfig` 返回结构，不破坏现有契约）。
 -用量视图：按用户聚合 capture 会话数，给 owner 看账单归因。
 - 若 SaaS 版出现多租户自配 Key 的需求，再评估 per-owner 密钥 + 信封加密，本期拒绝。
+
+## PR #135 整合结论（2026-09-16 落地）
+
+外部贡献者 edison-land 按同一需求独立实现了完整方案（PR #135），质量很高，经维护者整合后并入 main。与本文原稿的四处偏差及理由：
+
+1. **专用表 `voice_service_config` 取代 settings 表 owner KV**，并引入 revision 乐观锁（两处编辑互不覆盖）与删除墓碑（防旧配置复活）。比原稿更严谨，采纳。
+2. **可选加密信封取代「不做应用层加密」**：设了 ≥32 字符的 `FLAREMO_VOICE_CONFIG_KEY` 即 AES-GCM（AAD 绑定、新 nonce）；未设时以 v0 明文信封落库（D1 静态加密兜底），UI 提示但不阻塞。加密从硬门槛改为可选升级路径，采纳。原文「不做信封加密」作废。
+3. **连接测试保留**：复用 capture 限流桶、8 秒超时、仅握手不发音频、不出上游错误原文。原稿「不做付费探测」过于保守，作废。
+4. **掩码回显与 source 标识按本文执行**：GET 返回密钥字段尾 4 位掩码 + `source`（environment/database/none），env 接管时 UI 明示并置灰；恢复 capture status 的 provider 回显。
+
+维持本文的关键决策：**环境变量 > D1**（PR 原稿删除 env 回退是破坏性变更，整合时恢复）；**owner-only**（PR 原稿放宽到 admin，与品牌卡权限阶梯倒挂，整合时收紧）。「留空 = 保留现值」语义由 PR 实现为同 provider 下空字段继承旧值，等价采纳。

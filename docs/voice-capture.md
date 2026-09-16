@@ -1,6 +1,6 @@
 # Voice Capture
 
-Administrators can now configure shared provider credentials from Account. See [Administrator-managed voice recognition](./voice-settings.md) for setup, encryption, permissions, and site-only credential storage.
+The instance owner can now configure shared provider credentials from Account. See [Owner-managed voice recognition](./voice-settings.md) for setup, precedence over these environment variables, encryption, permissions, and credential storage.
 
 Capture adds an authenticated, foreground voice-to-note flow at `/capture`. The microphone opens only after **Start recording**. Keep the page visible, wait until it says **Recording**, then speak. Stop closes the microphone and waits for the final sentence, then opens an editor. Save produces an ordinary FlareMo note with the `voice` tag and private visibility by default.
 
@@ -11,6 +11,8 @@ The production Service Worker includes `/capture` in FlareMo's authenticated app
 ## Configure a test environment
 
 The deployment needs an external streaming ASR provider: Tencent Cloud or DashScope. The realtime-context reference contains a DashScope connection implementation; it does not supply an account credential. The status endpoint reports configuration readiness, not a successful cloud connection, account permission, or available quota. Reading status does not invoke an ASR service.
+
+Credentials can be configured in the settings UI without any console access ([voice-settings.md](./voice-settings.md)); the `FLAREMO_ASR_*` variables below remain supported as deployment-level configuration and take precedence over the saved settings when they fully resolve.
 
 ### Tencent Cloud
 

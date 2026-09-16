@@ -10,25 +10,31 @@ const messages = {
     "Operation failed. Reload settings and check credentials, balance, and region.",
   "voiceSettings.title": "Voice recognition settings",
   "voiceSettings.description":
-    "Shared site service, configured only by administrators. Saved secrets are never displayed. Leave fields blank to keep credentials saved here.",
+    "Shared site service, configured only by the instance owner. Saved secrets are never displayed. Leave fields blank to keep credentials saved here.",
   "voiceSettings.configured": "Credentials configured",
   "voiceSettings.unconfigured": "Not configured",
-  "voiceSettings.masterKey":
-    "First set an independent FLAREMO_VOICE_CONFIG_KEY (at least 32 characters) in Worker Secrets for encrypted storage.",
+  "voiceSettings.envManaged":
+    "Credentials currently come from environment variables (FLAREMO_ASR_*). Settings saved here take effect after those variables are removed.",
+  "voiceSettings.plainStore":
+    "No encryption key (FLAREMO_VOICE_CONFIG_KEY) is set, so credentials are stored as plaintext in the database (D1 is encrypted at rest). Set the key and save again to upgrade to encrypted storage.",
   "voiceSettings.unreadable":
     "Cannot decrypt saved credentials. Restore the encryption key, or delete and replace the credentials.",
   "voiceSettings.saved": "Settings saved.",
   "voiceSettings.provider": "Provider",
   "voiceSettings.tencent": "Tencent Cloud",
   "voiceSettings.model": "Recognition model (blank uses the default)",
+  "voiceSettings.appId": "Tencent Cloud AppID",
+  "voiceSettings.secretId": "Tencent Cloud SecretId",
+  "voiceSettings.secretKey": "Tencent Cloud SecretKey",
+  "voiceSettings.apiKey": "DashScope API Key",
   "voiceSettings.enabled": "Enable voice capture",
   "voiceSettings.save": "Save settings",
   "voiceSettings.testWarning":
-    "Connection tests use saved settings and may incur cloud charges. They do not verify transcription quality.",
+    "Connection tests use the effective settings and may incur cloud charges. They do not verify transcription quality.",
   "voiceSettings.testSuccess": "Connection test succeeded.",
   "voiceSettings.test": "Test saved connection",
   "voiceSettings.confirmDelete":
-    "Delete credentials and disable voice capture? Deployment environment keys will not be used as a fallback.",
+    "Delete credentials and disable voice capture? Environment variables will not take over automatically afterwards; reconfigure to enable again.",
   "voiceSettings.deleted": "Credentials deleted. Voice capture disabled.",
   "voiceSettings.delete": "Delete credentials and disable",
   "voiceSettings.migration":

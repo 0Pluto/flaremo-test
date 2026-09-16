@@ -7,18 +7,35 @@ import {
   testVoiceSettings,
   type VoiceSettings,
 } from "@/api";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useI18n } from "@/i18n";
 
-// Mounted only after a fresh, user-scoped administrator permission check succeeds.
+type CredentialField = "appId" | "secretId" | "secretKey" | "apiKey";
+const TENCENT_FIELDS: CredentialField[] = ["appId", "secretId", "secretKey"];
+const PROVIDERS = ["tencent", "dashscope"] as const;
+type Provider = (typeof PROVIDERS)[number];
+
+// Mounted only after a fresh, user-scoped owner permission check succeeds.
 export function VoicePanel() {
   const cache = useQueryClient();
   const { t } = useI18n();
   const mounted = useRef(false);
   const [config, setConfig] = useState<VoiceSettings | null>(null);
-  const [provider, setProvider] = useState("tencent");
+  const [provider, setProvider] = useState<Provider>("tencent");
   const [model, setModel] = useState("");
   const [enabled, setEnabled] = useState(true);
   const [fields, setFields] = useState({
@@ -29,6 +46,7 @@ export function VoicePanel() {
   });
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   useEffect(() => {
     let active = true;
     mounted.current = true;
@@ -48,6 +66,13 @@ export function VoicePanel() {
       mounted.current = false;
     };
   }, [t]);
+
+  // Environment credentials take precedence over anything saved here, so
+  // editing the database copy while they are active would be misleading.
+  const envManaged = config?.source === "environment";
+  const editingDisabled =
+    busy || envManaged || !config || (config.unreadable ?? false);
+
   async function run(action: () => Promise<unknown>, success: string) {
     setBusy(true);
     setMessage("");
@@ -70,6 +95,12 @@ export function VoicePanel() {
       if (mounted.current) setBusy(false);
     }
   }
+
+  const previewFor = (field: CredentialField) => {
+    if (provider !== (config?.provider ?? provider)) return "";
+    return config?.previews?.[field] ?? "";
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -82,11 +113,13 @@ export function VoicePanel() {
         {config && (
           <>
             <p>
-              {config.configured
-                ? t("voiceSettings.configured")
-                : t("voiceSettings.unconfigured")}
+              {envManaged
+                ? t("voiceSettings.envManaged")
+                : config.configured
+                  ? t("voiceSettings.configured")
+                  : t("voiceSettings.unconfigured")}
             </p>
-            {!config.canStore && <p>{t("voiceSettings.masterKey")}</p>}
+            {!config.canEncrypt && <p>{t("voiceSettings.plainStore")}</p>}
             {config.unreadable && <p>{t("voiceSettings.unreadable")}</p>}
             <form
               className="space-y-4"
@@ -103,14 +136,15 @@ export function VoicePanel() {
                 );
               }}
             >
-              <label className="block">
-                {t("voiceSettings.provider")}
-                <select
-                  className="block w-full rounded border border-input bg-background p-2 text-foreground [color-scheme:light_dark]"
-                  value={provider}
-                  disabled={busy || !config.canStore}
-                  onChange={(event) => {
-                    setProvider(event.target.value);
+              <div className="flex flex-col gap-1.5 text-sm font-medium">
+                <span>{t("voiceSettings.provider")}</span>
+                <ToggleGroup
+                  variant="outline"
+                  value={provider ? [provider] : []}
+                  disabled={editingDisabled}
+                  onValueChange={(values) => {
+                    if (values.length === 0) return;
+                    setProvider(values[values.length - 1] as Provider);
                     setModel("");
                     setFields({
                       appId: "",
@@ -120,60 +154,60 @@ export function VoicePanel() {
                     });
                   }}
                 >
-                  <option
-                    className="bg-background text-foreground"
-                    value="tencent"
-                  >
+                  <ToggleGroupItem value="tencent">
                     {t("voiceSettings.tencent")}
-                  </option>
-                  <option
-                    className="bg-background text-foreground"
-                    value="dashscope"
-                  >
-                    DashScope
-                  </option>
-                </select>
-              </label>
-              <label className="block" htmlFor="voice-model">
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="dashscope">DashScope</ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+              <label
+                className="flex flex-col gap-1.5 text-sm font-medium"
+                htmlFor="voice-model"
+              >
                 {t("voiceSettings.model")}
                 <Input
+                  autoComplete="off"
+                  disabled={editingDisabled}
                   id="voice-model"
                   value={model}
                   onChange={(event) => setModel(event.target.value)}
-                  disabled={busy || !config.canStore}
                 />
               </label>
               {(provider === "tencent"
-                ? (["appId", "secretId", "secretKey"] as const)
+                ? TENCENT_FIELDS
                 : (["apiKey"] as const)
               ).map((field) => (
-                <label className="block" key={field} htmlFor={`voice-${field}`}>
-                  {field}
+                <label
+                  className="flex flex-col gap-1.5 text-sm font-medium"
+                  key={field}
+                  htmlFor={`voice-${field}`}
+                >
+                  {t(`voiceSettings.${field}`)}
                   <Input
-                    id={`voice-${field}`}
-                    type="password"
                     autoComplete="new-password"
+                    disabled={editingDisabled}
+                    id={`voice-${field}`}
+                    placeholder={previewFor(field)}
+                    type="password"
                     value={fields[field]}
-                    disabled={busy || !config.canStore}
                     onChange={(event) =>
                       setFields({ ...fields, [field]: event.target.value })
                     }
                   />
                 </label>
               ))}
-              <label className="flex gap-2">
-                <input
-                  type="checkbox"
+              <div className="flex items-center gap-2">
+                <Switch
                   checked={enabled}
-                  disabled={busy || !config.canStore}
-                  onChange={(event) => setEnabled(event.target.checked)}
+                  disabled={editingDisabled}
+                  id="voice-enabled"
+                  onCheckedChange={setEnabled}
                 />
-                {t("voiceSettings.enabled")}
-              </label>
-              <Button
-                type="submit"
-                disabled={busy || !config.canStore || config.unreadable}
-              >
+                <label className="text-sm font-medium" htmlFor="voice-enabled">
+                  {t("voiceSettings.enabled")}
+                </label>
+              </div>
+              <Button disabled={editingDisabled} type="submit">
                 {t("voiceSettings.save")}
               </Button>
             </form>
@@ -192,14 +226,8 @@ export function VoicePanel() {
               </Button>
               <Button
                 variant="destructive"
-                disabled={busy}
-                onClick={() => {
-                  if (window.confirm(t("voiceSettings.confirmDelete")))
-                    void run(
-                      () => deleteVoiceSettings(config.revision),
-                      t("voiceSettings.deleted"),
-                    );
-                }}
+                disabled={busy || !config.revision}
+                onClick={() => setConfirmDelete(true)}
               >
                 {t("voiceSettings.delete")}
               </Button>
@@ -207,6 +235,33 @@ export function VoicePanel() {
           </>
         )}
         <p role="status">{message}</p>
+        <AlertDialog onOpenChange={setConfirmDelete} open={confirmDelete}>
+          <AlertDialogContent size="sm">
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t("voiceSettings.delete")}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t("voiceSettings.confirmDelete")}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel variant="ghost">
+                {t("common.cancel")}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                onClick={() => {
+                  if (config)
+                    void run(
+                      () => deleteVoiceSettings(config.revision),
+                      t("voiceSettings.deleted"),
+                    );
+                }}
+              >
+                {t("voiceSettings.delete")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );

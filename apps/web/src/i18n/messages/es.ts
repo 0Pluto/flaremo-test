@@ -5,34 +5,44 @@
 import type { TranslationKey } from "../key";
 
 const messages = {
-  "voiceSettings.loadError": "Could not load voice settings. Refresh to retry.",
+  "voiceSettings.loadError":
+    "No se pudo cargar la configuración de voz. Actualiza para reintentar.",
   "voiceSettings.error":
-    "Operation failed. Reload settings and check credentials, balance, and region.",
-  "voiceSettings.title": "Voice recognition settings",
+    "La operación falló. Vuelve a cargar la configuración y comprueba las credenciales, el saldo y la región.",
+  "voiceSettings.title": "Ajustes de reconocimiento de voz",
   "voiceSettings.description":
-    "Shared site service, configured only by administrators. Saved secrets are never displayed. Leave fields blank to keep credentials saved here.",
-  "voiceSettings.configured": "Credentials configured",
-  "voiceSettings.unconfigured": "Not configured",
-  "voiceSettings.masterKey":
-    "First set an independent FLAREMO_VOICE_CONFIG_KEY (at least 32 characters) in Worker Secrets for encrypted storage.",
+    "Servicio compartido del sitio, configurable solo por el propietario de la instancia. Los secretos guardados nunca se muestran. Deja los campos vacíos para conservar las credenciales guardadas.",
+  "voiceSettings.configured": "Credenciales configuradas",
+  "voiceSettings.unconfigured": "Sin configurar",
+  "voiceSettings.envManaged":
+    "Las credenciales provienen actualmente de variables de entorno (FLAREMO_ASR_*). Lo que guardes aquí surtirá efecto tras eliminar esas variables.",
+  "voiceSettings.plainStore":
+    "No hay clave de cifrado (FLAREMO_VOICE_CONFIG_KEY), así que las credenciales se guardan en claro en la base de datos (D1 cifra en reposo). Configura la clave y vuelve a guardar para cifrarlas.",
   "voiceSettings.unreadable":
-    "Cannot decrypt saved credentials. Restore the encryption key, or delete and replace the credentials.",
-  "voiceSettings.saved": "Settings saved.",
-  "voiceSettings.provider": "Provider",
+    "No se pueden descifrar las credenciales guardadas. Restaura la clave de cifrado, o elimina las credenciales y vuélvelas a introducir.",
+  "voiceSettings.saved": "Configuración guardada.",
+  "voiceSettings.provider": "Proveedor",
   "voiceSettings.tencent": "Tencent Cloud",
-  "voiceSettings.model": "Recognition model (blank uses the default)",
-  "voiceSettings.enabled": "Enable voice capture",
-  "voiceSettings.save": "Save settings",
+  "voiceSettings.model":
+    "Modelo de reconocimiento (vacío usa el predeterminado)",
+  "voiceSettings.appId": "AppID de Tencent Cloud",
+  "voiceSettings.secretId": "SecretId de Tencent Cloud",
+  "voiceSettings.secretKey": "SecretKey de Tencent Cloud",
+  "voiceSettings.apiKey": "Clave de API de DashScope",
+  "voiceSettings.enabled": "Activar notas de voz",
+  "voiceSettings.save": "Guardar ajustes",
   "voiceSettings.testWarning":
-    "Connection tests use saved settings and may incur cloud charges. They do not verify transcription quality.",
-  "voiceSettings.testSuccess": "Connection test succeeded.",
-  "voiceSettings.test": "Test saved connection",
+    "Las pruebas de conexión usan la configuración vigente y pueden generar cargos en la nube. No verifican la calidad de la transcripción.",
+  "voiceSettings.testSuccess":
+    "La prueba de conexión se realizó correctamente.",
+  "voiceSettings.test": "Probar la conexión guardada",
   "voiceSettings.confirmDelete":
-    "Delete credentials and disable voice capture? Deployment environment keys will not be used as a fallback.",
-  "voiceSettings.deleted": "Credentials deleted. Voice capture disabled.",
-  "voiceSettings.delete": "Delete credentials and disable",
+    "¿Eliminar las credenciales y desactivar las notas de voz? Después las variables de entorno no tomarán el control automáticamente; habrá que reconfigurar.",
+  "voiceSettings.deleted":
+    "Credenciales eliminadas. Las notas de voz están desactivadas.",
+  "voiceSettings.delete": "Eliminar credenciales y desactivar",
   "voiceSettings.migration":
-    "Enter all credentials when first switching to site settings or changing provider. Environment secrets are not imported automatically.",
+    "Introduce todas las credenciales al cambiar por primera vez a la configuración del sitio o de proveedor. Los secretos del entorno no se importan automáticamente.",
   "common.search": "Buscar",
   "search.placeholder": "Buscar notas…",
   "search.semanticPlaceholder": "Buscar: descríbelo en lenguaje natural…",

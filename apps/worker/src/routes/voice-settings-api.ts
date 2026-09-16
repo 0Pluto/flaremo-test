@@ -8,12 +8,15 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { z } from "zod";
 import {
+  canEncryptVoiceCredentials,
   configuredVoice,
   openVoiceCredentials,
   resolveVoiceService,
   sealVoiceCredentials,
+  type VoiceCredentials,
   voiceCredentialsSchema,
 } from "../asr/configuration";
+import { getConfiguredAsr } from "../asr/provider";
 import { getBrowserRequestContext, type HonoBindings } from "../context";
 import { jsonError } from "../http";
 import { rateLimitGuard } from "../rate-limit";
@@ -24,17 +27,26 @@ voiceSettingsApi.use("*", async (c, next) => {
   try {
     const { user } = await getBrowserRequestContext(c);
     if (!canManageVoiceService(user))
-      throw new ForbiddenError("Administrator required");
+      throw new ForbiddenError("Owner access is required.");
     return await next();
   } catch (error) {
     return jsonError(c, error);
   }
 });
 voiceSettingsApi.use("*", bodyLimit({ maxSize: 8192 }));
+
+// Secrets are write-only: masked previews are computed server-side and full
+// values never leave the Worker. AppID is a non-secret account identifier.
+function maskCredential(value: string) {
+  if (!value) return "";
+  if (value.length <= 4) return "****";
+  return `****${value.slice(-4)}`;
+}
+
 voiceSettingsApi.get("/", async (c) => {
   const { db } = await getBrowserRequestContext(c);
   const row = await readVoiceService(db);
-  let credentials = null;
+  let credentials: VoiceCredentials | null = null;
   let unreadable = false;
   if (row?.ciphertext) {
     try {
@@ -46,21 +58,39 @@ voiceSettingsApi.get("/", async (c) => {
       unreadable = true;
     }
   }
+  const envConfigured = getConfiguredAsr(c.env);
+  const envManaged = Boolean(envConfigured);
   return c.json(
     {
       revision: row?.revision ?? null,
       enabled: Boolean(row?.enabled && credentials),
-      source: "database",
-      configured: Boolean(credentials),
-      provider: credentials?.provider ?? null,
+      source: envManaged
+        ? ("environment" as const)
+        : credentials
+          ? ("database" as const)
+          : ("none" as const),
+      configured: envManaged || Boolean(credentials),
+      provider: envManaged
+        ? (envConfigured?.id ?? null)
+        : (credentials?.provider ?? null),
       model: credentials?.model ?? "",
       unreadable,
-      canStore: (c.env.FLAREMO_VOICE_CONFIG_KEY?.length ?? 0) >= 32,
+      previews: credentials
+        ? {
+            appId: credentials.appId,
+            secretId: maskCredential(credentials.secretId),
+            secretKey: maskCredential(credentials.secretKey),
+            apiKey: maskCredential(credentials.apiKey),
+          }
+        : null,
+      encrypted: Boolean(row?.ciphertext?.startsWith('{"v":1')),
+      canEncrypt: canEncryptVoiceCredentials(c.env.FLAREMO_VOICE_CONFIG_KEY),
     },
     200,
     { "Cache-Control": "no-store" },
   );
 });
+
 const inputSchema = z
   .object({
     revision: z.string().nullable(),
@@ -79,16 +109,6 @@ voiceSettingsApi.put("/", async (c) => {
     return c.json(
       { error: { message: "Configuration changed. Reload before saving." } },
       409,
-    );
-  if ((c.env.FLAREMO_VOICE_CONFIG_KEY?.length ?? 0) < 32)
-    return c.json(
-      {
-        error: {
-          message:
-            "Configure FLAREMO_VOICE_CONFIG_KEY in Worker secrets first.",
-        },
-      },
-      503,
     );
   const value = input.credentials;
   if (row?.ciphertext) {
@@ -158,12 +178,13 @@ voiceSettingsApi.delete("/", async (c) => {
   return c.json({ ok: true }); // A disabled tombstone prevents any implicit reactivation after deletion.
 });
 
-// Tests the saved configuration only; it never returns upstream error text.
+// Tests the effective configuration (environment or saved); it never returns
+// upstream error text.
 voiceSettingsApi.post("/test", async (c) => {
-  const { user } = await getBrowserRequestContext(c);
+  const { user, db } = await getBrowserRequestContext(c);
   const limited = await rateLimitGuard(c, "capture", user.id);
   if (limited) return limited;
-  const configured = await resolveVoiceService(c.env);
+  const configured = await resolveVoiceService(c.env, db);
   if (!configured)
     return c.json({ error: { message: "Voice service unavailable" } }, 503);
   const abort = new AbortController();

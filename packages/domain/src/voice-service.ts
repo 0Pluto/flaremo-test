@@ -1,16 +1,12 @@
 import { type FlareMoDb, voiceServiceConfig } from "@flaremo/db";
 import { and, eq } from "drizzle-orm";
 
-import {
-  isInstanceOwner,
-  isTeamAdmin,
-  type TeamViewer,
-} from "./team-permissions";
+import { isInstanceOwner, type TeamViewer } from "./team-permissions";
 
-// Voice configuration is shared by this deployment. Reuse its existing
-// administrator membership; do not grant access to other owner-only settings.
+// Voice credentials are billing-level instance secrets, so management stays
+// at the same owner-only tier as branding and other instance-wide settings.
 export function canManageVoiceService(user: TeamViewer | null): boolean {
-  return isInstanceOwner(user) || isTeamAdmin(user);
+  return isInstanceOwner(user);
 }
 
 export async function readVoiceService(db: FlareMoDb) {
