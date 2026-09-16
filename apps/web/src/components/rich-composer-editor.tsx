@@ -20,6 +20,20 @@ export type RichComposerEditorProps = {
   onImageFiles: (files: File[], position: number) => void;
   /** Enter without IME composition. */
   onSubmitRequest: () => void;
+  /**
+   * Plain Enter submits the note (composer behavior). Turn off for the card
+   * inline editor, where plain Enter keeps editing and Cmd/Ctrl+Enter saves.
+   */
+  submitOnEnter?: boolean;
+  /** Escape exits editing (card inline editor). */
+  onEscape?: () => void;
+  /** Move the caret to the end right after mount. */
+  autoFocus?: boolean;
+  /**
+   * DOM id of the editable element. The composer's id is load-bearing (global
+   * "c" shortcut and PWA compose focus); other surfaces must pass their own.
+   */
+  inputId?: string;
   /** Shared ref so the toolbar and the upload chain can drive the editor. */
   editorRef: React.RefObject<Editor | null>;
 };
@@ -41,6 +55,8 @@ function caretInListItem(view: EditorView): boolean {
  * Bear-style WYSIWYG body of the memo composer. Storage stays plain markdown:
  * the official Markdown extension parses it on the way in and serializes on
  * the way out, so cards, the API, and MCP all keep seeing ordinary GFM text.
+ * Loaded through the lazy wrapper (`rich-composer-editor-lazy`) so TipTap
+ * stays out of the startup bundle.
  */
 export function RichComposerEditor({
   content,
@@ -50,7 +66,11 @@ export function RichComposerEditor({
   onContentChange,
   onImageFiles,
   onSubmitRequest,
+  submitOnEnter = true,
+  onEscape,
+  autoFocus = false,
   editorRef,
+  inputId = "flaremo-composer-input",
 }: RichComposerEditorProps) {
   // Callbacks are read through refs: TipTap captures the options object once,
   // so prop closures would go stale across renders.
@@ -60,6 +80,8 @@ export function RichComposerEditor({
   onImageFilesRef.current = onImageFiles;
   const onSubmitRequestRef = useRef(onSubmitRequest);
   onSubmitRequestRef.current = onSubmitRequest;
+  const onEscapeRef = useRef(onEscape);
+  onEscapeRef.current = onEscape;
   // The markdown last pushed downstream. Guards the restore effect against
   // re-parsing the editor's own output (which would fight the update loop).
   const lastEmittedRef = useRef(content);
@@ -85,7 +107,7 @@ export function RichComposerEditor({
     ],
     editorProps: {
       attributes: {
-        id: "flaremo-composer-input",
+        id: inputId,
         "aria-label": ariaLabel,
         class: "composer-editor-content",
       },
@@ -95,17 +117,27 @@ export function RichComposerEditor({
         // Enter must continue the checklist instead of cutting the note off
         // after its first item.
         if (
-          event.key !== "Enter" ||
-          event.isComposing ||
-          event.keyCode === 229
+          event.key !== "Enter" &&
+          event.key !== "Escape" &&
+          event.keyCode !== 229
         ) {
           return false;
         }
+        if (event.key === "Escape") {
+          if (event.isComposing) return false;
+          if (onEscapeRef.current) {
+            onEscapeRef.current();
+            return true;
+          }
+          return false;
+        }
+        if (event.isComposing || event.keyCode === 229) return false;
         if (event.metaKey || event.ctrlKey) {
           onSubmitRequestRef.current();
           return true;
         }
-        if (!event.shiftKey && !caretInListItem(view)) {
+        // Plain Enter keeps editing when submitOnEnter is off (card editor).
+        if (submitOnEnter && !event.shiftKey && !caretInListItem(view)) {
           onSubmitRequestRef.current();
           return true;
         }
@@ -144,6 +176,10 @@ export function RichComposerEditor({
   useEffect(() => {
     if (editor) editor.setEditable(!disabled);
   }, [editor, disabled]);
+
+  useEffect(() => {
+    if (editor && autoFocus) editor.commands.focus("end");
+  }, [editor, autoFocus]);
 
   // Upstream draft restores (queued capture replay, persisted draft) push
   // markdown in; the editor re-parses only when the change did not originate

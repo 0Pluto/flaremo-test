@@ -11,10 +11,10 @@ import {
   UsersIcon,
   XIcon,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { Suspense, useRef, useState } from "react";
 import { toast } from "sonner";
 import { type MemoVisibility, uploadAttachment } from "@/api";
-import { RichComposerEditor } from "@/components/rich-composer-editor";
+import { RichComposerEditor } from "@/components/rich-composer-editor-lazy";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -27,6 +27,7 @@ import { useI18n } from "@/i18n";
 import { inlineImageMarkdown } from "@/lib/image-insert";
 import type { MemoCaptureInput } from "@/lib/local-memo-capture";
 import { extractTags } from "@/lib/memo";
+import { insertMarkdownAt } from "@/lib/rich-editor-upload";
 
 type MemoComposerProps = {
   draft: MemoCaptureInput;
@@ -40,6 +41,16 @@ type MemoComposerProps = {
 
 const fileKeys = new WeakMap<File, string>();
 let nextFileKey = 0;
+
+/**
+ * Placeholder while the editor chunk streams in on the very first visit; the
+ * idle prefetch makes this flash last one frame in practice.
+ */
+function ComposerEditorSkeleton() {
+  return (
+    <div className="min-h-32 rounded-t-xl bg-muted/30" aria-hidden="true" />
+  );
+}
 
 function getFileKey(file: File) {
   const existing = fileKeys.get(file);
@@ -102,14 +113,9 @@ export function MemoComposer({
               attachment.filename,
             );
             // Insert at the position captured when the paste happened (the
-            // user may have kept typing while the network was pending). The
-            // size delta advances the cursor so consecutive files keep order.
-            const sizeBefore = editor.state.doc.content.size;
-            editor
-              .chain()
-              .insertContentAt(cursor, markdown, { contentType: "markdown" })
-              .run();
-            cursor += editor.state.doc.content.size - sizeBefore;
+            // user may have kept typing while the network was pending); the
+            // cursor advances by the insertion's real size delta.
+            cursor = insertMarkdownAt(editor, cursor, markdown);
             preuploadMarkdownRef.current.set(attachment.name, markdown);
             commitDraft({
               preuploadedAttachmentNames: [
@@ -175,18 +181,20 @@ export function MemoComposer({
         void submit();
       }}
     >
-      <RichComposerEditor
-        ariaLabel={t("composer.ariaLabel")}
-        content={draft.content}
-        disabled={isPending}
-        editorRef={editorRef}
-        onContentChange={updateContent}
-        onImageFiles={enqueueInlineUploads}
-        onSubmitRequest={() => {
-          if (!isUploadingImages) void submit();
-        }}
-        placeholder={t("composer.placeholder")}
-      />
+      <Suspense fallback={<ComposerEditorSkeleton />}>
+        <RichComposerEditor
+          ariaLabel={t("composer.ariaLabel")}
+          content={draft.content}
+          disabled={isPending}
+          editorRef={editorRef}
+          onContentChange={updateContent}
+          onImageFiles={enqueueInlineUploads}
+          onSubmitRequest={() => {
+            if (!isUploadingImages) void submit();
+          }}
+          placeholder={t("composer.placeholder")}
+        />
+      </Suspense>
       {draft.files.length > 0 && (
         <div className="flex flex-wrap gap-2 px-4 pb-2">
           {draft.files.map((file) => (
