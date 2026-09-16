@@ -122,6 +122,10 @@ const messages = {
     "녹음이 중단되어 마이크를 껐습니다. 받아온 텍스트를 확인하세요. 끝부분이 불완전할 수 있습니다.",
   "capture.unavailable":
     "전사 기능이 설정되지 않았거나 일시적으로 사용할 수 없습니다. 나중에 다시 시도해 주세요.",
+  "capture.unavailableOwnerLink":
+    "「계정 → 음성 인식 설정」에서 활성화할 수 있습니다.",
+  "capture.unavailableMember":
+    "인스턴스 소유자에게 음성 인식 활성화를 요청해 주세요.",
   "capture.wakeLockFailed":
     "화면 켜짐 유지에 실패했습니다. 화면이 잠기면 녹음이 중단될 수 있습니다.",
   "capture.connectionFailed":

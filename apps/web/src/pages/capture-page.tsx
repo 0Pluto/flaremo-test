@@ -1,6 +1,6 @@
 import { CAPTURE_MAX_DURATION_MS, CAPTURE_MAX_TEXT } from "@flaremo/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useBlocker, useNavigate } from "@tanstack/react-router";
+import { Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { Loader2Icon, Mic, Square } from "lucide-react";
 import {
   useCallback,
@@ -16,6 +16,7 @@ import {
   bindMemoAttachments,
   createMemo,
   getCaptureStatus,
+  getCurrentFlareMoUser,
   updateMemo,
   uploadAttachment,
 } from "@/api";
@@ -115,6 +116,15 @@ export function CapturePage() {
     staleTime: 30_000,
     retry: false,
   });
+  // Role-aware unavailable copy (rollout §5): the App shell already caches
+  // the viewer under this key, so this rides along without a new request.
+  const meQuery = useQuery({
+    queryKey: ["current-flaremo-user"],
+    queryFn: getCurrentFlareMoUser,
+    staleTime: 60_000,
+    retry: false,
+  });
+  const canManageVoiceService = meQuery.data?.can_manage_voice_service === true;
   const [controller] = useState(
     () =>
       new CaptureController({
@@ -953,9 +963,19 @@ export function CapturePage() {
                   </Button>
                 </div>
               ) : !status.isPending && !status.data?.available ? (
-                <p role="status" className="text-sm text-muted-foreground">
-                  {t("capture.unavailable")}
-                </p>
+                <div className="flex flex-col items-center gap-2 text-center text-sm text-muted-foreground">
+                  <p role="status">{t("capture.unavailable")}</p>
+                  {canManageVoiceService ? (
+                    <Link
+                      className="underline underline-offset-4 hover:text-foreground"
+                      to="/account"
+                    >
+                      {t("capture.unavailableOwnerLink")}
+                    </Link>
+                  ) : (
+                    <p>{t("capture.unavailableMember")}</p>
+                  )}
+                </div>
               ) : null}
             </>
           )}

@@ -120,6 +120,10 @@ const messages = {
     "Recording was interrupted and the microphone is off. Review the captured text; the ending may be incomplete.",
   "capture.unavailable":
     "Transcription is not configured or is temporarily unavailable. Try again later.",
+  "capture.unavailableOwnerLink":
+    "Go to Account → Voice recognition settings to enable it.",
+  "capture.unavailableMember":
+    "Please ask the instance owner to enable voice recognition from the account page.",
   "capture.wakeLockFailed":
     "Failed to keep the screen awake; locking the screen may interrupt the recording.",
   "capture.connectionFailed":

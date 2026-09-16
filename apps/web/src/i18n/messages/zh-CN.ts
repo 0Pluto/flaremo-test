@@ -109,6 +109,8 @@ const messages = {
   "capture.interrupted":
     "录音已中断并关闭麦克风。请检查已识别的文字，末尾可能不完整。",
   "capture.unavailable": "语音识别尚未配置或服务暂时不可用，请稍后重试。",
+  "capture.unavailableOwnerLink": "前往「账户 → 语音识别设置」开启",
+  "capture.unavailableMember": "请联系实例所有者在账户页开启语音识别。",
   "capture.wakeLockFailed": "屏幕保持唤醒失败，锁屏可能中断录音。",
   "capture.connectionFailed":
     "无法连接识别服务，麦克风已关闭。已识别的文字可继续编辑和保存。",

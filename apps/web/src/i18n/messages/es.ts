@@ -124,6 +124,10 @@ const messages = {
     "La grabación se interrumpió y el micrófono está apagado. Revisa el texto capturado; el final podría estar incompleto.",
   "capture.unavailable":
     "La transcripción no está configurada o no está disponible temporalmente. Inténtalo más tarde.",
+  "capture.unavailableOwnerLink":
+    "Actívala en «Cuenta → Ajustes de reconocimiento de voz».",
+  "capture.unavailableMember":
+    "Pide al propietario de la instancia que active el reconocimiento de voz.",
   "capture.wakeLockFailed":
     "No se pudo mantener la pantalla encendida; bloquearla puede interrumpir la grabación.",
   "capture.connectionFailed":

@@ -122,6 +122,10 @@ const messages = {
     "L'enregistrement a été interrompu et le micro est coupé. Relisez le texte capturé ; la fin peut être incomplète.",
   "capture.unavailable":
     "La transcription n'est pas configurée ou momentanément indisponible. Réessayez plus tard.",
+  "capture.unavailableOwnerLink":
+    "Activez-la dans « Compte → Paramètres de reconnaissance vocale ».",
+  "capture.unavailableMember":
+    "Veuillez demander au propriétaire de l'instance d'activer la reconnaissance vocale.",
   "capture.wakeLockFailed":
     "Impossible de maintenir l'écran allumé ; le verrouillage pourrait interrompre l'enregistrement.",
   "capture.connectionFailed":

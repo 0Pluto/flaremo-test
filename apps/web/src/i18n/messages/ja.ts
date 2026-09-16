@@ -120,6 +120,10 @@ const messages = {
     "録音が中断され、マイクをオフにしました。取り込めたテキストを確認してください。末尾が不完全な可能性があります。",
   "capture.unavailable":
     "文字起こしは未設定か、一時的に利用できません。しばらくしてから再試行してください。",
+  "capture.unavailableOwnerLink":
+    "「アカウント → 音声認識設定」で有効にできます。",
+  "capture.unavailableMember":
+    "インスタンスのオーナーに音声認識の有効化を依頼してください。",
   "capture.wakeLockFailed":
     "画面のスリープ防止に失敗しました。ロックすると録音が中断される場合があります。",
   "capture.connectionFailed":
