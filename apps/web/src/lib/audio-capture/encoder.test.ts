@@ -1,5 +1,8 @@
+import {
+  CAPTURE_BATCH_SLICE_MS,
+  CAPTURE_SAMPLE_RATE,
+} from "@flaremo/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { CAPTURE_BATCH_SLICE_MS, CAPTURE_SAMPLE_RATE } from "@flaremo/contracts";
 import {
   CaptureAudioSink,
   SLICE_SAMPLES,
@@ -50,7 +53,9 @@ describe("WAV container", () => {
     expect(audio.slices[0]?.startMs).toBe(0);
     // Second slice starts where the first ended.
     expect(audio.slices[1]?.startMs).toBe(
-      Math.round((audio.slices[0]!.blob.size - 44) / 2 * (1000 / CAPTURE_SAMPLE_RATE)),
+      Math.round(
+        ((audio.slices[0]!.blob.size - 44) / 2) * (1000 / CAPTURE_SAMPLE_RATE),
+      ),
     );
     for (const slice of audio.slices) {
       const header = wavHeader(0);
@@ -59,6 +64,17 @@ describe("WAV container", () => {
       expect(view.getUint32(40, true)).toBe(slice.blob.size - 44);
       expect(header.byteLength).toBe(44);
     }
+    // The full-recording blob (rollout §4.1) is one standalone WAV: exactly
+    // one header and every slice's payload, headers stripped.
+    const recording = audio.recording!;
+    expect(recording.type).toBe("audio/wav");
+    const recordingView = new DataView(
+      await recording.slice(0, 44).arrayBuffer(),
+    );
+    expect(recordingView.getUint32(40, true)).toBe(
+      audio.slices.reduce((sum, slice) => sum + slice.blob.size - 44, 0),
+    );
+    expect(recording.size).toBe(44 + recordingView.getUint32(40, true));
     sink.dispose();
   });
 
@@ -68,6 +84,10 @@ describe("WAV container", () => {
     const audio = await sink.finalize();
     expect(audio.slices).toHaveLength(1);
     expect(audio.slices[0]?.startMs).toBe(0);
+    // A short session's recording is byte-identical to its single slice.
+    expect(await audio.recording!.arrayBuffer()).toEqual(
+      await audio.slices[0]!.blob.arrayBuffer(),
+    );
   });
 });
 
@@ -87,27 +107,45 @@ describe("Opus container (real WASM encoder)", () => {
       const pages = splitOggPages(bytes);
       expect(pages.length).toBeGreaterThan(0);
       const all = bytes;
-      const headIndex = all.findIndex(
-        (_, i) =>
-          all.subarray(i, i + 8).every((b, j) => b === "OpusHead".charCodeAt(j)),
+      const headIndex = all.findIndex((_, i) =>
+        all.subarray(i, i + 8).every((b, j) => b === "OpusHead".charCodeAt(j)),
       );
-      const tagsIndex = all.findIndex(
-        (_, i) =>
-          all.subarray(i, i + 8).every((b, j) => b === "OpusTags".charCodeAt(j)),
+      const tagsIndex = all.findIndex((_, i) =>
+        all.subarray(i, i + 8).every((b, j) => b === "OpusTags".charCodeAt(j)),
       );
       // Headers are prepended to every slice, so each uploads standalone.
       expect(headIndex).toBeGreaterThanOrEqual(0);
       expect(tagsIndex).toBeGreaterThan(headIndex);
-      expect(index === 0 ? slice.startMs : slice.startMs).toBeGreaterThanOrEqual(0);
+      expect(
+        index === 0 ? slice.startMs : slice.startMs,
+      ).toBeGreaterThanOrEqual(0);
     }
     // Timeline budget: every slice but the last stays under the provider's
     // 500 s hard limit.
     for (let i = 0; i + 1 < audio.slices.length; i++) {
-      const duration =
-        audio.slices[i + 1]!.startMs - audio.slices[i]!.startMs;
+      const duration = audio.slices[i + 1]!.startMs - audio.slices[i]!.startMs;
       expect(duration).toBeLessThan(500_000);
       expect(duration).toBeGreaterThanOrEqual(CAPTURE_BATCH_SLICE_MS - 500);
     }
+    // The full-recording blob (rollout §4.1) is one continuous Ogg Opus
+    // stream: the mandatory header pages appear exactly once, and every
+    // page of every slice re-parses in order.
+    const recordingBytes = new Uint8Array(await audio.recording!.arrayBuffer());
+    const countMagic = (bytes: Uint8Array, magic: string) => {
+      let count = 0;
+      outer: for (let i = 0; i <= bytes.byteLength - magic.length; i++) {
+        for (let j = 0; j < magic.length; j++)
+          if (bytes[i + j] !== magic.charCodeAt(j)) continue outer;
+        count++;
+        i += magic.length - 1;
+      }
+      return count;
+    };
+    expect(countMagic(recordingBytes, "OpusHead")).toBe(1);
+    expect(countMagic(recordingBytes, "OpusTags")).toBe(1);
+    expect(splitOggPages(recordingBytes).length).toBeGreaterThan(
+      audio.slices.length,
+    );
     sink.dispose();
   });
 });

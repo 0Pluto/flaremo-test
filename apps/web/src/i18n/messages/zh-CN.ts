@@ -91,7 +91,9 @@ const messages = {
   "capture.connecting": "麦克风开启 · 正在连接识别服务，请稍候再说话…",
   "capture.stopping": "麦克风已关闭 · 正在接收最后一句…",
   "capture.foreground":
-    "请保持此页面在前台。切换页面或锁屏会停止录音；本功能不保存原始音频。",
+    "请保持此页面在前台。切换页面或锁屏会停止录音；原始音频默认保存，可在保存时关闭。",
+  "capture.keepAudio": "保存原始音频",
+  "capture.audioNotSaved": "已保存文字，但原始音频未能上传。",
   "capture.leaveTitle": "离开语音记录？",
   "capture.leaveRecording":
     "当前正在录音。停止并离开后，未保存的文字仍会保存在此设备的本地草稿中。",
@@ -145,7 +147,8 @@ const messages = {
   "capture.saveSucceeded": "已保存。",
   "capture.transcribing": "转写中…",
   "capture.transcribingCount": "正在转写第 {done} / {total} 段…",
-  "capture.transcribeFailed": "转写失败。无法生成识别文本，可手动编辑草稿或放弃本次记录。",
+  "capture.transcribeFailed":
+    "转写失败。无法生成识别文本，可手动编辑草稿或放弃本次记录。",
   "capture.cancelTranscribing": "取消转写",
   "capture.retryTranscription": "重试转写",
   "capture.pause": "暂停录音",

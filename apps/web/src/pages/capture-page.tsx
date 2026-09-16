@@ -1,7 +1,4 @@
-import {
-  CAPTURE_MAX_DURATION_MS,
-  CAPTURE_MAX_TEXT,
-} from "@flaremo/contracts";
+import { CAPTURE_MAX_DURATION_MS, CAPTURE_MAX_TEXT } from "@flaremo/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBlocker, useNavigate } from "@tanstack/react-router";
 import { Loader2Icon, Mic, Square } from "lucide-react";
@@ -14,12 +11,19 @@ import {
   useSyncExternalStore,
 } from "react";
 import { toast } from "sonner";
-import { createMemo, getCaptureStatus, updateMemo } from "@/api";
+import {
+  type Attachment,
+  bindMemoAttachments,
+  createMemo,
+  getCaptureStatus,
+  updateMemo,
+  uploadAttachment,
+} from "@/api";
 import { authClient } from "@/auth-client";
 import {
   CaptureButton,
-  CapturePauseButton,
   type CaptureButtonState,
+  CapturePauseButton,
 } from "@/components/capture/capture-button";
 import { CaptureTranscribing } from "@/components/capture/capture-transcribing";
 import { CaptureWaveform } from "@/components/capture/capture-waveform";
@@ -36,11 +40,17 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { useI18n } from "@/i18n";
+import {
+  type BatchProgress,
+  transcribeCapturedAudio,
+} from "@/lib/audio-capture/batch";
 import {
   CaptureController,
   captureIsActive,
 } from "@/lib/audio-capture/controller";
+import { createCaptureAudioSink } from "@/lib/audio-capture/encoder";
 import {
   CaptureDraftStore,
   captureDraftId,
@@ -48,16 +58,48 @@ import {
   loadCapture,
   newLocalCapture,
 } from "@/lib/audio-capture/local-session";
-import { openMicrophone, type Microphone } from "@/lib/audio-capture/microphone";
-import { createCaptureAudioSink } from "@/lib/audio-capture/encoder";
 import {
-  transcribeCapturedAudio,
-  type BatchProgress,
-} from "@/lib/audio-capture/batch";
-import type { CaptureState } from "@/lib/audio-capture/types";
+  type Microphone,
+  openMicrophone,
+} from "@/lib/audio-capture/microphone";
 import { CaptureTranscriptAccumulator } from "@/lib/audio-capture/transcript";
+import type { CaptureState } from "@/lib/audio-capture/types";
 import { vibrate } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
+
+/** The Worker's attachment cap (attachment-http.ts MAX_ATTACHMENT_BYTES). */
+const CAPTURE_MAX_AUDIO_BYTES = 25 * 1024 * 1024;
+const CAPTURE_KEEP_AUDIO_KEY = "capture.keepAudio";
+
+function readKeepAudio(): boolean {
+  try {
+    return localStorage.getItem(CAPTURE_KEEP_AUDIO_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Uploads the encoded session recording through the same attachment pipeline
+ * the composer uses (R2 + /api/v1/attachments, rollout §4.1). Exactly one
+ * retry, and the retry reuses the client id so a first attempt that actually
+ * landed cannot duplicate the file. Null means the caller degrades to a
+ * transcript-only memo (D4) — text is never blocked by audio.
+ */
+async function uploadCaptureAudio(
+  file: File,
+  clientId: string,
+): Promise<Attachment | null> {
+  try {
+    return await uploadAttachment({ file, clientId });
+  } catch {
+    try {
+      return await uploadAttachment({ file, clientId });
+    } catch {
+      return null;
+    }
+  }
+}
 
 export function CapturePage() {
   const { t } = useI18n();
@@ -121,6 +163,11 @@ export function CapturePage() {
   const [saveError, setSaveError] = useState(false);
   const [draftError, setDraftError] = useState(false);
   const [cleanupError, setCleanupError] = useState(false);
+  // "Save original audio" (rollout §4.1): on by default, remembered across
+  // sessions in localStorage so enterprise members can opt out for good.
+  const [keepAudio, setKeepAudio] = useState(readKeepAudio);
+  const keepAudioRef = useRef(keepAudio);
+  keepAudioRef.current = keepAudio;
   const [now, setNow] = useState(Date.now());
   const savingRef = useRef(false);
   const savedRef = useRef(false);
@@ -130,6 +177,11 @@ export function CapturePage() {
   const submittedMemoRef = useRef<Parameters<typeof createMemo>[0] | null>(
     null,
   );
+  // Audio attachment claimed before the memo existed (rollout §4.1): the
+  // upload result survives a lost create response so a retry binds the same
+  // file instead of uploading it twice; boundRef skips an already-applied bind.
+  const uploadedAudioRef = useRef<Attachment | null>(null);
+  const audioBoundRef = useRef(false);
   const localRef = useRef(local);
   localRef.current = local;
   const transcript = useRef(new CaptureTranscriptAccumulator());
@@ -143,10 +195,7 @@ export function CapturePage() {
   // Batch transcription keeps the session unsaved until it resolves; leaving
   // mid-flight cancels the attempt instead of losing it silently.
   const unsaved =
-    active ||
-    snapshot.state === "transcribing" ||
-    review ||
-    Boolean(recovery);
+    active || snapshot.state === "transcribing" || review || Boolean(recovery);
   const blocker = useBlocker({
     disabled: !unsaved,
     enableBeforeUnload: true,
@@ -271,6 +320,8 @@ export function CapturePage() {
     setCleanupError(false);
     savedMemoRef.current = null;
     submittedMemoRef.current = null;
+    uploadedAudioRef.current = null;
+    audioBoundRef.current = false;
     transcript.current.reset();
     setLocal(newLocalCapture());
     void controller.start();
@@ -320,6 +371,8 @@ export function CapturePage() {
     savedRef.current = true;
     savedMemoRef.current = null;
     submittedMemoRef.current = null;
+    uploadedAudioRef.current = null;
+    audioBoundRef.current = false;
     transcript.current.reset();
     controller.reset();
     setReview(false);
@@ -329,6 +382,36 @@ export function CapturePage() {
     setDraftError(false);
     setCleanupError(false);
   };
+  // Uploads the encoded session recording to R2 before the memo exists (the
+  // composer's preupload pattern): the attachment id lands in the payload at
+  // create time and the bind claims the file right after (rollout §4.1).
+  const resolveAudioAttachment = async (): Promise<Attachment | null> => {
+    if (uploadedAudioRef.current) return uploadedAudioRef.current;
+    const audio = keepAudioRef.current ? controller.getCapturedAudio() : null;
+    const recording = audio?.recording;
+    if (!recording || recording.size === 0) return null;
+    if (recording.size > CAPTURE_MAX_AUDIO_BYTES) {
+      toast.warning(t("capture.audioNotSaved"));
+      return null;
+    }
+    const extension = audio.mimeType === "audio/ogg" ? "ogg" : "wav";
+    const file = new File(
+      [recording],
+      `voice-${new Date(local.startedAt).toISOString().replace(/[:.]/g, "-")}.${extension}`,
+      { type: audio.mimeType },
+    );
+    const attachment = await uploadCaptureAudio(
+      file,
+      `${local.clientId}:audio`,
+    );
+    if (!attachment) {
+      // D4: the transcript is the value; the recording is the enhancement.
+      toast.warning(t("capture.audioNotSaved"));
+      return null;
+    }
+    uploadedAudioRef.current = attachment;
+    return attachment;
+  };
   const save = async () => {
     if (savingRef.current || !local.text.trim()) return;
     savingRef.current = true;
@@ -337,6 +420,7 @@ export function CapturePage() {
     try {
       let memo = savedMemoRef.current;
       if (!memo) {
+        const audioAttachment = await resolveAudioAttachment();
         const content = `# ${t("capture.title")}\n\n${t("capture.recordedAt")}: ${new Date(local.startedAt).toLocaleString()}\n\n${t("capture.duration")}: ${formatDuration(local.duration)}\n\n${local.gap ? `${t("capture.gap")}\n\n` : ""}---\n\n${local.text.trim()}`;
         const input: Parameters<typeof createMemo>[0] = {
           content,
@@ -345,12 +429,22 @@ export function CapturePage() {
           payload: {
             tags: Array.from(new Set(["voice", ...local.tags])),
             client_id: local.clientId,
+            durationSeconds: local.duration,
+            ...(audioAttachment
+              ? { audioAttachmentId: audioAttachment.id }
+              : {}),
           },
         };
         const previousInput = submittedMemoRef.current;
         submittedMemoRef.current = input;
         memo = await createOrReconcileCaptureMemo(input, previousInput);
         savedMemoRef.current = memo;
+      }
+      if (uploadedAudioRef.current && !audioBoundRef.current) {
+        // Claim the preuploaded recording: the bind replaces the memo's
+        // attachment list, which is empty for a fresh capture memo.
+        await bindMemoAttachments(memo.name, [uploadedAudioRef.current.name]);
+        audioBoundRef.current = true;
       }
       const cleared = await store.clear();
       if (!cleared) {
@@ -523,7 +617,11 @@ export function CapturePage() {
         <div role="alert" className="space-y-3 rounded-lg border p-3 text-sm">
           <p>{t(`capture.${snapshot.error}`)}</p>
           {snapshot.error === "transcribeFailed" && !saving && (
-            <Button variant="outline" size="sm" onClick={() => controller.retryTranscription()}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => controller.retryTranscription()}
+            >
               {t("capture.retryTranscription")}
             </Button>
           )}
@@ -686,6 +784,25 @@ export function CapturePage() {
                   <option value="public">{t("capture.public")}</option>
                 </select>
               </label>
+              <div className="flex items-center justify-between gap-3 rounded-lg border bg-card p-3">
+                <span className="text-sm">{t("capture.keepAudio")}</span>
+                <Switch
+                  checked={keepAudio}
+                  disabled={saving || cleanupError}
+                  onCheckedChange={(checked) => {
+                    const value = Boolean(checked);
+                    setKeepAudio(value);
+                    try {
+                      localStorage.setItem(
+                        CAPTURE_KEEP_AUDIO_KEY,
+                        value ? "on" : "off",
+                      );
+                    } catch {
+                      /* Storage unavailable: the session default stands. */
+                    }
+                  }}
+                />
+              </div>
               {saveError && <p role="alert">{t("capture.saveFailed")}</p>}
               {cleanupError && <p role="alert">{t("capture.cleanupFailed")}</p>}
               <div className="flex gap-3">
@@ -735,7 +852,10 @@ export function CapturePage() {
                   </p>
                 )}
                 {snapshot.sentences.slice(-100).map((sentence) => (
-                  <p className="mb-3 motion-safe:animate-rise" key={sentence.id}>
+                  <p
+                    className="mb-3 motion-safe:animate-rise"
+                    key={sentence.id}
+                  >
                     {sentence.text}
                   </p>
                 ))}
@@ -745,7 +865,9 @@ export function CapturePage() {
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {t("capture.charsUsed", {
-                    count: (local.text.length + snapshot.partial.length).toLocaleString(),
+                    count: (
+                      local.text.length + snapshot.partial.length
+                    ).toLocaleString(),
                     max: CAPTURE_MAX_TEXT.toLocaleString(),
                   })}
                 </p>

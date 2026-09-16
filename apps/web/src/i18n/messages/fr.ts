@@ -30,7 +30,8 @@ const messages = {
   "voiceSettings.volcengine": "Doubao / Volcano Engine",
   "voiceSettings.minimax": "MiniMax",
   "voiceSettings.minimaxApiKey": "Clé API MiniMax",
-  "voiceSettings.minimaxBaseUrl": "URL de base MiniMax (facultative ; nationale par défaut)",
+  "voiceSettings.minimaxBaseUrl":
+    "URL de base MiniMax (facultative ; nationale par défaut)",
   "voiceSettings.volcAppId": "AppID Volcano Engine",
   "voiceSettings.volcAccessToken": "Jeton d'accès Volcano Engine",
   "voiceSettings.volcBoostingTable":
@@ -97,7 +98,10 @@ const messages = {
     "Micro actif · connexion à la transcription. Vous pourrez parler dans un instant…",
   "capture.stopping": "Micro coupé · réception de la dernière phrase…",
   "capture.foreground":
-    "Gardez cette page au premier plan. Changer d'onglet ou verrouiller l'écran interrompt l'enregistrement. L'audio brut n'est pas conservé.",
+    "Gardez cette page au premier plan. Changer d'onglet ou verrouiller l'écran interrompt l'enregistrement. L'audio brut est conservé par défaut ; vous pouvez le désactiver à l'enregistrement.",
+  "capture.keepAudio": "Conserver l'audio brut",
+  "capture.audioNotSaved":
+    "La transcription est enregistrée, mais l'audio brut n'a pas pu être importé.",
   "capture.leaveTitle": "Quitter la capture vocale ?",
   "capture.leaveRecording":
     "L'enregistrement est en cours. En l'arrêtant puis en partant, le texte non enregistré reste dans un brouillon local sur cet appareil.",
@@ -165,7 +169,8 @@ const messages = {
   "capture.saveSucceeded": "Enregistré.",
   "capture.transcribing": "Transcription…",
   "capture.transcribingCount": "Transcription du segment {done} sur {total}…",
-  "capture.transcribeFailed": "La transcription a échoué. Le texte reconnu n'a pas pu être produit ; modifiez le brouillon à la main ou abandonnez-le.",
+  "capture.transcribeFailed":
+    "La transcription a échoué. Le texte reconnu n'a pas pu être produit ; modifiez le brouillon à la main ou abandonnez-le.",
   "capture.cancelTranscribing": "Annuler la transcription",
   "capture.retryTranscription": "Réessayer la transcription",
   "capture.pause": "Mettre l'enregistrement en pause",
@@ -267,7 +272,8 @@ const messages = {
   "shortcuts.send": "Envoyer le texte en cours",
   "shortcuts.linebreak": "Insérer un saut de ligne pendant la saisie",
   "shortcuts.saveEdit": "Enregistrer la note en cours de modification",
-  "shortcuts.capture": "Démarrer ou arrêter l'enregistrement vocal (sur /capture)",
+  "shortcuts.capture":
+    "Démarrer ou arrêter l'enregistrement vocal (sur /capture)",
   "composer.removeFile": "Retirer {filename}",
   "composer.imageUploadFailed": "Échec de l'envoi de l'image. Réessayez.",
   "attachment.unavailable":

@@ -7,6 +7,7 @@ import {
   Globe2Icon,
   Loader2Icon,
   LockIcon,
+  MicIcon,
   MoreHorizontalIcon,
   PinIcon,
   RotateCcwIcon,
@@ -65,6 +66,7 @@ import {
   formatMemoTime,
   getMemoResourceId,
 } from "@/lib/memo";
+import { formatClock } from "@/lib/transcript";
 import { cn } from "@/lib/utils";
 
 /** Bodies beyond this size collapse in the timeline. */
@@ -282,6 +284,7 @@ export const MemoCard = memo(function MemoCard({
           )}
         </Link>
         <div className="flex shrink-0 items-center gap-1">
+          {memo.source === "voice" && <VoiceBadge memo={memo} />}
           {memo.visibility !== "private" && (
             <VisibilityBadge visibility={memo.visibility} />
           )}
@@ -618,6 +621,26 @@ export const MemoCard = memo(function MemoCard({
     </article>
   );
 });
+
+/**
+ * The timeline's voice-capture face (rollout §4.3, D5): a mic badge with the
+ * recording length. Playback stays on the detail page — the card only
+ * identifies the note as spoken.
+ */
+function VoiceBadge({ memo }: { memo: Memo }) {
+  const { t } = useI18n();
+  const duration = memo.payload.durationSeconds;
+  return (
+    <Badge className="rounded-md" variant="outline" title={t("capture.title")}>
+      <MicIcon />
+      {typeof duration === "number" &&
+        Number.isFinite(duration) &&
+        duration > 0 && (
+          <span className="tabular-nums">{formatClock(duration)}</span>
+        )}
+    </Badge>
+  );
+}
 
 function VisibilityBadge({ visibility }: { visibility: MemoVisibility }) {
   const { t } = useI18n();

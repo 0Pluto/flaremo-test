@@ -30,7 +30,8 @@ const messages = {
   "voiceSettings.volcengine": "Doubao / Volcano Engine",
   "voiceSettings.minimax": "MiniMax",
   "voiceSettings.minimaxApiKey": "API-ключ MiniMax",
-  "voiceSettings.minimaxBaseUrl": "Базовый URL MiniMax (необязательно; по умолчанию китайский узел)",
+  "voiceSettings.minimaxBaseUrl":
+    "Базовый URL MiniMax (необязательно; по умолчанию китайский узел)",
   "voiceSettings.volcAppId": "AppID Volcano Engine",
   "voiceSettings.volcAccessToken": "Токен доступа Volcano Engine",
   "voiceSettings.volcBoostingTable": "Имя таблицы горячих слов (опционально)",
@@ -96,7 +97,10 @@ const messages = {
     "Микрофон включён · подключаемся к распознаванию. Говорите, когда будете готовы…",
   "capture.stopping": "Микрофон выключен · принимаем последнюю фразу…",
   "capture.foreground":
-    "Держите эту страницу на переднем плане. Переключение вкладки или блокировка экрана остановят запись. Исходный звук не сохраняется.",
+    "Держите эту страницу на переднем плане. Переключение вкладки или блокировка экрана остановят запись. Исходный звук сохраняется по умолчанию; это можно отключить при сохранении.",
+  "capture.keepAudio": "Сохранять исходный звук",
+  "capture.audioNotSaved":
+    "Текст сохранён, но исходный звук не удалось загрузить.",
   "capture.leaveTitle": "Выйти из голосовой записи?",
   "capture.leaveRecording":
     "Идёт запись. Если остановить её и выйти, несохранённый текст останется в локальном черновике на этом устройстве.",
@@ -163,7 +167,8 @@ const messages = {
   "capture.saveSucceeded": "Сохранено.",
   "capture.transcribing": "Транскрибация…",
   "capture.transcribingCount": "Транскрибация фрагмента {done} из {total}…",
-  "capture.transcribeFailed": "Не удалось выполнить транскрибацию. Отредактируйте черновик вручную или откажитесь от записи.",
+  "capture.transcribeFailed":
+    "Не удалось выполнить транскрибацию. Отредактируйте черновик вручную или откажитесь от записи.",
   "capture.cancelTranscribing": "Отменить транскрибацию",
   "capture.retryTranscription": "Повторить транскрибацию",
   "capture.pause": "Приостановить запись",

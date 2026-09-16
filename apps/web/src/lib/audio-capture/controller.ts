@@ -3,9 +3,9 @@ import {
   CAPTURE_MAX_TEXT,
   captureServerMessageSchema,
 } from "@flaremo/contracts";
+import type { CaptureAudioSink, CapturedAudio } from "./encoder";
 import type { Microphone } from "./microphone";
 import type { CaptureSentence, CaptureState } from "./types";
-import type { CapturedAudio, CaptureAudioSink } from "./encoder";
 
 // While the session has no live socket (first connect or reconnect), frames
 // are buffered so speech over the gap still reaches the new session. 16 kHz
@@ -119,6 +119,13 @@ export class CaptureController {
     this.deps = deps;
   }
   getSnapshot = () => this.snapshot;
+  /**
+   * The encoded audio of the finished recording, kept after transcription
+   * succeeds so the capture page can upload it to R2 before saving (rollout
+   * §4.1). Cleared on start/reset (new session or discard), never on success:
+   * blobs are cheap to hold and the upload may legitimately happen later.
+   */
+  getCapturedAudio = (): CapturedAudio | null => this.batchAudio ?? null;
   subscribe = (listener: () => void) => {
     this.listeners.add(listener);
     return () => {
@@ -228,8 +235,7 @@ export class CaptureController {
       // Batch mode (rollout §3.3): no socket; frames feed the local encoder
       // and the provider is only contacted after Stop.
       if (status.kind === "batch") {
-        if (!this.deps.batch || !this.batchSink)
-          return this.end("unavailable");
+        if (!this.deps.batch || !this.batchSink) return this.end("unavailable");
         this.batchMode = true;
         this.update({
           state: "recording",
@@ -357,9 +363,7 @@ export class CaptureController {
       )
         // A pause survives reconnects, so silence — not captured speech —
         // must be buffered while paused even without a live socket.
-        this.buffer(
-          this.paused ? new ArrayBuffer(frame.byteLength) : frame,
-        );
+        this.buffer(this.paused ? new ArrayBuffer(frame.byteLength) : frame);
       return;
     }
     const socket = this.socket;
@@ -584,14 +588,18 @@ export class CaptureController {
         language: "zh",
         startedAtMs: startedAt,
         onProgress: (transcribing) => {
-          if (this.snapshot.state === "transcribing" && this.transcribeAbort === signal)
+          if (
+            this.snapshot.state === "transcribing" &&
+            this.transcribeAbort === signal
+          )
             this.update({ transcribing });
         },
         signal: signal.signal,
       });
       if (this.transcribeAbort !== signal) return; // Cancelled by the user.
       this.acceptBatch(sentences);
-      this.batchAudio = undefined;
+      // The audio stays available for the page's R2 upload (getCapturedAudio);
+      // only a discard/new session clears it.
       this.end();
     } catch {
       if (this.transcribeAbort !== signal) return;

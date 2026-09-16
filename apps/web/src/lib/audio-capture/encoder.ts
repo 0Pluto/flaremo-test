@@ -19,6 +19,13 @@ export type CaptureAudioSlice = {
 export type CapturedAudio = {
   slices: CaptureAudioSlice[];
   mimeType: "audio/ogg" | "audio/wav";
+  /**
+   * The whole session as one decodable file (rollout §4.1): the ASR slices
+   * carry duplicated container headers so each uploads standalone, the R2
+   * attachment must not. Cheap to build — slices are re-viewed via Blob.slice,
+   * never copied. Null when the session captured no audio at all.
+   */
+  recording?: Blob | null;
 };
 
 type OpusStreamEncoder = {
@@ -35,10 +42,11 @@ function opusPreSkip(headerPage: Uint8Array): number {
   const payloadStart = 27 + headerPage[26];
   const magic = Array.from("OpusHead", (char) => char.charCodeAt(0));
   for (let i = payloadStart; i <= headerPage.byteLength - 12; i++) {
-    if (
-      magic.every((value, index) => headerPage[i + index] === value)
-    )
-      return headerPage[i + OPUSHEAD_PRESKIP_OFFSET] | (headerPage[i + OPUSHEAD_PRESKIP_OFFSET + 1] << 8);
+    if (magic.every((value, index) => headerPage[i + index] === value))
+      return (
+        headerPage[i + OPUSHEAD_PRESKIP_OFFSET] |
+        (headerPage[i + OPUSHEAD_PRESKIP_OFFSET + 1] << 8)
+      );
   }
   return 0;
 }
@@ -161,6 +169,11 @@ export class CaptureAudioSink {
   // Opus state: one continuous page stream for the whole session.
   private opusChunks: Uint8Array[] = [];
   private finished = false;
+  // Full-recording assembly (rollout §4.1): the mandatory header pages kept
+  // once so slices can shed their copies, plus the WAV data-byte total.
+  private opusHeaderPages: Uint8Array[] = [];
+  private opusHeaderBytes = 0;
+  private wavDataBytes = 0;
 
   private constructor(mode: "opus" | "wav", opus: OpusStreamEncoder | null) {
     this.mode = mode;
@@ -168,7 +181,9 @@ export class CaptureAudioSink {
   }
 
   /** Never rejects: encoder initialization failures degrade to the WAV path. */
-  static async create(options: { opus?: boolean } = {}): Promise<CaptureAudioSink> {
+  static async create(
+    options: { opus?: boolean } = {},
+  ): Promise<CaptureAudioSink> {
     let opus: OpusStreamEncoder | null = null;
     if (options.opus !== false) {
       try {
@@ -221,7 +236,38 @@ export class CaptureAudioSink {
         this.opus = null;
       }
     }
-    return { slices: this.slices, mimeType: this.mimeType };
+    return {
+      slices: this.slices,
+      mimeType: this.mimeType,
+      recording: this.buildRecording(),
+    };
+  }
+
+  /**
+   * One container for the whole session: WAV slices lose their per-slice RIFF
+   * headers under a single fresh one; Opus slices lose their repeated header
+   * pages because the originals are kept only here. Blob.slice re-views the
+   * existing bytes instead of copying them.
+   */
+  private buildRecording(): Blob | null {
+    if (!this.slices.length) return null;
+    if (this.mode === "wav") {
+      return new Blob(
+        [
+          wavHeader(this.wavDataBytes),
+          ...this.slices.map((slice) => slice.blob.slice(WAV_HEADER_BYTES)),
+        ],
+        { type: "audio/wav" },
+      );
+    }
+    if (!this.opusHeaderPages.length) return null;
+    return new Blob(
+      [
+        concatBytes(this.opusHeaderPages),
+        ...this.slices.map((slice) => slice.blob.slice(this.opusHeaderBytes)),
+      ],
+      { type: "audio/ogg" },
+    );
   }
 
   dispose() {
@@ -234,6 +280,7 @@ export class CaptureAudioSink {
     this.opus = null;
     this.wavChunks = [];
     this.opusChunks = [];
+    this.opusHeaderPages = [];
   }
 
   private closeWavSlice() {
@@ -251,6 +298,7 @@ export class CaptureAudioSink {
         (this.wavSliceStartSamples * 1000) / CAPTURE_SAMPLE_RATE,
       ),
     });
+    this.wavDataBytes += this.wavSamples * 2;
     this.wavSliceStartSamples += this.wavSamples;
     this.wavChunks = [];
     this.wavSamples = 0;
@@ -299,6 +347,11 @@ export class CaptureAudioSink {
         flushSlice(pageEndMs);
     }
     flushSlice(inputMs(pages.at(-1)?.granule ?? 0n));
+    this.opusHeaderPages = headerPages;
+    this.opusHeaderBytes = headerPages.reduce(
+      (sum, page) => sum + page.byteLength,
+      0,
+    );
   }
 }
 

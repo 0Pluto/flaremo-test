@@ -45,6 +45,11 @@ export const memoPayloadSchema = z
     // domain layer only promotes a non-empty value up to 128 characters to
     // the internal idempotency key, without rejecting existing clients.
     client_id: z.string().optional(),
+    // Voice capture (rollout §4.2): playback length of the session and the
+    // attachment id that carries the recording. Optional so payloads from
+    // before P3 — and from other clients — keep parsing unchanged.
+    durationSeconds: z.number().optional(),
+    audioAttachmentId: z.string().optional(),
   })
   .passthrough();
 
@@ -152,6 +157,9 @@ export const memoDtoSchema = z.object({
   display_time: z.string(),
   creator: z.string(),
   creator_name: z.string().optional(),
+  // Submission client ("web", "voice", …); absent on legacy rows. The
+  // timeline uses it for the voice-capture face (rollout §4.3).
+  source: z.string().optional(),
   // Server-computed edit/manage permission for the requesting user, so
   // clients never re-derive the team permission rules locally.
   can_manage: z.boolean().optional(),

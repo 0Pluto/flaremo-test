@@ -30,7 +30,8 @@ const messages = {
   "voiceSettings.volcengine": "Doubao / Volcano Engine",
   "voiceSettings.minimax": "MiniMax",
   "voiceSettings.minimaxApiKey": "MiniMax API Key",
-  "voiceSettings.minimaxBaseUrl": "MiniMax base URL (optional; domestic by default)",
+  "voiceSettings.minimaxBaseUrl":
+    "MiniMax base URL (optional; domestic by default)",
   "voiceSettings.volcAppId": "Volcano Engine AppID",
   "voiceSettings.volcAccessToken": "Volcano Engine Access Token",
   "voiceSettings.volcBoostingTable": "Boosting table name (optional)",
@@ -95,7 +96,10 @@ const messages = {
     "Microphone active · connecting transcription. Please wait to speak…",
   "capture.stopping": "Microphone off · receiving the last sentence…",
   "capture.foreground":
-    "Keep this page in the foreground. Switching tabs or locking the screen stops recording. Original audio is not saved.",
+    "Keep this page in the foreground. Switching tabs or locking the screen stops recording. Original audio is kept by default; you can turn that off when saving.",
+  "capture.keepAudio": "Save original audio",
+  "capture.audioNotSaved":
+    "Saved the transcript, but the original audio could not be uploaded.",
   "capture.leaveTitle": "Leave voice capture?",
   "capture.leaveRecording":
     "Recording is active. Stopping and leaving keeps unsaved text in a local draft on this device.",
@@ -161,7 +165,8 @@ const messages = {
   "capture.saveSucceeded": "Saved.",
   "capture.transcribing": "Transcribing…",
   "capture.transcribingCount": "Transcribing chunk {done} of {total}…",
-  "capture.transcribeFailed": "Transcription failed. The recognized text could not be produced; edit the draft manually or discard it.",
+  "capture.transcribeFailed":
+    "Transcription failed. The recognized text could not be produced; edit the draft manually or discard it.",
   "capture.cancelTranscribing": "Cancel transcription",
   "capture.retryTranscription": "Retry transcription",
   "capture.pause": "Pause recording",

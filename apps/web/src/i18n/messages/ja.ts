@@ -30,7 +30,8 @@ const messages = {
   "voiceSettings.volcengine": "Doubao / Volcano Engine",
   "voiceSettings.minimax": "MiniMax",
   "voiceSettings.minimaxApiKey": "MiniMax API キー",
-  "voiceSettings.minimaxBaseUrl": "MiniMax ベース URL（省略可、既定は中国国内ノード）",
+  "voiceSettings.minimaxBaseUrl":
+    "MiniMax ベース URL（省略可、既定は中国国内ノード）",
   "voiceSettings.volcAppId": "Volcano Engine AppID",
   "voiceSettings.volcAccessToken": "Volcano Engine アクセストークン",
   "voiceSettings.volcBoostingTable": "熱語テーブル名（任意）",
@@ -95,7 +96,10 @@ const messages = {
     "マイク有効 · 文字起こしサービスに接続中です。そのままお話しください…",
   "capture.stopping": "マイク停止 · 最後の一文を受信しています…",
   "capture.foreground":
-    "このページを前面に保ってください。タブを切り替えたり画面をロックすると録音が止まります。元の音声は保存されません。",
+    "このページを前面に保ってください。タブを切り替えたり画面をロックすると録音が止まります。元の音声は既定で保存され、保存時にオフにできます。",
+  "capture.keepAudio": "元の音声を保存",
+  "capture.audioNotSaved":
+    "文字起こしは保存しましたが、元の音声をアップロードできませんでした。",
   "capture.leaveTitle": "音声メモを中断しますか？",
   "capture.leaveRecording":
     "録音中です。停止して離れると、未保存のテキストはこの端末のローカル下書きに残ります。",
@@ -161,7 +165,8 @@ const messages = {
   "capture.saveSucceeded": "保存しました。",
   "capture.transcribing": "文字起こし中…",
   "capture.transcribingCount": "文字起こし中… {done} / {total} 段落目",
-  "capture.transcribeFailed": "文字起こしに失敗しました。認識テキストを生成できなかったため、下書きを手動で編集するか破棄してください。",
+  "capture.transcribeFailed":
+    "文字起こしに失敗しました。認識テキストを生成できなかったため、下書きを手動で編集するか破棄してください。",
   "capture.cancelTranscribing": "文字起こしをキャンセル",
   "capture.retryTranscription": "文字起こしを再試行",
   "capture.pause": "録音を一時停止",

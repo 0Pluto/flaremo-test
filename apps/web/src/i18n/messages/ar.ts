@@ -30,7 +30,8 @@ const messages = {
   "voiceSettings.volcengine": "Doubao / Volcano Engine",
   "voiceSettings.minimax": "MiniMax",
   "voiceSettings.minimaxApiKey": "مفتاح API الخاص بـ MiniMax",
-  "voiceSettings.minimaxBaseUrl": "عنوان URL الأساسي لـ MiniMax (اختياري؛ الافتراضي هو الخدمة المحلية)",
+  "voiceSettings.minimaxBaseUrl":
+    "عنوان URL الأساسي لـ MiniMax (اختياري؛ الافتراضي هو الخدمة المحلية)",
   "voiceSettings.volcAppId": "AppID الخاص بـ Volcano Engine",
   "voiceSettings.volcAccessToken": "رمز الوصول الخاص بـ Volcano Engine",
   "voiceSettings.volcBoostingTable": "اسم جدول الكلمات الساخنة (اختياري)",
@@ -95,7 +96,9 @@ const messages = {
     "الميكروفون يعمل · جارٍ الاتصال بخدمة التفريغ. تحدث بعد قليل…",
   "capture.stopping": "الميكروفون متوقف · جارٍ استلام الجملة الأخيرة…",
   "capture.foreground":
-    "أبقِ هذه الصفحة في المقدمة. تبديل التبويبات أو قفل الشاشة يوقف التسجيل. لا يُحفظ الصوت الأصلي.",
+    "أبقِ هذه الصفحة في المقدمة. تبديل التبويبات أو قفل الشاشة يوقف التسجيل. يُحفظ الصوت الأصلي افتراضيًا ويمكنك إيقاف ذلك عند الحفظ.",
+  "capture.keepAudio": "حفظ الصوت الأصلي",
+  "capture.audioNotSaved": "تم حفظ النص، لكن تعذّر رفع الصوت الأصلي.",
   "capture.leaveTitle": "مغادرة التسجيل الصوتي؟",
   "capture.leaveRecording":
     "التسجيل جارٍ. إذا أوقفته وغادرت، يبقى النص غير المحفوظ في مسودة محلية على هذا الجهاز.",
@@ -160,7 +163,8 @@ const messages = {
   "capture.saveSucceeded": "تم الحفظ.",
   "capture.transcribing": "جارٍ التفريغ النصي…",
   "capture.transcribingCount": "جارٍ تفريغ المقطع {done} من {total}…",
-  "capture.transcribeFailed": "فشل التفريغ النصي. تعذّر إنتاج النص المُتعرَّف عليه؛ حرّر المسودة يدويًا أو تخلَّ عنها.",
+  "capture.transcribeFailed":
+    "فشل التفريغ النصي. تعذّر إنتاج النص المُتعرَّف عليه؛ حرّر المسودة يدويًا أو تخلَّ عنها.",
   "capture.cancelTranscribing": "إلغاء التفريغ النصي",
   "capture.retryTranscription": "إعادة محاولة التفريغ النصي",
   "capture.pause": "إيقاف التسجيل مؤقتًا",

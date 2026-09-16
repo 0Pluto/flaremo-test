@@ -31,7 +31,8 @@ const messages = {
   "voiceSettings.volcengine": "Doubao / Volcano Engine",
   "voiceSettings.minimax": "MiniMax",
   "voiceSettings.minimaxApiKey": "MiniMax API 키",
-  "voiceSettings.minimaxBaseUrl": "MiniMax 기본 URL(선택 사항, 기본값은 중국 내 서버)",
+  "voiceSettings.minimaxBaseUrl":
+    "MiniMax 기본 URL(선택 사항, 기본값은 중국 내 서버)",
   "voiceSettings.volcAppId": "Volcano Engine AppID",
   "voiceSettings.volcAccessToken": "Volcano Engine 액세스 토큰",
   "voiceSettings.volcBoostingTable": "핫워드 테이블 이름(선택)",
@@ -97,7 +98,10 @@ const messages = {
     "마이크 켜짐 · 전사 서비스에 연결하는 중입니다. 조금 뒤 말씀해 주세요…",
   "capture.stopping": "마이크 꺼짐 · 마지막 문장을 받는 중…",
   "capture.foreground":
-    "이 페이지를 화면 앞에 두세요. 탭을 바꾸거나 화면을 잠그면 녹음이 중지됩니다. 원본 오디오는 저장되지 않습니다.",
+    "이 페이지를 화면 앞에 두세요. 탭을 바꾸거나 화면을 잠그면 녹음이 중지됩니다. 원본 오디오는 기본으로 저장되며 저장 시 끌 수 있습니다.",
+  "capture.keepAudio": "원본 오디오 저장",
+  "capture.audioNotSaved":
+    "전사 내용은 저장했지만 원본 오디오를 업로드하지 못했습니다.",
   "capture.leaveTitle": "음성 기록을 그만두시겠어요?",
   "capture.leaveRecording":
     "녹음 중입니다. 중지하고 나가면 저장하지 않은 텍스트가 이 기기의 로컬 임시본에 남습니다.",
@@ -163,7 +167,8 @@ const messages = {
   "capture.saveSucceeded": "저장했습니다.",
   "capture.transcribing": "전사 중…",
   "capture.transcribingCount": "전사 중… {done} / {total} 구간",
-  "capture.transcribeFailed": "전사에 실패했습니다. 인식 텍스트를 생성하지 못했으니 초안을 직접 편집하거나 버리세요.",
+  "capture.transcribeFailed":
+    "전사에 실패했습니다. 인식 텍스트를 생성하지 못했으니 초안을 직접 편집하거나 버리세요.",
   "capture.cancelTranscribing": "전사 취소",
   "capture.retryTranscription": "전사 다시 시도",
   "capture.pause": "녹음 일시정지",

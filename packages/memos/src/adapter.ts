@@ -40,6 +40,7 @@ export function memoToDto(
     update_time: memo.updatedAt,
     display_time: memo.createdAt,
     creator: memo.userId,
+    source: memo.source,
     ...(creatorName ? { creator_name: creatorName } : {}),
   };
 }

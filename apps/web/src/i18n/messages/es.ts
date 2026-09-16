@@ -32,7 +32,8 @@ const messages = {
   "voiceSettings.volcengine": "Doubao / Volcano Engine",
   "voiceSettings.minimax": "MiniMax",
   "voiceSettings.minimaxApiKey": "Clave API de MiniMax",
-  "voiceSettings.minimaxBaseUrl": "URL base de MiniMax (opcional; nacional por defecto)",
+  "voiceSettings.minimaxBaseUrl":
+    "URL base de MiniMax (opcional; nacional por defecto)",
   "voiceSettings.volcAppId": "AppID de Volcano Engine",
   "voiceSettings.volcAccessToken": "Token de acceso de Volcano Engine",
   "voiceSettings.volcBoostingTable": "Nombre de tabla de refuerzo (opcional)",
@@ -99,7 +100,10 @@ const messages = {
     "Micrófono activo · conectando la transcripción. Podrás hablar enseguida…",
   "capture.stopping": "Micrófono apagado · recibiendo la última frase…",
   "capture.foreground":
-    "Mantén esta página en primer plano. Cambiar de pestaña o bloquear la pantalla detiene la grabación. El audio original no se guarda.",
+    "Mantén esta página en primer plano. Cambiar de pestaña o bloquear la pantalla detiene la grabación. El audio original se guarda por defecto; puedes desactivarlo al guardar.",
+  "capture.keepAudio": "Guardar el audio original",
+  "capture.audioNotSaved":
+    "Se guardó la transcripción, pero no se pudo subir el audio original.",
   "capture.leaveTitle": "¿Salir de la captura de voz?",
   "capture.leaveRecording":
     "Hay una grabación en curso. Si la detienes y sales, el texto sin guardar queda en un borrador local de este dispositivo.",
@@ -166,7 +170,8 @@ const messages = {
   "capture.saveSucceeded": "Guardado.",
   "capture.transcribing": "Transcribiendo…",
   "capture.transcribingCount": "Transcribiendo el fragmento {done} de {total}…",
-  "capture.transcribeFailed": "La transcripción falló. No se pudo generar el texto reconocido; edita el borrador a mano o descártalo.",
+  "capture.transcribeFailed":
+    "La transcripción falló. No se pudo generar el texto reconocido; edita el borrador a mano o descártalo.",
   "capture.cancelTranscribing": "Cancelar transcripción",
   "capture.retryTranscription": "Reintentar la transcripción",
   "capture.pause": "Pausar la grabación",
