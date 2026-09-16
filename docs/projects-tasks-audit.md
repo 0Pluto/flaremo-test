@@ -2,7 +2,7 @@
 
 - 日期：2026-09-17
 - 范围：projects & tasks 全链路（前端页面与交互、worker 路由与 domain、contracts、日历/侧栏/通知等消费点、MCP/Telegram/OpenAPI 通道、i18n、测试、文档叙事）
-- 性质：审查与决策稿。**只记录，不实施**；每条附修复方向供挑项。
+- 性质：审查 + 解决方案决策稿。问题清单在第一至八节（编号 1.1–7.13，供引用）；**第九节为覆盖全部问题的解决方案，未实施**；其中 D1/D2/D3/D4 四个产品级决策需 Kim 点头，其余按方案直接可开工。
 - 方法：三路并行深查（后端 / 前端 / 跨功能一致性），主会话对 P0/P1 级结论逐条亲自复核源码。
 
 ---
@@ -126,10 +126,103 @@
 
 ---
 
-## 九、建议的收口方向（供挑项，未实施）
+## 九、解决方案（2026-09-17 补，覆盖全部发现，未实施）
 
-1. **第一刀·交互收口（纯前端，低风险）**：1.1 / 1.2 / 1.4 / 1.5 / 1.6 / 1.9 + 7.1 —— 把右上角和空态一次理顺，顺手消灭幽灵筛选和死路按钮。
-2. **第二刀·数据安全对齐（后端）**：3.1 软删/回收站、3.2 导出纳入、4.1 due_at 校验、4.2 日历边界、4.3 时区统一 —— 与 memo 的数据基线拉平。
-3. **第三刀·能力消化（前后端配合）**：1.3 排序拖拽、4.4 分页与过滤、7.4 日历缓存失效 —— 把后端已建好的能力接完。
-4. **叙事补课（文档）**：6.1/6.2/6.3 —— README、CHANGELOG、R10 收口一次清完。
-5. **产品级决策（需要你拍板，不是工程活）**：2.1 两套待办要不要桥接（与 TipTap WYSIWYG 时机联动）、2.6 「日程 vs 任务」定名、第八节 space 后置项是否立项。
+总原则：
+- **数据基线对齐 memo**——memo 有的保底（软删、回收站、导出、限额护栏），tasks/projects 不该缺。
+- **后端能力一次性接完**，不再让合同里建好的东西悬空。
+- **新交互用 dnd-kit**（触屏/键盘/读屏三达），替换原生 HTML5 draggable 这类鼠标专属方案；原生 select 收口成 ui 组件。
+- 每刀实施时顺手回填决策稿/CHANGELOG（文档与代码同步走）。
+- 门禁按既定约定：tsc + 定向 vitest + build + dev 目检，不主动跑 e2e。
+
+### 第一刀 · 交互收口（纯前端，无迁移）
+
+| 问题 | 方案 |
+|---|---|
+| 1.1 编辑任务无法换项目 | `TaskFormDialog` 改为自取 `["projects"]` 缓存（useQuery 复用，不 prop-drilling），编辑态始终渲染项目下拉；update payload 带 `project_id`（contracts `projects.ts:102` 已支持）。`projects={[]}` 死参数随之删除 |
+| 1.2 删除已选项目的幽灵筛选 | `deleteMutation.onSuccess` 时若删的是 `selected` 则 `setSelected(ALL_TASKS)`；另加兜底 effect：`selected` 不在 `projectById` 且非 ALL 时自动回退，防 archive 之外的新路径复发 |
+| 1.3 看板零排序 | 引入 `@dnd-kit/core` + `sortable`：列内拖拽调 `reorderTasks`，跨列 = `updateTask({status})` + 两列各调一次 reorder（后端 batch 化见 4.5）。dnd-kit 触屏/键盘/读屏开箱可用，顺带解决 7.6 的看板一半 |
+| 1.4+1.5 头部双按钮与死路 | 两颗按钮**合并进 SubpageHeader actions 一行**：「新建项目」primary +「新建任务」outline secondary，任务区标题行撤按钮——堆叠消失；0 项目时「新建任务」隐藏（若采纳 D1 可无项目建任务，则始终显示，见下） |
+| 1.6 空态无 CTA | Empty 内补主按钮「新建项目」（对齐 daily-review/memory 页的 rigor），D1 采纳后加次链接「直接建任务」 |
+| 1.7 done 推进回环 | 保持 done→todo 的"重开"语义但讲清楚：点击文案/aria 按 `todo→开始`、`in_progress→完成`、`done→重新打开` 动态化（3 个新 key），toast 带 Undo（复用现有乐观快照回滚） |
+| 1.9 projectId 不重置 | reset 列表补 `setProjectId(defaultProjectId ?? "")`，不再依赖 `key={selected}` 重挂载兜底 |
+| 7.1 a11y 无名按钮 | 推进按钮加动态 `aria-label`（与 1.7 同三个 key） |
+| 7.2 触屏隐形菜单按钮 | `@media (pointer: coarse)` 下 More 按钮常显（`opacity-100`），fine pointer 保持 hover 渐显；键盘 `focus-visible` 已有保留 |
+| 7.3 select 三处手搓 | 新建 `components/ui/select.tsx`（native select + 统一 token，与 input 同视觉），projects 页 3 处、memory 页 3 处、capture 页 1 处全部替换 |
+| 7.11 tasksEmpty 语境错位 | 空态文案按 `selectedProject` 有无分支：项目视图用现文案，「全部任务」视图用"还没有任务，建一个？"式新 key |
+| 7.12 乐观更新不对称 | 对话框保存路径补乐观 patch（复用 `patchTasksCache`）；乐观 patch 一并补 `completed_at`（status→done 时置 now，回滚时还原） |
+
+### 第二刀 · 数据安全对齐（含迁移，后端为主）
+
+| 问题 | 方案 |
+|---|---|
+| 3.1 无回收站、删项目级联硬销 | 软删对齐 memo：projects/tasks 加 nullable `deleted_at`；全部读路径（projects 列表、tasks 列表、`calendar-view.ts`、`review.ts:377`、`index.ts:462` 逾期聚合、`countTasksByProjects`）统一加 `isNull(deletedAt)`；删除 = 写 `deleted_at`（project 删除 = 项目与其全部任务一起打标，**不再物理 cascade**）；复用 memo trash purge cron 做 30 天硬清；UI 在 /projects 侧栏加「回收站」折叠区（归档区同款交互），支持恢复。activity 表 FK 保持 cascade 不动——软删期间 trail 仍在，硬清时随行销毁 |
+| 3.2 导出不含任务 | `import-export.ts` 纳入 projects / tasks / task_activity 三表，bundle version 3→4，导入复用 memory 的 id remap 机制 |
+| 3.3+3.4 审计尾巴 | 删掉 `"deleted"` 死枚举（`contracts/projects.ts:15`）；`schema.ts:1171-1174` 注释改为"trail 与任务同生命周期"；reorder 的 `task_id=null` 行保留不删（未来 activity 读路径的地基），不新建读端点（克制） |
+| 4.1 due_at 不校验 | contract 收紧为 `regex ^\d{4}-\d{2}-\d{2}$`（产品语义 = 日期粒度，与 UI `type="date"` 输出一致）；实施前跑一次存量扫描（唯一写入口是 date input，预计脏数据为 0）；PAT/agent 文档同步注明格式 |
+| 4.2 日历 `to` 边界 | `lte(tasks.dueAt, to)` 改 `lt(tasks.dueAt, nextDay(to))`（`lib/calendar-date.ts` 已有日运算 helper），并补"带时间值也不漏"的回归测试（防御性，虽 4.1 收紧后理论上不再出现） |
+| 4.3 两套"一天" | 采纳 date-only 规范后**自动消解**：notes 是"时刻分桶"所以需要 tz 偏移，tasks 是"本地日语义"所以不需要——在 `calendar-view.ts` 补注释写明这个不对称是语义差异而非 bug，防后人再报 |
+| 4.4 无分页、过滤薄 | 对齐 memos 的 `page_size`/`page_token` 游标模式（游标 = 排序键 + id）；tasks 补 `priority`、`due_from/due_to` 过滤，projects 列表补 `query` 名称过滤；`api.ts` 同步接线 |
+| 4.5 reorder 无护栏 | `task_ids` 加 `.max(200)`；改 D1 batch 单事务替代逐行 UPDATE；混入非本项目/他人 id → 400 ValidationError（不再静默忽略） |
+| 4.6 strip 三处重复 | 全部改用共享 `parseResourceName`（`ids.ts:15-23` 本就支持），删三份手写实现 |
+| 4.7 PAT 前缀入库 | 维持现状（前缀片段非完整 token，风险可忽略），本条留档即结 |
+| 写路径护栏 | tasks/projects 写路由套用现有 `rate-limit.ts` per-user 限制（与 memos 写路径同级），堵住共享实例无限建行的口子 |
+| 5.1–5.3 测试补齐 | 新建 `tasks-api.test.ts`（HTTP 层：reorder、activity、unarchive、422/400 负例、未知 project_id 404）；跨用户隔离套件（双用户 fixture：用他人 project 建任务、读他人 task/project、reorder 混入他人 id）；边界值（name 200/201、重复 id、非法 due_at、日历带时间边界） |
+
+### 第三刀 · 能力消化与一致性（前后端配合）
+
+| 问题 | 方案 |
+|---|---|
+| 7.4 双缓存不同步 | `invalidate()` 补 `{ queryKey: ["calendar"] }` 前缀失效，日历 30 秒旧数据窗口消失 |
+| 7.5 对话框重挂载丢输入 | 编辑对话框 key 收窄为 `task.id`（去掉 7 字段 key）；状态 seed 改为 `onOpenChange(true)` 时重置——agent 并发更新 refetch 不再炸掉用户正在输入的内容 |
+| 2.3 无 due 任务隐形 | agenda 顶部加「未排期」折叠分组（复用现有分组样式），月历不塞（克制）；/projects 页维持为无 due 任务的主场 |
+| 2.4 消费点浅 | `task_overdue` 通知深链改 `/calendar?date=<dueAt>`（聚焦当日 DayPanel）；mini 日历 `overdueCount` 包 Link 指向同一目标；workspace-search 纳入 task title/notes（复用现有 search 框架加一类 provider）。每日回顾不加任务（DayPanel 已可达，克制） |
+| 1.8 批量操作 | 暂缓，记录触发条件：单用户任务数破百或用户提出；预留方案 = 卡片多选 + 底部操作条 |
+
+### 第四刀 · 叙事补课与 i18n 清理（文档为主）
+
+| 问题 | 方案 |
+|---|---|
+| 6.1 README 零提及 | Key Features 补「Projects & Tasks」「Calendar」两条，8 语言同步走现有翻译流程；`README.md:48` 的 "project context" 改为 "memory scopes"，消除与 Projects 功能的同名歧义 |
+| 6.2 CHANGELOG 空白 | 下个发版条目补记两波功能（projects/tasks 基座 + R10 日历 + 逾期推送），一次清账 |
+| 6.3 R10 未收口 | `product-requirements.md` R10 补状态行 ✅；"不做提醒推送"回填为"v0.20.x 已加逾期提醒与 Web Push（dabc1e8/e433a1b），范围修正" |
+| 6.4 官网卖点零提及 | `apps/site/src/content/copy.ts` 补一条任务/日历卖点（与 README 同批 8 语言） |
+| 6.5 对外通道 | `/api/app/projects|tasks` 补进 architecture-notes 的 API 面一节；MCP 暴露任务工具**列为 D4 的后续项**（等任务归属语义稳定再定契约，避免返工），本轮不做 |
+| 7.7–7.10 i18n 清理 | 删死键 `calendar.viewAgendaJump`；合并 `today`/`todayMini`；ja `projects.field.notes` 「メモ」→「備考」；placeholder 换真实示例（"例如：网站改版"）；文案里的 →/← 箭头字符改 `ArrowRightIcon`（rtl 自动镜像） |
+| 2.6 定名（D3） | 统一「任务」为主词：日历页的「日程」类 key 值改为任务措辞（key 名不动，纯值替换 8 语言），"排上日程/日程表"保留为动词性/容器性描述。理由：同一实体一个名字，日历页本质在排 tasks |
+
+### 第五刀 · 产品级决策（方案已给，三处需要你点头）
+
+**D1 · 任务可无项目（解 1.4 / 2.5 的根）**——推荐做：`tasks.project_id` 改 nullable（SQLite 去 NOT NULL 需表重建，tasks 行数小，锁窗可忽略，与 3.1 软删同批迁移）。收益：不依赖项目的任务成立、日历快速添加的"静默建默认项目"hack（`calendar-page.tsx:344-356`）整个删除、「全部任务」板面显示"未分配"徽标。次选（不迁移）：维持强制项目 + 0 项目时隐藏按钮，但 2.5 的隐式建项目仍脏。
+
+**D2 · 两套待办的桥接（解 2.1 / 2.2）**——推荐**单向升级，不做双向同步**（双向同步是两源真相的地狱，业界共识不做）：
+1. memo 渲染时 checkbox 可勾选：读视图直接改 markdown 对应行 → `updateMemo`，乐观更新。**与 TipTap WYSIWYG 分支（`docs/composer-editor-wysiwyg.md`，feat/composer-wysiwyg 已实现 TaskList）合并落地**，编辑态用 TipTap task list，读视图同步支持点击，避免两套实现。
+2. memo 待办条目加「转为任务」：创建 task（title = 条目文本，due_at 可空，新加 nullable `source_memo_id` 关联回链，不加 FK 约束防 memo 硬删后悬挂——读时校验）。
+3. 完成任务**不**回写 memo checkbox（单向）；日历上"笔记待办"计数与"任务"并排展示但文案区分。
+若你倾向更克制：也可只做第 1 步（checkbox 可勾）+ 明确文案宣布两套系统并存，第 2 步挂起。
+
+**D4 · space 归属去向（解第八节悬置项）**——推荐维持个人私有（与"个人日历"定位一致），在 `product-requirements.md` 补一条显式决策记录："团队共享任务清单列为远期候选；触发条件 = 团队实例用户提出"，`team-space-ux.md:54` 的"后续单议"指向该条。不立项、不加表结构。
+
+### 实施顺序与依赖
+
+```
+第一刀（纯前端）          ──────────────► 可独立先行，随时可开工
+第二刀（迁移 0019：软删 + nullable + 导出 v4 + 校验）
+        ├─► D1 nullable 与 3.1 软删同批迁移，迁移前需 D1 拍板
+        └─► 第三刀的 reorder batch（4.5）依赖本刀合入
+第三刀（dnd-kit 看板、缓存失效、深链、未排期分组）── 依赖 4.5 与 D1
+第四刀（叙事 + i18n）     ──────────────► 随第三刀收尾一起滚 kosx
+第五刀（D1/D2/D4）        ──────────────► D1 在第二刀开工前拍板即可；D2/D4 各自独立
+```
+
+### 覆盖核对
+
+| 问题 | 归属刀 | 问题 | 归属刀 |
+|---|---|---|---|
+| 1.1–1.7, 1.9 | 一 | 4.5–4.7, 5.1–5.3 | 二 |
+| 1.8 | 三（暂缓，触发条件在案） | 6.1–6.5 | 四 |
+| 2.1, 2.2 | 五（D2） | 7.1–7.3, 7.5, 7.11, 7.12 | 一 |
+| 2.3, 2.4 | 三 | 7.4, 7.6 | 三 |
+| 2.5 | 五（D1）+ 一（空态） | 7.7–7.10 | 四 |
+| 2.6 | 五（D3） | 3.1–3.4 | 二 |
+| 3.5, 4.8, 7.13, 第八节 OK 项 | 无需动作（现状合格） | 4.1–4.4 | 二（4.3 部分自动消解） |
