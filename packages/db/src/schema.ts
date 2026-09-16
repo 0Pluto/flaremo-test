@@ -1108,6 +1108,8 @@ export const usageCounters = sqliteTable(
 // Projects group tasks. They are first-class domain resources (not memo tags)
 // so agents and scripts can read a stable "what projects do I have, how many
 // tasks in each" through the app API without re-parsing memo markdown.
+// `deleted_at` is the recycle-bin marker: delete writes the timestamp, restore
+// clears it, and the daily cron hard-deletes rows past the TTL window.
 export const projects = sqliteTable(
   "projects",
   {
@@ -1120,6 +1122,7 @@ export const projects = sqliteTable(
     status: text("status", { enum: ["active", "archived"] })
       .notNull()
       .default("active"),
+    deletedAt: text("deleted_at"),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
   },
@@ -1134,6 +1137,10 @@ export const projects = sqliteTable(
 
 // Tasks are thin, ordered work items under a project. `status` and `sort_order`
 // are columns (not a JSON payload) so list/board grouping stays indexable.
+// `project_id` is nullable: a task without a project is an "unassigned" item
+// that shows up in the all-tasks view. `source_memo_id` links back to the memo
+// a task was upgraded from; it is intentionally FK-free (a memo hard-delete
+// must not cascade into tasks) and validated at read time.
 export const tasks = sqliteTable(
   "tasks",
   {
@@ -1141,9 +1148,10 @@ export const tasks = sqliteTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    projectId: text("project_id")
-      .notNull()
-      .references(() => projects.id, { onDelete: "cascade" }),
+    projectId: text("project_id").references(() => projects.id, {
+      onDelete: "cascade",
+    }),
+    sourceMemoId: text("source_memo_id"),
     title: text("title").notNull(),
     notes: text("notes"),
     status: text("status", { enum: ["todo", "in_progress", "done"] })
@@ -1155,6 +1163,7 @@ export const tasks = sqliteTable(
     dueAt: text("due_at"),
     sortOrder: integer("sort_order").notNull().default(0),
     completedAt: text("completed_at"),
+    deletedAt: text("deleted_at"),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
   },
@@ -1173,6 +1182,8 @@ export const tasks = sqliteTable(
 // so observability (who changed what, when) is what makes that trustable and
 // reversible rather than gating the agent's permissions. `task_id` is null for
 // project-scoped events (e.g. reorders) that do not target a single task.
+// The trail shares the task's lifecycle: it survives a recycle-bin delete and
+// is cascade-deleted only when the task row itself is hard-deleted.
 export const taskActivity = sqliteTable(
   "task_activity",
   {
@@ -1184,7 +1195,7 @@ export const taskActivity = sqliteTable(
     actorType: text("actor_type", { enum: ["user", "agent"] }).notNull(),
     actorName: text("actor_name"),
     action: text("action", {
-      enum: ["created", "updated", "status_changed", "deleted", "reordered"],
+      enum: ["created", "updated", "status_changed", "reordered"],
     }).notNull(),
     changes: text("changes", { mode: "json" })
       .$type<Record<string, unknown>>()

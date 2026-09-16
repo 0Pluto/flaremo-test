@@ -176,6 +176,13 @@
       "when": 1789475918752,
       "tag": "0024_gray_madrox",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1789584977482,
+      "tag": "0025_clammy_sunspot",
+      "breakpoints": true
     }
   ]
 }

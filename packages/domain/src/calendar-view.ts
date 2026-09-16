@@ -1,8 +1,8 @@
 import type { CalendarView } from "@flaremo/contracts";
 import type { FlareMoDb, UserRow } from "@flaremo/db";
 import { memos, tasks } from "@flaremo/db";
-import { and, asc, eq, gte, inArray, lt, lte, sql } from "drizzle-orm";
-import { taskToDto } from "./tasks";
+import { and, asc, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
+import { nextDayKey, taskToDto } from "./tasks";
 
 // The calendar is a presentation of data that already has a home: notes keep
 // being located by `created_at`, scheduled items keep being tasks located by
@@ -16,6 +16,13 @@ export async function getCalendarView(
   // Day keys are the client's local days. tz is the client's
   // getTimezoneOffset() (UTC - local in minutes, e.g. -480 for UTC+8), so
   // local wall clock = UTC - tz and UTC bounds = local-day bounds + tz.
+  //
+  // Deliberate asymmetry (not a bug): notes are *moments in time* — their
+  // `created_at` is an absolute instant, so they are bucketed into the
+  // viewer's local day via the tz offset. Tasks are *local-day semantics* —
+  // `due_at` is a plain calendar day ("due on the 12th"), so their day key is
+  // compared literally, with no timezone conversion. A due date is not an
+  // instant and has no meaningful "UTC instant" to shift.
   const offsetMinutes = -(query.tz ?? 0);
   const boundShift = (query.tz ?? 0) * 60_000;
   const startUtc = new Date(
@@ -81,8 +88,12 @@ export async function getCalendarView(
       .where(
         and(
           eq(tasks.userId, user.id),
+          isNull(tasks.deletedAt),
+          // Inclusive on the last day via an exclusive next-day bound so a
+          // task stored with a time component (`2026-09-12T15:00:00Z` on
+          // legacy rows; writes are date-only) still lands on the 12th.
           gte(tasks.dueAt, from),
-          lte(tasks.dueAt, to),
+          lt(tasks.dueAt, nextDayKey(to)),
         ),
       )
       .orderBy(asc(tasks.dueAt), asc(tasks.sortOrder), asc(tasks.id)),
