@@ -24,10 +24,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { useI18n } from "@/i18n";
-import { inlineImageMarkdown } from "@/lib/image-insert";
 import type { MemoCaptureInput } from "@/lib/local-memo-capture";
 import { extractTags } from "@/lib/memo";
-import { insertMarkdownAt } from "@/lib/rich-editor-upload";
+import { uploadAndInsertImages } from "@/lib/rich-editor-upload";
 
 type MemoComposerProps = {
   draft: MemoCaptureInput;
@@ -85,10 +84,9 @@ export function MemoComposer({
   // deleted image would be re-bound on submit).
   const preuploadMarkdownRef = useRef(new Map<string, string>());
 
-  // Pasted/dropped images upload immediately (unbound; the send flow claims
-  // them afterwards) and their references land at the recorded document
-  // position once the upload settles. Tasks chain so two rapid pastes never
-  // drift positions.
+  // Pasted/dropped images show an inline "uploading…" chip immediately, then
+  // their references land where the chip sits once the upload settles. Tasks
+  // chain so two rapid pastes never interleave.
   const enqueueInlineUploads = (files: File[], position: number) => {
     if (files.length === 0) return;
     pendingUploadsRef.current += files.length;
@@ -96,34 +94,23 @@ export function MemoComposer({
     uploadChainRef.current = uploadChainRef.current
       .catch(() => undefined)
       .then(async () => {
-        let cursor = position;
         try {
-          for (const file of files) {
-            let attachment: Awaited<ReturnType<typeof uploadAttachment>>;
-            try {
-              attachment = await uploadAttachment({ file });
-            } catch {
-              toast.error(t("composer.imageUploadFailed"));
-              break;
-            }
-            const editor = editorRef.current;
-            if (!editor) break;
-            const markdown = inlineImageMarkdown(
-              attachment.id,
-              attachment.filename,
-            );
-            // Insert at the position captured when the paste happened (the
-            // user may have kept typing while the network was pending); the
-            // cursor advances by the insertion's real size delta.
-            cursor = insertMarkdownAt(editor, cursor, markdown);
-            preuploadMarkdownRef.current.set(attachment.name, markdown);
-            commitDraft({
-              preuploadedAttachmentNames: [
-                ...(draftRef.current.preuploadedAttachmentNames ?? []),
-                attachment.name,
-              ],
-            });
-          }
+          await uploadAndInsertImages({
+            editorRef,
+            files,
+            position,
+            upload: (file) => uploadAttachment({ file }),
+            onUploaded: (attachment, markdown) => {
+              preuploadMarkdownRef.current.set(attachment.name, markdown);
+              commitDraft({
+                preuploadedAttachmentNames: [
+                  ...(draftRef.current.preuploadedAttachmentNames ?? []),
+                  attachment.name,
+                ],
+              });
+            },
+            onError: () => toast.error(t("composer.imageUploadFailed")),
+          });
         } finally {
           // A failed batch also releases the files skipped after the failure.
           pendingUploadsRef.current -= files.length;

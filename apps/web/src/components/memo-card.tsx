@@ -56,14 +56,13 @@ import {
   createImageDimensionResolver,
   filterUnreferencedAttachments,
 } from "@/lib/attachment-refs";
-import { inlineImageMarkdown } from "@/lib/image-insert";
 import {
   extractTags,
   formatMemoRelativeTime,
   formatMemoTime,
   getMemoResourceId,
 } from "@/lib/memo";
-import { insertMarkdownAt } from "@/lib/rich-editor-upload";
+import { uploadAndInsertImages } from "@/lib/rich-editor-upload";
 import { formatClock } from "@/lib/transcript";
 import { cn } from "@/lib/utils";
 
@@ -156,30 +155,18 @@ export const MemoCard = memo(function MemoCard({
 
   // Editing an existing memo: pasted images upload bound to the memo right
   // away, so a cancelled edit leaves nothing to clean up except an
-  // unreferenced (but owned) attachment in the gallery. References land at
-  // the recorded document position once each upload settles.
+  // unreferenced (but owned) attachment in the gallery. Each file shows an
+  // "uploading…" chip until its reference lands at the chip's position.
   const insertInlineImages = (files: File[], position: number) => {
     if (files.length === 0) return;
     setIsUploadingInline(true);
-    let cursor = position;
-    (async () => {
-      try {
-        for (const file of files) {
-          const attachment = await uploadAttachment({ file, memo: memo.name });
-          const editor = editEditorRef.current;
-          if (!editor) break;
-          const markdown = inlineImageMarkdown(
-            attachment.id,
-            attachment.filename,
-          );
-          cursor = insertMarkdownAt(editor, cursor, markdown);
-        }
-      } catch {
-        toast.error(t("composer.imageUploadFailed"));
-      } finally {
-        setIsUploadingInline(false);
-      }
-    })();
+    void uploadAndInsertImages({
+      editorRef: editEditorRef,
+      files,
+      position,
+      upload: (file) => uploadAttachment({ file, memo: memo.name }),
+      onError: () => toast.error(t("composer.imageUploadFailed")),
+    }).finally(() => setIsUploadingInline(false));
   };
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [draftContent, setDraftContent] = useState(memo.content);

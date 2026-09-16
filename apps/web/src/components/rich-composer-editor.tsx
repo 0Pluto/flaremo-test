@@ -1,3 +1,4 @@
+import Image from "@tiptap/extension-image";
 import { TaskItem, TaskList } from "@tiptap/extension-list";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Markdown } from "@tiptap/markdown";
@@ -6,6 +7,7 @@ import { type Editor, EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useEffect, useRef } from "react";
 import { TagHighlight } from "@/components/tag-highlight-extension";
+import { UploadPlaceholder } from "@/components/upload-placeholder-extension";
 import { extractImageFiles } from "@/lib/image-insert";
 
 export type RichComposerEditorProps = {
@@ -101,9 +103,13 @@ export function RichComposerEditor({
       }),
       TaskList,
       TaskItem.configure({ nested: false }),
+      // Body images: `![alt](/file/attachments/…)` references render in place.
+      // Inline so a marked image token can live inside its paragraph.
+      Image.configure({ inline: true }),
       Placeholder.configure({ placeholder }),
       Markdown,
       TagHighlight,
+      UploadPlaceholder,
     ],
     editorProps: {
       attributes: {

@@ -525,6 +525,17 @@
     @apply rounded bg-brand-500/10 px-0.5 font-medium text-brand-600 dark:text-brand-300;
   }
 
+  /* Inline "uploading…" feedback for a pasted/dropped image. Pure decoration:
+     the chip never enters the document model, so markdown stays clean. */
+  .composer-upload-chip {
+    @apply mr-1 inline-flex max-w-40 items-center gap-1.5 truncate rounded-md bg-muted px-2 py-0.5 align-middle text-xs text-muted-foreground;
+  }
+
+  .composer-upload-chip::before {
+    @apply inline-block size-3 shrink-0 rounded-full border-2 border-brand-400 border-t-transparent motion-safe:animate-spin;
+    content: "";
+  }
+
   .composer-editor-content p.is-editor-empty:first-child::before {
     @apply pointer-events-none float-left h-0 text-muted-foreground;
     content: attr(data-placeholder);
