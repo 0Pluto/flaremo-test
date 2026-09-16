@@ -207,6 +207,86 @@ export function ReadingAudioProvider({
     setRateState(next);
   }, []);
 
+  // OS media session (rollout §5): lock screen / notification controls while
+  // the transport is mounted (the provider only mounts alongside the audio
+  // bar). Feature-detection guarded; handlers are cleared on unmount so a
+  // memo without audio never inherits stale OS controls. No artwork — the
+  // manifest icons would mean an extra image fetch per playback.
+  useEffect(() => {
+    const mediaSession = navigator.mediaSession;
+    if (!mediaSession || typeof MediaMetadata === "undefined") return;
+
+    mediaSession.metadata = new MediaMetadata({
+      title: track?.filename ?? "",
+      artist: "FlareMo",
+      album: "FlareMo",
+    });
+    mediaSession.playbackState = playing ? "playing" : "paused";
+
+    const safeSet = (
+      action: MediaSessionAction,
+      handler: MediaSessionActionHandler | null,
+    ) => {
+      try {
+        mediaSession.setActionHandler(action, handler);
+      } catch {
+        // Unsupported actions throw on some platforms; playback continues.
+      }
+    };
+    safeSet("play", () => {
+      const audio = audioRef.current;
+      if (audio)
+        void audio.play().catch(() => {
+          setErrored(true);
+          setPlaying(false);
+        });
+    });
+    safeSet("pause", () => {
+      audioRef.current?.pause();
+    });
+    safeSet("seekbackward", (details) => {
+      const audio = audioRef.current;
+      if (audio)
+        seek(Math.max(0, audio.currentTime - (details.seekOffset ?? 10)));
+    });
+    safeSet("seekforward", (details) => {
+      const audio = audioRef.current;
+      if (audio) seek(audio.currentTime + (details.seekOffset ?? 10));
+    });
+    safeSet("seekto", (details) => {
+      if (details.seekTime != null) seek(details.seekTime);
+    });
+
+    return () => {
+      mediaSession.metadata = null;
+      mediaSession.playbackState = "none";
+      const actions = [
+        "play",
+        "pause",
+        "seekbackward",
+        "seekforward",
+        "seekto",
+      ] as const;
+      for (const action of actions) safeSet(action, null);
+    };
+  }, [playing, seek, track]);
+
+  // The OS scrubber needs an explicit position state; browsers do not derive
+  // it from the media element on their own.
+  useEffect(() => {
+    const mediaSession = navigator.mediaSession;
+    if (!mediaSession || !Number.isFinite(duration) || duration <= 0) return;
+    try {
+      mediaSession.setPositionState({
+        duration,
+        playbackRate: rate,
+        position: Math.min(Math.max(0, currentTime), duration),
+      });
+    } catch {
+      // Out-of-range states throw on some platforms; playback is unaffected.
+    }
+  }, [currentTime, duration, rate]);
+
   const value: ReadingAudioContextValue = {
     errored,
     track,

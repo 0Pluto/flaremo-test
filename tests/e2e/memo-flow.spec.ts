@@ -20,8 +20,9 @@ test("creates a memo and filters it by tag", async ({ page }) => {
   await composer.fill(content);
   await page.getByRole("button", { name: /save|保存|send|发送/i }).click();
   // Submission is done when the composer clears; the card and the composer
-  // briefly both show the content while the optimistic insert lands.
-  await expect(composer).toHaveValue("");
+  // briefly both show the content while the optimistic insert lands. The
+  // composer is a rich contenteditable, so emptiness reads as empty text.
+  await expect(composer).toHaveText("");
   await expect(page.getByText(content)).toBeVisible();
   await expect(page.getByText(`#${tag}`, { exact: true })).toBeVisible();
 
@@ -43,7 +44,7 @@ test("restores an unfinished new-memo draft after a reload", async ({
   await page.reload();
   await expect(
     page.getByRole("textbox", { name: /new note|新笔记/i }),
-  ).toHaveValue(content);
+  ).toHaveText(content);
   await expect(
     page.getByText(/restored.*draft|已恢复未完成的草稿/i),
   ).toBeVisible();
@@ -239,7 +240,7 @@ test("keeps a composer draft when saving fails", async ({ page }) => {
   await page.getByRole("button", { name: /save|保存|send|发送/i }).click();
 
   await expect(page.getByText("temporary create failure")).toBeVisible();
-  await expect(composer).toHaveValue(content);
+  await expect(composer).toHaveText(content);
 });
 
 test("edits and shares a memo", async ({ page }) => {
@@ -252,7 +253,7 @@ test("edits and shares a memo", async ({ page }) => {
   await page.getByRole("button", { name: /save|保存|send|发送/i }).click();
   await expect(
     page.getByRole("textbox", { name: /new note|新笔记/i }),
-  ).toHaveValue("");
+  ).toHaveText("");
   await expect(
     page.locator("article").filter({ hasText: content }),
   ).toBeVisible();
@@ -294,7 +295,7 @@ test("archives and restores a memo", async ({ page }) => {
   await page.getByRole("button", { name: /save|保存|send|发送/i }).click();
   await expect(
     page.getByRole("textbox", { name: /new note|新笔记/i }),
-  ).toHaveValue("");
+  ).toHaveText("");
   await expect(
     page.locator("article").filter({ hasText: content }),
   ).toBeVisible();
@@ -326,7 +327,7 @@ test("trashes, restores, and hard-deletes a memo", async ({ page }) => {
   await page.getByRole("button", { name: /save|保存|send|发送/i }).click();
   await expect(
     page.getByRole("textbox", { name: /new note|新笔记/i }),
-  ).toHaveValue("");
+  ).toHaveText("");
   await expect(
     page.locator("article").filter({ hasText: content }),
   ).toBeVisible();

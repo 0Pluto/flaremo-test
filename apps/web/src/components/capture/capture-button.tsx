@@ -1,11 +1,7 @@
 import { Loader2Icon, Mic, Pause, Play, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type CaptureButtonState =
-  | "idle"
-  | "connecting"
-  | "recording"
-  | "paused";
+export type CaptureButtonState = "idle" | "connecting" | "recording" | "paused";
 
 /**
  * The single large capture control (72px > 44px touch target):
@@ -46,7 +42,11 @@ export function CaptureButton({
       title={label}
       disabled={disabled || busy}
       onClick={() =>
-        state === "idle" ? onStart() : state === "paused" ? onResume() : onStop()
+        state === "idle"
+          ? onStart()
+          : state === "paused"
+            ? onResume()
+            : onStop()
       }
       className={cn(
         "relative flex size-[72px] items-center justify-center rounded-full",

@@ -51,6 +51,8 @@ const messages = {
   "common.search": "بحث",
   "search.placeholder": "ابحث في الملاحظات…",
   "search.semanticPlaceholder": "ابحث: صِف ما تريد باللغة الطبيعية…",
+  "search.noResultsHint":
+    "لم تظهر نتائج للكلمات المفتاحية؟ جرّب البحث الدلالي — ابحث بالمعنى.",
   "search.semanticToggle": "البحث الدلالي",
   "search.results": "نتائج البحث",
   "search.taskResults": "المهام",
@@ -88,8 +90,8 @@ const messages = {
   "space.all": "الكل",
   "space.personal": "المساحة الشخصية",
   "space.team": "مساحة الفريق",
-  "nav.dailyReview": "مراجعة اليوم",
-  "nav.randomWalk": "جولة عشوائية",
+  "nav.dailyReview": "في مثل هذا اليوم",
+  "nav.randomWalk": "تجوال في الذاكرة",
   "nav.memory": "الذاكرة",
   "nav.projects": "المشاريع",
   "nav.capture": "التسجيل الصوتي",
@@ -122,6 +124,10 @@ const messages = {
     "انقطع التسجيل وأُوقف الميكروفون. راجع النص الملتقط؛ قد يكون النهاية غير مكتملة.",
   "capture.unavailable":
     "التفريغ النصي غير مُهيأ أو غير متاح مؤقتًا. أعد المحاولة لاحقًا.",
+  "capture.unavailableOwnerLink":
+    "يمكن تفعيلها من «الحساب → إعدادات التعرف على الصوت».",
+  "capture.unavailableMember":
+    "يرجى طلب تفعيل التعرف على الصوت من مالك المثيل.",
   "capture.wakeLockFailed":
     "فشل إبقاء الشاشة مضاءة؛ قد يقفل الشاشة مقاطعة التسجيل.",
   "capture.connectionFailed":
@@ -210,6 +216,8 @@ const messages = {
   "calendar.toastRescheduledPast":
     "أُعيدت الجدولة إلى {date} (تاريخ في الماضي).",
   "calendar.actionFailed": "فشل الإجراء، أعد المحاولة.",
+  "review.onThisDayBanner":
+    "في مثل هذا اليوم · {count} ملاحظات من السنوات الماضية",
   "review.oneYearAgoToday": "قبل سنة، في مثل هذا اليوم",
   "review.yearsAgoToday": "قبل {count} سنوات، في مثل هذا اليوم",
   "review.dailyEmptyTitle": "لا ملاحظات من هذا اليوم بعد",
@@ -238,7 +246,7 @@ const messages = {
   "notifications.title": "التنبيهات",
   "notifications.empty":
     "لا تنبيهات بعد — ملاحظات هذا اليوم في السنوات الماضية ستظهر هنا.",
-  "notifications.type.dailyReview": "مراجعة اليوم",
+  "notifications.type.dailyReview": "في مثل هذا اليوم",
   "notifications.type.taskOverdue": "مهمة متأخرة",
   "notifications.type.memoComment": "علّق على ملاحظتك",
   "notifications.type.memoMention": "أشار إليك في ملاحظة",
@@ -248,15 +256,19 @@ const messages = {
   "sidebar.mobileDescription": "يفتح الشريط الجانبي للتنقل.",
   "sidebar.toggle": "تبديل الشريط الجانبي",
   "composer.ariaLabel": "ملاحظة جديدة",
-  "composer.placeholder": "بماذا تفكر الآن؟ دوّنها…",
+  "composer.placeholder": "اكتب شيئًا لنفسك في المستقبل…",
   "composer.addAttachment": "إضافة مرفق",
   "composer.addTag": "إضافة وسم",
   "composer.bulletList": "قائمة",
+  "composer.taskList": "قائمة المهام",
   "composer.send": "إرسال",
   "composer.visibility.personal": "شخصي",
   "composer.visibility.team": "الفريق",
   "composer.visibility.aria": "وجهة الإرسال",
   "composer.sending": "جارٍ الإرسال…",
+  "composer.voice": "ملاحظة صوتية",
+  "composer.voiceStop": "إيقاف وإدراج",
+  "composer.voiceCancel": "إلغاء",
   "shortcuts.title": "اختصارات لوحة المفاتيح",
   "shortcuts.subtitle": "اختصارات عامة متاحة في كل مكان.",
   "shortcuts.search": "الانتقال إلى البحث",
@@ -314,7 +326,7 @@ const messages = {
   "list.loadMore": "تحميل المزيد",
   "explorer.records": "الملاحظات",
   "explorer.tags": "الوسوم",
-  "explorer.days": "أيام",
+  "explorer.streak": "أيام متتالية",
   "explorer.expand": "توسيع",
   "explorer.collapse": "طي",
   "explorer.noTags": "لا وسوم بعد — ابدأ التنظيم بوسم #",
@@ -438,7 +450,7 @@ const messages = {
   "auth.passwordTitle": "تغيير كلمة المرور",
   "push.title": "تنبيهات فورية",
   "push.description":
-    "إشعارات متصفح للمراجعة اليومية والمواعيد المتأخرة. تعمل حتى بعد إغلاق الصفحة.",
+    "إشعارات متصفح لذكريات هذا اليوم والمواعيد المتأخرة. تعمل حتى بعد إغلاق الصفحة.",
   "push.enable": "تشغيل الإشعارات",
   "push.disable": "إيقاف الإشعارات",
   "push.subscribed": "التنبيهات الفورية مُفعّلة",

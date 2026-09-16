@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { transcribeCapturedAudio, type BatchProgress } from "./batch";
+import { type BatchProgress, transcribeCapturedAudio } from "./batch";
 import type { CapturedAudio } from "./encoder";
 
 const transcribe = vi.fn();
@@ -8,7 +8,10 @@ vi.mock("../../api", () => ({
 }));
 
 function audio(
-  slices: { startMs: number; utterances: { startMs: number; text: string }[] }[],
+  slices: {
+    startMs: number;
+    utterances: { startMs: number; text: string }[];
+  }[],
 ): CapturedAudio {
   return {
     mimeType: "audio/wav",
@@ -52,7 +55,9 @@ describe("batch transcription runner", () => {
       0, 480_000,
     ]);
     expect(
-      transcribe.mock.calls.map(([, input]) => (input as { format: string }).format),
+      transcribe.mock.calls.map(
+        ([, input]) => (input as { format: string }).format,
+      ),
     ).toEqual(["wav", "wav"]);
     expect(progress).toEqual([
       { done: 1, total: 2 },
@@ -69,7 +74,10 @@ describe("batch transcription runner", () => {
   it("retries a failed slice exactly once", async () => {
     transcribe
       .mockRejectedValueOnce(new Error("502"))
-      .mockResolvedValue({ utterances: [utterance(0, "recovered")], durationMs: 1 });
+      .mockResolvedValue({
+        utterances: [utterance(0, "recovered")],
+        durationMs: 1,
+      });
     const sentences = await transcribeCapturedAudio(
       audio([{ startMs: 0, utterances: [] }]),
       { language: "zh", startedAtMs: 0 },

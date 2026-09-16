@@ -256,9 +256,7 @@ test("keeps the draft when moving between the timeline and archive", async ({
   await navigation.getByRole("button", { name: /archive|归档/i }).click();
   await expect(composer).toHaveCount(0);
   await navigation.getByRole("button", { name: /timeline|时间线/i }).click();
-  await expect(composer).toHaveValue(
-    "Draft that survives workspace navigation",
-  );
+  await expect(composer).toHaveText("Draft that survives workspace navigation");
 });
 
 async function pasteImages(
@@ -309,8 +307,11 @@ test("preserves text typed while an inline image upload is pending", async ({
   await expect.poll(() => Boolean(releaseUpload)).toBe(true);
   await composer.fill("Before upload — text typed while waiting");
   releaseUpload?.();
-  await expect(composer).toHaveValue(/text typed while waiting/);
-  await expect(composer).toHaveValue(/\/file\/attachments\/inline-image\//);
+  // The inserted reference renders as an inline image node in the rich editor.
+  await expect(composer).toHaveText(/text typed while waiting/);
+  await expect(
+    composer.locator("img[src*='/file/attachments/inline-image/']"),
+  ).toBeVisible();
   await expect(
     page.getByRole("button", { name: /^(send|发送)$/i }),
   ).toBeEnabled();
@@ -337,6 +338,6 @@ test("releases the composer after the first image of a batch fails", async ({
   await expect(
     page.getByRole("button", { name: /^(send|发送)$/i }),
   ).toBeEnabled();
-  await expect(composer).toHaveValue("Keep this draft after an upload failure");
+  await expect(composer).toHaveText("Keep this draft after an upload failure");
   expect(uploads).toBe(1);
 });

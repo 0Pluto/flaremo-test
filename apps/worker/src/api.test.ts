@@ -139,6 +139,7 @@ describe("FlareMo Worker API", () => {
       available: true,
       provider: "dashscope",
       streaming: true,
+      kind: "streaming",
     });
     const latest = (await (await request("GET")).json()) as {
       revision: string;
@@ -156,6 +157,7 @@ describe("FlareMo Worker API", () => {
       available: false,
       provider: null,
       streaming: false,
+      kind: null,
     });
 
     // A registered non-owner can use the deployment but never manage the
@@ -285,6 +287,7 @@ describe("FlareMo Worker API", () => {
       available: true,
       provider: "dashscope",
       streaming: true,
+      kind: "streaming",
     });
 
     // A v1 envelope becomes unreadable fail-closed when the key rotates.
@@ -317,6 +320,7 @@ describe("FlareMo Worker API", () => {
       available: true,
       provider: "dashscope",
       streaming: true,
+      kind: "streaming",
     });
   });
 
@@ -348,6 +352,7 @@ describe("FlareMo Worker API", () => {
       available: false,
       provider: null,
       streaming: false,
+      kind: null,
     });
     expect(
       (
@@ -389,6 +394,7 @@ describe("FlareMo Worker API", () => {
       available: true,
       provider: "dashscope",
       streaming: true,
+      kind: "streaming",
     });
     expect(body).not.toContain("test-only-asr-secret");
     for (const origin of [
@@ -445,6 +451,7 @@ describe("FlareMo Worker API", () => {
       available: false,
       provider: null,
       streaming: false,
+      kind: null,
     });
     expect(
       (await raw("/ws", { ...headers, upgrade: "websocket" })).status,
@@ -481,6 +488,7 @@ describe("FlareMo Worker API", () => {
       available: true,
       provider: "tencent",
       streaming: true,
+      kind: "streaming",
     });
     expect((await raw("/status")).status).toBe(401);
     expect(

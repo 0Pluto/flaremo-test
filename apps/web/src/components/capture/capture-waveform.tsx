@@ -24,9 +24,7 @@ export function CaptureWaveform({
     let raf = 0;
     // The stroke follows the theme's primary token, including dark mode and
     // preset switches (class on <html>).
-    let stroke = getComputedStyle(canvas)
-      .getPropertyValue("--primary")
-      .trim();
+    let stroke = getComputedStyle(canvas).getPropertyValue("--primary").trim();
     const themeObserver = new MutationObserver(() => {
       stroke = getComputedStyle(canvas).getPropertyValue("--primary").trim();
     });
@@ -51,8 +49,7 @@ export function CaptureWaveform({
       if (data && data.length > 1) {
         for (let index = 0; index < data.length; index += 1) {
           const x = (index / (data.length - 1)) * width;
-          const y =
-            height / 2 + ((data[index] - 128) / 128) * (height / 2 - 3);
+          const y = height / 2 + ((data[index] - 128) / 128) * (height / 2 - 3);
           if (index === 0) context.moveTo(x, y);
           else context.lineTo(x, y);
         }

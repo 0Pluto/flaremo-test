@@ -130,7 +130,13 @@ Give the repository to an agent capable of executing terminal commands (e.g. Cla
 
 ---
 
-### Method 2: Manual 3-Step Deployment
+### Method 2: GitHub Action (self-hosted fork)
+
+On your fork, run **Deploy to Cloudflare** from Actions. Full steps: [GitHub Action deploy](./docs/en/github-action-deploy.md).
+
+---
+
+### Method 3: Manual 3-Step Deployment
 
 #### 1. Create Cloudflare Resources
 ```bash
@@ -138,6 +144,8 @@ pnpm exec wrangler whoami
 pnpm exec wrangler d1 create flaremo
 pnpm exec wrangler r2 bucket create flaremo-attachments
 ```
+
+Or run `pnpm provision:remote` instead: it creates the missing D1 / R2 / Queue / Vectorize resources and writes the D1 `database_id` into `wrangler.jsonc` for you. It is idempotent — existing resources are skipped.
 
 #### 2. Configure Settings & Secrets
 ```bash
@@ -158,7 +166,7 @@ pnpm deploy
 (The full `pnpm verify` gate runs only when the maintainer explicitly asks for it.)
 Visit your production domain at `/setup` and enter the `FLAREMO_BOOTSTRAP_SECRET` to initialize your Owner account.
 
-Detailed guides: [Deployment Guide](./docs/deploy.md) · [Update Guide](./docs/update.md).
+Detailed guides: [Deployment Guide](./docs/en/deploy.md) · [GitHub Action deploy](./docs/en/github-action-deploy.md) · [Update Guide](./docs/en/update.md).
 
 ---
 

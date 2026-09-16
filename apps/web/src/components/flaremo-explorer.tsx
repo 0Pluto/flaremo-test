@@ -49,7 +49,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/i18n";
-import { buildMonthLabels } from "@/lib/activity";
+import { buildMonthLabels, currentStreak } from "@/lib/activity";
 import { cn } from "@/lib/utils";
 
 export type ExplorerView = "all" | "archived" | "trashed";
@@ -87,6 +87,8 @@ type FlareMoExplorerProps = {
   onTagChange: (tag?: string) => void;
   onUntaggedChange: (untagged: boolean) => void;
   onViewChange: (view: ExplorerView) => void;
+  /** Jump the timeline to a heatmap day. */
+  onDaySelect?: (date: string) => void;
   onNavigate?: () => void;
 };
 
@@ -107,6 +109,7 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
   onTagChange,
   onUntaggedChange,
   onViewChange,
+  onDaySelect,
   onNavigate,
 }: FlareMoExplorerProps) {
   const { locale, t } = useI18n();
@@ -164,10 +167,7 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
       view: "trashed" as const,
     },
   ];
-  const activityTotal = useMemo(
-    () => stats.activity.reduce((total, day) => total + day.count, 0),
-    [stats.activity],
-  );
+  const streak = useMemo(() => currentStreak(stats.activity), [stats.activity]);
   const monthLabels = useMemo(
     () => buildMonthLabels(stats.activity, locale),
     [stats.activity, locale],
@@ -192,7 +192,7 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
       <section className="mb-4 grid grid-cols-3 gap-2 px-1 motion-safe:animate-rise">
         <StatCell label={t("explorer.records")} value={stats.counts.total} />
         <StatCell label={t("explorer.tags")} value={stats.tags.length} />
-        <StatCell label={t("explorer.days")} value={stats.active_days} />
+        <StatCell label={t("explorer.streak")} value={streak} />
       </section>
 
       <section className="mb-4 px-1 motion-safe:animate-fade">
@@ -229,28 +229,39 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
           {timeView === "trend" ? (
             <>
               <div
-                aria-label={t("explorer.heatmapSummary", {
-                  count: activityTotal,
-                  days: stats.activity.length,
-                })}
                 className="grid grid-flow-col grid-rows-7 gap-1"
                 data-testid="activity-heatmap"
-                role="img"
               >
-                {stats.activity.map((day) => (
-                  <div
-                    aria-hidden="true"
-                    className={cn(
-                      "aspect-square rounded-[3px] motion-safe:transition-[opacity,transform] motion-safe:duration-150 hover:opacity-85 motion-safe:hover:scale-110",
-                      heatmapColor(day.count),
-                    )}
-                    key={day.date}
-                    title={t("explorer.heatmapDay", {
-                      count: day.count,
-                      date: day.date,
-                    })}
-                  />
-                ))}
+                {stats.activity.map((day) =>
+                  onDaySelect ? (
+                    <button
+                      className={cn(
+                        "aspect-square rounded-[3px] motion-safe:transition-[opacity,transform] motion-safe:duration-150 hover:opacity-85 motion-safe:hover:scale-110",
+                        heatmapColor(day.count),
+                      )}
+                      key={day.date}
+                      title={t("explorer.heatmapDay", {
+                        count: day.count,
+                        date: day.date,
+                      })}
+                      type="button"
+                      onClick={() => onDaySelect(day.date)}
+                    />
+                  ) : (
+                    <div
+                      aria-hidden="true"
+                      className={cn(
+                        "aspect-square rounded-[3px] motion-safe:transition-[opacity,transform] motion-safe:duration-150 hover:opacity-85 motion-safe:hover:scale-110",
+                        heatmapColor(day.count),
+                      )}
+                      key={day.date}
+                      title={t("explorer.heatmapDay", {
+                        count: day.count,
+                        date: day.date,
+                      })}
+                    />
+                  ),
+                )}
               </div>
               <div
                 aria-hidden="true"

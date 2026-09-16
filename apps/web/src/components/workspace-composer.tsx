@@ -7,6 +7,7 @@ import { MemoComposer } from "@/components/memo-composer";
 import { useMemoMutations } from "@/hooks/use-memo-mutations";
 import { useNewMemoCapture } from "@/hooks/use-new-memo-capture";
 import { useI18n } from "@/i18n";
+import { focusComposerInput } from "@/lib/composer-focus";
 import {
   enqueueMemoSubmission,
   flushQueuedMemoSubmissions,
@@ -54,11 +55,15 @@ export const WorkspaceComposer = memo(function WorkspaceComposer({
   composeRequested,
   space,
   hasTeam,
+  tags,
+  captureAvailable,
 }: {
   visible: boolean;
   composeRequested: boolean;
   space: MemoSpace;
   hasTeam: boolean;
+  tags?: Array<{ name: string; count: number }>;
+  captureAvailable?: boolean;
 }) {
   const { t } = useI18n();
   const navigate = useNavigate({ from: "/" });
@@ -148,11 +153,7 @@ export const WorkspaceComposer = memo(function WorkspaceComposer({
   // strip the flag so a later reload does not steal focus again.
   useEffect(() => {
     if (!composeRequested || !visible) return;
-    const composer = document.getElementById("flaremo-composer-input");
-    if (composer instanceof HTMLTextAreaElement) {
-      composer.focus();
-      composer.setSelectionRange(composer.value.length, composer.value.length);
-    }
+    focusComposerInput();
     void navigate({
       replace: true,
       search: (current) => ({ ...current, compose: undefined }),
@@ -217,6 +218,8 @@ export const WorkspaceComposer = memo(function WorkspaceComposer({
       draft={capture.draft}
       isPending={isCreatingMemo || isCaptureSubmissionPending}
       showVisibility={hasTeam}
+      tags={tags}
+      captureAvailable={captureAvailable}
       onDraftChange={capture.updateDraft}
       onVisibilityChange={(visibility) => {
         setVisibilityPref((current) => {

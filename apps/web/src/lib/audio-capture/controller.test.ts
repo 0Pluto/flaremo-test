@@ -502,9 +502,7 @@ describe("voice capture controller — batch mode", () => {
       startedAtMs: number;
       language: string;
     };
-    expect(input.startedAtMs).toBe(
-      s.controller.getSnapshot().startedAt ?? -1,
-    );
+    expect(input.startedAtMs).toBe(s.controller.getSnapshot().startedAt ?? -1);
     expect(s.controller.getSnapshot()).toMatchObject({
       state: "review",
       transcribing: null,
@@ -541,9 +539,11 @@ describe("voice capture controller — batch mode", () => {
     await vi.waitFor(() =>
       expect(s.controller.getSnapshot().state).toBe("transcribing"),
     );
-    (s.controller as unknown as {
-      cancelTranscription: () => void;
-    }).cancelTranscription();
+    (
+      s.controller as unknown as {
+        cancelTranscription: () => void;
+      }
+    ).cancelTranscription();
     expect(s.controller.getSnapshot()).toMatchObject({
       state: "review",
       transcribing: null,
@@ -594,7 +594,9 @@ describe("voice capture controller — batch mode", () => {
       sentences: [],
     });
     s.controller.retryTranscription();
-    await vi.waitFor(() => expect(s.controller.getSnapshot().state).toBe("review"));
+    await vi.waitFor(() =>
+      expect(s.controller.getSnapshot().state).toBe("review"),
+    );
     expect(s.transcribe).toHaveBeenCalledTimes(3);
     expect(s.controller.getSnapshot()).toMatchObject({
       state: "review",
@@ -617,9 +619,11 @@ describe("voice capture controller — batch mode", () => {
     await vi.waitFor(() =>
       expect(s.controller.getSnapshot().state).toBe("transcribing"),
     );
-    (s.controller as unknown as {
-      cancelTranscription: () => void;
-    }).cancelTranscription();
+    (
+      s.controller as unknown as {
+        cancelTranscription: () => void;
+      }
+    ).cancelTranscription();
     release([]); // A late result must be ignored.
     await Promise.resolve();
     s.controller.retryTranscription();

@@ -156,8 +156,7 @@ export function VoicePanel() {
     if (provider !== (config?.provider ?? provider)) return "";
     // Wire spells the MiniMax endpoint key `minimaxBaseUrl`; the panel state
     // key stays `baseUrl` (single mapping point, rollout §3.4).
-    const wireField =
-      field === "baseUrl" ? ("minimaxBaseUrl" as const) : field;
+    const wireField = field === "baseUrl" ? ("minimaxBaseUrl" as const) : field;
     return config?.previews?.[wireField] ?? "";
   };
 

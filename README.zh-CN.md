@@ -138,7 +138,13 @@ Agent 将自动完成创建 D1/R2 资源、写入配置、运行数据库迁移�
 
 ---
 
-### 方式二：手动 3 步部署
+### 方式二：GitHub Action 手动部署
+
+自己的 fork 可在 Actions 里手动运行 `Deploy to Cloudflare`：创建 Cloudflare 资源、发布 Worker、同步认证密钥。push 不会自动发布。步骤见 [GitHub Action 部署教程](./docs/github-action-deploy.md)。
+
+---
+
+### 方式三：手动 3 步部署
 
 #### 1. 创建 Cloudflare 存储资源
 ```bash
@@ -149,6 +155,8 @@ pnpm exec wrangler whoami
 pnpm exec wrangler d1 create flaremo
 pnpm exec wrangler r2 bucket create flaremo-attachments
 ```
+
+也可以改用一条命令 `pnpm provision:remote`：自动创建缺失的 D1 / R2 / Queue / Vectorize 资源并把 D1 的 `database_id` 写入 `wrangler.jsonc`，幂等，已存在的资源会跳过。
 
 #### 2. 初始化配置文件与安全密钥
 复制配置模板：
@@ -174,7 +182,7 @@ pnpm deploy
 
 部署完成后，在浏览器打开你的生产域名并访问 `/setup` 页面，输入你在部署时填写的 `FLAREMO_BOOTSTRAP_SECRET`，即可一键初始化拥有最高权限的 Owner 账号！
 
-> 完整部署细节与常见问题排查请参见 [部署文档](./docs/deploy.md)。后续版本升级请参见 [版本更新手册](./docs/update.md)。
+> 完整部署细节与常见问题排查请参见 [部署文档](./docs/deploy.md)。用 GitHub Action 手动发布请参见 [GitHub Action 部署教程](./docs/github-action-deploy.md)。后续版本升级请参见 [版本更新手册](./docs/update.md)。
 
 ---
 

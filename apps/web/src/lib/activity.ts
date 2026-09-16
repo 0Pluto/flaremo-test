@@ -26,3 +26,25 @@ export function buildMonthLabels(activity: ActivityDay[], locale: string) {
     return { date: day.date, label: month };
   });
 }
+
+/**
+ * The streak of consecutive writing days ending today (or yesterday — today
+ * stays "not broken yet" until it is over). Days are chronological ascending,
+ * as produced by the backend's activity window.
+ */
+export function currentStreak(activity: ActivityDay[]): number {
+  let streak = 0;
+  for (let index = activity.length - 1; index >= 0; index -= 1) {
+    const day = activity[index];
+    if (!day) break;
+    if (day.count > 0) {
+      streak += 1;
+      continue;
+    }
+    // The latest day gets one free pass: an empty today does not break a
+    // streak that is still alive from yesterday.
+    if (index === activity.length - 1) continue;
+    break;
+  }
+  return streak;
+}

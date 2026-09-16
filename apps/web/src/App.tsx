@@ -1,20 +1,25 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
+  CalendarDaysIcon,
   CalendarIcon,
   CheckCircle2Icon,
+  ChevronRightIcon,
   CircleIcon,
   DownloadIcon,
   ListTodoIcon,
   MenuIcon,
   SettingsIcon,
+  SparklesIcon,
   UploadIcon,
   XIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
+  getCaptureStatus,
   getCurrentFlareMoUser,
+  getDailyReview,
   getMemoStats,
   getTagHierarchy,
   getVectorUsage,
@@ -54,7 +59,13 @@ import { WorkspaceSearch } from "@/components/workspace-search";
 import { useDataTransfer } from "@/hooks/use-data-transfer";
 import { useMemoMutations, viewToMemoState } from "@/hooks/use-memo-mutations";
 import { type TranslationKey, useI18n } from "@/i18n";
-import { dayFilterFromQuery, formatDayTitle } from "@/lib/calendar-date";
+import {
+  dayFilterFromQuery,
+  dayFilterQuery,
+  formatDayTitle,
+  todayKey,
+} from "@/lib/calendar-date";
+import { focusComposerInput } from "@/lib/composer-focus";
 import { cn } from "@/lib/utils";
 import { AppRoutes } from "@/router-tree";
 import { indexRoute, registerWorkspaceComponent } from "@/routes/index-route";
@@ -262,10 +273,9 @@ export function FlareMoApp() {
         !event.ctrlKey &&
         !event.altKey
       ) {
-        const composer = document.getElementById("flaremo-composer-input");
-        if (composer instanceof HTMLTextAreaElement) {
+        if (document.getElementById("flaremo-composer-input")) {
           event.preventDefault();
-          composer.focus();
+          focusComposerInput();
         }
       }
       // "?" lists the available keyboard shortcuts.
@@ -316,6 +326,33 @@ export function FlareMoApp() {
     staleTime: 60_000,
     retry: false,
   });
+  const captureStatusQuery = useQuery({
+    queryKey: ["capture-status", currentUserQuery.data?.id ?? ""],
+    queryFn: getCaptureStatus,
+    staleTime: 30_000,
+    retry: false,
+  });
+  // "On this day" teaser for the timeline top: notes from past years dated
+  // today. The query shares the daily-review page's cache entry, so landing
+  // on the banner costs nothing extra.
+  const [today, tzOffset] = useMemo(
+    () => [todayKey(), -new Date().getTimezoneOffset()],
+    [],
+  );
+  const onThisDayQuery = useQuery({
+    queryKey: ["daily-review", today, tzOffset],
+    queryFn: () => getDailyReview(today, tzOffset),
+    staleTime: 60_000,
+    retry: false,
+  });
+  const showOnThisDayBanner =
+    view === "all" &&
+    !dayFilter &&
+    !searchQuery &&
+    !activeTag &&
+    !untagged &&
+    !isSemanticSearch &&
+    (onThisDayQuery.data?.memos.length ?? 0) > 0;
 
   const memos = useMemo(
     () => memosQuery.data?.pages.flatMap((page) => page.memos) ?? [],
@@ -488,6 +525,18 @@ export function FlareMoApp() {
       onTagChange={setActiveTag}
       onUntaggedChange={setUntagged}
       onViewChange={setView}
+      onDaySelect={(date) => {
+        void navigate({
+          replace: true,
+          search: (current) => ({
+            ...current,
+            q: dayFilterQuery(date),
+            tag: undefined,
+            untagged: undefined,
+            view: "all",
+          }),
+        });
+      }}
       onNavigate={onNavigate}
     />
   );
@@ -587,6 +636,8 @@ export function FlareMoApp() {
                 composeRequested={composeRequested}
                 space={space}
                 hasTeam={Boolean(currentUserQuery.data?.team)}
+                tags={stats.tags}
+                captureAvailable={Boolean(captureStatusQuery.data?.available)}
               />
               {hasFilters && (
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground motion-safe:animate-rise">
@@ -691,6 +742,45 @@ export function FlareMoApp() {
                   </ul>
                 </div>
               )}
+              {showOnThisDayBanner && (
+                <Link
+                  className="mb-3 flex items-center gap-2.5 rounded-xl border border-brand-300/40 bg-brand-50/50 px-3.5 py-2.5 text-sm text-foreground motion-safe:animate-rise motion-safe:transition-[background-color,border-color] motion-safe:duration-150 hover:bg-brand-50 dark:border-brand-400/25 dark:bg-brand-400/5 dark:hover:bg-brand-400/10"
+                  data-testid="on-this-day-banner"
+                  to="/review/daily"
+                >
+                  <CalendarDaysIcon className="shrink-0 text-brand-500 dark:text-brand-400" />
+                  <span className="min-w-0 flex-1 truncate">
+                    {t("review.onThisDayBanner", {
+                      count: onThisDayQuery.data?.memos.length ?? 0,
+                    })}
+                  </span>
+                  <ChevronRightIcon className="shrink-0 text-muted-foreground" />
+                </Link>
+              )}
+              {semanticEnabled &&
+                !isSemanticSearch &&
+                !dayFilter &&
+                searchQuery &&
+                displayedMemos.length === 0 &&
+                !memosQuery.isLoading &&
+                !memosQuery.isFetchingNextPage &&
+                !memosQuery.isError && (
+                  <div className="mb-3 flex items-center gap-2 rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-xs text-muted-foreground motion-safe:animate-rise">
+                    <SparklesIcon className="size-3.5 shrink-0" />
+                    <span className="min-w-0 flex-1">
+                      {t("search.noResultsHint")}
+                    </span>
+                    <Button
+                      className="h-7 px-2 text-xs"
+                      size="sm"
+                      type="button"
+                      variant="ghost"
+                      onClick={toggleSemantic}
+                    >
+                      {t("search.semanticToggle")}
+                    </Button>
+                  </div>
+                )}
               <MemoList
                 attachmentsByMemo={attachmentsByMemo}
                 emptyDescription={

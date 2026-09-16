@@ -1,6 +1,7 @@
 # 编辑器所见即所得改造（选型决策稿）
 
-> 状态：**待定稿**（2026-09-17 起草）。Kim 已定向两件事：① 编辑框补待办能力；② 弃「textarea 裸写 Markdown」，走 Bear 式所见即所得（路线 C）。本稿回答路线 C 的落地问题：**有没有成熟的第三方组件库**，选哪个。
+> 状态：**P0–P3 全部收尾完毕，已合 main**（2026-09-17，Kim 手动合入；issue #133 由本改造关闭：加粗/斜体/任务列表/标签高亮即敲即成形，下划线不做，HTML 手写不做）。收尾交付（分支 `feat/wysiwyg-p3-closing`）：① e2e 四 spec 适配 contenteditable（`toHaveValue`→`toHaveText`/img 断言，卡片编辑器用 `#flaremo-card-editor-input`）；② **Markdown 往返幂等单测** `composer-roundtrip.test.ts` 21 用例（扩展清单抽成 `buildComposerExtensions()` 工厂与真实编辑器共用，二次序列化恒等 + `<u>` 不复活）；③ RTL 修正：`.memo-markdown` 与 `.composer-*` 物理方向属性换逻辑属性（LTR 等价、RTL 翻转），阿语真机目检建议合并后过一遍；④ 随车修 main 既有问题：api.test.ts 补 voice P2 新增的 `kind` 字段期望（4 用例）、根 vitest exclude 排除 Playwright spec 与 node:test 脚本、补 `@` 别名。包体：编辑器 chunk ~171KB raw / 56KB gzip，主包不增。验收：tsc -b ✅ / build ✅ / 定向与全量 vitest ✅（Playwright 未跑，待 Kim 指令）。
+> 原决策记录（2026-09-17 起草）：Kim 已定向两件事：① 编辑框补待办能力；② 弃「textarea 裸写 Markdown」，走 Bear 式所见即所得（路线 C）。本稿回答路线 C 的落地问题：**有没有成熟的第三方组件库**，选哪个。
 > 原则约束：`docs/design-system.md`「简约不简单，克制不放肆」。
 > 红线（不可谈判）：**memo 正文存储格式保持纯 Markdown 文本，一字不动**。Memos 兼容 API、MCP、agent 管道、导出导入全靠它；编辑器只是存储之上的渲染层。
 > 动工前置：与并行会话收口工作区（voice-capture-rollout R1 同款约束）。
