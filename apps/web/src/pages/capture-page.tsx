@@ -323,7 +323,7 @@ export function CapturePage() {
     return () => window.clearTimeout(timer);
   }, [snapshot.state]);
 
-  const start = () => {
+  const start = useCallback(() => {
     vibrate(5);
     savedRef.current = false;
     setReview(false);
@@ -336,7 +336,7 @@ export function CapturePage() {
     transcript.current.reset();
     setLocal(newLocalCapture());
     void controller.start();
-  };
+  }, [controller.start]);
   // Page-level Enter drives start/stop/resume while the page owns focus.
   // Space is deliberately unbound (scroll conflict); fields and buttons keep
   // their native Enter behavior, and open dialogs win.
@@ -777,9 +777,13 @@ export function CapturePage() {
                   }
                 />
               </label>
-              <label className="flex flex-col gap-2 text-sm">
+              <label
+                className="flex flex-col gap-2 text-sm"
+                htmlFor="capture-visibility"
+              >
                 {t("capture.visibility")}
                 <Select
+                  id="capture-visibility"
                   value={local.visibility}
                   disabled={saving || cleanupError}
                   onChange={(event) =>

@@ -183,7 +183,7 @@ export const FlareMoCalendar = memo(function FlareMoCalendar({
               />
               {showTaskTitles && taskCount > 0 ? (
                 <>
-                  {cell!.tasks.slice(0, 2).map((task) => (
+                  {cell?.tasks.slice(0, 2).map((task) => (
                     <span
                       className={cn(
                         "mt-0.5 w-full truncate rounded px-0.5 text-left text-[10px] leading-4",

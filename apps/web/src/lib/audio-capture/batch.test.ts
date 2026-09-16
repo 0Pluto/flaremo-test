@@ -72,12 +72,10 @@ describe("batch transcription runner", () => {
   });
 
   it("retries a failed slice exactly once", async () => {
-    transcribe
-      .mockRejectedValueOnce(new Error("502"))
-      .mockResolvedValue({
-        utterances: [utterance(0, "recovered")],
-        durationMs: 1,
-      });
+    transcribe.mockRejectedValueOnce(new Error("502")).mockResolvedValue({
+      utterances: [utterance(0, "recovered")],
+      durationMs: 1,
+    });
     const sentences = await transcribeCapturedAudio(
       audio([{ startMs: 0, utterances: [] }]),
       { language: "zh", startedAtMs: 0 },

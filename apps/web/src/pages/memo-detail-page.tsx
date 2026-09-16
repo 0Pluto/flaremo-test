@@ -203,15 +203,14 @@ export function MemoDetailPage({ memoId }: { memoId: string }) {
     onError: (error) =>
       toast.error(errorMessage(error, t("toast.taskCreateFailed"))),
   });
-  const taskInteraction =
-    contextQuery.data?.can_manage
-      ? {
-          onToggleTask: (lineIndex: number) =>
-            toggleTaskMutation.mutate(lineIndex),
-          onConvertTask: (_lineIndex: number, text: string) =>
-            convertTaskMutation.mutate(text),
-        }
-      : undefined;
+  const taskInteraction = contextQuery.data?.can_manage
+    ? {
+        onToggleTask: (lineIndex: number) =>
+          toggleTaskMutation.mutate(lineIndex),
+        onConvertTask: (_lineIndex: number, text: string) =>
+          convertTaskMutation.mutate(text),
+      }
+    : undefined;
 
   return (
     <div className="min-h-svh bg-background px-4 py-5 sm:py-8">

@@ -138,10 +138,13 @@ export async function openMicrophone(
     });
     return {
       dispose,
-      getWaveform: () =>
-        analyser && !disposed
-          ? (analyser.getByteTimeDomainData(waveform), waveform)
-          : null,
+      getWaveform: () => {
+        if (analyser && !disposed) {
+          analyser.getByteTimeDomainData(waveform);
+          return waveform;
+        }
+        return null;
+      },
       stop() {
         if (stopPromise) return stopPromise;
         stopping = true;

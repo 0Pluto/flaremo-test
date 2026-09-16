@@ -54,7 +54,7 @@ describe("WAV container", () => {
     // Second slice starts where the first ended.
     expect(audio.slices[1]?.startMs).toBe(
       Math.round(
-        ((audio.slices[0]!.blob.size - 44) / 2) * (1000 / CAPTURE_SAMPLE_RATE),
+        ((audio.slices[0]?.blob.size - 44) / 2) * (1000 / CAPTURE_SAMPLE_RATE),
       ),
     );
     for (const slice of audio.slices) {
@@ -85,8 +85,8 @@ describe("WAV container", () => {
     expect(audio.slices).toHaveLength(1);
     expect(audio.slices[0]?.startMs).toBe(0);
     // A short session's recording is byte-identical to its single slice.
-    expect(await audio.recording!.arrayBuffer()).toEqual(
-      await audio.slices[0]!.blob.arrayBuffer(),
+    expect(await audio.recording?.arrayBuffer()).toEqual(
+      await audio.slices[0]?.blob.arrayBuffer(),
     );
   });
 });
@@ -123,14 +123,16 @@ describe("Opus container (real WASM encoder)", () => {
     // Timeline budget: every slice but the last stays under the provider's
     // 500 s hard limit.
     for (let i = 0; i + 1 < audio.slices.length; i++) {
-      const duration = audio.slices[i + 1]!.startMs - audio.slices[i]!.startMs;
+      const duration = audio.slices[i + 1]?.startMs - audio.slices[i]?.startMs;
       expect(duration).toBeLessThan(500_000);
       expect(duration).toBeGreaterThanOrEqual(CAPTURE_BATCH_SLICE_MS - 500);
     }
     // The full-recording blob (rollout §4.1) is one continuous Ogg Opus
     // stream: the mandatory header pages appear exactly once, and every
     // page of every slice re-parses in order.
-    const recordingBytes = new Uint8Array(await audio.recording!.arrayBuffer());
+    const recording = audio.recording;
+    if (!recording) throw new Error("recording missing");
+    const recordingBytes = new Uint8Array(await recording.arrayBuffer());
     const countMagic = (bytes: Uint8Array, magic: string) => {
       let count = 0;
       outer: for (let i = 0; i <= bytes.byteLength - magic.length; i++) {
