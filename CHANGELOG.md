@@ -2,6 +2,20 @@
 
 FlareMo 使用 SemVer。每个 release 都要写清楚升级影响、Cloudflare 资源变化和 Memos 兼容面变化。
 
+## 未发布
+
+任务与日历版本：一次性补记 v0.20.0 之后落地的三波能力（此前未入账）。
+
+- **Projects & Tasks 基座**（2026-08-23）：侧栏一级入口「项目」——按项目归拢记录与任务；项目内提供看板（状态列拖拽）、优先级、手动排序与截止日（`due_at` 为 YYYY-MM-DD 本地日历日）。任务为 owner 私有资源，删除先入回收站（可还原，到期自动清理）。
+- **日历视图 `/calendar`**（2026-09-12）：月历以任务截止日为唯一日程事实源——过去的格子铺当日记录、未来的格子排到期任务；支持月导航、快速添加带日期任务、拖拽改期与 agenda 列表；探索页同步提供只读小月历。日聚合按查看者本地时区分格（修正此前的 UTC 帧偏差）。
+- **逾期提醒与 Web Push**（2026-09-15）：逾期任务幂等写入站内通知（铃铛直达日历/逾期收件箱）；可选浏览器 Web Push（VAPID + RFC 8291 aes128gcm，WebCrypto 端到端），未配置 VAPID 密钥时推送整体停用、站内通知不受影响。
+
+### 升级影响
+
+- 含数据库 migration（0013 projects/tasks 两表、0022 通知去重索引、0023 push_subscriptions 表），`wrangler d1 migrations apply` 即可，向前兼容。
+- 需要浏览器 Web Push 时，生成 VAPID 密钥对并配置 `FLAREMO_VAPID_PUBLIC_KEY` / `FLAREMO_VAPID_PRIVATE_KEY`（见 docs/deploy.md）；不配置则 Web Push 自动停用，其余功能零变化。
+- 新增 `/api/app/projects`、`/api/app/tasks`、通知与推送订阅端点（cookie session 或 PAT 可用，详见 docs/architecture-notes.md）；Memos `/api/v1` 兼容面零变化。
+
 ## v0.20.0
 
 工作区流畅度版本：搜索输入 250ms 防抖并随新请求中断旧请求（列表与语义搜索均可携带 AbortSignal）；worker 端 /memos 的创建者昵称与附件两个查询并行化，减少首屏往返；搜索/筛选场景的乐观更新修复——编辑搜索结果不再被时间线状态过滤错误吞掉；加载失败可恢复——刷新/加载更多失败时保留已加载内容并给出重试入口，筛选命中为空、归档、回收站各有专属空态；搜索与标签筛选新增一键清除；工作区编辑器与搜索抽为独立组件（WorkspaceComposer/WorkspaceSearch），App.tsx 大幅瘦身。无 API 变化、无数据变化。

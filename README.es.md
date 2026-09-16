@@ -67,7 +67,15 @@ La respuesta es rotundamente sí:
 - **Supervisión humana**: En la página `/memory` puedes auditar, fijar o corregir las memorias registradas por la IA.
 - **Ecosistema abierto**: Endpoint Streamable HTTP MCP (`/mcp`) para consultar o añadir notas mediante código.
 
-### 3. Trabajo en equipo y permisos en 3 niveles
+### 3. Proyectos y tareas
+- **Agrupa el trabajo por proyectos**: Organiza notas y pendientes en proyectos, con tablero kanban (arrastrar entre columnas de estado), prioridades, orden manual y fechas límite.
+- **Privado por diseño, borrado reversible**: Las tareas pertenecen a un solo propietario; al eliminarlas van a la papelera, donde pueden restaurarse o purgarse automáticamente.
+
+### 4. Calendario
+- **Las tareas como única fuente del calendario**: La vista mensual de `/calendar` llena los días pasados con lo que escribiste y los venideros con lo que vence — arrastra para reprogramar, añade tareas con fecha y consulta la lista agenda.
+- **Recordatorios de vencidos**: Las tareas atrasadas generan notificaciones dentro de la app, con Web Push opcional en el navegador.
+
+### 5. Trabajo en equipo y permisos en 3 niveles
 - **Roles claros**: `owner`, `admin` y `member`. Enlaces de activación de un solo uso para que cada miembro elija su contraseña.
 - **3 niveles de visibilidad**:
   - 🔒 **Privado**: Solo visible para el autor.
@@ -75,16 +83,16 @@ La respuesta es rotundamente sí:
   - 🌐 **Público**: Enlaces públicos revocables con fecha de caducidad.
 - **Salida segura**: Al retirar a un miembro, sus datos privados se eliminan físicamente mientras que el contenido de equipo se preserva.
 
-### 4. Modo sin conexión y experiencia PWA
+### 6. Modo sin conexión y experiencia PWA
 - **PWA instalable**: Instala FlareMo en tu ordenador o móvil con tacto y velocidad de app nativa.
 - **Sincronización garantizada**: Los borradores se guardan al instante en local; las notas creadas sin conexión se envían en orden al recuperar la red.
 - **Captura de voz en vivo**: Página `/capture` con transcripción de voz a texto en tiempo real (ASR).
 
-### 5. Seguridad robusta con Better Auth
+### 7. Seguridad robusta con Better Auth
 - **Sesiones seguras**: Cookies `HttpOnly` y `SameSite=Lax` en navegadores; tokens de acceso personal (`memos_pat_`) revocables para scripts y MCP.
 - **Protección estricta de Origin**: Validación rigurosa en todas las peticiones con cambio de estado.
 
-### 6. Compatibilidad con el ecosistema Memos
+### 8. Compatibilidad con el ecosistema Memos
 - **API Memos compatible**: Endpoints `/api/v1/*` compatibles y esquema OpenAPI.
 - **Soporte de apps de terceros**: Conexión directa con clientes como Moe Memos.
 - **Importación y exportación**: Migración en un clic de paquetes Memos y flomo con resolución de conflictos.

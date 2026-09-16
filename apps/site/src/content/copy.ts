@@ -76,7 +76,7 @@ const EN_HOME: HomeContent = {
     {
       title: "AI-Native Long-Term Memory",
       description:
-        "Built-in Model Context Protocol (MCP) endpoint allows AI agents (Claude, Cursor, Codex) to read and update your preferences and project context with full human auditability.",
+        "Built-in Model Context Protocol (MCP) endpoint allows AI agents (Claude, Cursor, Codex) to read and update your preferences and memory scopes with full human auditability.",
     },
     {
       title: "Team Collaboration & Roles",
@@ -87,6 +87,11 @@ const EN_HOME: HomeContent = {
       title: "Memos Compatible & Import/Export",
       description:
         "Full compatibility with Memos /api/v1 endpoints and OpenAPI. Direct integration with existing third-party clients like Moe Memos, plus one-click import and export.",
+    },
+    {
+      title: "Projects, Tasks & Calendar",
+      description:
+        "Organize notes and to-dos into projects with a kanban board, priorities, and due dates. The month calendar keeps tasks as the schedule's source of truth, with overdue reminders and optional Web Push.",
     },
   ],
   comparisonBadge: "Side-by-Side",
@@ -210,6 +215,11 @@ const ZH_HOME: HomeContent = {
       title: "全面兼容 Memos 与 flomo",
       description:
         "完整实现 Memos /api/v1 核心接口与 OpenAPI 规范，支持第三方客户端直接连接，Memos/flomo 数据一键无损导入导出。",
+    },
+    {
+      title: "项目、任务与日历",
+      description:
+        "按项目归拢记录与待办：看板、优先级、截止日一应俱全。月历以任务为日程的事实源，逾期自动提醒，支持可选的浏览器推送。",
     },
   ],
   comparisonBadge: "横向对比",
@@ -335,6 +345,11 @@ const JA_HOME: HomeContent = {
       description:
         "Memos /api/v1 仕様と互換。既存のサードパーティアプリ（Moe Memos等）にそのまま接続でき、一括移行も簡単です。",
     },
+    {
+      title: "プロジェクト・タスク・カレンダー",
+      description:
+        "メモとTODOをプロジェクトにまとめ、カンバン・優先度・締め切り日で管理。月間カレンダーはタスクを予定の一次情報源とし、期限超過を通知、Web Push も任意で有効化できます。",
+    },
   ],
   comparisonBadge: "比較表",
   comparisonHeading: "3 つの自ホスト方式を並べて比較",
@@ -457,6 +472,11 @@ const FR_HOME: HomeContent = {
       title: "Compatibilité Memos totale",
       description:
         "Compatible avec l'API Memos /api/v1 et OpenAPI. Connexion directe aux clients mobiles existants et import/export sans friction.",
+    },
+    {
+      title: "Projets, tâches et calendrier",
+      description:
+        "Regroupez notes et à-dos en projets : kanban, priorités et échéances. Le calendrier mensuel fait des tâches la source de vérité du planning, avec rappels des retards et Web Push optionnel.",
     },
   ],
   comparisonBadge: "Comparatif",
@@ -583,6 +603,11 @@ const ES_HOME: HomeContent = {
       description:
         "Compatibilidad total con la API /api/v1 de Memos y OpenAPI. Conexión directa con clientes como Moe Memos e importación/exportación.",
     },
+    {
+      title: "Proyectos, tareas y calendario",
+      description:
+        "Organiza notas y pendientes en proyectos con tablero kanban, prioridades y fechas límite. El calendario mensual convierte las tareas en la fuente del calendario, con recordatorios de vencidos y Web Push opcional.",
+    },
   ],
   comparisonBadge: "Comparativa",
   comparisonHeading: "Tres formas de autoalojarse, lado a lado",
@@ -695,7 +720,7 @@ const KO_HOME: HomeContent = {
     {
       title: "AI 네이티브 장기 기억",
       description:
-        "/memory/mcp 엔드포인트를 통해 Claude, Cursor 등의 AI 에이전트가 사용자의 영구 기억과 프로젝트 맥락을 안전하게 읽고 씁니다.",
+        "/memory/mcp 엔드포인트를 통해 Claude, Cursor 등의 AI 에이전트가 사용자의 영구 기억과 개인 맥락을 안전하게 읽고 씁니다.",
     },
     {
       title: "팀 협업 및 역할 관리",
@@ -706,6 +731,11 @@ const KO_HOME: HomeContent = {
       title: "완벽한 Memos 호환성",
       description:
         "Memos /api/v1 사양 및 OpenAPI 완벽 호환. Moe Memos 등 기존 모바일 앱과 즉시 연동되며 클릭 한 번으로 가져오기/내보내기 가능합니다.",
+    },
+    {
+      title: "프로젝트, 작업, 캘린더",
+      description:
+        "관련 메모와 할 일을 프로젝트로 묶어 칸반 보드, 우선순위, 마감일로 관리합니다. 월간 캘린더는 작업을 일정의 기준으로 삼고, 기한 초과 알림과 선택적 Web Push를 제공합니다.",
     },
   ],
   comparisonBadge: "한눈에 보는 비교",
@@ -818,7 +848,7 @@ const RU_HOME: HomeContent = {
     {
       title: "Долгосрочная память ИИ",
       description:
-        "Через интерфейс /memory/mcp ваши ИИ-помощники (Claude, Cursor) читают и дополняют постоянную память о проектах под вашим контролем.",
+        "Через интерфейс /memory/mcp ваши ИИ-помощники (Claude, Cursor) читают и дополняют постоянную память о ваших предпочтениях под вашим контролем.",
     },
     {
       title: "Командная работа и роли",
@@ -829,6 +859,11 @@ const RU_HOME: HomeContent = {
       title: "Совместимость с Memos",
       description:
         "Поддержка API Memos /api/v1 и OpenAPI. Прямая работа с приложениями вроде Moe Memos и экспорт/импорт в один клик.",
+    },
+    {
+      title: "Проекты, задачи и календарь",
+      description:
+        "Собирайте заметки и дела в проекты: канбан-доска, приоритеты и сроки. Месячный календарь делает задачи единственным источником расписания, с напоминаниями о просрочке и опциональным Web Push.",
     },
   ],
   comparisonBadge: "Сравнение",
@@ -953,6 +988,11 @@ const AR_HOME: HomeContent = {
       title: "توافق كامل مع بيئة Memos",
       description:
         "توافق كامل مع واجهة Memos /api/v1 و OpenAPI. اتصال مباشر بالتطبيقات الخارجية مثل Moe Memos مع استيراد وتصدير سهل.",
+    },
+    {
+      title: "المشاريع والمهام والتقويم",
+      description:
+        "نظّم الملاحظات والمهام في مشاريع بلوحة كانبان وأولويات ومواعيد استحقاق. التقويم الشهري يجعل المهام المصدر الوحيد للجدول، مع تنبيهات التأخر ودعم اختياري لـ Web Push.",
     },
   ],
   comparisonBadge: "مقارنة مباشرة",

@@ -67,7 +67,15 @@ La réponse est oui :
 - **Contrôle humain** : Consultez, confirmez, verrouillez ou corrigez les souvenirs IA sur la page `/memory`.
 - **Écosystème ouvert** : Endpoint Streamable HTTP MCP (`/mcp`) pour manipuler vos notes par programmation.
 
-### 3. Collaboration d'équipe & Permissions à 3 niveaux
+### 3. Projets et tâches
+- **Rassemblez le travail par projet** : Notes et tâches liées regroupées dans des projets, avec tableau kanban (glisser entre les colonnes de statut), priorités, tri manuel et échéances.
+- **Privé par conception, suppression réversible** : Les tâches appartiennent à un seul propriétaire ; la suppression passe par une corbeille, avec restauration possible ou purge automatique.
+
+### 4. Calendrier
+- **Les tâches, source de vérité du planning** : La vue mensuelle `/calendar` remplit les jours passés de vos notes et les jours à venir de vos échéances — glisser-déposer pour replanifier, ajout rapide de tâches datées et liste agenda.
+- **Rappels des retards** : Les tâches en retard déclenchent des notifications intégrées, avec Web Push navigateur en option.
+
+### 5. Collaboration d'équipe & Permissions à 3 niveaux
 - **Gouvernance claire** : Rôles `owner`, `admin`, `member`. Liens d'activation sécurisés sans transit de mots de passe en clair par les administrateurs.
 - **3 niveaux de visibilité** :
   - 🔒 **Privé** : Visible uniquement par l'auteur.
@@ -75,16 +83,16 @@ La réponse est oui :
   - 🌐 **Public** : Partage public révocable avec contrôle d'expiration.
 - **Départ sécurisé** : Suppression physique et vérifiée des notes privées lors du retrait d'un membre.
 
-### 4. Mode hors-ligne & Expérience PWA
+### 6. Mode hors-ligne & Expérience PWA
 - **PWA installable** : Installez FlareMo sur bureau ou smartphone pour une sensation d'application native.
 - **Synchronisation hors-ligne garantie** : Brouillons enregistrés localement ; les soumissions hors-ligne sont rejouées dans l'ordre dès le retour du réseau.
 - **Dictée vocale en direct** : Page `/capture` avec transcription vocale continue en temps réel (ASR).
 
-### 5. Sécurité Better Auth moderne
+### 7. Sécurité Better Auth moderne
 - **Session sécurisée** : Cookies `HttpOnly`, `SameSite=Lax` pour navigateur ; jetons d'accès personnels révocables (`memos_pat_`) pour scripts et MCP.
 - **Protection stricte de l'Origin** : Validation systématique sur les requêtes modifiant l'état.
 
-### 6. Écosystème et compatibilité Memos
+### 8. Écosystème et compatibilité Memos
 - **API Memos compatible** : Endpoints `/api/v1/*` compatibles et spécification OpenAPI.
 - **Clients tiers compatibles** : Fonctionne directement avec des applications comme Moe Memos.
 - **Import / Export sans perte** : Importez vos archives Memos et flomo en un clic.

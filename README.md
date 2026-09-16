@@ -45,7 +45,7 @@ FlareMo answers a simpler question: **Can you get a 24/7 online, resilient, glob
 
 - **Truly Serverless**: Both code and static assets run on Cloudflare Workers edge nodes near you with millisecond latency.
 - **Enterprise-grade durability out of the box**: Cloudflare D1 handles notes and metadata; Cloudflare R2 stores media attachments with multi-region replication.
-- **AI-Native Second Brain**: Built-in MCP endpoints and Agent Memory hub allow AI agents (Claude, Cursor, Codex, ChatGPT) to read and update your long-term preferences and project context.
+- **AI-Native Second Brain**: Built-in MCP endpoints and Agent Memory hub allow AI agents (Claude, Cursor, Codex, ChatGPT) to read and update your long-term preferences and memory scopes.
 - **Quiet for one, powerful for many**: Default is an encrypted, private single-user sanctuary. Enable team mode, and it instantly transforms into a collaborative workspace with roles and three-tier visibility.
 - **Minimal, not simplistic**: The interface stays quiet and every control earns its place — nothing decorative shouting for attention, nothing useful missing.
 
@@ -65,7 +65,15 @@ FlareMo answers a simpler question: **Can you get a 24/7 online, resilient, glob
 - **Human in the loop**: Review, verify, lock, or correct AI-recorded memories at `/memory`.
 - **Open ecosystem**: Standard `/mcp` (Streamable HTTP MCP) endpoint to query and append notes programmatically.
 
-### 3. Team Collaboration & 3-Tier Visibility
+### 3. Projects & Tasks
+- **Group work under projects**: Organize notes and to-dos into projects, with a kanban board (drag between status columns), priorities, manual sort order, and due dates.
+- **Personal by design, reversible deletion**: Tasks belong to a single owner; deleting moves them to a recycle bin until restored or automatically purged.
+
+### 4. Calendar
+- **Tasks are the schedule's source of truth**: The `/calendar` month view fills past days with what you wrote and future days with what's due — drag to reschedule, quick-add dated tasks, or scan the agenda list.
+- **Overdue reminders**: Overdue tasks raise in-app notifications, with optional browser Web Push.
+
+### 5. Team Collaboration & 3-Tier Visibility
 - **Role governance**: `owner`, `admin`, and `member` roles. Admins invite members via one-time activation links (members choose their own passwords; admins never handle plaintext credentials).
 - **3-tier visibility**:
   - 🔒 **Private**: Only author can view.
@@ -73,16 +81,16 @@ FlareMo answers a simpler question: **Can you get a 24/7 online, resilient, glob
   - 🌐 **Public**: Anonymous read-only via time-limited share links.
 - **Safe offboarding**: Removing a member triggers reliable background cleanup that purges private data while preserving team and public notes.
 
-### 4. Offline First & PWA Experience
+### 6. Offline First & PWA Experience
 - **Installable PWA**: Install to macOS, Windows, iOS, or Android home screen with native feel.
 - **Reliable offline sync**: Drafts save locally instantly. Offline submissions and uploads queue up and replay automatically when connectivity is restored.
 - **Live voice capture**: Access `/capture` for real-time streaming speech-to-text (ASR) transcription.
 
-### 5. Secure Better Auth Application Security
+### 7. Secure Better Auth Application Security
 - **Better Auth powered**: HttpOnly, `SameSite=Lax` browser cookie sessions; revocable `memos_pat_` Personal Access Tokens for scripts, CLI, and MCP.
 - **Strict Origin protection**: State-changing requests enforce exact origin whitelisting. Cloudflare Access remains available as an optional outer defensive perimeter.
 
-### 6. Memos Compatibility & Seamless Migration
+### 8. Memos Compatibility & Seamless Migration
 - **Memos `/api/v1` compatibility**: Provides core Memos API endpoints (camelCase default, legacy snake_case via header) and OpenAPI schema.
 - **Third-party apps ready**: Works directly with mobile clients like Moe Memos.
 - **Bi-directional import & export**: One-click import from Memos / flomo with conflict strategies and full raw export bundles.

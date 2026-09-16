@@ -289,6 +289,13 @@ FlareMo 自己的前端 API。
 
 这一层可以更简单、更贴近 Cloudflare 运行时，但必须复用同一套 domain services 和 Drizzle-backed repositories。不能维护两套业务实现。
 
+原生面包含 Agent Memory 管理、语义搜索、branding、通知与推送订阅等资源；projects 与 tasks 是其中两大一等资源：
+
+- `/api/app/projects` 与 `/api/app/tasks`：项目的 CRUD 与任务管理（看板状态、优先级、手动排序、`due_at`）。tasks 为 owner 私有资源，cookie session 与 PAT 均可读写——这是 Memos 兼容面之外的第二个对外写入口。
+- **软删与回收站**：任务删除先入回收站（`deleted_at` 标记，列表默认排除），可还原，到期由每日 TTL 清理任务硬删；项目删除遵循同一回收站语义。
+- **`due_at` 约定**：格式为 `YYYY-MM-DD` 的本地日历日（与 UI 日期输入一致），不带时区与时间部分；日历聚合、逾期 cron 与日期范围过滤均按该格式做字符串比较，写入其他格式会静默脱离日历与逾期提醒。
+- **MCP 任务工具为远期候选**：`/mcp` 目前只暴露 memo 工具、`/memory/mcp` 只暴露 memory 工具；是否向 MCP 暴露任务读写工具，等 tasks/projects 的归属语义（含团队共享的可能形态）稳定后再定契约，避免返工。第三方客户端管理任务暂经 `/api/app/tasks` + PAT。
+
 ## 数据模型
 
 D1 是唯一的主数据库，Drizzle schema 是数据库结构事实源。
