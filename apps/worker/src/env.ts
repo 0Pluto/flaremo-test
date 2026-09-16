@@ -22,6 +22,11 @@ export type FlareMoEnv = Env & {
   // Optional console boosting/correct table names for accuracy hints.
   FLAREMO_ASR_VOLCENGINE_BOOSTING_TABLE?: string;
   FLAREMO_ASR_VOLCENGINE_CORRECT_TABLE?: string;
+  // MiniMax batch ASR (asr-1.0; see src/asr/minimax.ts). The key is a Worker
+  // secret; the base URL is optional (defaults to the domestic endpoint,
+  // https://api.minimaxi.com; https://api.minimax.io switches international).
+  FLAREMO_ASR_MINIMAX_API_KEY?: string;
+  FLAREMO_ASR_MINIMAX_BASE_URL?: string;
   MEMBER_REMOVAL_QUEUE?: Queue<{ jobId: string }>;
   DATA_EXPORT_QUEUE?: Queue<{ taskId: string }>;
   BETTER_AUTH_SECRET?: string;

@@ -85,6 +85,7 @@ voiceSettingsApi.get("/", async (c) => {
             volcAccessToken: maskCredential(credentials.volcAccessToken),
             volcBoostingTable: credentials.volcBoostingTable,
             volcCorrectTable: credentials.volcCorrectTable,
+            minimaxBaseUrl: credentials.minimaxBaseUrl,
           }
         : null,
       encrypted: Boolean(row?.ciphertext?.startsWith('{"v":1')),
@@ -130,6 +131,7 @@ voiceSettingsApi.put("/", async (c) => {
         value.volcAccessToken ||= old.volcAccessToken;
         value.volcBoostingTable ||= old.volcBoostingTable;
         value.volcCorrectTable ||= old.volcCorrectTable;
+        value.minimaxBaseUrl ||= old.minimaxBaseUrl;
       }
     } catch {
       return c.json(
@@ -155,7 +157,17 @@ voiceSettingsApi.put("/", async (c) => {
     value.volcAccessToken = "";
     value.volcBoostingTable = "";
     value.volcCorrectTable = "";
+    value.minimaxBaseUrl = "";
   } else if (value.provider === "dashscope") {
+    value.appId = "";
+    value.secretId = "";
+    value.secretKey = "";
+    value.volcAppId = "";
+    value.volcAccessToken = "";
+    value.volcBoostingTable = "";
+    value.volcCorrectTable = "";
+    value.minimaxBaseUrl = "";
+  } else if (value.provider === "minimax") {
     value.appId = "";
     value.secretId = "";
     value.secretKey = "";
@@ -168,6 +180,7 @@ voiceSettingsApi.put("/", async (c) => {
     value.secretId = "";
     value.secretKey = "";
     value.apiKey = "";
+    value.minimaxBaseUrl = "";
   }
   const ciphertext = await sealVoiceCredentials(
     c.env.FLAREMO_VOICE_CONFIG_KEY,
@@ -200,6 +213,34 @@ voiceSettingsApi.delete("/", async (c) => {
   return c.json({ ok: true }); // A disabled tombstone prevents any implicit reactivation after deletion.
 });
 
+// Builds 3 seconds of 16 kHz mono s16le silence in a 44-byte RIFF container
+// (MiniMax rejects bare PCM). Used to give the batch provider a real —
+// billed — transcription test without depending on microphone input.
+export function buildSilenceWavBytes(durationMs = 3_000): ArrayBuffer {
+  const samples = Math.round((16_000 * durationMs) / 1000);
+  const dataSize = samples * 2;
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+  const writeText = (offset: number, text: string) => {
+    for (const [index, char] of Array.from(text).entries())
+      view.setUint8(offset + index, char.charCodeAt(0));
+  };
+  writeText(0, "RIFF");
+  view.setUint32(4, 36 + dataSize, true);
+  writeText(8, "WAVE");
+  writeText(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, 1, true); // mono
+  view.setUint32(24, 16_000, true);
+  view.setUint32(28, 32_000, true); // byte rate
+  view.setUint16(32, 2, true); // block align
+  view.setUint16(34, 16, true); // bits per sample
+  writeText(36, "data");
+  view.setUint32(40, dataSize, true);
+  return buffer; // Samples stay zero-filled.
+}
+
 // Tests the effective configuration (environment or saved); it never returns
 // upstream error text.
 voiceSettingsApi.post("/test", async (c) => {
@@ -210,8 +251,19 @@ voiceSettingsApi.post("/test", async (c) => {
   if (!configured)
     return c.json({ error: { message: "Voice service unavailable" } }, 503);
   const abort = new AbortController();
-  const timer = setTimeout(() => abort.abort(), 8000);
+  const timer = setTimeout(() => abort.abort(), configured.kind === "batch" ? 30_000 : 8000);
   try {
+    if (configured.kind === "batch") {
+      // Real transcription (rollout §3.4): a 3 s silent WAV exercises
+      // credentials, quota and region, and consumes plan quota like any
+      // other request — the panel's testWarning covers the charge.
+      await configured.provider.transcribe(buildSilenceWavBytes(), {
+        language: "zh",
+        signal: abort.signal,
+      });
+      if (abort.signal.aborted) throw new Error("Connection interrupted");
+      return c.json({ ok: true }, 200, { "Cache-Control": "no-store" });
+    }
     const connection = await configured.provider.connect(
       { sampleRate: 16000 },
       () => {},
