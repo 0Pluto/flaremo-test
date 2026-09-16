@@ -1,6 +1,6 @@
 # 编辑器所见即所得改造（选型决策稿）
 
-> 状态：**P0/P1 已实施**（2026-09-17，分支 `feat/composer-wysiwyg`，commit `4c06936`；真机走查通过）。标签 mark 按 D5 微调为 Decoration 高亮（不走 mark，杜绝序列化污染）；Enter 定调按走查结果收敛：列表项内 Enter 续写新条目，非列表 Enter 发送，Cmd/Ctrl+Enter 任何位置发送。实测包体：index chunk gzip +140KB（164→305KB）。剩余：P2 三自定义节点细化、P3 收尾与卡片行内编辑（memo-card 仍是 Textarea）。
+> 状态：**P0/P1 已实施 + P2 优化已实施**（2026-09-17，分支 `feat/composer-wysiwyg`：P0/P1 commit `4c06936`，P2 优化 commit `04cde2d`；真机走查通过）。标签 mark 按 D5 微调为 Decoration 高亮（不走 mark，杜绝序列化污染）；Enter 定调按走查结果收敛：列表项内 Enter 续写新条目，非列表 Enter 发送，Cmd/Ctrl+Enter 任何位置发送。**包体优化已落地**：TipTap 拆独立 async chunk（React.lazy + 空闲预取），主包 gzip 166KB 回到基线，编辑器 chunk 141KB 按需加载。**卡片行内编辑已迁移**同一编辑器（Cmd+Enter 保存/Esc 取消语义保留，明文 Enter 不提交）。pcm.test.ts 超时已修（30s 显式上限）。剩余：P3 收尾（markdown 往返抽样校验、RTL 真机）。
 > 原决策记录（2026-09-17 起草）：Kim 已定向两件事：① 编辑框补待办能力；② 弃「textarea 裸写 Markdown」，走 Bear 式所见即所得（路线 C）。本稿回答路线 C 的落地问题：**有没有成熟的第三方组件库**，选哪个。
 > 原则约束：`docs/design-system.md`「简约不简单，克制不放肆」。
 > 红线（不可谈判）：**memo 正文存储格式保持纯 Markdown 文本，一字不动**。Memos 兼容 API、MCP、agent 管道、导出导入全靠它；编辑器只是存储之上的渲染层。
