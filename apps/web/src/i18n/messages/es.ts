@@ -29,6 +29,11 @@ const messages = {
   "voiceSettings.secretId": "SecretId de Tencent Cloud",
   "voiceSettings.secretKey": "SecretKey de Tencent Cloud",
   "voiceSettings.apiKey": "Clave de API de DashScope",
+  "voiceSettings.volcengine": "Doubao / Volcano Engine",
+  "voiceSettings.volcAppId": "AppID de Volcano Engine",
+  "voiceSettings.volcAccessToken": "Token de acceso de Volcano Engine",
+  "voiceSettings.volcBoostingTable": "Nombre de tabla de refuerzo (opcional)",
+  "voiceSettings.volcCorrectTable": "Nombre de tabla de corrección (opcional)",
   "voiceSettings.enabled": "Activar notas de voz",
   "voiceSettings.save": "Guardar ajustes",
   "voiceSettings.testWarning":

@@ -9,6 +9,10 @@ const value = {
   secretId: "test-id",
   secretKey: "test-sensitive-value",
   apiKey: "",
+  volcAppId: "",
+  volcAccessToken: "",
+  volcBoostingTable: "",
+  volcCorrectTable: "",
 };
 describe("voice credential envelope", () => {
   it("uses fresh nonces, round trips and never stores plaintext with a key", async () => {

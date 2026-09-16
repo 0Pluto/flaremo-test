@@ -1140,7 +1140,7 @@ export type VoiceSettings = {
   enabled: boolean;
   configured: boolean;
   source: "database" | "environment" | "none";
-  provider: "tencent" | "dashscope" | null;
+  provider: "tencent" | "dashscope" | "volcengine" | null;
   model: string;
   unreadable: boolean;
   previews: {
@@ -1148,6 +1148,10 @@ export type VoiceSettings = {
     secretId: string;
     secretKey: string;
     apiKey: string;
+    volcAppId: string;
+    volcAccessToken: string;
+    volcBoostingTable: string;
+    volcCorrectTable: string;
   } | null;
   encrypted: boolean;
   canEncrypt: boolean;

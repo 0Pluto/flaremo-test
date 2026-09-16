@@ -27,6 +27,12 @@ const messages = {
   "voiceSettings.secretId": "SecretId Tencent Cloud",
   "voiceSettings.secretKey": "SecretKey Tencent Cloud",
   "voiceSettings.apiKey": "Clé API DashScope",
+  "voiceSettings.volcengine": "Doubao / Volcano Engine",
+  "voiceSettings.volcAppId": "AppID Volcano Engine",
+  "voiceSettings.volcAccessToken": "Jeton d'accès Volcano Engine",
+  "voiceSettings.volcBoostingTable":
+    "Nom de table de renforcement (facultatif)",
+  "voiceSettings.volcCorrectTable": "Nom de table de correction (facultatif)",
   "voiceSettings.enabled": "Activer la saisie vocale",
   "voiceSettings.save": "Enregistrer les réglages",
   "voiceSettings.testWarning":

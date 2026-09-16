@@ -6,12 +6,16 @@ import { getConfiguredAsr } from "./provider";
 
 export const voiceCredentialsSchema = z
   .object({
-    provider: z.enum(["tencent", "dashscope"]),
+    provider: z.enum(["tencent", "dashscope", "volcengine"]),
     model: z.string().trim().max(128).default(""),
     appId: z.string().trim().max(128).default(""),
     secretId: z.string().trim().max(256).default(""),
     secretKey: z.string().trim().max(1024).default(""),
     apiKey: z.string().trim().max(1024).default(""),
+    volcAppId: z.string().trim().max(128).default(""),
+    volcAccessToken: z.string().trim().max(1024).default(""),
+    volcBoostingTable: z.string().trim().max(128).default(""),
+    volcCorrectTable: z.string().trim().max(128).default(""),
   })
   .strict();
 export type VoiceCredentials = z.infer<typeof voiceCredentialsSchema>;
@@ -89,6 +93,10 @@ export function configuredVoice(value: VoiceCredentials) {
     FLAREMO_ASR_TENCENT_SECRET_ID: value.secretId,
     FLAREMO_ASR_TENCENT_SECRET_KEY: value.secretKey,
     FLAREMO_ASR_DASHSCOPE_API_KEY: value.apiKey,
+    FLAREMO_ASR_VOLCENGINE_APP_ID: value.volcAppId,
+    FLAREMO_ASR_VOLCENGINE_ACCESS_TOKEN: value.volcAccessToken,
+    FLAREMO_ASR_VOLCENGINE_BOOSTING_TABLE: value.volcBoostingTable,
+    FLAREMO_ASR_VOLCENGINE_CORRECT_TABLE: value.volcCorrectTable,
   });
 }
 

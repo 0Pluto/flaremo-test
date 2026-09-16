@@ -25,6 +25,11 @@ const messages = {
   "voiceSettings.secretId": "腾讯云 SecretId",
   "voiceSettings.secretKey": "腾讯云 SecretKey",
   "voiceSettings.apiKey": "DashScope API Key",
+  "voiceSettings.volcengine": "豆包 / 火山引擎",
+  "voiceSettings.volcAppId": "火山引擎 AppID",
+  "voiceSettings.volcAccessToken": "火山引擎 Access Token",
+  "voiceSettings.volcBoostingTable": "热词表名（可选）",
+  "voiceSettings.volcCorrectTable": "替换词表名（可选）",
   "voiceSettings.enabled": "启用语音记录",
   "voiceSettings.save": "保存配置",
   "voiceSettings.testWarning":

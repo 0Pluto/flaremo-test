@@ -24,9 +24,23 @@ import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useI18n } from "@/i18n";
 
-type CredentialField = "appId" | "secretId" | "secretKey" | "apiKey";
+type CredentialField =
+  | "appId"
+  | "secretId"
+  | "secretKey"
+  | "apiKey"
+  | "volcAppId"
+  | "volcAccessToken"
+  | "volcBoostingTable"
+  | "volcCorrectTable";
 const TENCENT_FIELDS: CredentialField[] = ["appId", "secretId", "secretKey"];
-const PROVIDERS = ["tencent", "dashscope"] as const;
+const VOLCENGINE_FIELDS: CredentialField[] = [
+  "volcAppId",
+  "volcAccessToken",
+  "volcBoostingTable",
+  "volcCorrectTable",
+];
+const PROVIDERS = ["tencent", "dashscope", "volcengine"] as const;
 type Provider = (typeof PROVIDERS)[number];
 
 // Mounted only after a fresh, user-scoped owner permission check succeeds.
@@ -43,6 +57,10 @@ export function VoicePanel() {
     secretId: "",
     secretKey: "",
     apiKey: "",
+    volcAppId: "",
+    volcAccessToken: "",
+    volcBoostingTable: "",
+    volcCorrectTable: "",
   });
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -79,7 +97,16 @@ export function VoicePanel() {
     try {
       await action();
       if (!mounted.current) return;
-      setFields({ appId: "", secretId: "", secretKey: "", apiKey: "" });
+      setFields({
+        appId: "",
+        secretId: "",
+        secretKey: "",
+        apiKey: "",
+        volcAppId: "",
+        volcAccessToken: "",
+        volcBoostingTable: "",
+        volcCorrectTable: "",
+      });
       const value = await getVoiceSettings();
       if (!mounted.current) return;
       setConfig(value);
@@ -151,6 +178,10 @@ export function VoicePanel() {
                       secretId: "",
                       secretKey: "",
                       apiKey: "",
+                      volcAppId: "",
+                      volcAccessToken: "",
+                      volcBoostingTable: "",
+                      volcCorrectTable: "",
                     });
                   }}
                 >
@@ -158,6 +189,9 @@ export function VoicePanel() {
                     {t("voiceSettings.tencent")}
                   </ToggleGroupItem>
                   <ToggleGroupItem value="dashscope">DashScope</ToggleGroupItem>
+                  <ToggleGroupItem value="volcengine">
+                    {t("voiceSettings.volcengine")}
+                  </ToggleGroupItem>
                 </ToggleGroup>
               </div>
               <label
@@ -175,7 +209,9 @@ export function VoicePanel() {
               </label>
               {(provider === "tencent"
                 ? TENCENT_FIELDS
-                : (["apiKey"] as const)
+                : provider === "volcengine"
+                  ? VOLCENGINE_FIELDS
+                  : (["apiKey"] as const)
               ).map((field) => (
                 <label
                   className="flex flex-col gap-1.5 text-sm font-medium"

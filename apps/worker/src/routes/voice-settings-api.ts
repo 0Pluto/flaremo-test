@@ -81,6 +81,10 @@ voiceSettingsApi.get("/", async (c) => {
             secretId: maskCredential(credentials.secretId),
             secretKey: maskCredential(credentials.secretKey),
             apiKey: maskCredential(credentials.apiKey),
+            volcAppId: credentials.volcAppId,
+            volcAccessToken: maskCredential(credentials.volcAccessToken),
+            volcBoostingTable: credentials.volcBoostingTable,
+            volcCorrectTable: credentials.volcCorrectTable,
           }
         : null,
       encrypted: Boolean(row?.ciphertext?.startsWith('{"v":1')),
@@ -122,6 +126,10 @@ voiceSettingsApi.put("/", async (c) => {
         value.appId ||= old.appId;
         value.secretId ||= old.secretId;
         value.secretKey ||= old.secretKey;
+        value.volcAppId ||= old.volcAppId;
+        value.volcAccessToken ||= old.volcAccessToken;
+        value.volcBoostingTable ||= old.volcBoostingTable;
+        value.volcCorrectTable ||= old.volcCorrectTable;
       }
     } catch {
       return c.json(
@@ -141,11 +149,25 @@ voiceSettingsApi.put("/", async (c) => {
       400,
     );
   // Do not retain credentials for the inactive provider.
-  if (value.provider === "tencent") value.apiKey = "";
-  else {
+  if (value.provider === "tencent") {
+    value.apiKey = "";
+    value.volcAppId = "";
+    value.volcAccessToken = "";
+    value.volcBoostingTable = "";
+    value.volcCorrectTable = "";
+  } else if (value.provider === "dashscope") {
     value.appId = "";
     value.secretId = "";
     value.secretKey = "";
+    value.volcAppId = "";
+    value.volcAccessToken = "";
+    value.volcBoostingTable = "";
+    value.volcCorrectTable = "";
+  } else {
+    value.appId = "";
+    value.secretId = "";
+    value.secretKey = "";
+    value.apiKey = "";
   }
   const ciphertext = await sealVoiceCredentials(
     c.env.FLAREMO_VOICE_CONFIG_KEY,

@@ -27,6 +27,11 @@ const messages = {
   "voiceSettings.secretId": "SecretId الخاص بـ Tencent Cloud",
   "voiceSettings.secretKey": "SecretKey الخاص بـ Tencent Cloud",
   "voiceSettings.apiKey": "مفتاح API الخاص بـ DashScope",
+  "voiceSettings.volcengine": "Doubao / Volcano Engine",
+  "voiceSettings.volcAppId": "AppID الخاص بـ Volcano Engine",
+  "voiceSettings.volcAccessToken": "رمز الوصول الخاص بـ Volcano Engine",
+  "voiceSettings.volcBoostingTable": "اسم جدول الكلمات الساخنة (اختياري)",
+  "voiceSettings.volcCorrectTable": "اسم جدول الكلمات البديلة (اختياري)",
   "voiceSettings.enabled": "تفعيل الملاحظات الصوتية",
   "voiceSettings.save": "حفظ الإعدادات",
   "voiceSettings.testWarning":

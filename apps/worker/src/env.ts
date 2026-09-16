@@ -14,6 +14,14 @@ export type FlareMoEnv = Env & {
   // hotword list is sensitive and stays a secret.
   FLAREMO_ASR_TENCENT_HOTWORD_ID?: string;
   FLAREMO_ASR_TENCENT_HOTWORD_LIST?: string;
+  // Volcano Engine (Doubao) streaming ASR. AppID and Access Token are the
+  // console credentials; resource id selects hourly vs concurrent billing.
+  FLAREMO_ASR_VOLCENGINE_APP_ID?: string;
+  FLAREMO_ASR_VOLCENGINE_ACCESS_TOKEN?: string;
+  FLAREMO_ASR_VOLCENGINE_RESOURCE_ID?: string;
+  // Optional console boosting/correct table names for accuracy hints.
+  FLAREMO_ASR_VOLCENGINE_BOOSTING_TABLE?: string;
+  FLAREMO_ASR_VOLCENGINE_CORRECT_TABLE?: string;
   MEMBER_REMOVAL_QUEUE?: Queue<{ jobId: string }>;
   DATA_EXPORT_QUEUE?: Queue<{ taskId: string }>;
   BETTER_AUTH_SECRET?: string;

@@ -2,6 +2,7 @@ import type { FlareMoEnv } from "../env";
 import { createDashscopeProvider } from "./dashscope";
 import { createTencentProvider } from "./tencent";
 import type { StreamingAsrProvider } from "./types";
+import { createVolcengineProvider } from "./volcengine";
 
 type AsrEnv = Pick<
   FlareMoEnv,
@@ -13,6 +14,11 @@ type AsrEnv = Pick<
   | "FLAREMO_ASR_TENCENT_HOTWORD_LIST"
   | "FLAREMO_ASR_TENCENT_SECRET_ID"
   | "FLAREMO_ASR_TENCENT_SECRET_KEY"
+  | "FLAREMO_ASR_VOLCENGINE_ACCESS_TOKEN"
+  | "FLAREMO_ASR_VOLCENGINE_APP_ID"
+  | "FLAREMO_ASR_VOLCENGINE_BOOSTING_TABLE"
+  | "FLAREMO_ASR_VOLCENGINE_CORRECT_TABLE"
+  | "FLAREMO_ASR_VOLCENGINE_RESOURCE_ID"
 >;
 
 function normalizeHotwordId(value: string | undefined) {
@@ -46,7 +52,7 @@ function normalizeHotwordList(value: string | undefined) {
 
 // Configuration readiness only: this does not call a paid API or verify quota.
 export function getConfiguredAsr(env: AsrEnv): {
-  id: "dashscope" | "tencent";
+  id: "dashscope" | "tencent" | "volcengine";
   provider: StreamingAsrProvider;
 } | null {
   const model = env.FLAREMO_ASR_MODEL?.trim() || undefined;
@@ -83,6 +89,32 @@ export function getConfiguredAsr(env: AsrEnv): {
         provider: createTencentProvider({ appId, secretId, secretKey }, model, {
           hotwordId,
           hotwordList,
+        }),
+      };
+    }
+    case "volcengine": {
+      const appId = env.FLAREMO_ASR_VOLCENGINE_APP_ID?.trim();
+      const accessToken = env.FLAREMO_ASR_VOLCENGINE_ACCESS_TOKEN?.trim();
+      if (!appId || !accessToken) return null;
+      const resourceId =
+        env.FLAREMO_ASR_VOLCENGINE_RESOURCE_ID?.trim() || undefined;
+      if (resourceId && !/^[a-z0-9.]+$/.test(resourceId)) return null;
+      const boostingTable =
+        env.FLAREMO_ASR_VOLCENGINE_BOOSTING_TABLE?.trim() || undefined;
+      const correctTable =
+        env.FLAREMO_ASR_VOLCENGINE_CORRECT_TABLE?.trim() || undefined;
+      if (boostingTable && !/^[A-Za-z0-9_-]{1,128}$/.test(boostingTable))
+        return null;
+      if (correctTable && !/^[A-Za-z0-9_-]{1,128}$/.test(correctTable))
+        return null;
+      return {
+        id: "volcengine",
+        provider: createVolcengineProvider({
+          appId,
+          accessToken,
+          resourceId: resourceId ?? "volc.bigasr.sauc.duration",
+          boostingTable,
+          correctTable,
         }),
       };
     }

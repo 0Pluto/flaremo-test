@@ -28,6 +28,11 @@ const messages = {
   "voiceSettings.secretId": "Tencent Cloud SecretId",
   "voiceSettings.secretKey": "Tencent Cloud SecretKey",
   "voiceSettings.apiKey": "DashScope API 키",
+  "voiceSettings.volcengine": "Doubao / Volcano Engine",
+  "voiceSettings.volcAppId": "Volcano Engine AppID",
+  "voiceSettings.volcAccessToken": "Volcano Engine 액세스 토큰",
+  "voiceSettings.volcBoostingTable": "핫워드 테이블 이름(선택)",
+  "voiceSettings.volcCorrectTable": "치환 테이블 이름(선택)",
   "voiceSettings.enabled": "음성 메모 활성화",
   "voiceSettings.save": "설정 저장",
   "voiceSettings.testWarning":
