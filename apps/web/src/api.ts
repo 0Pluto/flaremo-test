@@ -1250,7 +1250,7 @@ export type VoiceSettings = {
     volcAccessToken: string;
     volcBoostingTable: string;
     volcCorrectTable: string;
-    baseUrl: string;
+    minimaxBaseUrl: string;
   } | null;
   encrypted: boolean;
   canEncrypt: boolean;

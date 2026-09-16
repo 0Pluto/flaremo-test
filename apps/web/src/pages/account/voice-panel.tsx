@@ -154,7 +154,11 @@ export function VoicePanel() {
 
   const previewFor = (field: CredentialField) => {
     if (provider !== (config?.provider ?? provider)) return "";
-    return config?.previews?.[field] ?? "";
+    // Wire spells the MiniMax endpoint key `minimaxBaseUrl`; the panel state
+    // key stays `baseUrl` (single mapping point, rollout §3.4).
+    const wireField =
+      field === "baseUrl" ? ("minimaxBaseUrl" as const) : field;
+    return config?.previews?.[wireField] ?? "";
   };
 
   const fieldLabel = (field: CredentialField) => {
@@ -200,12 +204,20 @@ export function VoicePanel() {
                 event.preventDefault();
                 void run(
                   "save",
-                  () =>
-                    saveVoiceSettings({
+                  () => {
+                    const { baseUrl, ...rest } = fields;
+                    return saveVoiceSettings({
                       revision: config.revision,
                       enabled,
-                      credentials: { provider, model, ...fields },
-                    }),
+                      credentials: {
+                        provider,
+                        model,
+                        ...rest,
+                        // Wire contract: minimax endpoint key (strict schema).
+                        minimaxBaseUrl: baseUrl,
+                      },
+                    });
+                  },
                   t("voiceSettings.saved"),
                 );
               }}
