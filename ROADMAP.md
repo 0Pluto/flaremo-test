@@ -4,6 +4,7 @@
 
 ## 产品主线
 
+- 设计原则：简约不简单，克制不放肆——不为了炫技加装饰，也不为了省事砍掉该有的能力（视觉与交互细节见 `docs/design-system.md`）。
 - 快速记录：打开即写、低干扰输入、可靠草稿。
 - 安静时间线：搜索、标签、归档、回收站、活动热力图。
 - Memos 兼容：核心 `/api/v1` 子集稳定，当前包含有限 social、UserService webhook/notification 资源生命周期，以及四类 memo 事件的有界异步 webhook outbox 投递/重试；完整 Memos Server parity、完整上游 webhook 事件语义和完整多用户 ACL 仍未完成。导入导出保持可靠。

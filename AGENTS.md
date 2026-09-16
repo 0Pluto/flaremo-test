@@ -59,6 +59,7 @@ pnpm deploy:dry-run
 - `/api/v1/*` 是兼容层；新增字段或行为时同步检查 `packages/memos` 和 OpenAPI。
 - `/api/app/*` 可以服务前端体验，但必须复用同一套 domain services。
 - 前端只展示已经接上后端能力的入口；不要放未实现功能的按钮、菜单或文案。
+- 产品与界面改动遵循设计原则「简约不简单，克制不放肆」；视觉、动效和文案细节见 `docs/design-system.md`。
 - 应用层认证边界是 Better Auth；不要新增绕开 Better Auth 的登录页、共享密码或第二套应用令牌。Cloudflare Access 可以作为可选外层防线，但不能被误当成应用用户身份映射。
 - 凭据相关的 Origin 契约必须保持不变：cookie session 的状态变更请求（包括 `POST`、`PATCH`、`DELETE` 等非安全方法）必须携带并精确匹配 `FLAREMO_PUBLIC_URL` 或 `FLAREMO_TRUSTED_ORIGINS`；PAT 请求可以省略 Origin，但一旦携带也必须精确匹配同一 allowlist，否则返回 `403`。不要用 wildcard、`Referer` 或 Cloudflare Access headers 替代 Origin 校验。
 - 不得把 `BETTER_AUTH_SECRET`、`FLAREMO_BOOTSTRAP_SECRET`、初始密码、cookie 或 `memos_pat_` 明文写进代码、文档、migration、issue、PR、日志或聊天；生产 secret 只能通过 Wrangler secret 或 Cloudflare 控制台安全配置。

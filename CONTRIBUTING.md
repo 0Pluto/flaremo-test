@@ -42,6 +42,7 @@ pnpm format
 ## PR 要求
 
 - 描述用户可见变化。
+- 产品与界面改动遵循设计原则「简约不简单，克制不放肆」，细节见 `docs/design-system.md`。
 - 说明是否影响 D1 migration。
 - 说明是否影响 Memos 兼容 API。
 - 说明是否影响 Cloudflare Access、D1、R2 或部署流程。
