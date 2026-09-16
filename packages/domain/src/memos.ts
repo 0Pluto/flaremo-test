@@ -678,8 +678,9 @@ export async function updateMemo(
 ): Promise<MemoRow> {
   const existing = await getMemoById(db, user, id, { includeDeleted: true });
   // Content edits and state governance are different powers with different
-  // holders: the author (and the team owner) edit, administrators govern.
-  // A patch touching both is only accepted for a viewer holding both rights.
+  // holders: only the author edits (docs/content-authority.md), administrators
+  // and the owner govern. A patch touching both is only accepted for a viewer
+  // holding both rights.
   if (
     input.content !== undefined ||
     input.payload !== undefined ||

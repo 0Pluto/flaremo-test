@@ -1,6 +1,7 @@
 import type { MemoRow, UserRow } from "@flaremo/db";
 import { describe, expect, it } from "vitest";
 import {
+  canDeleteMemo,
   canEditMemo,
   canGovernMemo,
   canReadMemo,
@@ -83,10 +84,19 @@ describe("team memo permissions", () => {
     expect(canGovernMemo(admin, memo("protected"))).toBe(true);
   });
 
-  it("lets the team owner edit another member's team memo but not a personal one", () => {
-    expect(canEditMemo(owner, memo("protected"))).toBe(true);
+  it("never lets anyone but the author edit, while the owner keeps hard delete", () => {
+    // Content authority (docs/content-authority.md): rewriting another
+    // author's words is authorship, so even the team owner cannot edit —
+    // but the irreversible governance end (hard delete) stays owner-level.
+    expect(canEditMemo(owner, memo("protected"))).toBe(false);
     expect(canGovernMemo(owner, memo("protected"))).toBe(true);
+    expect(canDeleteMemo(owner, memo("protected"))).toBe(true);
+    expect(canDeleteMemo(admin, memo("protected"))).toBe(false);
+    expect(canDeleteMemo(member, memo("protected"))).toBe(false);
     expect(canEditMemo(owner, memo("private"))).toBe(false);
+    expect(canDeleteMemo(owner, memo("private"))).toBe(false);
+    expect(canEditMemo(admin, memo("public"))).toBe(false);
+    expect(canDeleteMemo(owner, memo("public"))).toBe(true);
   });
 
   it("gives the author every power over their own memo", () => {
@@ -119,8 +129,10 @@ describe("team memo permissions", () => {
       // confined to the memo's own organization.
       expect(canEditMemo(actor, foreignMemo)).toBe(false);
       expect(canGovernMemo(actor, foreignMemo)).toBe(false);
+      expect(canDeleteMemo(actor, foreignMemo)).toBe(false);
       expect(canEditMemo(actor, foreignPublic)).toBe(false);
       expect(canGovernMemo(actor, foreignPublic)).toBe(false);
+      expect(canDeleteMemo(actor, foreignPublic)).toBe(false);
     }
   });
 });
