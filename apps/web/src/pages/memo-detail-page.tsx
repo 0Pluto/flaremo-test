@@ -192,6 +192,7 @@ export function MemoDetailPage({ memoId }: { memoId: string }) {
             isSearching={relationCandidatesQuery.isFetching}
             locale={locale}
             related={relatedQuery.data?.memos ?? []}
+            relatedPending={relatedQuery.isPending}
             relatedMemo={relatedMemo}
             setRelatedMemo={setRelatedMemo}
             onAddRelation={(name) => {
@@ -245,6 +246,7 @@ function MemoDetail({
   isSearching,
   locale,
   related,
+  relatedPending,
   relatedMemo,
   setRelatedMemo,
   onAddRelation,
@@ -266,6 +268,7 @@ function MemoDetail({
   isSearching: boolean;
   locale: string;
   related: RelatedMemo[];
+  relatedPending: boolean;
   relatedMemo: string;
   setRelatedMemo: (value: string) => void;
   onAddRelation: (name: string) => void;
@@ -354,6 +357,12 @@ function MemoDetail({
                     </div>
                   </div>
                 ))}
+              </section>
+            )}
+            {relatedPending && (
+              <section className="flex flex-col gap-2 border-t border-border/60 pt-4">
+                <h2 className="text-sm font-medium">{t("detail.related")}</h2>
+                <Skeleton className="h-16 w-full" />
               </section>
             )}
             {related.length > 0 && (

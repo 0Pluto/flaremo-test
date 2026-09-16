@@ -13,6 +13,7 @@ import {
   getAppInfo,
   getCurrentFlareMoUser,
   getVectorUsage,
+  getVoiceSettings,
   listAdminUsers,
   listDataTasks,
   listPersonalAccessTokens,
@@ -41,6 +42,22 @@ const VoicePanel = lazy(() =>
 );
 
 type AccountTab = "account" | "usage" | "branding" | "admin";
+
+// Matches the lazy VoicePanel's frame (title + description + a few rows) so
+// the chunk download never pops the cards below it upward.
+function VoicePanelSkeleton() {
+  return (
+    <div className="rounded-xl border">
+      <div className="flex flex-col gap-3 p-6">
+        <Skeleton className="h-6 w-40" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-9 w-full" />
+        <Skeleton className="h-9 w-2/3" />
+        <Skeleton className="h-9 w-full" />
+      </div>
+    </div>
+  );
+}
 
 function AccountPageSkeleton() {
   return (
@@ -110,20 +127,10 @@ export function AccountPage() {
     queryFn: getCurrentFlareMoUser,
     retry: false,
   });
-  const voicePermission = useQuery({
-    queryKey: ["voice-management-permission", session.data?.user.id],
-    queryFn: getCurrentFlareMoUser,
-    enabled: !session.isPending && Boolean(session.data?.user.id),
-    staleTime: 0,
-    gcTime: 0,
-    retry: false,
-  });
-  const showVoiceSettings =
-    !session.isPending &&
-    Boolean(session.data?.user.id) &&
-    voicePermission.isSuccess &&
-    !voicePermission.isFetching &&
-    voicePermission.data.can_manage_voice_service === true;
+  // The workspace already holds this viewer under the same key, so opening
+  // the account page renders from cache instead of paying another /me round
+  // trip (and voice permission rides along for free).
+  const showVoiceSettings = meQuery.data?.can_manage_voice_service === true;
   const appInfoQuery = useQuery({
     queryKey: ["app-info"],
     queryFn: getAppInfo,
@@ -171,7 +178,6 @@ export function AccountPage() {
       await queryClient.invalidateQueries({
         queryKey: ["current-flaremo-user"],
       });
-      await queryClient.invalidateQueries({ queryKey: ["me"] });
       await queryClient.invalidateQueries({ queryKey: ["admin-users"] });
     },
   });
@@ -351,6 +357,8 @@ export function AccountPage() {
 
   // Admin tab cards fetch on mount; warm both queries while the viewer is on
   // any tab so switching to 品牌外观/团队管理 paints with data, not skeletons.
+  // Voice settings rides along too: by the time the lazy VoicePanel chunk
+  // lands, its config is already in cache.
   useEffect(() => {
     if (!isTeamAdmin) return undefined;
     void queryClient.prefetchQuery({
@@ -364,11 +372,21 @@ export function AccountPage() {
     return undefined;
   }, [isTeamAdmin, queryClient]);
 
+  useEffect(() => {
+    if (meQuery.data?.can_manage_voice_service !== true) return undefined;
+    void queryClient.prefetchQuery({
+      queryKey: ["voice-settings"],
+      queryFn: getVoiceSettings,
+    });
+    return undefined;
+  }, [meQuery.data?.can_manage_voice_service, queryClient]);
+
   // The role arrives with the viewer query, one roundtrip after mount.
   // Rendering before it resolves makes the tab row (and the whole page)
   // reflow twice — hold everything behind one skeleton so the page paints
-  // once, complete.
-  if (session.isPending || meQuery.isPending) {
+  // once, complete. app-info rides in the gate too: its "no email provider"
+  // note would otherwise pop a row in after the paint.
+  if (session.isPending || meQuery.isPending || appInfoQuery.isPending) {
     return <AccountPageSkeleton />;
   }
 
@@ -424,7 +442,7 @@ export function AccountPage() {
 
               <PushPanel />
               {showVoiceSettings && (
-                <Suspense fallback={null}>
+                <Suspense fallback={<VoicePanelSkeleton />}>
                   <VoicePanel key={session.data?.user.id} />
                 </Suspense>
               )}

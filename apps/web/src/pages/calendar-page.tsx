@@ -70,6 +70,14 @@ export function CalendarPage() {
   const gridEnd = grid[grid.length - 1].key;
 
   const timeZoneOffset = useMemo(() => new Date().getTimezoneOffset(), []);
+  // Warm the shared all-tasks cache so switching to the agenda view (and the
+  // day panel's task rows) paints without a fetch round trip.
+  useEffect(() => {
+    void queryClient.prefetchQuery({
+      queryKey: ["tasks"],
+      queryFn: () => listTasks(),
+    });
+  }, [queryClient]);
   const calendarQuery = useQuery({
     queryKey: ["calendar", gridStart, gridEnd, timeZoneOffset],
     queryFn: () =>
@@ -246,7 +254,11 @@ export function CalendarPage() {
                 onTaskDragStart={setDragTask}
                 onTaskSaved={invalidateCalendar}
               />
-              <NotesPanel day={selected} monthNotes={monthNotes} />
+              <NotesPanel
+                day={selected}
+                monthNotes={monthNotes}
+                pending={calendarQuery.isPending}
+              />
             </div>
           </div>
         )}
@@ -567,9 +579,29 @@ function DayPanel({
   );
 }
 
-function NotesPanel({ day, monthNotes }: { day: string; monthNotes: number }) {
+function NotesPanel({
+  day,
+  monthNotes,
+  pending,
+}: {
+  day: string;
+  monthNotes: number;
+  pending: boolean;
+}) {
   const { t } = useI18n();
   const navigate = useNavigate();
+  // While the month is loading the count is meaninglessly 0; hold the card's
+  // spot with a skeleton instead of popping it in after the fetch lands.
+  if (pending) {
+    return (
+      <Card aria-hidden="true">
+        <CardContent className="p-4">
+          <Skeleton className="h-4 w-2/3" />
+          <Skeleton className="mt-2 h-8 w-40" />
+        </CardContent>
+      </Card>
+    );
+  }
   if (monthNotes === 0) return null;
   return (
     <Card>

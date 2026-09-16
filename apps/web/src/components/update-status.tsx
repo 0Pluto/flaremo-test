@@ -28,10 +28,12 @@ export function UpdateStatus() {
   });
   // Prefer the repository advertised by the deployment (`update_repository`);
   // the null key keeps the upstream default so self-hosted installs without a
-  // configured repository behave exactly as before.
+  // configured repository behave exactly as before. Gated on app-info so the
+  // key doesn't flip mid-flight and hit GitHub twice on every cold boot.
   const releaseQuery = useQuery({
     queryKey: ["latest-release", appInfoQuery.data?.update_repository ?? null],
     queryFn: () => getLatestRelease(appInfoQuery.data?.update_repository),
+    enabled: appInfoQuery.isSuccess,
     retry: false,
     staleTime: 30 * 60 * 1_000,
   });

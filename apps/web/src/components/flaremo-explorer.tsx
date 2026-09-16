@@ -47,6 +47,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/i18n";
 import { buildMonthLabels } from "@/lib/activity";
 import { cn } from "@/lib/utils";
@@ -77,6 +78,7 @@ type FlareMoExplorerProps = {
   footer?: ReactNode;
   headerAction?: ReactNode;
   hierarchy: TagHierarchyNode[];
+  hierarchyPending?: boolean;
   stats: MemoStatsResponse;
   untagged?: boolean;
   onDeleteTag: (tag: string) => void;
@@ -96,6 +98,7 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
   footer,
   headerAction,
   hierarchy,
+  hierarchyPending = false,
   stats,
   untagged = false,
   onDeleteTag,
@@ -408,7 +411,15 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
           <HashIcon className="opacity-50" />
           <span className="truncate">{t("explorer.untagged")}</span>
         </button>
-        {hierarchy.length > 0 ? (
+        {hierarchyPending ? (
+          // Loading state, not the empty state: flashing「无标签」before the
+          // real tree expands reads as data loss. Hold a few ghost rows.
+          <div aria-hidden="true" className="flex flex-col gap-1.5">
+            <Skeleton className="h-5 w-3/5" />
+            <Skeleton className="ml-4 h-5 w-2/5" />
+            <Skeleton className="h-5 w-1/2" />
+          </div>
+        ) : hierarchy.length > 0 ? (
           <TagTree
             activeTag={activeTag}
             nodes={hierarchy}

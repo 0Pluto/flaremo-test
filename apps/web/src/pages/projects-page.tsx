@@ -101,7 +101,9 @@ export function ProjectsPage() {
   });
 
   const tasksQuery = useQuery({
-    queryKey: ["tasks", selected],
+    // Same key as the mini calendar's all-tasks query so the board reuses
+    // that cache instead of re-fetching the same payload under ["tasks","all"].
+    queryKey: selected === ALL_TASKS ? ["tasks"] : ["tasks", selected],
     queryFn: () =>
       listTasks(selected === ALL_TASKS ? {} : { project_id: selected }),
   });

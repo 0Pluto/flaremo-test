@@ -249,7 +249,12 @@ export function RegisterPage() {
             />
           </label>
         </div>
-        {registrationQuery.data?.captcha &&
+        {registrationQuery.isPending ? (
+          // Reserve the captcha's button height while the status is in
+          // flight so the submit button doesn't pop down when it lands.
+          <div aria-hidden="true" className="min-h-9" />
+        ) : (
+          registrationQuery.data?.captcha &&
           registrationQuery.data.captcha.provider !== "none" && (
             <CaptchaField
               disabled={isSubmitting}
@@ -261,7 +266,8 @@ export function RegisterPage() {
               provider={registrationQuery.data.captcha.provider}
               siteKey={registrationQuery.data.captcha.site_key}
             />
-          )}
+          )
+        )}
         {formError && (
           <p className="rounded-lg border border-destructive/30 bg-destructive/8 px-3 py-2 text-sm text-destructive">
             {formError}

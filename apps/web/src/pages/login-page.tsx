@@ -168,6 +168,10 @@ export function LoginPage() {
             </Link>
           </p>
         )}
+        {/* Always-present trailing slot: the register link appears here once
+            the public status lands, and the row keeps its height so the
+            buttons above never shift. */}
+        <div aria-hidden="true" className="min-h-6" />
       </form>
     </AuthPageFrame>
   );

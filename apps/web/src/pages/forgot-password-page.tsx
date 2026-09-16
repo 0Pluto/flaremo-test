@@ -19,7 +19,7 @@ export function ForgotPasswordPage() {
   // "transactional email configured" signal: without an email provider the
   // only reset path is the self-hosted recovery-key flow.
   const statusQuery = useQuery({
-    queryKey: ["register-status"],
+    queryKey: ["auth-registration-status"],
     queryFn: getRegistrationStatus,
     retry: false,
   });
@@ -62,7 +62,10 @@ export function ForgotPasswordPage() {
       description={t("auth.forgotPasswordDescription")}
       title={t("auth.forgotPasswordTitle")}
     >
-      {!emailProviderEnabled && (
+      {/* Gate on success, not just falsy: while the status is in flight the
+          banner must stay hidden, otherwise self-hosted instances flash it
+          and yank the form upward when email turns out to be configured. */}
+      {statusQuery.isSuccess && !emailProviderEnabled && (
         <p className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">
           {t("auth.forgotPasswordSelfHostHint")}{" "}
           <Link className="underline underline-offset-4" to="/recover">

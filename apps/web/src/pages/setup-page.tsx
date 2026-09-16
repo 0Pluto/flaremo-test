@@ -5,6 +5,7 @@ import { bootstrapOwner, getBootstrapStatus } from "@/api";
 import { AuthPageFrame } from "@/components/auth-page-frame";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/i18n";
 import { errorMessage } from "@/lib/error";
 
@@ -73,7 +74,16 @@ export function SetupPage() {
       title={t("auth.setupTitle")}
     >
       {bootstrapQuery.isPending && (
-        <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+        // Form-shaped skeleton instead of a one-line "loading": the real
+        // content is a ~4-row form, so matching its silhouette keeps the
+        // single swap from skeleton to form visually quiet.
+        <div aria-hidden="true" className="flex flex-col gap-4">
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-9 w-full" />
+          <Skeleton className="h-9 w-full" />
+          <Skeleton className="h-9 w-full" />
+          <Skeleton className="h-9 w-28" />
+        </div>
       )}
       {bootstrapQuery.isError && (
         <p className="rounded-lg border border-destructive/30 bg-destructive/8 px-3 py-2 text-sm text-destructive">

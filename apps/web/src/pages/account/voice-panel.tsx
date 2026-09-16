@@ -1,4 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import {
   deleteVoiceSettings,
@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useI18n } from "@/i18n";
@@ -65,25 +66,29 @@ export function VoicePanel() {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Shared cache key: the account page prefetches it while the lazy chunk is
+  // still downloading, so config often renders on the first paint.
+  const settingsQuery = useQuery({
+    queryKey: ["voice-settings"],
+    queryFn: getVoiceSettings,
+  });
   useEffect(() => {
-    let active = true;
     mounted.current = true;
-    void getVoiceSettings()
-      .then((value) => {
-        if (!active) return;
-        setConfig(value);
-        setProvider(value.provider ?? "tencent");
-        setModel(value.model);
-        setEnabled(value.enabled);
-      })
-      .catch(() => {
-        if (active) setMessage(t("voiceSettings.loadError"));
-      });
     return () => {
-      active = false;
       mounted.current = false;
     };
-  }, [t]);
+  }, []);
+  useEffect(() => {
+    const value = settingsQuery.data;
+    if (!value) return;
+    setConfig(value);
+    setProvider(value.provider ?? "tencent");
+    setModel(value.model);
+    setEnabled(value.enabled);
+  }, [settingsQuery.data]);
+  useEffect(() => {
+    if (settingsQuery.isError) setMessage(t("voiceSettings.loadError"));
+  }, [settingsQuery.isError, t]);
 
   // Environment credentials take precedence over anything saved here, so
   // editing the database copy while they are active would be misleading.
@@ -107,7 +112,11 @@ export function VoicePanel() {
         volcBoostingTable: "",
         volcCorrectTable: "",
       });
-      const value = await getVoiceSettings();
+      const value = await cache.fetchQuery({
+        queryKey: ["voice-settings"],
+        queryFn: getVoiceSettings,
+        staleTime: 0,
+      });
       if (!mounted.current) return;
       setConfig(value);
       setEnabled(value.enabled);
@@ -137,6 +146,13 @@ export function VoicePanel() {
         <p>
           {t("voiceSettings.description")} {t("voiceSettings.migration")}
         </p>
+        {!config && settingsQuery.isPending && (
+          <div className="flex flex-col gap-3" aria-hidden="true">
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-2/3" />
+            <Skeleton className="h-9 w-full" />
+          </div>
+        )}
         {config && (
           <>
             <p>

@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
   ArchiveIcon,
@@ -16,7 +17,7 @@ import {
 import { memo, useState } from "react";
 import { toast } from "sonner";
 import type { Attachment, Memo, MemoState, MemoVisibility, Share } from "@/api";
-import { uploadAttachment } from "@/api";
+import { getMemoContext, getRelatedMemos, uploadAttachment } from "@/api";
 import { AttachmentGallery } from "@/components/attachment-gallery";
 import { LazyMemoContent } from "@/components/lazy-memo-content";
 import { MemoSearchExcerpt } from "@/components/memo-search-excerpt";
@@ -108,6 +109,7 @@ export const MemoCard = memo(function MemoCard({
   canGovern = false,
 }: MemoCardProps) {
   const { locale, t } = useI18n();
+  const queryClient = useQueryClient();
   const id = getMemoResourceId(memo);
   const shareUrl = share
     ? `${globalThis.location.origin}/share/${share.token}`
@@ -129,6 +131,18 @@ export const MemoCard = memo(function MemoCard({
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingInline, setIsUploadingInline] = useState(false);
+  // Hovering the title telegraphs "opening the detail page": warm its two
+  // queries so the route paints with data instead of a full-page skeleton.
+  const prefetchDetail = () => {
+    void queryClient.prefetchQuery({
+      queryKey: ["memo-context", memo.id],
+      queryFn: () => getMemoContext(memo.id),
+    });
+    void queryClient.prefetchQuery({
+      queryKey: ["memo-related", memo.id],
+      queryFn: () => getRelatedMemos(memo.id),
+    });
+  };
 
   // Editing an existing memo: pasted images upload bound to the memo right
   // away, so a cancelled edit leaves nothing to clean up except an
@@ -237,6 +251,8 @@ export const MemoCard = memo(function MemoCard({
       <div className="flex w-full items-center justify-between gap-2">
         <Link
           className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
+          onFocus={prefetchDetail}
+          onMouseEnter={prefetchDetail}
           params={{ memoId: memo.id }}
           title={formatMemoTime(memo.display_time, locale)}
           to="/memo/$memoId"

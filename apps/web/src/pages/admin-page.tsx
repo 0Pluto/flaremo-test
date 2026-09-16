@@ -120,7 +120,6 @@ export function AdminPanel() {
       void queryClient.invalidateQueries({
         queryKey: ["current-flaremo-user"],
       });
-      void queryClient.invalidateQueries({ queryKey: ["me"] });
     },
   });
 

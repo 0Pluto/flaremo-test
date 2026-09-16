@@ -286,7 +286,7 @@ export function FlareMoApp() {
     retry: false,
   });
   const currentUserQuery = useQuery({
-    queryKey: ["flaremo-user"],
+    queryKey: ["current-flaremo-user"],
     queryFn: getCurrentFlareMoUser,
     staleTime: 60_000,
     retry: false,
@@ -456,6 +456,7 @@ export function FlareMoApp() {
       }
       stats={stats}
       hierarchy={tagHierarchyQuery.data?.tags ?? []}
+      hierarchyPending={tagHierarchyQuery.isPending}
       untagged={untagged}
       onDeleteTag={(tag) => deleteTagMutation.mutate(tag)}
       onRenameTag={(from, to) => renameTagMutation.mutate({ from, to })}
