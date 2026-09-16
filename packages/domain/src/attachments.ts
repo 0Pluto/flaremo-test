@@ -569,6 +569,30 @@ export function parseAttachmentDuration(value: unknown) {
   return { duration: seconds };
 }
 
+/**
+ * Clients can report an image's intrinsic pixel dimensions at upload time;
+ * they land in the free-form payload as `width`/`height` so the web app can
+ * reserve the rendered box before the bytes arrive (no scroll jump). Invalid
+ * or half-present values keep the payload empty instead of failing the
+ * upload — dimensions are decoration, not a contract.
+ */
+export function parseAttachmentDimensions(input: {
+  width: unknown;
+  height: unknown;
+}) {
+  const parse = (value: unknown) => {
+    const px =
+      typeof value === "string" || typeof value === "number"
+        ? Number(value)
+        : Number.NaN;
+    return Number.isInteger(px) && px >= 1 && px <= 20000 ? px : undefined;
+  };
+  const width = parse(input.width);
+  const height = parse(input.height);
+  if (width === undefined || height === undefined) return undefined;
+  return { width, height };
+}
+
 export async function bindMemoAttachments(
   db: FlareMoDb,
   user: UserRow,

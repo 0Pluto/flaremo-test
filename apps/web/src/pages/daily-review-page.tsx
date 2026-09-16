@@ -12,10 +12,11 @@ import {
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/i18n";
+import { todayKey } from "@/lib/calendar-date";
 
 export function DailyReviewPage() {
   const { locale, t } = useI18n();
-  const today = useMemo(() => formatLocalDate(new Date()), []);
+  const today = useMemo(() => todayKey(), []);
   const tzOffset = useMemo(() => -new Date().getTimezoneOffset(), []);
   const reviewQuery = useQuery({
     queryKey: ["daily-review", today, tzOffset],
@@ -102,11 +103,4 @@ function groupByYearsAgo(memos: Memo[]): YearGroup[] {
     }
   }
   return groups;
-}
-
-function formatLocalDate(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
 }

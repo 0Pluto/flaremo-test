@@ -1,17 +1,37 @@
 import { DirectionProvider } from "@base-ui/react/direction-provider";
+import { type QueryClient, useQueryClient } from "@tanstack/react-query";
 import {
   createRoute,
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
 import { lazy, Suspense } from "react";
+import {
+  getCalendarView,
+  getDailyReview,
+  getMemoContext,
+  getRelatedMemos,
+  listMemories,
+  listProjects,
+  listTasks,
+} from "@/api";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { isRtlLocale, useI18n } from "@/i18n";
+import { getInitialLocale, isRtlLocale, useI18n } from "@/i18n";
+import { buildMonthGrid, monthOf, todayKey } from "@/lib/calendar-date";
 import { AuthenticatedRoute } from "@/routes/authenticated-route";
 import { indexRoute } from "@/routes/index-route";
 import { rootRoute } from "@/routes/root-route";
 import { RouteLoading } from "@/routes/route-loading";
+
+/**
+ * Route loaders warm query caches without ever blocking navigation: a failed
+ * or slow fetch must not turn into a broken route, so the promise is fired
+ * and forgotten. The component's useQuery joins the in-flight request.
+ */
+function warmQuery(promise: Promise<unknown>) {
+  void promise.catch(() => undefined);
+}
 
 const MemoDetailPage = lazy(() =>
   import("@/pages/memo-detail-page").then((module) => ({
@@ -129,6 +149,23 @@ const memoRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/memo/$memoId",
   component: MemoDetailRoutePage,
+  // Intent preload already warms the JS chunk; this warms the data so the
+  // page (hover-prefetched from memo cards, cold on direct visits) paints
+  // with content on the first render instead of a full-page skeleton.
+  loader: ({ context, params }) => {
+    warmQuery(
+      context.queryClient.ensureQueryData({
+        queryKey: ["memo-context", params.memoId],
+        queryFn: () => getMemoContext(params.memoId),
+      }),
+    );
+    warmQuery(
+      context.queryClient.ensureQueryData({
+        queryKey: ["memo-related", params.memoId],
+        queryFn: () => getRelatedMemos(params.memoId),
+      }),
+    );
+  },
 });
 
 function LoginRoutePage() {
@@ -304,6 +341,16 @@ const dailyReviewRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/review/daily",
   component: DailyReviewRoutePage,
+  loader: ({ context }) => {
+    const today = todayKey();
+    const tzOffset = -new Date().getTimezoneOffset();
+    warmQuery(
+      context.queryClient.ensureQueryData({
+        queryKey: ["daily-review", today, tzOffset],
+        queryFn: () => getDailyReview(today, tzOffset),
+      }),
+    );
+  },
 });
 
 function RandomWalkRoutePage() {
@@ -336,6 +383,14 @@ const memoryRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/memory",
   component: MemoryRoutePage,
+  loader: ({ context }) => {
+    warmQuery(
+      context.queryClient.ensureQueryData({
+        queryKey: ["memories", "list"],
+        queryFn: () => listMemories(),
+      }),
+    );
+  },
 });
 
 function ProjectsRoutePage() {
@@ -352,6 +407,21 @@ const projectsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/projects",
   component: ProjectsRoutePage,
+  loader: ({ context }) => {
+    warmQuery(
+      context.queryClient.ensureQueryData({
+        queryKey: ["projects"],
+        queryFn: () => listProjects(),
+      }),
+    );
+    // Same key as the board's default all-tasks view and the mini calendar.
+    warmQuery(
+      context.queryClient.ensureQueryData({
+        queryKey: ["tasks"],
+        queryFn: () => listTasks(),
+      }),
+    );
+  },
 });
 
 function CalendarRoutePage() {
@@ -378,6 +448,22 @@ const calendarRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/calendar",
   component: CalendarRoutePage,
+  loader: ({ context }) => {
+    // Mirrors the page's initial month: today's cursor, week start from the
+    // stored locale, and the same tz convention the page passes. Warm data
+    // for exactly that key so first paint has the month grid.
+    const weekStart = getInitialLocale().startsWith("en") ? "sunday" : "monday";
+    const grid = buildMonthGrid(monthOf(todayKey()), weekStart);
+    const from = grid[0].key;
+    const to = grid[grid.length - 1].key;
+    const tz = new Date().getTimezoneOffset();
+    warmQuery(
+      context.queryClient.ensureQueryData({
+        queryKey: ["calendar", from, to, tz],
+        queryFn: () => getCalendarView({ from, to, tz }),
+      }),
+    );
+  },
 });
 
 const captureRoute = createRoute({
@@ -388,6 +474,10 @@ const captureRoute = createRoute({
 
 const router = createRouter({
   defaultPreload: "intent",
+  // The real QueryClient is injected by AppRoutes (inside
+  // QueryClientProvider) through RouterProvider's context prop; the typed
+  // placeholder keeps route loader signatures aware of it.
+  context: { queryClient: undefined as unknown as QueryClient },
   routeTree: rootRoute.addChildren([
     indexRoute,
     memoRoute,
@@ -421,9 +511,10 @@ declare module "@tanstack/react-router" {
 // 由 I18nProvider 与 CSS 各自负责（Base UI 不代管 HTML）。
 function DirectionalRoutes() {
   const { locale } = useI18n();
+  const queryClient = useQueryClient();
   return (
     <DirectionProvider direction={isRtlLocale(locale) ? "rtl" : "ltr"}>
-      <RouterProvider router={router} />
+      <RouterProvider context={{ queryClient }} router={router} />
       <Toaster />
     </DirectionProvider>
   );

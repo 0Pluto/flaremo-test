@@ -40,6 +40,7 @@ import {
   markAttachmentDeleting,
   moveMemoToTrash,
   normalizeAttachmentClientId,
+  parseAttachmentDimensions,
   parseAttachmentDuration,
   replaceMemoRelations,
   restoreMemoRevision,
@@ -357,7 +358,15 @@ memosApi.post("/attachments", async (c) => {
     const file = formData.get("file");
     const memo = formData.get("memo");
     const clientId = normalizeAttachmentClientId(formData.get("client_id"));
-    const payload = parseAttachmentDuration(formData.get("duration"));
+    // Both parsers are decoration-not-contract: absent or invalid fields
+    // simply leave the payload keys out.
+    const payload = {
+      ...parseAttachmentDuration(formData.get("duration")),
+      ...parseAttachmentDimensions({
+        width: formData.get("width"),
+        height: formData.get("height"),
+      }),
+    };
     if (!(file instanceof File)) {
       return c.json({ error: { message: "file is required" } }, 400);
     }
@@ -393,7 +402,7 @@ memosApi.post("/attachments", async (c) => {
         r2Key: objectKey,
         etag: object.httpEtag,
         clientId,
-        ...(payload ? { payload } : {}),
+        ...(Object.keys(payload).length > 0 ? { payload } : {}),
       });
       if (attachment.r2Key !== objectKey) {
         await c.env.ATTACHMENTS.delete(objectKey).catch(() => undefined);

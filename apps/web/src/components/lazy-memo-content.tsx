@@ -43,11 +43,15 @@ export const LazyMemoContent = memo(function LazyMemoContent({
   content,
   onTimestampClick,
   withHeadingIds,
+  resolveImageDimensions,
 }: {
   className?: string;
   content: string;
   onTimestampClick?: (seconds: number) => void;
   withHeadingIds?: boolean;
+  resolveImageDimensions?: (
+    src: string,
+  ) => { width: number; height: number } | undefined;
 }) {
   return (
     <MemoContentErrorBoundary
@@ -60,6 +64,7 @@ export const LazyMemoContent = memo(function LazyMemoContent({
           className={className}
           content={content}
           onTimestampClick={onTimestampClick}
+          resolveImageDimensions={resolveImageDimensions}
           withHeadingIds={withHeadingIds}
         />
       </Suspense>

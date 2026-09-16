@@ -106,7 +106,12 @@ export function useI18n() {
   return context;
 }
 
-function getInitialLocale(): Locale {
+/**
+ * Resolves the locale the provider would pick (stored preference, else
+ * navigator). Exposed for non-React callers — route loaders warm caches that
+ * are keyed by locale-dependent values (e.g. the calendar's week start).
+ */
+export function getInitialLocale(): Locale {
   const stored = localStorage.getItem(LOCALE_STORAGE_KEY);
   if (isLocale(stored)) {
     return stored;

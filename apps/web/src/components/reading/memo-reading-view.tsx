@@ -8,7 +8,10 @@ import {
   ReadingAudioProvider,
   useReadingAudio,
 } from "@/components/reading/reading-audio-provider";
-import { filterUnreferencedAttachments } from "@/lib/attachment-refs";
+import {
+  createImageDimensionResolver,
+  filterUnreferencedAttachments,
+} from "@/lib/attachment-refs";
 import { cn } from "@/lib/utils";
 
 export type ReadingViewProps = {
@@ -119,8 +122,13 @@ function ArticleReadingView({
   className,
   content,
   contentClassName,
+  resolveImageDimensions,
 }: Required<Pick<ReadingViewProps, "attachments" | "content">> &
-  Pick<ReadingViewProps, "className" | "contentClassName">) {
+  Pick<ReadingViewProps, "className" | "contentClassName"> & {
+    resolveImageDimensions: (
+      src: string,
+    ) => { width: number; height: number } | undefined;
+  }) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const audio = useReadingAudio();
   useParagraphHighlight(bodyRef, Boolean(audio?.track));
@@ -149,6 +157,7 @@ function ArticleReadingView({
             className={contentClassName}
             content={content}
             onTimestampClick={audio?.seek}
+            resolveImageDimensions={resolveImageDimensions}
             withHeadingIds
           />
           {galleryAttachments.length > 0 && (
@@ -165,15 +174,24 @@ function PlainReadingView({
   className,
   content,
   contentClassName,
+  resolveImageDimensions,
 }: Required<Pick<ReadingViewProps, "attachments" | "content">> &
-  Pick<ReadingViewProps, "className" | "contentClassName">) {
+  Pick<ReadingViewProps, "className" | "contentClassName"> & {
+    resolveImageDimensions: (
+      src: string,
+    ) => { width: number; height: number } | undefined;
+  }) {
   const galleryAttachments = filterUnreferencedAttachments(
     attachments,
     content,
   );
   return (
     <div className={cn("flex flex-col gap-4", className)}>
-      <LazyMemoContent className={contentClassName} content={content} />
+      <LazyMemoContent
+        className={contentClassName}
+        content={content}
+        resolveImageDimensions={resolveImageDimensions}
+      />
       {galleryAttachments.length > 0 && (
         <AttachmentGallery attachments={galleryAttachments} />
       )}
@@ -195,6 +213,10 @@ export function MemoReadingView({
   // Stable identity across renders: the provider keys restore/save effects on
   // the active track object.
   const tracks = useMemo(() => MemoAudioTracks(attachments), [attachments]);
+  const resolveImageDimensions = useMemo(
+    () => createImageDimensionResolver(attachments),
+    [attachments],
+  );
 
   if (layout === "article" && tracks.length > 0) {
     return (
@@ -204,6 +226,7 @@ export function MemoReadingView({
           className={className}
           content={content}
           contentClassName={contentClassName}
+          resolveImageDimensions={resolveImageDimensions}
         />
       </ReadingAudioProvider>
     );
@@ -215,6 +238,7 @@ export function MemoReadingView({
       className={className}
       content={content}
       contentClassName={contentClassName}
+      resolveImageDimensions={resolveImageDimensions}
     />
   );
 }

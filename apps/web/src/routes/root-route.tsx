@@ -1,4 +1,9 @@
-import { createRootRoute, Outlet, useRouter } from "@tanstack/react-router";
+import type { QueryClient } from "@tanstack/react-query";
+import {
+  createRootRouteWithContext,
+  Outlet,
+  useRouter,
+} from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/i18n";
 
@@ -41,7 +46,11 @@ function RouteErrorPage({ error }: { error: unknown }) {
   );
 }
 
-export const rootRoute = createRootRoute({
+// Typed context makes every route loader's `context.queryClient` known; the
+// real QueryClient is injected through RouterProvider's context prop.
+export const rootRoute = createRootRouteWithContext<{
+  queryClient: QueryClient;
+}>()({
   component: () => <Outlet />,
   errorComponent: RouteErrorPage,
 });

@@ -978,6 +978,27 @@ async function readAudioDuration(file: File): Promise<number | undefined> {
   });
 }
 
+/**
+ * Images report intrinsic dimensions alongside the upload so every render
+ * site can reserve the right box before the bytes land (no scroll jump).
+ * Mirrors readAudioDuration's philosophy: decoration, never a contract.
+ */
+async function readImageDimensions(
+  file: File,
+): Promise<{ width: number; height: number } | undefined> {
+  if (!file.type.toLowerCase().startsWith("image/")) return undefined;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const dimensions = { width: bitmap.width, height: bitmap.height };
+    bitmap.close();
+    return dimensions.width > 0 && dimensions.height > 0
+      ? dimensions
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function uploadAttachment(input: {
   file: File;
   memo?: string;
@@ -994,6 +1015,11 @@ export async function uploadAttachment(input: {
   const duration = await readAudioDuration(input.file);
   if (duration !== undefined) {
     formData.set("duration", String(duration));
+  }
+  const dimensions = await readImageDimensions(input.file);
+  if (dimensions) {
+    formData.set("width", String(dimensions.width));
+    formData.set("height", String(dimensions.height));
   }
   return apiRequest<Attachment>("/api/v1/attachments", {
     method: "POST",

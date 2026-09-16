@@ -14,7 +14,7 @@ import {
   ShieldIcon,
   Trash2Icon,
 } from "lucide-react";
-import { memo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { Attachment, Memo, MemoState, MemoVisibility, Share } from "@/api";
 import { getMemoContext, getRelatedMemos, uploadAttachment } from "@/api";
@@ -50,7 +50,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/i18n";
-import { filterUnreferencedAttachments } from "@/lib/attachment-refs";
+import {
+  createImageDimensionResolver,
+  filterUnreferencedAttachments,
+} from "@/lib/attachment-refs";
 import {
   extractImageFiles,
   inlineImageMarkdown,
@@ -143,6 +146,13 @@ export const MemoCard = memo(function MemoCard({
       queryFn: () => getRelatedMemos(memo.id),
     });
   };
+  // Intrinsic boxes for body images: uploaded dimensions ride the
+  // attachments list, so a photo the author placed inline never shoves the
+  // cards below it aside while loading.
+  const resolveImageDimensions = useMemo(
+    () => createImageDimensionResolver(attachments),
+    [attachments],
+  );
 
   // Editing an existing memo: pasted images upload bound to the memo right
   // away, so a cancelled edit leaves nothing to clean up except an
@@ -429,7 +439,10 @@ export const MemoCard = memo(function MemoCard({
                 !collapsed && "transition-[max-height]",
               )}
             >
-              <LazyMemoContent content={memo.content} />
+              <LazyMemoContent
+                content={memo.content}
+                resolveImageDimensions={resolveImageDimensions}
+              />
             </div>
             {collapsed && (
               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-card to-transparent" />

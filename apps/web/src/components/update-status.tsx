@@ -81,8 +81,17 @@ export function UpdateStatus() {
             variant="ghost"
           >
             <RefreshCwIcon />
-            {appInfo && (
+            {appInfo ? (
               <span className="text-xs font-medium">v{appInfo.version}</span>
+            ) : (
+              // Invisible placeholder keeps the button's width stable until
+              // app-info lands; a real version has the same digit count.
+              <span
+                aria-hidden="true"
+                className="invisible text-xs font-medium"
+              >
+                v0.00
+              </span>
             )}
             {updateAvailable && (
               <span

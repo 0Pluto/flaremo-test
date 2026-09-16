@@ -1202,6 +1202,43 @@ describe("FlareMo Worker API", () => {
     expect(deleted.ok).toBe(true);
   });
 
+  it("keeps client-reported image dimensions in the attachment payload", async () => {
+    const formData = new FormData();
+    formData.set(
+      "file",
+      new File(["png pixels"], "shot.png", { type: "image/png" }),
+    );
+    formData.set("width", "1920");
+    formData.set("height", "1080");
+    const attachment = await json<{
+      name: string;
+      payload: Record<string, unknown>;
+    }>(
+      await fetchApp("http://flaremo.test/api/v1/attachments", {
+        method: "POST",
+        body: formData,
+      }),
+    );
+    expect(attachment.payload).toMatchObject({ width: 1920, height: 1080 });
+
+    // A half-present pair must not poison the payload: dimensions are
+    // decoration, and an invalid value simply leaves the keys out.
+    const invalid = new FormData();
+    invalid.set(
+      "file",
+      new File(["png pixels"], "shot-broken.png", { type: "image/png" }),
+    );
+    invalid.set("width", "0");
+    invalid.set("height", "1080");
+    const rejected = await json<{ payload: Record<string, unknown> }>(
+      await fetchApp("http://flaremo.test/api/v1/attachments", {
+        method: "POST",
+        body: invalid,
+      }),
+    );
+    expect(rejected.payload).toEqual({});
+  });
+
   it("manages hierarchical tags through rename, delete, and untagged filtering", async () => {
     const workMemo = await createMemo<{ id: string; name: string }>(
       "推进 #工作/项目A 和 #工作/项目B，也看 #生活",

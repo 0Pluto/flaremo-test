@@ -72,6 +72,7 @@ export const MemoContent = memo(function MemoContent({
   content,
   onTimestampClick,
   withHeadingIds = false,
+  resolveImageDimensions,
 }: {
   className?: string;
   content: string;
@@ -86,6 +87,13 @@ export const MemoContent = memo(function MemoContent({
    * under StrictMode's double render.
    */
   withHeadingIds?: boolean;
+  /**
+   * Maps a body image's src to its attachment's intrinsic dimensions so the
+   * rendered box is reserved before the bytes load (no layout shift).
+   */
+  resolveImageDimensions?: (
+    src: string,
+  ) => { width: number; height: number } | undefined;
 }) {
   // Transcript bodies rewrite clock markers into `#flaremo-t=` links before
   // parsing; prose without markers passes through untouched.
@@ -155,7 +163,25 @@ export const MemoContent = memo(function MemoContent({
           h4: heading("h4"),
           h5: heading("h5"),
           h6: heading("h6"),
-          img: MarkdownImage,
+          img({ node: _node, ...props }) {
+            const dimensions = resolveImageDimensions?.(
+              typeof props.src === "string" ? props.src : "",
+            );
+            return (
+              <MarkdownImage
+                {...props}
+                {...(dimensions
+                  ? {
+                      width: dimensions.width,
+                      height: dimensions.height,
+                      style: {
+                        aspectRatio: `${dimensions.width} / ${dimensions.height}`,
+                      },
+                    }
+                  : {})}
+              />
+            );
+          },
         }}
         remarkPlugins={[remarkGfm]}
         skipHtml

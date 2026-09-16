@@ -2,6 +2,7 @@ import { CircleAlertIcon, DownloadIcon, FileIcon } from "lucide-react";
 import { useState } from "react";
 import type { Attachment } from "@/api";
 import { useI18n } from "@/i18n";
+import { attachmentImageDimensions } from "@/lib/attachment-refs";
 import { formatBytes } from "@/lib/utils";
 
 function GalleryItem({ attachment }: { attachment: Attachment }) {
@@ -9,6 +10,10 @@ function GalleryItem({ attachment }: { attachment: Attachment }) {
   const [failed, setFailed] = useState(false);
   const isImage = attachment.content_type?.startsWith("image/");
   const isAudio = attachment.content_type?.startsWith("audio/");
+  // Uploaded images carry intrinsic dimensions in their payload; with them
+  // the browser reserves the exact box before the bytes arrive, so feed
+  // content below never gets pushed down mid-scroll.
+  const dimensions = attachmentImageDimensions(attachment);
   return (
     <div
       className="overflow-hidden rounded-xl border bg-card transition-shadow duration-200 hover:shadow-sm"
@@ -24,10 +29,19 @@ function GalleryItem({ attachment }: { attachment: Attachment }) {
           <a href={attachment.download_url}>
             <img
               alt={attachment.filename}
-              className="max-h-[32rem] w-full bg-muted object-contain motion-safe:transition-transform motion-safe:duration-300 motion-safe:ease-out-expo motion-safe:hover:scale-[1.015]"
+              className="h-auto max-h-[32rem] w-full bg-muted object-contain motion-safe:transition-transform motion-safe:duration-300 motion-safe:ease-out-expo motion-safe:hover:scale-[1.015]"
+              height={dimensions?.height}
               loading="lazy"
               onError={() => setFailed(true)}
               src={attachment.preview_url}
+              style={
+                dimensions
+                  ? {
+                      aspectRatio: `${dimensions.width} / ${dimensions.height}`,
+                    }
+                  : undefined
+              }
+              width={dimensions?.width}
             />
           </a>
         ))}

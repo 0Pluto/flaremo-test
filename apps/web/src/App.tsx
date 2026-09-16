@@ -531,6 +531,7 @@ export function FlareMoApp() {
                 onToggleSemantic={semanticEnabled ? toggleSemantic : undefined}
                 query={dayFilter ? "" : query}
                 semanticMode={semanticMode}
+                semanticPending={vectorUsageQuery.isPending}
                 onQueryChange={setQuery}
                 isPending={isUpdating}
               />
@@ -551,6 +552,7 @@ export function FlareMoApp() {
               onToggleSemantic={semanticEnabled ? toggleSemantic : undefined}
               query={dayFilter ? "" : query}
               semanticMode={semanticMode}
+              semanticPending={vectorUsageQuery.isPending}
               onQueryChange={setQuery}
               isPending={isUpdating}
             />
