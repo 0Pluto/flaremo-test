@@ -1,9 +1,6 @@
 import type { FlareMoEnv } from "../env";
 import { createDashscopeProvider } from "./dashscope";
-import {
-  createMinimaxProvider,
-  normalizeMinimaxBaseUrl,
-} from "./minimax";
+import { createMinimaxProvider, normalizeMinimaxBaseUrl } from "./minimax";
 import { createTencentProvider } from "./tencent";
 import type { StreamingAsrProvider } from "./types";
 import { createVolcengineProvider } from "./volcengine";

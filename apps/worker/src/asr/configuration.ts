@@ -143,7 +143,11 @@ export async function resolveVoiceService(
     };
   const fromEnvBatch = getConfiguredBatchAsr(env);
   if (fromEnvBatch)
-    return { kind: "batch", id: fromEnvBatch.id, provider: fromEnvBatch.provider };
+    return {
+      kind: "batch",
+      id: fromEnvBatch.id,
+      provider: fromEnvBatch.provider,
+    };
   const row = await readVoiceService(db);
   if (!row) return null;
   if (!row.enabled || !row.ciphertext) return null;

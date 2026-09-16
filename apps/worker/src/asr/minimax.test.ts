@@ -2,10 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildMinimaxForm,
   createMinimaxProvider,
+  MINIMAX_MAX_AUDIO_DURATION_MS,
   mapMinimaxSegments,
   minimaxDurationMs,
   minimaxFailure,
-  MINIMAX_MAX_AUDIO_DURATION_MS,
   normalizeMinimaxBaseUrl,
   sniffAudioMimeType,
 } from "./minimax";
@@ -79,10 +79,7 @@ describe("MiniMax batch adapter", () => {
     await createMinimaxProvider(credentials).transcribe(ogg.buffer, {
       language: "auto",
     });
-    const [, init] = fetcher.mock.calls[0] as unknown as [
-      string,
-      RequestInit,
-    ];
+    const [, init] = fetcher.mock.calls[0] as unknown as [string, RequestInit];
     expect(init.headers).not.toHaveProperty("language");
     const file = (init.body as FormData).get("file");
     expect(file?.type).toBe("audio/ogg");
@@ -99,10 +96,7 @@ describe("MiniMax batch adapter", () => {
     await createMinimaxProvider(credentials).transcribe(wavBytes(), {
       language: "zh-Hans-CN",
     });
-    const [, init] = fetcher.mock.calls[0] as unknown as [
-      string,
-      RequestInit,
-    ];
+    const [, init] = fetcher.mock.calls[0] as unknown as [string, RequestInit];
     expect((init.headers as Record<string, string>).language).toBe(
       "zh-Hans-CN",
     );
@@ -246,9 +240,7 @@ describe("MiniMax batch adapter", () => {
   });
 
   it("normalizes the base URL and defaults to the domestic endpoint", () => {
-    expect(normalizeMinimaxBaseUrl(undefined)).toBe(
-      "https://api.minimaxi.com",
-    );
+    expect(normalizeMinimaxBaseUrl(undefined)).toBe("https://api.minimaxi.com");
     expect(normalizeMinimaxBaseUrl("https://api.minimax.io/")).toBe(
       "https://api.minimax.io",
     );

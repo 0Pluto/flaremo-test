@@ -1,9 +1,9 @@
-import { incrementUsageCounter } from "@flaremo/domain";
 import { CAPTURE_BATCH_MAX_BYTES } from "@flaremo/contracts";
+import { incrementUsageCounter } from "@flaremo/domain";
 import { Hono } from "hono";
 import { z } from "zod";
-import { resolveVoiceService } from "../asr/configuration";
 import { bridgeCapture } from "../asr/bridge";
+import { resolveVoiceService } from "../asr/configuration";
 import { sniffAudioMimeType } from "../asr/minimax";
 import { AsrProviderError } from "../asr/types";
 import { getTrustedOrigins } from "../auth";
@@ -45,8 +45,7 @@ captureApi.get("/ws", async (c) => {
     // The WebSocket bridge speaks the streaming contract only; a batch-only
     // deployment is unavailable for it (clients fall back to record-then-
     // transcribe through /transcribe).
-    if (configured.kind !== "streaming")
-      return c.text("ASR unavailable", 503);
+    if (configured.kind !== "streaming") return c.text("ASR unavailable", 503);
     if (c.req.header("upgrade")?.toLowerCase() !== "websocket")
       return c.text("Expected WebSocket upgrade", 426);
     const throttled = await rateLimitGuard(c, "capture", user.id);
@@ -122,7 +121,7 @@ captureApi.post("/transcribe", async (c) => {
         ? "audio/ogg"
         : query.format === "wav"
           ? "audio/wav"
-          : sniffAudioMimeType(new Uint8Array(audio)) ?? "audio/wav";
+          : (sniffAudioMimeType(new Uint8Array(audio)) ?? "audio/wav");
     const transcription = await configured.provider.transcribe(audio, {
       startMs: query.startMs,
       language: query.language,

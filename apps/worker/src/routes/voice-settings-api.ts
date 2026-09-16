@@ -251,7 +251,10 @@ voiceSettingsApi.post("/test", async (c) => {
   if (!configured)
     return c.json({ error: { message: "Voice service unavailable" } }, 503);
   const abort = new AbortController();
-  const timer = setTimeout(() => abort.abort(), configured.kind === "batch" ? 30_000 : 8000);
+  const timer = setTimeout(
+    () => abort.abort(),
+    configured.kind === "batch" ? 30_000 : 8000,
+  );
   try {
     if (configured.kind === "batch") {
       // Real transcription (rollout §3.4): a 3 s silent WAV exercises

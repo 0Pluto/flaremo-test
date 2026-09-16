@@ -1,6 +1,6 @@
 # UX 差异化决策稿：在熟悉的骨架上做得更精细
 
-> 2026-09-17 · 状态：P0–P3 全部实施完毕（分支 `feat/ux-differentiation`） · 验收：biome / tsc / vitest 122 绿 / pnpm build 通过
+> 2026-09-17 · 状态：P0–P3 全部实施完毕，已合 main 并部署（`bf7dad9`，kosx 已滚） · 验收：biome / tsc / vitest 122 绿 / pnpm build 通过
 
 ## 背景与结论
 
@@ -42,8 +42,8 @@
    —— 已实施：`lib/tag-autocomplete.ts`（token 提取 + 候选过滤，带单测）+ composer 内嵌候选面板（↑↓ 导航、Enter/Tab 选中、Esc 关闭、IME 安全、点击 # 按钮直接弹候选）。
 2. **语音入口进 composer**：工具条加麦克风按钮，点击展开紧凑录音面板（复用 `lib/audio-capture`），录完转写文本插入草稿光标处；完整录音体验仍归 `/capture`（P2/P3 见 `voice-capture-rollout.md`）。
    —— 已实施：composer 工具条麦克风按钮（仅实例配置了 ASR 时显示），紧凑录音面板（计时 + 实时 partial + 停止并插入/取消），停止后最终句子经 `joinFinalSentences` 追加进草稿；录音中发送按钮禁用。
-3. **任务/日程入口**：清单按钮插入 `- [ ]`；卡片 checkbox 可勾选并联动 `tasks.dueAt` → 日历。（后置，待 Composer 前两项验收后做）
-   —— 已实施（部分）：composer 清单按钮插入 `- [ ] `；卡片 checkbox 对编辑者可点（`lib/task-list.ts` 定位第 N 个 marker 改写，走 memo 更新的乐观更新链，点击即时回显）。**tasks.dueAt → 日历联动未做**：checkbox 与任务系统怎么对应（自动建日程？仅勾选态？）是产品决策，见 `projects-tasks-audit.md`，待 Kim 拍板后再接。
+3. **任务/日程入口**：清单按钮插入 `- [ ]`；记录里的待办可「转为任务」，任务带日期即上日历。
+   —— 已实施（收口）：composer 清单按钮插入 `- [ ] `；卡片 checkbox 对编辑者可点（`lib/memo-tasks.ts` 定位源行改写，走 memo 更新的乐观更新链，点击即时回显）；任务行（对编辑者）悬停出现「转为任务」入口，点击建任务并以 `source_memo_id` 回链原记录（任务卡显示来源入口）。对应关系按 D2 定稿：**勾选 ≠ 建任务**——勾选只改正文，只有显式转化才产生任务；任务侧不回写正文。决策与实施记录见 `projects-tasks-audit.md`（D2）与 [docs/concept-model.md](./concept-model.md)。
 
 ### P2 · 卡片与回顾的人性化（已实施）
 

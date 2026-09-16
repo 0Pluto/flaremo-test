@@ -120,7 +120,12 @@ describe("Batch (MiniMax) provider configuration", () => {
     expect(
       getConfiguredBatchAsr({ FLAREMO_ASR_MINIMAX_API_KEY: "test-key" }),
     ).toBeNull();
-    expect(getConfiguredBatchAsr({ ...minimaxEnv, FLAREMO_ASR_MINIMAX_API_KEY: " " })).toBeNull();
+    expect(
+      getConfiguredBatchAsr({
+        ...minimaxEnv,
+        FLAREMO_ASR_MINIMAX_API_KEY: " ",
+      }),
+    ).toBeNull();
   });
   it("requires an API key and rejects an unusable base URL without throwing", () => {
     expect(

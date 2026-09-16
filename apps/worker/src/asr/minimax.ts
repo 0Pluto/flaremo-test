@@ -192,7 +192,9 @@ export function createMinimaxProvider(
           headers,
           body: buildMinimaxForm(
             audio,
-            options.mimeType ?? sniffAudioMimeType(new Uint8Array(audio)) ?? "audio/wav",
+            options.mimeType ??
+              sniffAudioMimeType(new Uint8Array(audio)) ??
+              "audio/wav",
           ),
           signal,
         });
@@ -216,8 +218,7 @@ export function createMinimaxProvider(
       // from a completed response is a request/credential problem, never a
       // transient network condition.
       const statusCode = parsed.data.base_resp?.status_code;
-      if (statusCode && statusCode > 0)
-        throw minimaxBodyFailure(statusCode);
+      if (statusCode && statusCode > 0) throw minimaxBodyFailure(statusCode);
       const utterances = mapMinimaxSegments(parsed.data, options.startMs ?? 0);
       const durationMs = minimaxDurationMs(parsed.data);
       if (durationMs > MINIMAX_MAX_AUDIO_DURATION_MS)

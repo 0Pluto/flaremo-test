@@ -56,9 +56,9 @@ describe("voice service resolution", () => {
     expect(
       configuredVoice({ ...value, provider: "minimax", apiKey: "" }),
     ).toBeNull();
-    expect(configuredVoice({ ...value, apiKey: "test-minimax-key" })).toMatchObject(
-      { kind: "streaming", id: "tencent" },
-    );
+    expect(
+      configuredVoice({ ...value, apiKey: "test-minimax-key" }),
+    ).toMatchObject({ kind: "streaming", id: "tencent" });
   });
   it("environment credentials resolve before the database copy", async () => {
     const db = {
