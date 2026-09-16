@@ -59,12 +59,12 @@ const EN_HOME: HomeContent = {
     "Leave heavy server maintenance behind and enjoy pure, reliable, AI-native knowledge management",
   features: [
     {
-      title: "Enterprise Durability",
+      title: "Durable by default",
       description:
         "Memos live in your Cloudflare D1 database and R2 bucket with multi-region persistence. Drive failure, power outages, and moving hardware won't touch your data.",
     },
     {
-      title: "Generous Free Tier",
+      title: "Free tier, no fine print",
       description:
         "Cloudflare's free tier provides 5GB D1 database (~2.5 million text memos) and 10GB R2 storage (~10,000 photos). R2 has $0 egress fees so sharing notes won't surprise you with bandwidth charges.",
     },
@@ -90,7 +90,7 @@ const EN_HOME: HomeContent = {
     },
   ],
   comparisonBadge: "Side-by-Side",
-  comparisonHeading: "Why Cloudflare Native Wins",
+  comparisonHeading: "Three ways to self-host, side by side",
   comparisonSubtitle:
     "Comparing Cloudflare Serverless against home NAS and traditional VPS self-hosting",
   comparisonRows: [
@@ -159,7 +159,7 @@ const EN_HOME: HomeContent = {
     },
   ],
   ctaBadge: "Get Started",
-  ctaHeading: "Your Second Brain Is One Deploy Away",
+  ctaHeading: "Five minutes to deploy. Yours for good.",
   ctaSubtitle:
     "No servers, no credit card required. Deploy on Cloudflare in 5 minutes.",
   ctaButton: "Open the Deploy Guide",
@@ -173,7 +173,7 @@ const ZH_HOME: HomeContent = {
     "简约，不简单；克制，不放肆。基于 Cloudflare 边缘网络（Workers + D1 + R2）原生构建的知识库：无需 VPS、免运维，完整兼容 Memos 生态，还能作为 AI Agent 的长期记忆。灵感随手记下，永久沉淀。",
   primaryCta: "快速开始部署",
   secondaryCta: "GitHub 源码",
-  statMemos: "约 250 万条纯文本笔记",
+  statMemos: "约 250 万条纯文本记录",
   statPhotos: "1 万张图片 · 0 出口流量费",
   statServers: "全球 300+ 边缘近场直连",
   statUptime: "企业级多副本 · 本地自由归档",
@@ -182,12 +182,12 @@ const ZH_HOME: HomeContent = {
   featuresSubtitle: "把运维交给 Cloudflare，把注意力留给记录本身",
   features: [
     {
-      title: "企业级持久化，永不丢失",
+      title: "多区域持久化，数据稳稳落地",
       description:
-        "笔记存储于 Cloudflare D1 分布式数据库与 R2 存储桶，自带跨地域冗余容灾。无需担心硬盘坏道、停电或单点损坏。",
+        "记录存储于 Cloudflare D1 分布式数据库与 R2 存储桶，自带跨地域冗余容灾。无需担心硬盘坏道、停电或单点损坏。",
     },
     {
-      title: "免费配额，终生充裕",
+      title: "免费额度，明码实价",
       description:
         "Cloudflare 免费层自带 5GB D1 数据库与 10GB R2 存储，且 R2 不收出口流量费——记得再多，也没有一张账单。",
     },
@@ -213,9 +213,9 @@ const ZH_HOME: HomeContent = {
     },
   ],
   comparisonBadge: "横向对比",
-  comparisonHeading: "为什么选择 Cloudflare 原生架构",
+  comparisonHeading: "三种自托管方式，一张表看清",
   comparisonSubtitle:
-    "对比传统家用 NAS 与 VPS，看 Cloudflare 原生为何是现代自托管的最优解",
+    "对比传统家用 NAS 与 VPS，看清 Cloudflare 原生架构的实际差别",
   comparisonRows: [
     {
       label: "数据存储位置",
@@ -262,11 +262,11 @@ const ZH_HOME: HomeContent = {
   faqItems: [
     {
       q: "免费配额真的够用吗？",
-      a: "完全够用。Cloudflare 免费层提供 5GB D1 数据库（可存约 250 万条普通文本笔记）与 10GB R2 存储（约 1 万张压缩图片）。即使每天写 100 条笔记，也能写 68 年，对绝大部分笔记用户而言终生都难以触及上限。",
+      a: "完全够用。Cloudflare 免费层提供 5GB D1 数据库（可存约 250 万条普通文本记录）与 10GB R2 存储（约 1 万张压缩图片）。即使每天写 100 条记录，也能写 68 年，对绝大部分用户而言终生都难以触及上限。",
     },
     {
       q: "如何确保我的数据绝对安全？",
-      a: "笔记保存在 Cloudflare 企业级分布式基础设施中，自带跨地域冗余持久化，不会因单点硬件故障丢失。同时 FlareMo 支持一键导出标准 Memos 格式备份包，随时可本地离线归档形成双重保障。",
+      a: "记录保存在 Cloudflare 企业级分布式基础设施中，自带跨地域冗余持久化，不会因单点硬件故障丢失。同时 FlareMo 支持一键导出标准 Memos 格式备份包，随时可本地离线归档形成双重保障。",
     },
     {
       q: "能从 Memos 或 flomo 搬家过来吗？",
@@ -278,7 +278,7 @@ const ZH_HOME: HomeContent = {
     },
     {
       q: "单人使用和团队使用有什么区别？",
-      a: "默认是一套安静专注的单人笔记系统；如果需要协同，管理员可在后台一键生成邀请激活链接添加成员。笔记支持设为私密（仅自己可见）、团队可见（成员只读）或全网公开，数据权属清晰明确。",
+      a: "默认是一套安静专注的单人记录系统；如果需要协同，管理员可在后台一键生成邀请激活链接添加成员。记录支持设为私密（仅自己可见）、团队可见（成员只读）或全网公开，数据权属清晰明确。",
     },
   ],
   ctaBadge: "开始上手",
@@ -306,12 +306,12 @@ const JA_HOME: HomeContent = {
     "煩雑なサーバー運用を手放し、純粋で堅牢なAIネイティブ知識管理を実現",
   features: [
     {
-      title: "企業級の永続化、データ損失ゼロ",
+      title: "マルチリージョンでデータを守る",
       description:
         "メモはCloudflare D1およびR2ストレージにマルチリージョン冗長化で保存。ディスク障害や停電の心配は不要です。",
     },
     {
-      title: "無料枠で一生使える大容量",
+      title: "無料枠は正直な数字で",
       description:
         "無料枠で約250万件のメモと1万枚の写真を保存可能。R2は下り転送料金が無料のため、急な請求の心配もありません。",
     },
@@ -337,7 +337,7 @@ const JA_HOME: HomeContent = {
     },
   ],
   comparisonBadge: "比較表",
-  comparisonHeading: "Cloudflareネイティブが選ばれる理由",
+  comparisonHeading: "3 つの自ホスト方式を並べて比較",
   comparisonSubtitle: "自宅NASや従来型VPSと比較して分かる、真のゼロ保守運用",
   comparisonRows: [
     {
@@ -429,12 +429,12 @@ const FR_HOME: HomeContent = {
     "Oubliez la maintenance de serveur et profitez d'une gestion de connaissances pure et native pour l'IA",
   features: [
     {
-      title: "Durabilité de classe entreprise",
+      title: "Durabilité par défaut",
       description:
         "Vos notes résident dans Cloudflare D1 et R2 avec réplication multi-régions. Pannes de disques et coupures de courant n'atteignent jamais vos données.",
     },
     {
-      title: "Niveau gratuit ultra-généreux",
+      title: "Niveau gratuit, sans surprise",
       description:
         "Le forfait gratuit contient 2,5 millions de notes et 10 000 photos. Aucun frais de transfert sortant avec Cloudflare R2.",
     },
@@ -460,7 +460,7 @@ const FR_HOME: HomeContent = {
     },
   ],
   comparisonBadge: "Comparatif",
-  comparisonHeading: "Pourquoi le Cloud-Native surpasse le reste",
+  comparisonHeading: "Trois façons de s'auto-héberger, côte à côte",
   comparisonSubtitle:
     "Comparaison de Cloudflare Serverless avec les NAS domestiques et les VPS classiques",
   comparisonRows: [
@@ -529,7 +529,7 @@ const FR_HOME: HomeContent = {
     },
   ],
   ctaBadge: "C'est parti",
-  ctaHeading: "Votre second cerveau mérite mieux qu'un VPS.",
+  ctaHeading: "Cinq minutes pour déployer. À vous pour de bon.",
   ctaSubtitle:
     "Sans serveur, sans carte bancaire. Déployez sur Cloudflare en 5 minutes.",
   ctaButton: "Lire le guide de déploiement en 5 min",
@@ -554,12 +554,12 @@ const ES_HOME: HomeContent = {
     "Olvídate del mantenimiento de servidores y disfruta de una gestión de conocimiento limpia y nativa de IA",
   features: [
     {
-      title: "Durabilidad de nivel empresarial",
+      title: "Durabilidad por diseño",
       description:
         "Tus notas viven en Cloudflare D1 y R2 con persistencia multirregional. Fallos de disco o cortes de luz jamás tocarán tus datos.",
     },
     {
-      title: "Plan gratuito inagotable",
+      title: "Plan gratuito sin letra pequeña",
       description:
         "El plan gratuito alberga 2,5 millones de notas y 10.000 fotos. R2 no cobra por transferencia saliente, sin sorpresas en tu factura.",
     },
@@ -585,7 +585,7 @@ const ES_HOME: HomeContent = {
     },
   ],
   comparisonBadge: "Comparativa",
-  comparisonHeading: "¿Por qué Cloudflare Serverless es superior?",
+  comparisonHeading: "Tres formas de autoalojarse, lado a lado",
   comparisonSubtitle:
     "Comparando el enfoque Cloudflare Native frente a NAS caseros y servidores VPS",
   comparisonRows: [
@@ -654,7 +654,7 @@ const ES_HOME: HomeContent = {
     },
   ],
   ctaBadge: "Empieza ahora",
-  ctaHeading: "Tu segundo cerebro merece algo mejor que un VPS.",
+  ctaHeading: "Cinco minutos para desplegar. Tuyo para siempre.",
   ctaSubtitle:
     "Sin servidores, sin tarjeta de crédito. Despliega en Cloudflare en 5 minutos.",
   ctaButton: "Ver guía de despliegue en 5 minutos",
@@ -678,12 +678,12 @@ const KO_HOME: HomeContent = {
     "복잡한 서버 유지보수에서 벗어나 순수하고 강력한 AI 네이티브 지식 관리를 경험하세요",
   features: [
     {
-      title: "엔터프라이즈급 내구성",
+      title: "기본값이 내구성",
       description:
         "메모는 Cloudflare D1과 R2에 멀티 리전으로 안전하게 저장됩니다. 디스크 고장이나 정전 걱정 없이 데이터를 보호하세요.",
     },
     {
-      title: "평생 넉넉한 무료 제공량",
+      title: "투명한 무료 제공량",
       description:
         "무료 플랜만으로 약 250만 건의 메모와 1만 장의 사진을 보관할 수 있습니다. R2는 다운로드 트래픽 비용이 무료입니다.",
     },
@@ -709,7 +709,7 @@ const KO_HOME: HomeContent = {
     },
   ],
   comparisonBadge: "한눈에 보는 비교",
-  comparisonHeading: "Cloudflare 네이티브가 정답인 이유",
+  comparisonHeading: "셀프 호스팅 세 가지 방식 비교",
   comparisonSubtitle: "홈 NAS 및 전통적인 VPS 호스팅과의 비교 분석",
   comparisonRows: [
     {
@@ -777,7 +777,7 @@ const KO_HOME: HomeContent = {
     },
   ],
   ctaBadge: "시작하기",
-  ctaHeading: "제2의 뇌, 이제 내 도메인에.",
+  ctaHeading: "5분 만에 배포, 영원히 당신의 것.",
   ctaSubtitle:
     "서버도, 신용카드도 필요 없습니다. 무료 Cloudflare 계정으로 5분 만에 배포하세요.",
   ctaButton: "5분 배포 가이드 확인하기",
@@ -801,12 +801,12 @@ const RU_HOME: HomeContent = {
     "Забудьте об администрировании серверов и наслаждайтесь чистым знанием с нативным ИИ",
   features: [
     {
-      title: "Корпоративная надежность",
+      title: "Надежность по умолчанию",
       description:
         "Заметки хранятся в Cloudflare D1 и R2 с геораспределенной репликацией. Ни поломка диска, ни сбой питания не затронут ваши данные.",
     },
     {
-      title: "Щедрый бесплатный тариф",
+      title: "Бесплатный тариф без сюрпризов",
       description:
         "Бесплатного лимита хватит на 2,5 миллиона заметок и 10 000 фото. Хранилище R2 не берет плату за исходящий трафик.",
     },
@@ -832,7 +832,7 @@ const RU_HOME: HomeContent = {
     },
   ],
   comparisonBadge: "Сравнение",
-  comparisonHeading: "Почему Cloudflare Serverless лучше",
+  comparisonHeading: "Три способа самостоятельного хостинга рядом",
   comparisonSubtitle:
     "Сравнение архитектуры Cloudflare Native с домашними NAS и VPS-серверами",
   comparisonRows: [
@@ -901,7 +901,7 @@ const RU_HOME: HomeContent = {
     },
   ],
   ctaBadge: "Начать",
-  ctaHeading: "Второй мозг — на вашем домене.",
+  ctaHeading: "Пять минут на развёртывание. Навсегда ваше.",
   ctaSubtitle:
     "Без серверов и без кредитных карт. Разверните в Cloudflare за 5 минут.",
   ctaButton: "Открыть 5-минутное руководство",
@@ -925,12 +925,12 @@ const AR_HOME: HomeContent = {
     "تخلَّ عن أعباء صيانة الخوادم واستمتع بإدارة معرفية نقية ومدعومة أصلاً بالذكاء الاصطناعي",
   features: [
     {
-      title: "متانة بمستوى المؤسسات",
+      title: "متانة افتراضية",
       description:
         "تُحفظ ملاحظاتك في Cloudflare D1 و R2 مع تكرار عبر مناطق متعددة. لن تمس بياناتك أعطال الأقراص الصلبة أو انقطاعات الطاقة.",
     },
     {
-      title: "خطة مجانية سخية جداً",
+      title: "خطة مجانية بلا مفاجآت",
       description:
         "تتسع الحصة المجانية لنحو 2.5 مليون ملاحظة و 10 آلاف صورة. كما أن R2 لا يفرض أي رسوم على البيانات الصادرة.",
     },
@@ -956,7 +956,7 @@ const AR_HOME: HomeContent = {
     },
   ],
   comparisonBadge: "مقارنة مباشرة",
-  comparisonHeading: "لماذا يتفوق التصميم القائم على Cloudflare؟",
+  comparisonHeading: "ثلاث طرق للاستضافة الذاتية، مقارنة مباشرة",
   comparisonSubtitle:
     "مقارنة بين بنية Cloudflare Serverless والتخزين المنزلي NAS والخوادم الافتراضية VPS",
   comparisonRows: [
@@ -1025,7 +1025,7 @@ const AR_HOME: HomeContent = {
     },
   ],
   ctaBadge: "ابدأ الآن",
-  ctaHeading: "عقلك الثاني، على نطاقك الخاص.",
+  ctaHeading: "خمس دقائق للنشر. ملكك إلى الأبد.",
   ctaSubtitle:
     "بدون خوادم، وبدون بطاقة ائتمان. انشر التطبيق على Cloudflare في 5 دقائق.",
   ctaButton: "قراءة دليل النشر السريع (5 دقائق)",

@@ -204,7 +204,6 @@ export function InteractiveShowcase({
             </div>
 
             <div className="text-[11px] font-mono text-fog flex items-center gap-1.5">
-              <span className="size-1.5 rounded-full bg-signal animate-pulse" />
               <span>Cloudflare Workers</span>
             </div>
           </div>
@@ -610,9 +609,8 @@ export function InteractiveShowcase({
                 09:41
               </span>
               {/* 灵动岛胶囊孔 */}
-              <div className="h-4 w-20 rounded-full bg-black flex items-center justify-between px-2 shadow-inner">
+              <div className="h-4 w-20 rounded-full bg-black flex items-center justify-center px-2 shadow-inner">
                 <span className="size-1.5 rounded-full bg-zinc-900 ring-1 ring-zinc-800" />
-                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
               </div>
               <div className="flex items-center gap-1 text-[10px] text-ink font-bold">
                 5G

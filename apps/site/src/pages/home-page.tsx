@@ -90,7 +90,6 @@ export function HomePage() {
         subtitle={home.featuresSubtitle}
       />
       <ComparisonSection
-        badge={home.comparisonBadge}
         heading={home.comparisonHeading}
         locale={locale}
         rows={home.comparisonRows}
@@ -306,7 +305,7 @@ function BentoFeatures({
           const Icon = icons[idx] ?? Bot;
           return (
             <RevealItem key={item.title}>
-              <SpotlightCard className="p-6 flex flex-col justify-between h-full group">
+              <div className="panel-card p-6 flex flex-col justify-between h-full group">
                 <div>
                   <div className="mb-4 flex size-11 items-center justify-center icon-dock text-signal transition-transform duration-300 group-hover:scale-105">
                     <Icon className="size-5" />
@@ -318,7 +317,7 @@ function BentoFeatures({
                     {item.description}
                   </p>
                 </div>
-              </SpotlightCard>
+              </div>
             </RevealItem>
           );
         })}
@@ -332,13 +331,11 @@ function BentoFeatures({
    ============================================================ */
 
 function ComparisonSection({
-  badge,
   heading,
   subtitle,
   rows,
   locale,
 }: {
-  badge: string;
   heading: string;
   subtitle: string;
   rows: Array<{ label: string; cloudflare: string; nas: string; vps: string }>;
@@ -349,7 +346,6 @@ function ComparisonSection({
   return (
     <section id="comparison" className="container-x space-y-8 scroll-mt-20">
       <div className="max-w-2xl space-y-2">
-        <Badge variant="flame">{badge}</Badge>
         <h2 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl md:text-4xl">
           {heading}
         </h2>
@@ -436,7 +432,7 @@ const ECOSYSTEM_CONTENT: Record<
       {
         title: "AI MCP Server",
         tag: "Model Context Protocol",
-        desc: "连接 Claude Desktop、Cursor 与 Codex，将笔记库作为 AI 长期记忆体。",
+        desc: "连接 Claude Desktop、Cursor 与 Codex，将记录库作为 AI 长期记忆体。",
       },
       {
         title: "Raycast / Alfred",
@@ -651,7 +647,6 @@ function EcosystemSection({ locale }: { locale: SupportedLocale }) {
   return (
     <section id="ecosystem" className="container-x space-y-8 scroll-mt-20">
       <div className="max-w-2xl space-y-2">
-        <Badge variant="flame">{content.badge}</Badge>
         <h2 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl md:text-4xl">
           {content.heading}
         </h2>
@@ -662,9 +657,9 @@ function EcosystemSection({ locale }: { locale: SupportedLocale }) {
         {content.clients.map((c, idx) => {
           const Icon = ECOSYSTEM_ICONS[idx] ?? Sparkles;
           return (
-            <SpotlightCard
+            <div
               key={c.title}
-              className="p-5 flex flex-col justify-between"
+              className="panel-card p-5 flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between">
@@ -678,7 +673,7 @@ function EcosystemSection({ locale }: { locale: SupportedLocale }) {
                   {c.desc}
                 </p>
               </div>
-            </SpotlightCard>
+            </div>
           );
         })}
       </div>

@@ -1,7 +1,6 @@
 import { animate } from "motion";
 import { motion } from "motion/react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { Progress } from "@/components/ui/progress";
 
 /* ============ 动效 token：全站平滑入场与物理弹跳 ============ */
 
@@ -198,21 +197,4 @@ export function AnimatedNumber({
       {suffix}
     </span>
   );
-}
-
-/* ============ GrowProgress：进度条生长 ============ */
-
-export function GrowProgress({
-  value,
-  className,
-}: {
-  value: number;
-  className?: string;
-}) {
-  const [display, setDisplay] = useState(0);
-  useEffect(() => {
-    const raf = requestAnimationFrame(() => setDisplay(value));
-    return () => cancelAnimationFrame(raf);
-  }, [value]);
-  return <Progress value={display} className={className} />;
 }
