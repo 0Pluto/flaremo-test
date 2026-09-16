@@ -1,4 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
   ArchiveIcon,
@@ -18,7 +18,12 @@ import {
 import { memo, useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { Attachment, Memo, MemoState, MemoVisibility, Share } from "@/api";
-import { getMemoContext, getRelatedMemos, uploadAttachment } from "@/api";
+import {
+  createTask,
+  getMemoContext,
+  getRelatedMemos,
+  uploadAttachment,
+} from "@/api";
 import { AttachmentGallery } from "@/components/attachment-gallery";
 import { LazyMemoContent } from "@/components/lazy-memo-content";
 import { MemoSearchExcerpt } from "@/components/memo-search-excerpt";
@@ -55,6 +60,7 @@ import {
   createImageDimensionResolver,
   filterUnreferencedAttachments,
 } from "@/lib/attachment-refs";
+import { errorMessage } from "@/lib/error";
 import {
   extractImageFiles,
   inlineImageMarkdown,
@@ -66,6 +72,7 @@ import {
   formatMemoTime,
   getMemoResourceId,
 } from "@/lib/memo";
+import { toggleMemoTaskLine } from "@/lib/memo-tasks";
 import { formatClock } from "@/lib/transcript";
 import { cn } from "@/lib/utils";
 
@@ -155,6 +162,37 @@ export const MemoCard = memo(function MemoCard({
     () => createImageDimensionResolver(attachments),
     [attachments],
   );
+
+  // D2: live to-dos. The memo stays the source of truth — checking a box
+  // rewrites that one Markdown line through the standard update path, and a
+  // to-do line can be upgraded into a task linked back to this memo.
+  const convertTaskMutation = useMutation({
+    mutationFn: (title: string) =>
+      createTask({ title, source_memo_id: memo.name }),
+    onSuccess: () => {
+      toast.success(t("toast.taskCreated"));
+      void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+    onError: (error) =>
+      toast.error(errorMessage(error, t("toast.taskCreateFailed"))),
+  });
+  const taskInteraction =
+    !canManage || isTrashed
+      ? undefined
+      : {
+          onToggleTask: (lineIndex: number) => {
+            const next = toggleMemoTaskLine(memo.content, lineIndex);
+            if (next) {
+              void onUpdate(id, {
+                content: next,
+                visibility: memo.visibility,
+              });
+            }
+          },
+          onConvertTask: (_lineIndex: number, text: string) => {
+            convertTaskMutation.mutate(text);
+          },
+        };
 
   // Editing an existing memo: pasted images upload bound to the memo right
   // away, so a cancelled edit leaves nothing to clean up except an
@@ -445,6 +483,8 @@ export const MemoCard = memo(function MemoCard({
               <LazyMemoContent
                 content={memo.content}
                 resolveImageDimensions={resolveImageDimensions}
+                onToggleTask={taskInteraction?.onToggleTask}
+                onConvertTask={taskInteraction?.onConvertTask}
               />
             </div>
             {collapsed && (

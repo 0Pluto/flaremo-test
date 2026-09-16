@@ -25,6 +25,9 @@ export type ReadingViewProps = {
    * the audio transport.
    */
   layout?: "card" | "article";
+  /** D2: live GFM checkboxes; see MemoContent. */
+  onToggleTask?: (lineIndex: number, checked: boolean) => void;
+  onConvertTask?: (lineIndex: number, text: string) => void;
 };
 
 function isAudio(attachment: Attachment) {
@@ -122,9 +125,14 @@ function ArticleReadingView({
   className,
   content,
   contentClassName,
+  onToggleTask,
+  onConvertTask,
   resolveImageDimensions,
 }: Required<Pick<ReadingViewProps, "attachments" | "content">> &
-  Pick<ReadingViewProps, "className" | "contentClassName"> & {
+  Pick<
+    ReadingViewProps,
+    "className" | "contentClassName" | "onToggleTask" | "onConvertTask"
+  > & {
     resolveImageDimensions: (
       src: string,
     ) => { width: number; height: number } | undefined;
@@ -159,6 +167,8 @@ function ArticleReadingView({
             onTimestampClick={audio?.seek}
             resolveImageDimensions={resolveImageDimensions}
             withHeadingIds
+            onToggleTask={onToggleTask}
+            onConvertTask={onConvertTask}
           />
           {galleryAttachments.length > 0 && (
             <AttachmentGallery attachments={galleryAttachments} />
@@ -174,9 +184,14 @@ function PlainReadingView({
   className,
   content,
   contentClassName,
+  onToggleTask,
+  onConvertTask,
   resolveImageDimensions,
 }: Required<Pick<ReadingViewProps, "attachments" | "content">> &
-  Pick<ReadingViewProps, "className" | "contentClassName"> & {
+  Pick<
+    ReadingViewProps,
+    "className" | "contentClassName" | "onToggleTask" | "onConvertTask"
+  > & {
     resolveImageDimensions: (
       src: string,
     ) => { width: number; height: number } | undefined;
@@ -191,6 +206,8 @@ function PlainReadingView({
         className={contentClassName}
         content={content}
         resolveImageDimensions={resolveImageDimensions}
+        onToggleTask={onToggleTask}
+        onConvertTask={onConvertTask}
       />
       {galleryAttachments.length > 0 && (
         <AttachmentGallery attachments={galleryAttachments} />
@@ -209,6 +226,8 @@ export function MemoReadingView({
   content,
   contentClassName,
   layout = "article",
+  onToggleTask,
+  onConvertTask,
 }: ReadingViewProps) {
   // Stable identity across renders: the provider keys restore/save effects on
   // the active track object.
@@ -227,6 +246,8 @@ export function MemoReadingView({
           content={content}
           contentClassName={contentClassName}
           resolveImageDimensions={resolveImageDimensions}
+          onToggleTask={onToggleTask}
+          onConvertTask={onConvertTask}
         />
       </ReadingAudioProvider>
     );
@@ -239,6 +260,8 @@ export function MemoReadingView({
       content={content}
       contentClassName={contentClassName}
       resolveImageDimensions={resolveImageDimensions}
+      onToggleTask={onToggleTask}
+      onConvertTask={onConvertTask}
     />
   );
 }

@@ -71,7 +71,7 @@ export function NotificationBell() {
       return;
     }
     if (notification.type === "task_overdue") {
-      void navigate({ to: "/calendar" });
+      void navigate({ to: "/calendar", search: { date: undefined } });
       return;
     }
     if (!notification.memo) return;

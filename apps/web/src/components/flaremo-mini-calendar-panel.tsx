@@ -57,10 +57,20 @@ export function MiniCalendarReminders() {
   const { locale, t } = useI18n();
   const today = useMemo(() => todayKey(), []);
   const grid = useMemo(() => currentMonthGrid(locale, today), [locale, today]);
-  const { dueToday, overdue } = useOpenTasks(
+  const { dueToday, map, overdue } = useOpenTasks(
     grid[0].key,
     grid[grid.length - 1].key,
   );
+  // The overdue roll-up deep-links to the earliest overdue day's panel; a
+  // focused DayPanel beats a generic calendar for "go fix this".
+  const earliestOverdue = useMemo(() => {
+    let min: string | null = null;
+    for (const key of map.keys()) {
+      if (key >= today) continue;
+      if (min === null || key < min) min = key;
+    }
+    return min;
+  }, [map, today]);
   if (dueToday <= 0 && overdue <= 0) return null;
   return (
     <>
@@ -68,6 +78,7 @@ export function MiniCalendarReminders() {
         <Link
           className="mb-1.5 flex items-center gap-1.5 rounded-md px-1 py-1 text-xs font-medium text-brand-700 dark:text-brand-200 bg-brand-100 dark:bg-brand-400/12 motion-safe:transition-colors motion-safe:duration-150 hover:bg-brand-100/80 dark:hover:bg-brand-400/20 focus-visible:ring-2 focus-visible:ring-ring"
           data-testid="mini-calendar-today-notice"
+          search={{ date: undefined }}
           to="/calendar"
         >
           <AlertCircleIcon className="shrink-0" />
@@ -75,9 +86,13 @@ export function MiniCalendarReminders() {
         </Link>
       )}
       {overdue > 0 && (
-        <p className="mb-1 px-1 text-xs text-destructive">
+        <Link
+          className="mb-1 block px-1 text-xs text-destructive underline-offset-2 hover:underline"
+          search={{ date: earliestOverdue ?? undefined }}
+          to="/calendar"
+        >
           {t("calendar.overdueCount", { count: overdue })}
-        </p>
+        </Link>
       )}
     </>
   );

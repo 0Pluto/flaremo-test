@@ -44,6 +44,8 @@ export const LazyMemoContent = memo(function LazyMemoContent({
   onTimestampClick,
   withHeadingIds,
   resolveImageDimensions,
+  onToggleTask,
+  onConvertTask,
 }: {
   className?: string;
   content: string;
@@ -52,6 +54,9 @@ export const LazyMemoContent = memo(function LazyMemoContent({
   resolveImageDimensions?: (
     src: string,
   ) => { width: number; height: number } | undefined;
+  /** D2: live GFM checkboxes in the read view; see MemoContent. */
+  onToggleTask?: (lineIndex: number, checked: boolean) => void;
+  onConvertTask?: (lineIndex: number, text: string) => void;
 }) {
   return (
     <MemoContentErrorBoundary
@@ -66,6 +71,8 @@ export const LazyMemoContent = memo(function LazyMemoContent({
           onTimestampClick={onTimestampClick}
           resolveImageDimensions={resolveImageDimensions}
           withHeadingIds={withHeadingIds}
+          onToggleTask={onToggleTask}
+          onConvertTask={onConvertTask}
         />
       </Suspense>
     </MemoContentErrorBoundary>

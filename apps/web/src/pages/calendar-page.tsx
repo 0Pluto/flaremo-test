@@ -1,7 +1,9 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
+  ArrowRightIcon,
   CheckCircle2Icon,
+  ChevronDownIcon,
   CircleIcon,
   GripVerticalIcon,
   ListTodoIcon,
@@ -11,11 +13,9 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
-  createProject,
   createTask,
   deleteTask,
   getCalendarView,
-  listProjects,
   listTasks,
   type Task,
   updateTask,
@@ -51,12 +51,13 @@ import {
 import { errorMessage } from "@/lib/error";
 import { cn, stripResourceName } from "@/lib/utils";
 
-export function CalendarPage() {
+export function CalendarPage({ initialDate }: { initialDate?: string }) {
   const { locale, t } = useI18n();
   const queryClient = useQueryClient();
   const today = useMemo(() => todayKey(), []);
-  const [cursor, setCursor] = useState(() => today);
-  const [selected, setSelected] = useState(() => today);
+  // A notification or reminder deep link focuses its own day immediately.
+  const [cursor, setCursor] = useState(() => initialDate ?? today);
+  const [selected, setSelected] = useState(() => initialDate ?? today);
   const [dragTask, setDragTask] = useState<Task | null>(null);
   const [viewMode, setViewMode] = useState<"month" | "agenda">("month");
 
@@ -106,16 +107,6 @@ export function CalendarPage() {
     }
     return map;
   }, [calendarQuery.data]);
-
-  const projectsQuery = useQuery({
-    queryKey: ["projects"],
-    queryFn: () => listProjects(),
-  });
-  const defaultProjectId = useMemo(() => {
-    const projects = projectsQuery.data?.projects ?? [];
-    const active = projects.find((project) => project.status === "active");
-    return active ? stripResourceName(active.id, "projects") : null;
-  }, [projectsQuery.data]);
 
   const selectedCell = data.get(selected);
   const selectedTasks = selectedCell?.tasks ?? [];
@@ -247,10 +238,6 @@ export function CalendarPage() {
                 notes={selectedCell?.notes ?? 0}
                 tasks={selectedTasks}
                 today={today}
-                defaultProjectId={defaultProjectId}
-                projectsReady={Boolean(projectsQuery.data)}
-                projectsError={projectsQuery.isError && !projectsQuery.data}
-                onRetryProjects={() => void projectsQuery.refetch()}
                 onTaskDragStart={setDragTask}
                 onTaskSaved={invalidateCalendar}
               />
@@ -280,10 +267,6 @@ function DayPanel({
   today,
   notes,
   tasks,
-  defaultProjectId,
-  projectsReady,
-  projectsError,
-  onRetryProjects,
   onTaskDragStart,
   onTaskSaved,
 }: {
@@ -292,10 +275,6 @@ function DayPanel({
   today: string;
   notes: number;
   tasks: Task[];
-  defaultProjectId: string | null;
-  projectsReady: boolean;
-  projectsError: boolean;
-  onRetryProjects: () => void;
   onTaskDragStart: (task: Task | null) => void;
   onTaskSaved: () => void;
 }) {
@@ -343,15 +322,8 @@ function DayPanel({
     if (!value) return;
     setCreating(true);
     try {
-      let projectId = defaultProjectId;
-      if (!projectId) {
-        const created = await createProject({
-          name: t("calendar.defaultProject"),
-        });
-        projectId = stripResourceName(created.project.id, "projects");
-      }
+      // D1: tasks can live without a project; quick adds never fabricate one.
       await createTask({
-        project_id: projectId,
         title: value,
         due_at: day,
       });
@@ -383,6 +355,7 @@ function DayPanel({
             <ListTodoIcon size={13} aria-hidden="true" />
             {t("calendar.dayNoteTasks", { count: noteTasks })} ·{" "}
             {t("calendar.viewDayNotes")}
+            <ArrowRightIcon className="size-3 rtl:-rotate-180" />
           </p>
         )}
 
@@ -535,21 +508,6 @@ function DayPanel({
           </AlertDialogContent>
         </AlertDialog>
 
-        {projectsError ? (
-          <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-            <span>{t("list.errorDescription")}</span>
-            <Button
-              className="h-6 px-2 text-xs"
-              size="sm"
-              type="button"
-              variant="outline"
-              onClick={onRetryProjects}
-            >
-              {t("common.retry")}
-            </Button>
-          </div>
-        ) : null}
-
         <form
           className="mt-3 flex items-center gap-2"
           onSubmit={(event) => {
@@ -560,16 +518,12 @@ function DayPanel({
           <Input
             aria-label={t("calendar.quickAdd")}
             className="h-8 text-sm"
-            disabled={creating || !projectsReady}
+            disabled={creating}
             placeholder={t("calendar.quickAddPlaceholder")}
             value={title}
             onChange={(event) => setTitle(event.target.value)}
           />
-          <Button
-            disabled={creating || !title.trim() || !projectsReady}
-            size="sm"
-            type="submit"
-          >
+          <Button disabled={creating || !title.trim()} size="sm" type="submit">
             <PlusIcon data-icon="inline-start" />
             {t("calendar.quickAdd")}
           </Button>
@@ -621,6 +575,7 @@ function NotesPanel({
           }}
         >
           {t("calendar.viewDayNotes")}
+          <ArrowRightIcon className="rtl:-rotate-180" data-icon="inline-end" />
         </Button>
       </CardContent>
     </Card>
@@ -635,6 +590,7 @@ function AgendaView({
   onDaySelect: (dayKey: string) => void;
 }) {
   const { locale, t } = useI18n();
+  const [unscheduledOpen, setUnscheduledOpen] = useState(false);
   const tasksQuery = useQuery({
     queryKey: ["tasks"],
     queryFn: () => listTasks(),
@@ -659,6 +615,16 @@ function AgendaView({
     }));
   }, [tasksQuery.data, today]);
 
+  // Tasks without a due date stay on the /projects page as their main home;
+  // the agenda only offers a collapsed glance so they cannot hide entirely.
+  const unscheduled = useMemo(
+    () =>
+      (tasksQuery.data?.tasks ?? []).filter(
+        (task) => !task.due_at && task.status !== "done",
+      ),
+    [tasksQuery.data],
+  );
+
   return (
     <Card>
       <CardContent className="p-4">
@@ -673,9 +639,46 @@ function AgendaView({
           />
         ) : (
           <ul className="mt-3 flex flex-col divide-y divide-border/60">
-            {groups.length === 0 && !tasksQuery.isLoading && (
-              <li className="text-sm text-muted-foreground">
-                {t("calendar.agendaEmpty")}
+            {groups.length === 0 &&
+              unscheduled.length === 0 &&
+              !tasksQuery.isLoading && (
+                <li className="text-sm text-muted-foreground">
+                  {t("calendar.agendaEmpty")}
+                </li>
+              )}
+            {unscheduled.length > 0 && (
+              <li className="py-2">
+                <button
+                  aria-expanded={unscheduledOpen}
+                  className="flex w-full items-center gap-2 text-left"
+                  type="button"
+                  onClick={() => setUnscheduledOpen((value) => !value)}
+                >
+                  <ChevronDownIcon
+                    className={cn(
+                      "size-3.5 shrink-0 text-muted-foreground motion-safe:transition-transform motion-safe:duration-150",
+                      !unscheduledOpen && "-rotate-90 rtl:rotate-90",
+                    )}
+                  />
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {t("calendar.agendaUnscheduled")}
+                  </span>
+                  <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+                    {t("calendar.dayTasks", { count: unscheduled.length })}
+                  </span>
+                </button>
+                {unscheduledOpen && (
+                  <div className="mt-1 flex flex-col gap-0.5 pl-4">
+                    {unscheduled.map((task) => (
+                      <span
+                        className="truncate text-sm text-muted-foreground"
+                        key={task.id}
+                      >
+                        {task.title}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </li>
             )}
             {groups.map((group) => (

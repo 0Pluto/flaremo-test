@@ -14,12 +14,14 @@ import type { RelatedMemo } from "@/api";
 import {
   createMemoryFromMemo,
   createShare,
+  createTask,
   getMemoContext,
   getRelatedMemos,
   listMemos,
   replaceMemoRelations,
   restoreMemoRevision,
   revokeShare,
+  updateMemo,
 } from "@/api";
 import { MemoReadingView } from "@/components/reading/memo-reading-view";
 import { SubpageHeader } from "@/components/subpage-header";
@@ -49,6 +51,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useI18n } from "@/i18n";
 import { errorMessage } from "@/lib/error";
 import { formatMemoTime } from "@/lib/memo";
+import { toggleMemoTaskLine } from "@/lib/memo-tasks";
 
 export function MemoDetailPage({ memoId }: { memoId: string }) {
   const { locale, t } = useI18n();
@@ -158,6 +161,58 @@ export function MemoDetailPage({ memoId }: { memoId: string }) {
       toast.error(errorMessage(error, t("toast.requestFailed"))),
   });
 
+  // D2: the read view's to-dos are live. A checkbox click rewrites its one
+  // Markdown line (optimistic on the detail cache); a to-do line can be
+  // upgraded into a task linked back to this memo.
+  const toggleTaskMutation = useMutation({
+    mutationFn: (lineIndex: number) => {
+      const memo = contextQuery.data?.memo;
+      if (!memo) throw new Error("Memo unavailable");
+      const content = toggleMemoTaskLine(memo.content, lineIndex);
+      if (!content) throw new Error("Not a task line");
+      return updateMemo(memo.name, { content, visibility: memo.visibility });
+    },
+    onMutate: (lineIndex) => {
+      const memo = contextQuery.data?.memo;
+      if (!memo) return;
+      const content = toggleMemoTaskLine(memo.content, lineIndex);
+      if (content) {
+        queryClient.setQueryData<Awaited<ReturnType<typeof getMemoContext>>>(
+          queryKey,
+          (context) =>
+            context ? { ...context, memo: { ...memo, content } } : context,
+        );
+      }
+    },
+    onSuccess: async () => {
+      await invalidateMemo();
+    },
+    onError: (error) =>
+      toast.error(errorMessage(error, t("toast.requestFailed"))),
+  });
+  const convertTaskMutation = useMutation({
+    mutationFn: (title: string) =>
+      createTask({
+        title,
+        source_memo_id: contextQuery.data?.memo.name ?? `memos/${memoId}`,
+      }),
+    onSuccess: () => {
+      toast.success(t("toast.taskCreated"));
+      void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+    onError: (error) =>
+      toast.error(errorMessage(error, t("toast.taskCreateFailed"))),
+  });
+  const taskInteraction =
+    contextQuery.data?.can_manage
+      ? {
+          onToggleTask: (lineIndex: number) =>
+            toggleTaskMutation.mutate(lineIndex),
+          onConvertTask: (_lineIndex: number, text: string) =>
+            convertTaskMutation.mutate(text),
+        }
+      : undefined;
+
   return (
     <div className="min-h-svh bg-background px-4 py-5 sm:py-8">
       <main className="mx-auto flex w-full max-w-3xl flex-col gap-4">
@@ -226,6 +281,7 @@ export function MemoDetailPage({ memoId }: { memoId: string }) {
             }
             onRevoke={(share) => revokeMutation.mutate(share)}
             onRemember={() => rememberMutation.mutate()}
+            taskInteraction={taskInteraction}
             rememberPending={rememberMutation.isPending}
             relationPending={relationMutation.isPending}
             restorePending={restoreMutation.isPending}
@@ -241,6 +297,7 @@ export function MemoDetailPage({ memoId }: { memoId: string }) {
 function MemoDetail({
   canManage,
   canGovern,
+  taskInteraction,
   candidates,
   context,
   isSearching,
@@ -263,6 +320,12 @@ function MemoDetail({
 }: {
   canManage: boolean;
   canGovern: boolean;
+  taskInteraction:
+    | {
+        onToggleTask: (lineIndex: number) => void;
+        onConvertTask: (lineIndex: number, text: string) => void;
+      }
+    | undefined;
   candidates: Awaited<ReturnType<typeof listMemos>>["memos"];
   context: Awaited<ReturnType<typeof getMemoContext>>;
   isSearching: boolean;
@@ -334,6 +397,8 @@ function MemoDetail({
               attachments={context.attachments}
               content={context.memo.content}
               contentClassName="text-base"
+              onToggleTask={taskInteraction?.onToggleTask}
+              onConvertTask={taskInteraction?.onConvertTask}
             />
             {context.memories.length > 0 && (
               <section className="flex flex-col gap-2 border-t border-border/60 pt-4">

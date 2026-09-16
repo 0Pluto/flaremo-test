@@ -378,6 +378,7 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
         <Link
           className="flex h-9 items-center gap-3 rounded-lg px-2.5 text-muted-foreground motion-safe:transition-[background-color,color,transform] motion-safe:duration-150 hover:bg-muted hover:text-foreground motion-safe:hover:translate-x-0.5"
           onClick={onNavigate}
+          search={{ date: undefined }}
           to="/calendar"
         >
           <CalendarIcon />

@@ -63,6 +63,7 @@ import {
 } from "@/components/ui/empty";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -727,8 +728,7 @@ function MemoryFormDialog({
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label={t("memory.type")}>
-              <select
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+              <Select
                 value={type}
                 onChange={(event) =>
                   setType(event.target.value as Memory["type"])
@@ -739,11 +739,10 @@ function MemoryFormDialog({
                 <option value="procedural">
                   {t("memory.type.procedural")}
                 </option>
-              </select>
+              </Select>
             </Field>
             <Field label={t("memory.kind")}>
-              <select
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+              <Select
                 value={kind}
                 onChange={(event) =>
                   setKind(event.target.value as Memory["kind"])
@@ -754,11 +753,10 @@ function MemoryFormDialog({
                     {t(`memory.kind.${value}`)}
                   </option>
                 ))}
-              </select>
+              </Select>
             </Field>
             <Field label={t("memory.scope")}>
-              <select
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+              <Select
                 value={scopeType}
                 onChange={(event) =>
                   setScopeType(event.target.value as Memory["scope_type"])
@@ -768,7 +766,7 @@ function MemoryFormDialog({
                 <option value="workspace">{t("memory.scope.workspace")}</option>
                 <option value="project">{t("memory.scope.project")}</option>
                 <option value="agent">{t("memory.scope.agent")}</option>
-              </select>
+              </Select>
             </Field>
             <Field label={t("memory.importance")}>
               <input

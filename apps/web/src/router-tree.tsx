@@ -425,10 +425,11 @@ const projectsRoute = createRoute({
 });
 
 function CalendarRoutePage() {
+  const { date } = calendarRoute.useSearch();
   return (
     <AuthenticatedRoute>
       <Suspense fallback={<RouteLoading />}>
-        <CalendarPage />
+        <CalendarPage initialDate={date} />
       </Suspense>
     </AuthenticatedRoute>
   );
@@ -448,6 +449,13 @@ const calendarRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/calendar",
   component: CalendarRoutePage,
+  // Overdue reminders and search rows deep-link straight to a day panel.
+  validateSearch: (search: Record<string, unknown>) => ({
+    date:
+      typeof search.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(search.date)
+        ? search.date
+        : undefined,
+  }),
   loader: ({ context }) => {
     // Mirrors the page's initial month: today's cursor, week start from the
     // stored locale, and the same tz convention the page passes. Warm data

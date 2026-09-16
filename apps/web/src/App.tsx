@@ -2,7 +2,10 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   CalendarIcon,
+  CheckCircle2Icon,
+  CircleIcon,
   DownloadIcon,
+  ListTodoIcon,
   MenuIcon,
   SettingsIcon,
   UploadIcon,
@@ -16,10 +19,12 @@ import {
   getTagHierarchy,
   getVectorUsage,
   listMemos,
+  listTasks,
   type MemoSpace,
   type MemoStatsResponse,
   type MemoVisibility,
   semanticSearchMemos,
+  type Task,
 } from "@/api";
 import type { ExplorerView as ViewMode } from "@/components/flaremo-explorer";
 import { FlareMoExplorer } from "@/components/flaremo-explorer";
@@ -199,6 +204,26 @@ export function FlareMoApp() {
     () => semanticResultsQuery.data?.memos ?? [],
     [semanticResultsQuery.data],
   );
+
+  // Plain keyword search rides the memos endpoint; tasks join the results
+  // client-side from the shared ["tasks"] cache (title/notes substring match).
+  const keywordSearch = isSearching && !dayFilter && !isSemanticSearch;
+  const taskSearchQuery = useQuery({
+    queryKey: ["tasks"],
+    queryFn: () => listTasks(),
+    enabled: keywordSearch,
+  });
+  const matchingTasks = useMemo(() => {
+    if (!keywordSearch) return [] as Task[];
+    const needle = searchQuery.toLocaleLowerCase();
+    return (taskSearchQuery.data?.tasks ?? [])
+      .filter(
+        (task) =>
+          task.title.toLocaleLowerCase().includes(needle) ||
+          (task.notes?.toLocaleLowerCase().includes(needle) ?? false),
+      )
+      .slice(0, 5);
+  }, [keywordSearch, taskSearchQuery.data, searchQuery]);
 
   useEffect(() => {
     const focusSearch = () => {
@@ -626,6 +651,46 @@ export function FlareMoApp() {
                   {t("search.semanticDegraded")}
                 </p>
               ) : null}
+              {keywordSearch && matchingTasks.length > 0 && (
+                <div className="rounded-xl border border-border/50 bg-card/60 px-3.5 py-3 text-card-foreground">
+                  <h2 className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                    <ListTodoIcon className="size-3.5" />
+                    {t("search.taskResults")}
+                  </h2>
+                  <ul className="mt-1.5 flex flex-col divide-y divide-border/40">
+                    {matchingTasks.map((task) => (
+                      <li key={task.id}>
+                        <Link
+                          className="flex items-center gap-2 py-1.5 text-sm text-muted-foreground hover:text-foreground"
+                          search={
+                            task.due_at ? { date: task.due_at } : undefined
+                          }
+                          to={task.due_at ? "/calendar" : "/projects"}
+                        >
+                          {task.status === "done" ? (
+                            <CheckCircle2Icon className="size-3.5 shrink-0" />
+                          ) : (
+                            <CircleIcon className="size-3.5 shrink-0" />
+                          )}
+                          <span
+                            className={cn(
+                              "min-w-0 truncate",
+                              task.status === "done" && "line-through",
+                            )}
+                          >
+                            {task.title}
+                          </span>
+                          {task.due_at && (
+                            <span className="ml-auto shrink-0 text-xs tabular-nums">
+                              {task.due_at}
+                            </span>
+                          )}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <MemoList
                 attachmentsByMemo={attachmentsByMemo}
                 emptyDescription={

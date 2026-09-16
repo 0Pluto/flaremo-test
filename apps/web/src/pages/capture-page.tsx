@@ -40,6 +40,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useI18n } from "@/i18n";
 import {
@@ -768,8 +769,7 @@ export function CapturePage() {
               </label>
               <label className="flex flex-col gap-2 text-sm">
                 {t("capture.visibility")}
-                <select
-                  className="rounded-lg border bg-card p-3 text-base"
+                <Select
                   value={local.visibility}
                   disabled={saving || cleanupError}
                   onChange={(event) =>
@@ -782,7 +782,7 @@ export function CapturePage() {
                 >
                   <option value="private">{t("capture.private")}</option>
                   <option value="public">{t("capture.public")}</option>
-                </select>
+                </Select>
               </label>
               <div className="flex items-center justify-between gap-3 rounded-lg border bg-card p-3">
                 <span className="text-sm">{t("capture.keepAudio")}</span>
