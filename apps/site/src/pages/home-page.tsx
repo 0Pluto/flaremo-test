@@ -207,7 +207,7 @@ function Hero({
               </div>
               <div className="mt-4">
                 <div className="text-3xl font-extrabold tracking-tight tabular-nums text-ink">
-                  <AnimatedNumber value={5} suffix=" GB" />
+                  <AnimatedNumber value={5} suffix=" GB" locale={locale} />
                 </div>
                 <div className="mt-1 text-xs text-mist">{home.statMemos}</div>
               </div>
@@ -224,7 +224,7 @@ function Hero({
               </div>
               <div className="mt-4">
                 <div className="text-3xl font-extrabold tracking-tight tabular-nums text-ink">
-                  <AnimatedNumber value={10} suffix=" GB" />
+                  <AnimatedNumber value={10} suffix=" GB" locale={locale} />
                 </div>
                 <div className="mt-1 text-xs text-mist">{home.statPhotos}</div>
               </div>

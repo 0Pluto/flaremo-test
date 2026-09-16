@@ -49,5 +49,19 @@ token:`animate-rise`(200ms expo 入场）、`animate-fade`(140ms)、`animate-sca
 ## 文案
 
 - 中文用全角标点，省略号用 `…`；英文用 sentence case。
-- 产品内统一叫"记录 / note"，不要混用"笔记/便签/memo"（代码标识符除外）。
+- 产品内统一叫"记录 / note"，不要混用"笔记/便签/memo"（代码标识符除外）。官网中文文案同样遵守（"记录"而非"笔记"）。
 - 空状态文案要给出下一步动作（例："在上方写下第一条记录")，不要只写"暂无内容"。
+- 性能/容量宣称全站单一口径：官网延迟宣称基准为 sub-100ms；禁用"永不""终生""取之不竭""最优解"类绝对化词（对照 `docs/design-principle-rollout.md`）。
+
+## 官网（Paper 体系）
+
+官网 `apps/site` 运行独立于 Ember 的自建 token 体系：`signal`/`ink`/`mist`/`paper`（hex 而非 oklch，见 `apps/site/src/styles/tokens.css`）。视觉语言同源（火焰色点睛、界面安静），但不与应用共刷同一套变量。官网遵守与 Ember 等价的克制尺子（来源：`docs/design-principle-rollout.md` 第 0 节）：
+
+- 一屏一个渐变：任何视口内品牌渐变最多 1 处 CTA + 0–1 处品牌识别元素（logo、渐变标题行）；光晕（blur-3xl 环境光）一屏最多 1 处，且不与渐变标题同屏。
+- 无装饰性循环动画：无限循环只允许骨架屏 shimmer、真实状态指示（录音中、上传中）、录音波形；呼吸灯小圆点全站禁止。
+- hover 光效每屏限额：cursor 聚光灯类组件单页最多 4 张卡使用，不与渐变标题同屏。
+- 入场动效覆盖 ≤ 50%：单页被 Reveal/PopIn 包裹的区块过半即超标，必须留完全不动的区块。
+- 数字不许浮夸：性能/容量宣称全站单一口径（见文案节）。
+- 同款模板不连用：badge/heading/subtitle 三件套一页内连续复用 ≤ 2 次；一个视觉内不得有重复/相似标题。
+
+全局 reduced-motion 兜底在 `apps/site/src/styles/tokens.css`；`AnimatedNumber` 等数字组件必须显式传 locale，避免 SSR/hydration 格式漂移。
