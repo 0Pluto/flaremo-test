@@ -16,14 +16,7 @@ import {
   ShieldIcon,
   Trash2Icon,
 } from "lucide-react";
-import {
-  memo,
-  type MouseEvent as ReactMouseEvent,
-  Suspense,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { memo, Suspense, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { Attachment, Memo, MemoState, MemoVisibility, Share } from "@/api";
 import {
@@ -75,9 +68,8 @@ import {
   formatMemoTime,
   getMemoResourceId,
 } from "@/lib/memo";
-import { toggleMemoTaskLine } from "@/lib/memo-tasks";
+import { countTaskItems, toggleMemoTaskLine } from "@/lib/memo-tasks";
 import { uploadAndInsertImages } from "@/lib/rich-editor-upload";
-import { countTaskItems, toggleTaskItem } from "@/lib/task-list";
 import { formatClock } from "@/lib/transcript";
 import { cn } from "@/lib/utils";
 
@@ -167,30 +159,10 @@ export const MemoCard = memo(function MemoCard({
     () => createImageDimensionResolver(attachments),
     [attachments],
   );
-  // Task-list checkboxes are clickable for editors: a click rewrites the
-  // item's `[ ]`/`[x]` marker and flows through the memo update mutation
-  // (optimistic, so the box settles instantly).
+  // Task-list checkboxes are clickable for editors: LazyMemoContent maps the
+  // rendered checkbox back to its source line and D2 rewrites just that
+  // marker through the memo update mutation (optimistic, so it settles fast).
   const taskCount = useMemo(() => countTaskItems(memo.content), [memo.content]);
-  const toggleTask = (event: ReactMouseEvent<HTMLDivElement>) => {
-    const target = event.target;
-    if (!(target instanceof HTMLInputElement) || target.type !== "checkbox") {
-      return;
-    }
-    event.preventDefault();
-    const boxes = event.currentTarget.querySelectorAll<HTMLInputElement>(
-      'input[type="checkbox"]',
-    );
-    const index = Array.prototype.indexOf.call(boxes, target);
-    if (index < 0) return;
-    void onUpdate(id, {
-      content: toggleTaskItem(memo.content, index),
-      visibility: memo.visibility,
-    });
-  };
-
-  // D2: live to-dos. The memo stays the source of truth — checking a box
-  // rewrites that one Markdown line through the standard update path, and a
-  // to-do line can be upgraded into a task linked back to this memo.
   const convertTaskMutation = useMutation({
     mutationFn: (title: string) =>
       createTask({ title, source_memo_id: memo.name }),
@@ -479,7 +451,6 @@ export const MemoCard = memo(function MemoCard({
                 collapsed && "max-h-52 overflow-hidden",
                 !collapsed && "transition-[max-height]",
               )}
-              onClick={canManage && taskCount > 0 ? toggleTask : undefined}
             >
               <LazyMemoContent
                 content={memo.content}

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { memoTaskLines, toggleMemoTaskLine } from "./memo-tasks";
+import {
+  countTaskItems,
+  memoTaskLines,
+  toggleMemoTaskLine,
+} from "./memo-tasks";
 
 describe("memoTaskLines", () => {
   it("finds task lines with their 0-based index and text", () => {
@@ -50,5 +54,14 @@ describe("toggleMemoTaskLine", () => {
     expect(toggleMemoTaskLine(content, 1)).toBeNull();
     expect(toggleMemoTaskLine(content, 99)).toBeNull();
     expect(toggleMemoTaskLine("- no checkbox", 0)).toBeNull();
+  });
+});
+
+describe("countTaskItems", () => {
+  it("counts task items in document order", () => {
+    expect(countTaskItems("- [ ] a\n- [x] b\ntext\n- [ ] c")).toBe(3);
+    expect(countTaskItems("no tasks here")).toBe(0);
+    expect(countTaskItems("- [] no checkbox mark")).toBe(0);
+    expect(countTaskItems("- [ ] extra pair brackets")).toBe(1);
   });
 });

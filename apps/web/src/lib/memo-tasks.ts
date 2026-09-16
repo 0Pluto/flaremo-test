@@ -47,3 +47,12 @@ export function toggleMemoTaskLine(
   lines[lineIndex] = `${match[1]}${match[2] === " " ? "x" : " "}${match[3]}`;
   return lines.join("\n");
 }
+
+export function countTaskItems(content: string): number {
+  // TASK_LINE_RE is line-scoped (no `g` flag); count line-wise like memoTaskLines.
+  let count = 0;
+  for (const line of content.split("\n")) {
+    if (TASK_LINE_RE.test(line)) count += 1;
+  }
+  return count;
+}
