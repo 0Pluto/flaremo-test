@@ -634,6 +634,7 @@ const messages = {
     "Se aplica en todo el sitio al instante y se guarda automáticamente.",
   "admin.branding.accentHexHint":
     "Introduce un valor hexadecimal de 6 dígitos (p. ej. #7c3aed).",
+  "admin.branding.identity": "Logotipo y nombre del producto",
   "admin.branding.accent_flame": "Llama",
   "admin.branding.accent_ocean": "Océano",
   "admin.branding.accent_indigo": "Índigo",

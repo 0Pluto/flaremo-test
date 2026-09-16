@@ -562,6 +562,7 @@ const messages = {
   "admin.branding.accentHex": "十六进制色值",
   "admin.branding.accentHint": "已全站实时应用并自动保存。",
   "admin.branding.accentHexHint": "输入 6 位十六进制色值（如 #7c3aed）。",
+  "admin.branding.identity": "Logo 与产品名",
   "admin.branding.accent_flame": "火焰",
   "admin.branding.accent_ocean": "海洋",
   "admin.branding.accent_indigo": "靛蓝",

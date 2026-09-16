@@ -620,6 +620,7 @@ const messages = {
   "admin.branding.accentHex": "HEX 색상 값",
   "admin.branding.accentHint": "사이트 전체에 즉시 적용되며 자동 저장됩니다.",
   "admin.branding.accentHexHint": "6자리 HEX 값(예: #7c3aed)을 입력하세요.",
+  "admin.branding.identity": "로고 및 제품명",
   "admin.branding.accent_flame": "플레임",
   "admin.branding.accent_ocean": "오션",
   "admin.branding.accent_indigo": "인디고",

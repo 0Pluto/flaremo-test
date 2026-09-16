@@ -614,6 +614,7 @@ const messages = {
   "admin.branding.accentHint":
     "Applied across the site instantly and saved automatically.",
   "admin.branding.accentHexHint": "Enter a 6-digit hex value, e.g. #7c3aed.",
+  "admin.branding.identity": "Logo & product name",
   "admin.branding.accent_flame": "Flame",
   "admin.branding.accent_ocean": "Ocean",
   "admin.branding.accent_indigo": "Indigo",

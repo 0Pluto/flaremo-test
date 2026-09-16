@@ -627,6 +627,7 @@ const messages = {
     "Мгновенно применяется на всём сайте и сохраняется автоматически.",
   "admin.branding.accentHexHint":
     "Введите 6-значный HEX-код, например #7c3aed.",
+  "admin.branding.identity": "Логотип и название продукта",
   "admin.branding.accent_flame": "Пламя",
   "admin.branding.accent_ocean": "Океан",
   "admin.branding.accent_indigo": "Индиго",

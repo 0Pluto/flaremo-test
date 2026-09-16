@@ -625,6 +625,7 @@ const messages = {
   "admin.branding.accentHint": "サイト全体に即時適用され、自動保存されます。",
   "admin.branding.accentHexHint":
     "6 桁の 16 進数カラー（例: #7c3aed）を入力してください。",
+  "admin.branding.identity": "ロゴと製品名",
   "admin.branding.accent_flame": "フレーム",
   "admin.branding.accent_ocean": "オーシャン",
   "admin.branding.accent_indigo": "インディゴ",

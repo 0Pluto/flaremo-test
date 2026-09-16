@@ -9,9 +9,11 @@ import {
   createPersonalAccessToken,
   deleteAccount,
   deletePersonalAccessToken,
+  getAdminBranding,
   getAppInfo,
   getCurrentFlareMoUser,
   getVectorUsage,
+  listAdminUsers,
   listDataTasks,
   listPersonalAccessTokens,
   revokePersonalAccessToken,
@@ -19,6 +21,7 @@ import {
 import { authClient } from "@/auth-client";
 import { SubpageHeader } from "@/components/subpage-header";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useI18n } from "@/i18n";
 import { errorMessage } from "@/lib/error";
@@ -38,6 +41,24 @@ const VoicePanel = lazy(() =>
 );
 
 type AccountTab = "account" | "usage" | "branding" | "admin";
+
+function AccountPageSkeleton() {
+  return (
+    <div className="min-h-svh bg-background px-4 py-5 sm:py-8">
+      <main className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+        <div className="flex items-start justify-between border-b pb-4">
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-7 w-40" />
+            <Skeleton className="h-4 w-56" />
+          </div>
+          <Skeleton className="h-8 w-24 rounded-md" />
+        </div>
+        <Skeleton className="h-9 w-full rounded-lg" />
+        <Skeleton className="h-44 w-full rounded-xl" />
+      </main>
+    </div>
+  );
+}
 
 export function AccountPage() {
   const { locale, t } = useI18n();
@@ -327,6 +348,29 @@ export function AccountPage() {
 
   const isTeamAdmin =
     meQuery.data?.role === "owner" || meQuery.data?.role === "admin";
+
+  // Admin tab cards fetch on mount; warm both queries while the viewer is on
+  // any tab so switching to 品牌外观/团队管理 paints with data, not skeletons.
+  useEffect(() => {
+    if (!isTeamAdmin) return undefined;
+    void queryClient.prefetchQuery({
+      queryKey: ["admin-branding"],
+      queryFn: getAdminBranding,
+    });
+    void queryClient.prefetchQuery({
+      queryKey: ["admin-users"],
+      queryFn: listAdminUsers,
+    });
+    return undefined;
+  }, [isTeamAdmin, queryClient]);
+
+  // The role arrives with the viewer query, one roundtrip after mount.
+  // Rendering before it resolves makes the tab row (and the whole page)
+  // reflow twice — hold everything behind one skeleton so the page paints
+  // once, complete.
+  if (session.isPending || meQuery.isPending) {
+    return <AccountPageSkeleton />;
+  }
 
   return (
     <div className="min-h-svh bg-background px-4 py-5 sm:py-8">

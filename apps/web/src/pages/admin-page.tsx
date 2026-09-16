@@ -65,6 +65,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/i18n";
+import type { TranslationKey } from "@/i18n/key";
 import { normalizeHexColor } from "@/lib/brand-ramp";
 import { errorMessage } from "@/lib/error";
 
@@ -501,6 +502,19 @@ const ACCENT_SWATCH_HEX: Record<Exclude<BrandingAccent, "custom">, string> = {
   amber: "#ffc53d",
 };
 
+function accentSummaryLabel(
+  accent: string | null | undefined,
+  accentHex: string | null | undefined,
+  t: (key: TranslationKey) => string,
+): string {
+  if (accent === "custom") {
+    const base = t("admin.branding.accentCustom");
+    return accentHex ? `${base} · ${accentHex}` : base;
+  }
+  const preset = accent ?? "flame";
+  return t(`admin.branding.accent_${preset}` as TranslationKey);
+}
+
 function AccentPicker({
   value,
   customHex,
@@ -829,47 +843,61 @@ export function BrandingCard() {
         </Button>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-2">
             <p className="text-sm font-medium">{t("admin.branding.accent")}</p>
-            <AccentPicker
-              customHex={brandingQuery.data?.accent_hex ?? null}
-              disabled={saveAccentMutation.isPending}
-              value={brandingQuery.data?.accent ?? "flame"}
-              onSelect={(accent) => {
-                if (accent === "custom") {
-                  setCustomDraft(
-                    brandingQuery.data?.accent_hex ??
-                      (brandingQuery.data?.accent
-                        ? (ACCENT_SWATCH_HEX[
-                            brandingQuery.data
-                              .accent as keyof typeof ACCENT_SWATCH_HEX
-                          ] ?? "#ff6a00")
-                        : "#ff6a00"),
-                  );
-                  setCustomOpen(true);
-                  return;
-                }
-                void saveAccentMutation.mutateAsync({ accent });
-              }}
-            />
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-lg border bg-muted/40 dark:bg-muted/20">
-              {brandingQuery.data?.mark_dark_url ? (
-                <img
-                  alt=""
-                  className="size-8 object-contain"
-                  src={brandingQuery.data.mark_dark_url}
-                />
-              ) : (
-                <ImageUpIcon className="size-4 text-muted-foreground" />
-              )}
+            <div className="flex flex-wrap items-center gap-3">
+              <AccentPicker
+                customHex={brandingQuery.data?.accent_hex ?? null}
+                disabled={saveAccentMutation.isPending}
+                value={brandingQuery.data?.accent ?? "flame"}
+                onSelect={(accent) => {
+                  if (accent === "custom") {
+                    setCustomDraft(
+                      brandingQuery.data?.accent_hex ??
+                        (brandingQuery.data?.accent
+                          ? (ACCENT_SWATCH_HEX[
+                              brandingQuery.data
+                                .accent as keyof typeof ACCENT_SWATCH_HEX
+                            ] ?? "#ff6a00")
+                          : "#ff6a00"),
+                    );
+                    setCustomOpen(true);
+                    return;
+                  }
+                  void saveAccentMutation.mutateAsync({ accent });
+                }}
+              />
+              <span className="text-muted-foreground text-sm">
+                {accentSummaryLabel(
+                  brandingQuery.data?.accent,
+                  brandingQuery.data?.accent_hex,
+                  t,
+                )}
+              </span>
             </div>
-            <p className="min-w-0 truncate text-sm">
-              {brandingQuery.data?.product_name ||
-                t("admin.branding.statusDefault")}
+          </div>
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-medium">
+              {t("admin.branding.identity")}
             </p>
+            <div className="flex items-center gap-3">
+              <div className="flex size-12 shrink-0 items-center justify-center rounded-lg border bg-muted/40 dark:bg-muted/20">
+                {brandingQuery.data?.mark_dark_url ? (
+                  <img
+                    alt=""
+                    className="size-8 object-contain"
+                    src={brandingQuery.data.mark_dark_url}
+                  />
+                ) : (
+                  <ImageUpIcon className="size-4 text-muted-foreground" />
+                )}
+              </div>
+              <p className="min-w-0 truncate text-sm">
+                {brandingQuery.data?.product_name ||
+                  t("admin.branding.statusDefault")}
+              </p>
+            </div>
           </div>
         </div>
       </CardContent>
