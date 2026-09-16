@@ -1,6 +1,7 @@
 # 编辑框所见即所得：P3 收口计划（实况盘点）
 
-> 状态：**收尾完成**（2026-09-17 第二轮，分支 `feat/wysiwyg-p3-closing`）。前置条件（原稿 §3.5 的顺序依赖）已解除：voice §5 已作为 `b6647e8` 提交、feat/composer-wysiwyg 已由 Kim 合入 main。本轮交付：e2e 四 spec 适配、往返幂等单测落地（21 用例）、RTL 逻辑属性修正；随车修 main 既有问题（api.test.ts `kind` 期望 ×5、vitest 误扫 exclude、`@` 别名）。验收：tsc -b ✅、build ✅、全量 vitest 536/536 ✅、Playwright 未跑（待 Kim 指令）。剩：合 main、阿语 dev 目检、kosx 滚动、issue #133 回复。
+> 状态：**收尾完成**（2026-09-17 第二轮，分支 `feat/wysiwyg-p3-closing`）。前置条件（原稿 §3.5 的顺序依赖）已解除：voice §5 已作为 `b6647e8` 提交、feat/composer-wysiwyg 已由 Kim 合入 main。本轮交付：e2e 四 spec 适配、往返幂等单测落地（21 用例）、RTL 逻辑属性修正；随车修 main 既有问题（api.test.ts `kind` 期望 ×5、vitest 误扫 exclude、`@` 别名）。验收：tsc -b ✅、build ✅、全量 vitest 536/536 ✅、Playwright 未跑（待 Kim 指令）。已合 main 并推送（0eeb329）。剩：阿语 dev 目检、kosx 滚动（**被 format/lint 债阻塞**，见下）、issue #133 回复。
+> 阻塞发现（09-17）：main 上 voice P2-P4 文件未过 format（2 个 biome error + 41 warning，capture-page.tsx hooks 依赖、encoder.test 非空断言），`pnpm format` 会波及 13 个无关文件——kosx 部署门禁「format 先过」会挂，需 voice 会话或单独 format 提交先清债。
 > 触发：GitHub issue #133（「正文增加加粗/下划线/斜体或 md 格式支持」）。核实结论：该 issue 的需求已被本分支实现覆盖，无需新方案；本文档回答「距离合并上线还差什么」。
 > D1/D2 已由 Kim 于 2026-09-17 拍板：**全部按推荐执行**——D1 不做 Markdown 源码切换；D2 保留底部单行按钮位，不做浮动气泡菜单；下划线不做（无 Markdown 表示，落库即失样式）。三项与分支现状一致，无需改代码。
 
