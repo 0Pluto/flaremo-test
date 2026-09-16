@@ -159,6 +159,10 @@ const messages = {
   "capture.charsUsed": "{count} / {max}자",
   "capture.saveSucceeded": "저장했습니다.",
   "capture.transcribing": "전사 중…",
+  "capture.pause": "녹음 일시정지",
+  "capture.resume": "녹음 계속",
+  "capture.paused": "일시정지 · 기록은 계속됩니다",
+  "capture.waveform": "실시간 마이크 파형",
   "nav.calendar": "캘린더",
   "calendar.title": "캘린더",
   "calendar.today": "오늘로 이동",
@@ -252,6 +256,7 @@ const messages = {
   "shortcuts.send": "현재 입력 전송",
   "shortcuts.linebreak": "입력 중 줄바꿈 삽입",
   "shortcuts.saveEdit": "편집 중인 노트 저장",
+  "shortcuts.capture": "음성 기록 시작/중지 (/capture 페이지)",
   "composer.removeFile": "{filename} 제거",
   "composer.imageUploadFailed": "이미지 업로드 실패. 다시 시도해 주세요",
   "attachment.unavailable":

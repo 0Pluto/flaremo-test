@@ -45,6 +45,7 @@ export function captureIsActive(state: CaptureState) {
     "requesting_permission",
     "connecting",
     "recording",
+    "paused",
     "reconnecting",
     "stopping",
   ].includes(state);
@@ -76,6 +77,10 @@ export class CaptureController {
   private lastAudio = 0;
   private pendingFrames: ArrayBuffer[] = [];
   private pendingBytes = 0;
+  // D1 (voice-capture-rollout §2.4): a user pause must survive a reconnect
+  // (the socket can silently drop while paused), so it lives outside the
+  // published state.
+  private paused = false;
   constructor(deps: CaptureDependencies) {
     this.deps = deps;
   }
@@ -99,6 +104,7 @@ export class CaptureController {
     this.retry = 0;
     this.pendingFrames = [];
     this.pendingBytes = 0;
+    this.paused = false;
     const abort = new AbortController();
     this.abort = abort;
     this.update({
@@ -200,7 +206,7 @@ export class CaptureController {
             // Preserve the session's original start across reconnects so the
             // recorded start time and the total-duration cap stay truthful.
             this.update({
-              state: "recording",
+              state: this.paused ? "paused" : "recording",
               startedAt: this.snapshot.startedAt ?? Date.now(),
             });
             this.heartbeat = setInterval(() => {
@@ -251,21 +257,34 @@ export class CaptureController {
     if (
       !this.ready ||
       (this.snapshot.state !== "recording" &&
+        this.snapshot.state !== "paused" &&
         this.snapshot.state !== "stopping")
     ) {
       if (
         this.snapshot.state === "connecting" ||
         this.snapshot.state === "reconnecting"
       )
-        this.buffer(frame);
+        // A pause survives reconnects, so silence — not captured speech —
+        // must be buffered while paused even without a live socket.
+        this.buffer(
+          this.paused ? new ArrayBuffer(frame.byteLength) : frame,
+        );
       return;
     }
     const socket = this.socket;
     if (socket?.readyState !== 1) return;
-    if (socket.bufferedAmount + frame.byteLength > 64_000)
+    // While paused the user's speech must neither reach the ASR provider
+    // (no transcript, no billed speech) nor break the audio timeline: the
+    // frame cadence continues with zero-filled PCM so server-side timestamps
+    // keep matching wall-clock time, and resuming stays gap-free (D1).
+    const payload =
+      this.snapshot.state === "paused"
+        ? new ArrayBuffer(frame.byteLength)
+        : frame;
+    if (socket.bufferedAmount + payload.byteLength > 64_000)
       return this.lost(socket);
     try {
-      socket.send(frame);
+      socket.send(payload);
     } catch {
       this.lost(socket);
     }
@@ -350,6 +369,21 @@ export class CaptureController {
       void this.connect(abort);
     }, delay);
   }
+  /** User-intent pause: only between live recording and resuming (D1). */
+  pause() {
+    if (this.snapshot.state !== "recording" || this.paused) return;
+    this.paused = true;
+    this.update({ state: "paused", partial: "" });
+  }
+  resume() {
+    if (!this.paused || this.snapshot.state !== "paused") return;
+    this.paused = false;
+    // A socket lost while paused reconnects without leaving the paused state;
+    // if it is somehow gone anyway, fall back to the reconnect path.
+    this.update({
+      state: this.ready ? "recording" : "reconnecting",
+    });
+  }
   async stop(error: CaptureError | null = null) {
     if (
       !captureIsActive(this.snapshot.state) ||
@@ -393,6 +427,7 @@ export class CaptureController {
     this.dispose();
     this.pendingFrames = [];
     this.pendingBytes = 0;
+    this.paused = false;
     this.update({
       state:
         this.snapshot.startedAt !== null || this.snapshot.sentences.length
@@ -408,6 +443,7 @@ export class CaptureController {
   }
   reset() {
     this.dispose();
+    this.paused = false;
     this.update({
       state: "idle",
       sentences: [],

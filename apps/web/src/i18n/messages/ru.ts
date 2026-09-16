@@ -159,6 +159,10 @@ const messages = {
   "capture.charsUsed": "{count} / {max} символов",
   "capture.saveSucceeded": "Сохранено.",
   "capture.transcribing": "Транскрибация…",
+  "capture.pause": "Приостановить запись",
+  "capture.resume": "Продолжить запись",
+  "capture.paused": "Пауза · таймер продолжает идти",
+  "capture.waveform": "Живая осциллограмма микрофона",
   "nav.calendar": "Календарь",
   "calendar.title": "Календарь",
   "calendar.today": "Вернуться к сегодня",
@@ -254,6 +258,7 @@ const messages = {
   "shortcuts.send": "Отправить текущий ввод",
   "shortcuts.linebreak": "Перенос строки во время ввода",
   "shortcuts.saveEdit": "Сохранить редактируемую заметку",
+  "shortcuts.capture": "Начать или остановить голосовую запись (на /capture)",
   "composer.removeFile": "Убрать {filename}",
   "composer.imageUploadFailed":
     "Не удалось загрузить изображение. Повторите попытку.",

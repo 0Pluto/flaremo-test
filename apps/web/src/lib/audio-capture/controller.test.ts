@@ -37,7 +37,13 @@ function setup() {
     deps,
     sockets,
     mic,
-    frame: () => frame(new ArrayBuffer(3200)),
+    // Filled so tests can tell real audio apart from zero-filled pause
+    // silence on the wire.
+    frame: () => {
+      const buffer = new ArrayBuffer(3200);
+      new Uint8Array(buffer).fill(7);
+      frame(buffer);
+    },
   };
 }
 afterEach(() => {
@@ -177,6 +183,120 @@ describe("voice capture controller", () => {
     const replayed = second.send.mock.calls.length;
     expect(replayed).toBeGreaterThan(0);
     expect(replayed * 3200).toBeLessThanOrEqual(2_000_000 + 3200);
+  });
+  it("pauses by sending silence frames, then resumes with live audio", async () => {
+    const s = setup();
+    await s.controller.start();
+    const socket = s.sockets[0];
+    socket.onopen?.();
+    socket.message({ type: "ready" });
+    s.frame();
+    const liveSentences = socket.send.mock.calls.length;
+    s.controller.pause();
+    expect(s.controller.getSnapshot()).toMatchObject({
+      state: "paused",
+      partial: "",
+      microphoneActive: true,
+    });
+    expect(socket.send).toHaveBeenCalledTimes(liveSentences);
+    s.frame();
+    const silenced = socket.send.mock.calls.at(-1)?.[0] as ArrayBuffer;
+    expect(silenced.byteLength).toBe(3200);
+    expect(new Uint8Array(silenced).every((byte) => byte === 0)).toBe(true);
+    s.controller.resume();
+    expect(s.controller.getSnapshot().state).toBe("recording");
+    s.frame();
+    const resumed = socket.send.mock.calls.at(-1)?.[0] as ArrayBuffer;
+    expect(new Uint8Array(resumed).every((byte) => byte === 7)).toBe(true);
+  });
+  it("ignores pause while still connecting and never pauses twice", async () => {
+    const s = setup();
+    await s.controller.start(); // connecting: no ready yet
+    s.controller.pause();
+    expect(s.controller.getSnapshot().state).toBe("connecting");
+    s.sockets[0].onopen?.();
+    s.sockets[0].message({ type: "ready" });
+    expect(s.controller.getSnapshot().state).toBe("recording");
+    s.controller.pause();
+    s.controller.pause();
+    expect(s.controller.getSnapshot().state).toBe("paused");
+    s.controller.resume();
+    expect(s.controller.getSnapshot().state).toBe("recording");
+    s.controller.resume();
+    expect(s.controller.getSnapshot().state).toBe("recording");
+  });
+  it("stops cleanly from paused and keeps the captured sentences", async () => {
+    const s = setup();
+    await s.controller.start();
+    const socket = s.sockets[0];
+    socket.message({ type: "ready" });
+    socket.message(sentence("kept while paused"));
+    s.controller.pause();
+    expect(s.controller.getSnapshot().state).toBe("paused");
+    await s.controller.stop();
+    socket.message({ type: "finished" });
+    expect(s.controller.getSnapshot()).toMatchObject({
+      state: "review",
+      microphoneActive: false,
+      sentences: [expect.objectContaining({ text: "kept while paused" })],
+    });
+  });
+  it("keeps a pause across a reconnect and buffers silence for the gap", async () => {
+    const s = setup();
+    await s.controller.start();
+    const first = s.sockets[0];
+    first.message({ type: "ready" });
+    s.controller.pause();
+    first.onclose?.();
+    expect(s.controller.getSnapshot()).toMatchObject({
+      state: "reconnecting",
+      gap: true,
+      microphoneActive: true,
+    });
+    s.frame();
+    s.frame();
+    await vi.advanceTimersByTimeAsync(1000);
+    const second = s.sockets[1];
+    second.onopen?.();
+    second.message({ type: "ready" });
+    // The user's pause survives the reconnect; the gap audio was silence, so
+    // the timeline stays continuous and no pause speech leaks to the ASR.
+    expect(s.controller.getSnapshot()).toMatchObject({
+      state: "paused",
+      gap: true,
+    });
+    const replayed = second.send.mock.calls
+      .slice(1)
+      .map(([data]) => data as ArrayBuffer);
+    expect(replayed.length).toBeGreaterThan(0);
+    expect(
+      replayed.every(
+        (buffer) =>
+          buffer.byteLength === 3200 &&
+          new Uint8Array(buffer).every((byte) => byte === 0),
+      ),
+    ).toBe(true);
+  });
+  it("applies the one-hour cap to the whole session including pauses", async () => {
+    const s = setup();
+    await s.controller.start();
+    const socket = s.sockets[0];
+    socket.onopen?.();
+    socket.message({ type: "ready" });
+    s.controller.pause();
+    // Mic frames keep arriving while paused (the microphone stays open);
+    // pause silence keeps the ASR timeline aligned and the heartbeat fed.
+    for (let index = 0; index < 730; index += 1) {
+      if (s.controller.getSnapshot().state === "stopping") break;
+      s.frame();
+      // The server keeps answering heartbeats while nothing is spoken.
+      socket.message({ type: "pong" });
+      await vi.advanceTimersByTimeAsync(5_000);
+    }
+    expect(s.controller.getSnapshot()).toMatchObject({
+      state: "stopping",
+      error: "limitReached",
+    });
   });
   it("stops while reconnecting and never opens a second microphone", async () => {
     const s = setup();

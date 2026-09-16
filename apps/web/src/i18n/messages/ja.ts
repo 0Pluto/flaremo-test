@@ -157,6 +157,10 @@ const messages = {
   "capture.charsUsed": "{count} / {max} 文字",
   "capture.saveSucceeded": "保存しました。",
   "capture.transcribing": "文字起こし中…",
+  "capture.pause": "録音を一時停止",
+  "capture.resume": "録音を再開",
+  "capture.paused": "一時停止中 · タイマーは継続中",
+  "capture.waveform": "マイクのライブ波形",
   "nav.calendar": "カレンダー",
   "calendar.title": "カレンダー",
   "calendar.today": "今日に戻る",
@@ -251,6 +255,7 @@ const messages = {
   "shortcuts.send": "現在の入力を送信",
   "shortcuts.linebreak": "入力欄内で改行",
   "shortcuts.saveEdit": "編集中のノートを保存",
+  "shortcuts.capture": "音声記録の開始/停止（/capture ページ）",
   "composer.removeFile": "{filename} を削除",
   "composer.imageUploadFailed":
     "画像のアップロードに失敗しました。再試行してください",

@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBlocker, useNavigate } from "@tanstack/react-router";
 import { Loader2Icon, Mic, Square } from "lucide-react";
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -15,6 +16,13 @@ import {
 import { toast } from "sonner";
 import { createMemo, getCaptureStatus, updateMemo } from "@/api";
 import { authClient } from "@/auth-client";
+import {
+  CaptureButton,
+  CapturePauseButton,
+  type CaptureButtonState,
+} from "@/components/capture/capture-button";
+import { CaptureTranscribing } from "@/components/capture/capture-transcribing";
+import { CaptureWaveform } from "@/components/capture/capture-waveform";
 import { SubpageHeader } from "@/components/subpage-header";
 import {
   AlertDialog,
@@ -40,9 +48,11 @@ import {
   loadCapture,
   newLocalCapture,
 } from "@/lib/audio-capture/local-session";
-import { openMicrophone } from "@/lib/audio-capture/microphone";
+import { openMicrophone, type Microphone } from "@/lib/audio-capture/microphone";
+import type { CaptureState } from "@/lib/audio-capture/types";
 import { CaptureTranscriptAccumulator } from "@/lib/audio-capture/transcript";
 import { vibrate } from "@/lib/haptics";
+import { cn } from "@/lib/utils";
 
 export function CapturePage() {
   const { t } = useI18n();
@@ -61,7 +71,13 @@ export function CapturePage() {
   const [controller] = useState(
     () =>
       new CaptureController({
-        microphone: openMicrophone,
+        // The page keeps the live microphone handle for the waveform while
+        // the controller owns its lifecycle (start/stop/dispose).
+        microphone: async (onFrame, signal, interrupt) => {
+          const mic = await openMicrophone(onFrame, signal, interrupt);
+          micRef.current = mic;
+          return mic;
+        },
         status: getCaptureStatus,
         socket: () =>
           new WebSocket(
@@ -77,6 +93,12 @@ export function CapturePage() {
   const [recovery, setRecovery] = useState<LocalCapture | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [review, setReview] = useState(false);
+  // True for one beat when the live log hands over to the review form, so the
+  // log can fade out instead of vanishing in a ternary hard cut (§2.3).
+  const [logLeaving, setLogLeaving] = useState(false);
+  // P2 wires batch-mode ASR here (rollout §2.3/§3.3); the skeleton style
+  // ships now.
+  const transcribing = false;
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
   const [draftError, setDraftError] = useState(false);
@@ -93,6 +115,11 @@ export function CapturePage() {
   const localRef = useRef(local);
   localRef.current = local;
   const transcript = useRef(new CaptureTranscriptAccumulator());
+  const micRef = useRef<Microphone | null>(null);
+  const getWaveform = useCallback(
+    () => micRef.current?.getWaveform?.() ?? null,
+    [],
+  );
   const tail = useRef<HTMLDivElement>(null);
   const active = captureIsActive(snapshot.state);
   const unsaved = active || review || Boolean(recovery);
@@ -200,6 +227,18 @@ export function CapturePage() {
       tail.current?.scrollIntoView({ block: "nearest" });
   }, [snapshot.partial, snapshot.sentenceVersion]);
 
+  // Recording → review: fade the live log out (animate-fade reversed, 140ms
+  // ≤ the 320ms entrance budget) while the review form rises in.
+  const previousStateRef = useRef<CaptureState>("idle");
+  useEffect(() => {
+    const wasActive = captureIsActive(previousStateRef.current);
+    previousStateRef.current = snapshot.state;
+    if (snapshot.state !== "review" || !wasActive) return;
+    setLogLeaving(true);
+    const timer = window.setTimeout(() => setLogLeaving(false), 160);
+    return () => window.clearTimeout(timer);
+  }, [snapshot.state]);
+
   const start = () => {
     vibrate(5);
     savedRef.current = false;
@@ -212,6 +251,42 @@ export function CapturePage() {
     setLocal(newLocalCapture());
     void controller.start();
   };
+  // Page-level Enter drives start/stop/resume while the page owns focus.
+  // Space is deliberately unbound (scroll conflict); fields and buttons keep
+  // their native Enter behavior, and open dialogs win.
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Enter") return;
+      const target = event.target;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        target instanceof HTMLButtonElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
+      )
+        return;
+      if (document.querySelector('[role="dialog"][data-state="open"]')) return;
+      const state = controller.getSnapshot().state;
+      if (state === "recording") {
+        event.preventDefault();
+        vibrate(5);
+        void controller.stop();
+      } else if (state === "paused") {
+        event.preventDefault();
+        controller.resume();
+      } else if (
+        (state === "idle" || state === "error") &&
+        loaded &&
+        status.data?.available
+      ) {
+        event.preventDefault();
+        start();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [controller, loaded, start, status.data?.available]);
   const discard = async () => {
     const cleared = await store.clear();
     if (!cleared) {
@@ -347,9 +422,27 @@ export function CapturePage() {
           ? t("capture.reconnecting")
           : snapshot.state === "stopping"
             ? t("capture.stopping")
-            : snapshot.state === "recording"
-              ? t("capture.recording")
-              : t("capture.description");
+            : snapshot.state === "paused"
+              ? t("capture.paused")
+              : snapshot.state === "recording"
+                ? t("capture.recording")
+                : t("capture.description");
+  const buttonState: CaptureButtonState =
+    snapshot.state === "recording" || snapshot.state === "stopping"
+      ? "recording"
+      : snapshot.state === "paused"
+        ? "paused"
+        : snapshot.state === "idle" ||
+            snapshot.state === "error" ||
+            snapshot.state === "review"
+          ? "idle"
+          : "connecting";
+  const bigButtonDisabled =
+    buttonState === "connecting"
+      ? true
+      : buttonState === "idle"
+        ? !loaded || !status.data?.available
+        : snapshot.state === "stopping" || snapshot.state === "reconnecting";
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-2xl flex-col gap-6 bg-background px-4 py-6 sm:px-6">
@@ -459,6 +552,15 @@ export function CapturePage() {
                 {statusText}
               </p>
             )}
+            {snapshot.microphoneActive && !review && (
+              <div className="mt-3">
+                <CaptureWaveform
+                  active={snapshot.microphoneActive}
+                  getWaveform={getWaveform}
+                  label={t("capture.waveform")}
+                />
+              </div>
+            )}
             {elapsed > 0 && (
               <div
                 role="progressbar"
@@ -490,8 +592,8 @@ export function CapturePage() {
               </p>
             )}
           </div>
-          {review ? (
-            <>
+          {review && (
+            <div className="space-y-6 motion-safe:animate-rise">
               <label className="flex flex-col gap-2 text-sm font-medium">
                 {t("capture.transcript")}
                 <textarea
@@ -577,14 +679,20 @@ export function CapturePage() {
                   )}
                 </Button>
               </div>
-            </>
-          ) : (
+            </div>
+          )}
+          {(!review || logLeaving) && (
             <>
               <div
                 role="log"
                 aria-label={t("capture.transcript")}
                 aria-live="off"
-                className="max-h-[45dvh] min-h-56 overflow-y-auto whitespace-pre-wrap rounded-xl border bg-card p-4 text-base leading-relaxed"
+                className={cn(
+                  "max-h-[45dvh] min-h-56 overflow-y-auto whitespace-pre-wrap rounded-xl border bg-card p-4 text-base leading-relaxed",
+                  review &&
+                    logLeaving &&
+                    "motion-safe:animate-fade [animation-direction:reverse]",
+                )}
               >
                 {snapshot.sentences.length > 100 && (
                   <p className="text-sm text-muted-foreground">
@@ -592,11 +700,11 @@ export function CapturePage() {
                   </p>
                 )}
                 {snapshot.sentences.slice(-100).map((sentence) => (
-                  <p className="mb-3" key={sentence.id}>
+                  <p className="mb-3 motion-safe:animate-rise" key={sentence.id}>
                     {sentence.text}
                   </p>
                 ))}
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground/70 motion-safe:animate-partial-pulse">
                   {snapshot.partial ||
                     (!snapshot.sentences.length ? t("capture.empty") : "")}
                 </p>
@@ -608,38 +716,54 @@ export function CapturePage() {
                 </p>
                 <div ref={tail} />
               </div>
+              {transcribing && (
+                <CaptureTranscribing label={t("capture.transcribing")} />
+              )}
+            </>
+          )}
+          {!review && (
+            <>
               <p aria-live="polite" className="sr-only">
                 {snapshot.sentences.at(-1)?.text ?? ""}
               </p>
-              {active ? (
-                <Button
-                  variant="destructive"
-                  size="lg"
-                  className="h-11"
-                  onClick={() => {
+              <div className="flex items-center justify-center gap-3">
+                {snapshot.state === "recording" && (
+                  <CapturePauseButton
+                    onPaused={() => {
+                      vibrate(5);
+                      controller.pause();
+                    }}
+                    label={t("capture.pause")}
+                  />
+                )}
+                {snapshot.state === "paused" && (
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="size-12 rounded-full text-destructive"
+                    aria-label={t("capture.stop")}
+                    onClick={() => {
+                      vibrate(5);
+                      void controller.stop();
+                    }}
+                  >
+                    <Square className="fill-current" />
+                  </Button>
+                )}
+                <CaptureButton
+                  state={buttonState}
+                  disabled={bigButtonDisabled}
+                  onStart={start}
+                  onStop={() => {
                     vibrate(5);
                     void controller.stop();
                   }}
-                  disabled={snapshot.state === "stopping"}
-                >
-                  <Square />
-                  {t(
-                    snapshot.state === "stopping"
-                      ? "capture.stopping"
-                      : "capture.stop",
-                  )}
-                </Button>
-              ) : (
-                <Button
-                  variant="brand"
-                  size="lg"
-                  onClick={start}
-                  disabled={!loaded || !status.data?.available}
-                >
-                  <Mic />
-                  {t("capture.start")}
-                </Button>
-              )}
+                  onResume={() => controller.resume()}
+                  startLabel={t("capture.start")}
+                  stopLabel={t("capture.stop")}
+                  resumeLabel={t("capture.resume")}
+                />
+              </div>
               {status.isError && !status.data ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <p role="status">{t("list.errorDescription")}</p>

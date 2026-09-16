@@ -91,6 +91,10 @@
     --animate-fade: flaremo-fade 140ms ease-out both;
     --animate-scale-in: flaremo-scale-in 140ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
     --animate-shimmer: flaremo-shimmer 1.6s linear infinite;
+    /* Real-state indicators (recording ring, live partial line): whitelisted
+       informational motion, not decoration. */
+    --animate-signal-ring: flaremo-signal-ring 1.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+    --animate-partial-pulse: flaremo-partial-pulse 1.6s ease-in-out infinite;
 }
 
 :root {
@@ -507,5 +511,27 @@
   }
   to {
     background-position: -200% 0;
+  }
+}
+
+@keyframes flaremo-signal-ring {
+  from {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  70%,
+  to {
+    opacity: 0;
+    transform: scale(1.55);
+  }
+}
+
+@keyframes flaremo-partial-pulse {
+  from,
+  to {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
   }
 }

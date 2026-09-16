@@ -157,6 +157,10 @@ const messages = {
   "capture.charsUsed": "{count} / {max} characters",
   "capture.saveSucceeded": "Saved.",
   "capture.transcribing": "Transcribing…",
+  "capture.pause": "Pause recording",
+  "capture.resume": "Resume recording",
+  "capture.paused": "Paused · the clock keeps running",
+  "capture.waveform": "Live microphone waveform",
   "nav.calendar": "Calendar",
   "calendar.title": "Calendar",
   "calendar.today": "Back to today",
@@ -249,6 +253,7 @@ const messages = {
   "shortcuts.send": "Send the current draft",
   "shortcuts.linebreak": "Insert a line break while composing",
   "shortcuts.saveEdit": "Save the memo being edited",
+  "shortcuts.capture": "Start or stop voice recording (on /capture)",
   "composer.removeFile": "Remove {filename}",
   "composer.imageUploadFailed": "Image upload failed. Try again.",
   "attachment.unavailable":

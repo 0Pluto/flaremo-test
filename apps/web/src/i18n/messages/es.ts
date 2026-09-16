@@ -162,6 +162,10 @@ const messages = {
   "capture.charsUsed": "{count} / {max} caracteres",
   "capture.saveSucceeded": "Guardado.",
   "capture.transcribing": "Transcribiendo…",
+  "capture.pause": "Pausar la grabación",
+  "capture.resume": "Reanudar la grabación",
+  "capture.paused": "En pausa · el cronómetro sigue en marcha",
+  "capture.waveform": "Onda del micrófono en vivo",
   "nav.calendar": "Calendario",
   "calendar.title": "Calendario",
   "calendar.today": "Volver a hoy",
@@ -257,6 +261,7 @@ const messages = {
   "shortcuts.send": "Enviar el texto actual",
   "shortcuts.linebreak": "Insertar un salto de línea mientras escribes",
   "shortcuts.saveEdit": "Guardar la nota en edición",
+  "shortcuts.capture": "Iniciar o detener la grabación de voz (en /capture)",
   "composer.removeFile": "Quitar {filename}",
   "composer.imageUploadFailed": "Falló la subida de la imagen. Reintenta.",
   "attachment.unavailable":

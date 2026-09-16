@@ -704,6 +704,7 @@ export function FlareMoApp() {
                 ["shortcuts.send", "Enter"],
                 ["shortcuts.linebreak", "Shift + Enter"],
                 ["shortcuts.saveEdit", "⌘Enter"],
+                ["shortcuts.capture", "Enter (on /capture)"],
               ] as const
             ).map(([key, combo]) => (
               <div

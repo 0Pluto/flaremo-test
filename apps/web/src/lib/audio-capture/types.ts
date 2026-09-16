@@ -3,6 +3,7 @@ export type CaptureState =
   | "requesting_permission"
   | "connecting"
   | "recording"
+  | "paused"
   | "reconnecting"
   | "stopping"
   | "review"
