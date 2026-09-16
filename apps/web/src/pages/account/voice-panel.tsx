@@ -1,5 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Loader2Icon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import {
   deleteVoiceSettings,
   getVoiceSettings,
@@ -65,6 +67,9 @@ export function VoicePanel() {
   });
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [pendingAction, setPendingAction] = useState<
+    "save" | "test" | "delete" | null
+  >(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   // Shared cache key: the account page prefetches it while the lazy chunk is
   // still downloading, so config often renders on the first paint.
@@ -96,11 +101,16 @@ export function VoicePanel() {
   const editingDisabled =
     busy || envManaged || !config || (config.unreadable ?? false);
 
-  async function run(action: () => Promise<unknown>, success: string) {
+  async function run(
+    action: "save" | "test" | "delete",
+    task: () => Promise<unknown>,
+    success: string,
+  ) {
     setBusy(true);
+    setPendingAction(action);
     setMessage("");
     try {
-      await action();
+      await task();
       if (!mounted.current) return;
       setFields({
         appId: "",
@@ -124,11 +134,16 @@ export function VoicePanel() {
       setModel(value.model);
       await cache.invalidateQueries({ queryKey: ["capture-status"] });
       setMessage(success);
+      toast.success(success);
     } catch {
       if (!mounted.current) return;
       setMessage(t("voiceSettings.error"));
+      toast.error(t("voiceSettings.error"));
     } finally {
-      if (mounted.current) setBusy(false);
+      if (mounted.current) {
+        setBusy(false);
+        setPendingAction(null);
+      }
     }
   }
 
@@ -169,6 +184,7 @@ export function VoicePanel() {
               onSubmit={(event) => {
                 event.preventDefault();
                 void run(
+                  "save",
                   () =>
                     saveVoiceSettings({
                       revision: config.revision,
@@ -260,6 +276,12 @@ export function VoicePanel() {
                 </label>
               </div>
               <Button disabled={editingDisabled} type="submit">
+                {pendingAction === "save" && (
+                  <Loader2Icon
+                    className="animate-spin"
+                    data-icon="inline-start"
+                  />
+                )}
                 {t("voiceSettings.save")}
               </Button>
             </form>
@@ -271,9 +293,19 @@ export function VoicePanel() {
                 variant="outline"
                 disabled={busy || !config.enabled || !config.configured}
                 onClick={() =>
-                  void run(testVoiceSettings, t("voiceSettings.testSuccess"))
+                  void run(
+                    "test",
+                    testVoiceSettings,
+                    t("voiceSettings.testSuccess"),
+                  )
                 }
               >
+                {pendingAction === "test" && (
+                  <Loader2Icon
+                    className="animate-spin"
+                    data-icon="inline-start"
+                  />
+                )}
                 {t("voiceSettings.test")}
               </Button>
               <Button
@@ -304,6 +336,7 @@ export function VoicePanel() {
                 onClick={() => {
                   if (config)
                     void run(
+                      "delete",
                       () => deleteVoiceSettings(config.revision),
                       t("voiceSettings.deleted"),
                     );

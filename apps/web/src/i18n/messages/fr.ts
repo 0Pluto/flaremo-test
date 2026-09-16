@@ -156,6 +156,11 @@ const messages = {
   "capture.save": "Enregistrer dans FlareMo",
   "capture.error":
     "Impossible d'utiliser le micro ou le service de transcription.",
+  "capture.nearLimit":
+    "Environ 5 minutes restantes avant la limite d'enregistrement.",
+  "capture.charsUsed": "{count} / {max} caractères",
+  "capture.saveSucceeded": "Enregistré.",
+  "capture.transcribing": "Transcription…",
   "nav.calendar": "Calendrier",
   "calendar.title": "Calendrier",
   "calendar.today": "Revenir à aujourd'hui",

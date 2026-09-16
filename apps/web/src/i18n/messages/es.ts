@@ -158,6 +158,10 @@ const messages = {
   "capture.save": "Guardar en FlareMo",
   "capture.error":
     "No se puede usar el micrófono ni el servicio de transcripción.",
+  "capture.nearLimit": "Quedan unos 5 minutos antes del límite de grabación.",
+  "capture.charsUsed": "{count} / {max} caracteres",
+  "capture.saveSucceeded": "Guardado.",
+  "capture.transcribing": "Transcribiendo…",
   "nav.calendar": "Calendario",
   "calendar.title": "Calendario",
   "calendar.today": "Volver a hoy",

@@ -1,7 +1,10 @@
-import { CAPTURE_MAX_TEXT } from "@flaremo/contracts";
+import {
+  CAPTURE_MAX_DURATION_MS,
+  CAPTURE_MAX_TEXT,
+} from "@flaremo/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBlocker, useNavigate } from "@tanstack/react-router";
-import { Mic, Square } from "lucide-react";
+import { Loader2Icon, Mic, Square } from "lucide-react";
 import {
   useEffect,
   useMemo,
@@ -39,6 +42,7 @@ import {
 } from "@/lib/audio-capture/local-session";
 import { openMicrophone } from "@/lib/audio-capture/microphone";
 import { CaptureTranscriptAccumulator } from "@/lib/audio-capture/transcript";
+import { vibrate } from "@/lib/haptics";
 
 export function CapturePage() {
   const { t } = useI18n();
@@ -197,6 +201,7 @@ export function CapturePage() {
   }, [snapshot.partial, snapshot.sentenceVersion]);
 
   const start = () => {
+    vibrate(5);
     savedRef.current = false;
     setReview(false);
     setSaveError(false);
@@ -256,6 +261,8 @@ export function CapturePage() {
       savedRef.current = true;
       setDraftError(false);
       setCleanupError(false);
+      vibrate(10);
+      toast.success(t("capture.saveSucceeded"));
       await Promise.all(
         ["memos", "memo-stats", "tag-hierarchy"].map((key) =>
           queryClient.invalidateQueries({ queryKey: [key] }),
@@ -330,6 +337,7 @@ export function CapturePage() {
           Math.floor(((snapshot.stoppedAt ?? now) - snapshot.startedAt) / 1000),
         )
       : local.duration;
+  const nearLimit = elapsed * 1000 >= CAPTURE_MAX_DURATION_MS - 5 * 60_000;
   const statusText =
     snapshot.state === "requesting_permission"
       ? t("capture.requestingPermission")
@@ -451,6 +459,36 @@ export function CapturePage() {
                 {statusText}
               </p>
             )}
+            {elapsed > 0 && (
+              <div
+                role="progressbar"
+                aria-label={t("capture.duration")}
+                aria-valuemin={0}
+                aria-valuemax={CAPTURE_MAX_DURATION_MS / 1000}
+                aria-valuenow={Math.min(
+                  elapsed,
+                  CAPTURE_MAX_DURATION_MS / 1000,
+                )}
+                className="mt-4 h-1 w-full overflow-hidden rounded-full bg-muted"
+              >
+                <div
+                  className={`h-full rounded-full ${
+                    nearLimit ? "bg-destructive" : "bg-primary"
+                  }`}
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      ((elapsed * 1000) / CAPTURE_MAX_DURATION_MS) * 100,
+                    )}%`,
+                  }}
+                />
+              </div>
+            )}
+            {!review && nearLimit && (
+              <p role="status" className="mt-3 text-sm text-destructive">
+                {t("capture.nearLimit")}
+              </p>
+            )}
           </div>
           {review ? (
             <>
@@ -469,6 +507,12 @@ export function CapturePage() {
                     }))
                   }
                 />
+                <span className="text-xs font-normal text-muted-foreground">
+                  {t("capture.charsUsed", {
+                    count: local.text.length.toLocaleString(),
+                    max: CAPTURE_MAX_TEXT.toLocaleString(),
+                  })}
+                </span>
               </label>
               <label className="flex flex-col gap-2 text-sm">
                 {t("capture.tags")}
@@ -518,6 +562,12 @@ export function CapturePage() {
                   disabled={saving || !local.text.trim()}
                   onClick={() => void save()}
                 >
+                  {saving && (
+                    <Loader2Icon
+                      className="animate-spin"
+                      data-icon="inline-start"
+                    />
+                  )}
                   {t(
                     saving
                       ? "capture.saving"
@@ -550,13 +600,26 @@ export function CapturePage() {
                   {snapshot.partial ||
                     (!snapshot.sentences.length ? t("capture.empty") : "")}
                 </p>
+                <p className="text-xs text-muted-foreground">
+                  {t("capture.charsUsed", {
+                    count: (local.text.length + snapshot.partial.length).toLocaleString(),
+                    max: CAPTURE_MAX_TEXT.toLocaleString(),
+                  })}
+                </p>
                 <div ref={tail} />
               </div>
+              <p aria-live="polite" className="sr-only">
+                {snapshot.sentences.at(-1)?.text ?? ""}
+              </p>
               {active ? (
                 <Button
                   variant="destructive"
                   size="lg"
-                  onClick={() => void controller.stop()}
+                  className="h-11"
+                  onClick={() => {
+                    vibrate(5);
+                    void controller.stop();
+                  }}
                   disabled={snapshot.state === "stopping"}
                 >
                   <Square />
