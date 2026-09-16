@@ -9,9 +9,12 @@ import {
   memoryRevisions,
   memos,
   memoTags,
+  projects,
   shares,
+  taskActivity,
+  tasks,
 } from "@flaremo/db";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { createResourceId, createToken, parseResourceName } from "./ids";
 import {
   normalizeMemoClientId,
@@ -32,6 +35,9 @@ export async function exportData(
     memoryRevisionRows,
     memoryRelationRows,
     memoryResourceLinkRows,
+    projectRows,
+    taskRows,
+    taskActivityRows,
   ] = await Promise.all([
     db.select().from(memos).where(eq(memos.userId, user.id)),
     db.select().from(attachments).where(eq(attachments.userId, user.id)),
@@ -49,6 +55,13 @@ export async function exportData(
       .select()
       .from(memoryResourceLinks)
       .where(eq(memoryResourceLinks.userId, user.id)),
+    db.select().from(projects).where(eq(projects.userId, user.id)),
+    db.select().from(tasks).where(eq(tasks.userId, user.id)),
+    db
+      .select()
+      .from(taskActivity)
+      .where(eq(taskActivity.userId, user.id))
+      .orderBy(asc(taskActivity.id)),
   ]);
 
   const memoIds = new Set(memoRows.map((memo) => memo.id));
@@ -66,7 +79,7 @@ export async function exportData(
     );
   }
   return {
-    version: 3,
+    version: 4,
     exported_at: new Date().toISOString(),
     memos: memoRows.map((memo) => ({
       name: memo.id,
@@ -161,6 +174,41 @@ export async function exportData(
       relation_type: link.relationType,
       metadata: link.metadata,
       created_at: link.createdAt,
+    })),
+    // Recycle-bin rows travel too: a backup that quietly drops soft-deleted
+    // data is a lossy backup. `deleted_at` rides along so an import into a
+    // fresh account reproduces the bin state.
+    projects: projectRows.map((project) => ({
+      name: project.id,
+      title: project.name,
+      description: project.description,
+      status: project.status,
+      deleted_at: project.deletedAt,
+      created_at: project.createdAt,
+      updated_at: project.updatedAt,
+    })),
+    tasks: taskRows.map((task) => ({
+      name: task.id,
+      project_id: task.projectId,
+      source_memo_id: task.sourceMemoId,
+      title: task.title,
+      notes: task.notes,
+      status: task.status,
+      priority: task.priority,
+      due_at: task.dueAt,
+      sort_order: task.sortOrder,
+      completed_at: task.completedAt,
+      deleted_at: task.deletedAt,
+      created_at: task.createdAt,
+      updated_at: task.updatedAt,
+    })),
+    task_activity: taskActivityRows.map((activity) => ({
+      task_id: activity.taskId,
+      actor_type: activity.actorType,
+      actor_name: activity.actorName,
+      action: activity.action,
+      changes: activity.changes,
+      created_at: activity.createdAt,
     })),
   };
 }
@@ -466,6 +514,134 @@ export async function importData(
     importedMemories += 1;
   }
 
+  // Projects, tasks and the activity trail follow the same remap pipeline as
+  // memories: the source id is preserved when free, collision imports get a
+  // fresh id, and task → project / task → memo / activity → task references
+  // follow the maps. A task whose project is not in the bundle lands as
+  // unassigned (project_id is nullable by design).
+  let importedProjects = 0;
+  const projectIdMap = new Map<string, string>();
+  for (const project of bundle.projects) {
+    const sourceId = parseResourceName(project.name, "projects");
+    const existing = await db
+      .select({ id: projects.id })
+      .from(projects)
+      .where(and(eq(projects.id, sourceId), eq(projects.userId, user.id)))
+      .get();
+    if (existing && conflict === "skip") {
+      projectIdMap.set(project.name, existing.id);
+      continue;
+    }
+    const importedId = existing ? createResourceId("projects") : sourceId;
+    projectIdMap.set(project.name, importedId);
+    await db
+      .insert(projects)
+      .values({
+        id: importedId,
+        userId: user.id,
+        name: project.title,
+        description: project.description,
+        status: project.status,
+        deletedAt: project.deleted_at,
+        createdAt: project.created_at,
+        updatedAt: project.updated_at,
+      })
+      .onConflictDoUpdate({
+        target: projects.id,
+        set: {
+          name: project.title,
+          description: project.description,
+          status: project.status,
+          deletedAt: project.deleted_at,
+          updatedAt: project.updated_at,
+        },
+      });
+    importedProjects += 1;
+  }
+
+  let importedTasks = 0;
+  const taskIdMap = new Map<string, string>();
+  for (const task of bundle.tasks) {
+    const sourceId = parseResourceName(task.name, "tasks");
+    const existing = await db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .where(and(eq(tasks.id, sourceId), eq(tasks.userId, user.id)))
+      .get();
+    if (existing && conflict === "skip") {
+      taskIdMap.set(task.name, existing.id);
+      continue;
+    }
+    const importedId = existing ? createResourceId("tasks") : sourceId;
+    taskIdMap.set(task.name, importedId);
+    await db
+      .insert(tasks)
+      .values({
+        id: importedId,
+        userId: user.id,
+        projectId: task.project_id
+          ? (projectIdMap.get(task.project_id) ?? null)
+          : null,
+        // A memo id remaps through the memo map; an unmapped memo (e.g. the
+        // memo was skipped) loses the bridge rather than dangling.
+        sourceMemoId: task.source_memo_id
+          ? (memoIdMap.get(task.source_memo_id) ?? null)
+          : null,
+        title: task.title,
+        notes: task.notes,
+        status: task.status,
+        priority: task.priority,
+        dueAt: task.due_at,
+        sortOrder: task.sort_order,
+        completedAt: task.completed_at,
+        deletedAt: task.deleted_at,
+        createdAt: task.created_at,
+        updatedAt: task.updated_at,
+      })
+      .onConflictDoUpdate({
+        target: tasks.id,
+        set: {
+          projectId: task.project_id
+            ? (projectIdMap.get(task.project_id) ?? null)
+            : null,
+          sourceMemoId: task.source_memo_id
+            ? (memoIdMap.get(task.source_memo_id) ?? null)
+            : null,
+          title: task.title,
+          notes: task.notes,
+          status: task.status,
+          priority: task.priority,
+          dueAt: task.due_at,
+          sortOrder: task.sort_order,
+          completedAt: task.completed_at,
+          deletedAt: task.deleted_at,
+          updatedAt: task.updated_at,
+        },
+      });
+    importedTasks += 1;
+  }
+
+  let importedTaskActivity = 0;
+  for (const activity of bundle.task_activity) {
+    const taskId = activity.task_id
+      ? (taskIdMap.get(activity.task_id) ?? null)
+      : null;
+    // A null task_id is a project-scoped event (reorder) and imports as is;
+    // rows pointing at a task that was not imported are dropped instead of
+    // writing activity for a task that does not exist here.
+    if (activity.task_id && !taskId) continue;
+    await db.insert(taskActivity).values({
+      taskId,
+      userId: user.id,
+      actorType: activity.actor_type,
+      actorName: activity.actor_name,
+      action: activity.action,
+      changes: activity.changes,
+      createdAt: activity.created_at,
+    });
+    importedTaskActivity += 1;
+  }
+
   for (const revision of bundle.memory_revisions) {
     const memoryId = memoryIdMap.get(revision.memory_id);
     if (!memoryId) continue;
@@ -527,6 +703,9 @@ export async function importData(
     imported_relations: importedRelations,
     imported_shares: importedShares,
     imported_memories: importedMemories,
+    imported_projects: importedProjects,
+    imported_tasks: importedTasks,
+    imported_task_activity: importedTaskActivity,
     cleanupR2Keys,
   };
 }
