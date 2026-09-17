@@ -1,0 +1,152 @@
+import type {
+  AppNotificationDto,
+  AttachmentDto,
+  CalendarView,
+  CreateMemoInput,
+  CreateMemoryInput,
+  CreateProjectInput,
+  CreateTaskInput,
+  MemoContextResponse,
+  MemoDto,
+  MemoryDto,
+  MemoryRelationDto,
+  MemoryRevisionDto,
+  MemoState,
+  MemoStatsResponse,
+  MemoVisibility,
+  ProjectDto,
+  PublicShareDto,
+  RelatedMemosResponse,
+  ReviewWalkVia,
+  ShareDto,
+  TagHierarchyResponse,
+  TaskDto,
+  TaskPriority,
+  TaskStatus,
+  UpdateMemoInput,
+  UpdateMemoryInput,
+  UpdateProjectInput,
+  UpdateTaskInput,
+  VectorUsageReport,
+} from "@flaremo/contracts";
+
+export type Attachment = AttachmentDto;
+export type Memo = MemoDto;
+export type MemoPayload = MemoDto["payload"];
+export type Share = ShareDto;
+export type PublicShare = PublicShareDto;
+export type MemoContext = MemoContextResponse;
+export type RelatedMemo = RelatedMemosResponse["memos"][number];
+export type TagHierarchyNode = TagHierarchyResponse["tags"][number];
+export type AppNotification = AppNotificationDto;
+export type Memory = MemoryDto;
+export type MemoryRevision = MemoryRevisionDto;
+export type MemoryRelation = MemoryRelationDto;
+export type {
+  MemoState,
+  MemoStatsResponse,
+  MemoVisibility,
+  ReviewWalkVia,
+  VectorUsageReport,
+};
+
+export type CreateMemoRequest = CreateMemoInput;
+export type UpdateMemoRequest = UpdateMemoInput;
+export type CreateMemoryRequest = CreateMemoryInput;
+export type UpdateMemoryRequest = UpdateMemoryInput;
+
+export type Project = ProjectDto;
+export type Task = TaskDto;
+export type Calendar = CalendarView;
+export type CreateProjectRequest = CreateProjectInput;
+export type UpdateProjectRequest = UpdateProjectInput;
+export type CreateTaskRequest = CreateTaskInput;
+export type UpdateTaskRequest = UpdateTaskInput;
+export type { TaskPriority, TaskStatus };
+
+export type ListMemoParams = {
+  state?: MemoState;
+  q?: string;
+  tag?: string;
+  untagged?: boolean;
+  include_deleted?: boolean;
+  page_size?: number;
+  page_token?: string;
+  space?: MemoSpace;
+};
+
+export type AppInfo = {
+  ok: true;
+  product: string;
+  version: string;
+  update_repository: string | null;
+  update_workflow_url: string | null;
+  releases_url: string;
+  update_guide_url: string;
+  email_provider?: string;
+};
+
+export type LatestRelease = {
+  version: string;
+  name: string;
+  published_at: string | null;
+  url: string;
+};
+
+export type BootstrapStatus = {
+  initialized: boolean;
+  state: "ready" | "complete" | "recovery_required";
+  setup_available: boolean;
+};
+
+export type PersonalAccessToken = {
+  id: string;
+  name: string | null;
+  start: string | null;
+  prefix: string | null;
+  enabled: boolean;
+  expires_at: string | null;
+  created_at: string;
+  updated_at: string;
+  last_request: string | null;
+  request_count: number;
+  rate_limit_enabled: boolean;
+  rate_limit_max: number | null;
+  rate_limit_time_window: number | null;
+};
+
+export type RegistrationStatus = {
+  registration_open: boolean;
+  initialized: boolean;
+  email_verification_required: boolean;
+  captcha: {
+    provider: "none" | "tencent" | "http";
+    site_key: string | null;
+  };
+};
+
+export type CurrentFlareMoUser = {
+  id: string;
+  role: "owner" | "admin" | "member" | null;
+  is_instance_owner: boolean;
+  can_manage_voice_service: boolean;
+  status: "active" | "removed";
+  name: string;
+  email: string;
+  username: string;
+  /** Present when the viewer holds a team membership; drives the space UI. */
+  team: { id: string; name: string } | null;
+};
+
+/** Workspace partition of the memo corpus (see docs/team-space-ux.md). */
+export type MemoSpace = "all" | "personal" | "team";
+
+export type AdminUser = {
+  id: string;
+  email: string;
+  name: string;
+  username: string;
+  role: "owner" | "admin" | "member" | null;
+  status: "active" | "removed";
+  created_at: string;
+};
