@@ -59,7 +59,7 @@ import { mcpApi, mcpStreamableApi } from "./routes/mcp";
 import { memoryApi } from "./routes/memory-api";
 import { memoryMcpApi } from "./routes/memory-mcp";
 import { memosApi } from "./routes/memos-api";
-import { memosConnectApi } from "./routes/memos-connect-api";
+import { memosConnectApi } from "./routes/memos-connect";
 import {
   isLegacyWireRequest,
   memosCurrentApi,
