@@ -32,7 +32,12 @@
   --signal-deep: #ea580c;
   --signal-warm: #fb923c;
   --signal-ink: #c2410c;
-  --gradient-brand: linear-gradient(135deg, #fb923c 0%, #f97316 50%, #ea580c 100%);
+  --gradient-brand: linear-gradient(
+    135deg,
+    #fb923c 0%,
+    #f97316 50%,
+    #ea580c 100%
+  );
   --flame-50: #fff7ed;
   --flame-100: #ffedd5;
   --flame-200: #fed7aa;
@@ -58,12 +63,16 @@
   --card-inset: inset 0 1px 0 0 rgba(255, 255, 255, 0.8);
   --dock-from: rgba(0, 0, 0, 0.03);
   --dock-inset: inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
-  --panel-elev: 0 1px 2px rgba(0, 0, 0, 0.04), 0 10px 28px -14px rgba(0, 0, 0, 0.08);
+  --panel-elev:
+    0 1px 2px rgba(0, 0, 0, 0.04), 0 10px 28px -14px rgba(0, 0, 0, 0.08);
   --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.08);
   --shadow-pop-xl:
-    0 24px 70px -12px rgba(0, 0, 0, 0.12), inset 0 1px 0 0 rgba(255, 255, 255, 0.85);
-  --shadow-glass: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
-  --hover-lift: 0 12px 24px -4px rgba(0, 0, 0, 0.09), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+    0 24px 70px -12px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.85);
+  --shadow-glass:
+    0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+  --hover-lift:
+    0 12px 24px -4px rgba(0, 0, 0, 0.09), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
 
   /* shadcn 语义映射 */
   --background: var(--paper);
@@ -112,12 +121,16 @@
   --dock-from: rgba(255, 255, 255, 0.06);
   --dock-inset: inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
   --panel-elev:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.06), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.06),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
   --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.6);
   --shadow-pop-xl:
-    0 24px 70px -12px rgba(0, 0, 0, 0.75), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
-  --shadow-glass: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
-  --hover-lift: 0 12px 24px -4px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+    0 24px 70px -12px rgba(0, 0, 0, 0.75),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+  --shadow-glass:
+    0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
+  --hover-lift:
+    0 12px 24px -4px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
 
   --signal-ink: var(--signal);
   --flame-50: #431407;
@@ -222,7 +235,8 @@
   /* 细致优雅滚动条 */
   * {
     scrollbar-width: thin;
-    scrollbar-color: color-mix(in srgb, var(--mist) 25%, transparent) transparent;
+    scrollbar-color: color-mix(in srgb, var(--mist) 25%, transparent)
+      transparent;
   }
   ::-webkit-scrollbar {
     width: 5px;
@@ -297,8 +311,14 @@
 
 /* Tab 内容切换入场 */
 @keyframes tab-in {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: none; }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 @utility tab-in {
   animation: tab-in 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
