@@ -500,16 +500,24 @@ test("creates, follows, reads, and removes memo relations", async ({
   expect(await contextResponse.json()).toMatchObject({ relations: [] });
 });
 
-test("keeps the activity strip and the focused composer fully visible", async ({
+test("keeps activity labels and the focused composer fully visible", async ({
   page,
 }) => {
   await page.goto("/");
 
-  // The dual heatmap/calendar toggle became a quiet 4-week strip (D1); it
-  // must render at all, and the composer below it must not move on focus.
-  await expect(
-    page.locator('[data-testid="activity-heatmap"]').first(),
-  ).toBeVisible();
+  const monthLabels = page.locator(
+    '[data-testid="activity-heatmap"] + div span',
+  );
+  const visibleLabels = monthLabels.filter({ hasText: /\S/ });
+  await expect(visibleLabels.first()).toBeVisible();
+  for (const label of await visibleLabels.all()) {
+    const style = await label.evaluate((element) => ({
+      overflow: getComputedStyle(element).overflow,
+      textOverflow: getComputedStyle(element).textOverflow,
+    }));
+    expect(style.overflow).toBe("visible");
+    expect(style.textOverflow).not.toBe("ellipsis");
+  }
 
   const composer = page.getByRole("textbox", { name: /new note|新笔记/i });
   const composerForm = page.locator("form").filter({ has: composer });
