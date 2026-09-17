@@ -40,7 +40,6 @@ import {
 import {
   currentAttachmentToDto,
   currentMemoToDto,
-  currentRelationToDto,
   currentShareToDto,
   currentUserToDto,
   legacyMemoState,
@@ -71,6 +70,7 @@ import {
   splitBearerToken,
 } from "../memos-compat/credential";
 import { resolveMemoCreator } from "../memos-compat/memo-creator";
+import { memoRelationsToDtos } from "../memos-compat/memo-relations";
 import { personalAccessTokenToDto } from "../memos-compat/pat";
 import {
   normalizeAttachmentName,
@@ -1122,28 +1122,13 @@ async function currentRelations(
     context.user,
     memoId,
   );
-  const related = await Promise.all(
-    rows.map(async (relation) => {
-      try {
-        const [memo, relatedMemo] = await Promise.all([
-          getMemoByIdForViewer(context.db, context.user, relation.memoId, {
-            includeDeleted: true,
-          }),
-          getMemoByIdForViewer(
-            context.db,
-            context.user,
-            relation.relatedMemoId,
-            { includeDeleted: true },
-          ),
-        ]);
-        return currentRelationToDto(relation, memo, relatedMemo);
-      } catch {
-        return null;
-      }
-    }),
-  );
-  return related.filter(
-    (value): value is NonNullable<typeof value> => value !== null,
+  return memoRelationsToDtos(
+    rows,
+    (id) =>
+      getMemoByIdForViewer(context.db, context.user, id, {
+        includeDeleted: true,
+      }),
+    { skipUnavailable: true },
   );
 }
 

@@ -78,7 +78,6 @@ import {
   currentAttachmentToDto,
   currentMemoToDto,
   currentReactionToDto,
-  currentRelationToDto,
   currentShareToDto,
   currentShortcutsToListResponse,
   currentShortcutToDto,
@@ -111,6 +110,7 @@ import {
   splitBearerToken,
 } from "../memos-compat/credential";
 import { resolveMemoCreator } from "../memos-compat/memo-creator";
+import { memoRelationsToDtos } from "../memos-compat/memo-relations";
 import { personalAccessTokenToDto } from "../memos-compat/pat";
 import {
   normalizeAttachmentName,
@@ -1591,33 +1591,12 @@ async function connectPublicMemoRead(
         context.user,
         memoId,
       );
-      const relations = await Promise.all(
-        rows.map(async (relation) => {
-          try {
-            const [relationMemo, relatedMemo] = await Promise.all([
-              getMemoByIdForViewer(context.db, context.user, relation.memoId),
-              getMemoByIdForViewer(
-                context.db,
-                context.user,
-                relation.relatedMemoId,
-              ),
-            ]);
-            return currentRelationToDto(relation, relationMemo, relatedMemo);
-          } catch {
-            return null;
-          }
-        }),
+      const relations = await memoRelationsToDtos(
+        rows,
+        (id) => getMemoByIdForViewer(context.db, context.user, id),
+        { skipUnavailable: true },
       );
-      return connectValue(
-        c,
-        {
-          relations: relations.filter(
-            (relation): relation is NonNullable<typeof relation> =>
-              relation !== null,
-          ),
-        },
-        transport,
-      );
+      return connectValue(c, { relations }, transport);
     }
     default:
       return connectErrorForTransport(
@@ -1641,30 +1620,16 @@ async function connectPublicMemoWithDetails(
     listMemoReactions(context.db, context.user, memo.id, { pageSize: 1_000 }),
     listMemoRelationsForViewer(context.db, context.user, memo.id),
   ]);
-  const relations = await Promise.all(
-    relationRows.map(async (relation) => {
-      try {
-        const [relationMemo, relatedMemo] = await Promise.all([
-          getMemoByIdForViewer(context.db, context.user, relation.memoId),
-          getMemoByIdForViewer(
-            context.db,
-            context.user,
-            relation.relatedMemoId,
-          ),
-        ]);
-        return currentRelationToDto(relation, relationMemo, relatedMemo);
-      } catch {
-        return null;
-      }
-    }),
+  const relations = await memoRelationsToDtos(
+    relationRows,
+    (id) => getMemoByIdForViewer(context.db, context.user, id),
+    { skipUnavailable: true },
   );
   const creator = await resolveMemoCreator(context, memo);
   return currentMemoToDto(memo, creator, {
     attachments,
     reactions: reactions.reactions,
-    relations: relations.filter(
-      (relation): relation is NonNullable<typeof relation> => relation !== null,
-    ),
+    relations,
     ...(parent ? { parent } : {}),
   });
 }
@@ -1917,18 +1882,8 @@ async function listConnectRelations(
     context.user,
     memo.id,
   );
-  const relations = await Promise.all(
-    rows.map(async (row) => {
-      const [relationMemo, relatedMemo] = await Promise.all([
-        getMemoById(context.db, context.user, row.memoId, {
-          includeDeleted: true,
-        }),
-        getMemoById(context.db, context.user, row.relatedMemoId, {
-          includeDeleted: true,
-        }),
-      ]);
-      return currentRelationToDto(row, relationMemo, relatedMemo);
-    }),
+  const relations = await memoRelationsToDtos(rows, (id) =>
+    getMemoById(context.db, context.user, id, { includeDeleted: true }),
   );
   return { relations };
 }
@@ -1951,18 +1906,8 @@ async function connectMemoWithDetails(
     }),
     getMemoParent(context.db, context.user, memo.id),
   ]);
-  const relations = await Promise.all(
-    rows.map(async (row) => {
-      const [relationMemo, relatedMemo] = await Promise.all([
-        getMemoById(context.db, context.user, row.memoId, {
-          includeDeleted: true,
-        }),
-        getMemoById(context.db, context.user, row.relatedMemoId, {
-          includeDeleted: true,
-        }),
-      ]);
-      return currentRelationToDto(row, relationMemo, relatedMemo);
-    }),
+  const relations = await memoRelationsToDtos(rows, (id) =>
+    getMemoById(context.db, context.user, id, { includeDeleted: true }),
   );
   return currentMemoToDto(memo, context.user, {
     attachments,
@@ -2033,18 +1978,8 @@ async function hydrateConnectMemos(
         context.user,
         memo.id,
       );
-      const relations = await Promise.all(
-        relationRows.map(async (row) => {
-          const [relationMemo, relatedMemo] = await Promise.all([
-            getMemoById(context.db, context.user, row.memoId, {
-              includeDeleted: true,
-            }),
-            getMemoById(context.db, context.user, row.relatedMemoId, {
-              includeDeleted: true,
-            }),
-          ]);
-          return currentRelationToDto(row, relationMemo, relatedMemo);
-        }),
+      const relations = await memoRelationsToDtos(relationRows, (id) =>
+        getMemoById(context.db, context.user, id, { includeDeleted: true }),
       );
       const parent = await getMemoParent(context.db, context.user, memo.id);
       return currentMemoToDto(memo, context.user, {
@@ -2088,27 +2023,10 @@ async function hydrateConnectPublicMemos(
         context.user,
         memo.id,
       );
-      const relations = (
-        await Promise.all(
-          relationRows.map(async (relation) => {
-            try {
-              const [relationMemo, relatedMemo] = await Promise.all([
-                getMemoByIdForViewer(context.db, context.user, relation.memoId),
-                getMemoByIdForViewer(
-                  context.db,
-                  context.user,
-                  relation.relatedMemoId,
-                ),
-              ]);
-              return currentRelationToDto(relation, relationMemo, relatedMemo);
-            } catch {
-              return null;
-            }
-          }),
-        )
-      ).filter(
-        (relation): relation is NonNullable<typeof relation> =>
-          relation !== null,
+      const relations = await memoRelationsToDtos(
+        relationRows,
+        (id) => getMemoByIdForViewer(context.db, context.user, id),
+        { skipUnavailable: true },
       );
       let creator = creators.get(memo.userId);
       if (!creator) {
