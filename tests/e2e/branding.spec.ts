@@ -161,7 +161,9 @@ test("the owner derives a theme from a custom hex seed", async ({
     "data-accent",
     "custom",
   );
-  await expect(ownerPage.locator("html")).toHaveCSS("--brand-500", /rgb/);
+  // Chromium <153 resolved the custom property to rgb(); newer builds hand
+  // back the declared hex — both prove the ramp variable landed.
+  await expect(ownerPage.locator("html")).toHaveCSS("--brand-500", /rgb|#/);
 
   // Debounced save flushes; a fresh anonymous context resolves custom too.
   await expect
@@ -181,7 +183,7 @@ test("the owner derives a theme from a custom hex seed", async ({
     "data-accent",
     "custom",
   );
-  await expect(anonymousPage.locator("html")).toHaveCSS("--brand-500", /rgb/);
+  await expect(anonymousPage.locator("html")).toHaveCSS("--brand-500", /rgb|#/);
   await anonymousContext.close();
 
   // Reset so later specs and other suites observe the default accent.
@@ -201,4 +203,44 @@ test("the owner derives a theme from a custom hex seed", async ({
   ).resolves.toBe(0);
   await resetContext.close();
   await ownerContext.close();
+});
+
+test("an already-open tab repaints when the owner changes the accent elsewhere", async ({
+  browser,
+}) => {
+  // Branding resolves once per mount, so the tab that stays on the timeline
+  // never refetches on its own. This pins the BroadcastChannel fan-out that
+  // closed the "changed the theme and nothing happened" gap.
+  // Both pages share one context on purpose: BroadcastChannel is per-browser
+  // profile, and the bug reproduces between two tabs of the same browser.
+  const context = await browser.newContext({
+    storageState: E2E_AUTH_STATE,
+  });
+  const viewerPage = await context.newPage();
+  await viewerPage.goto(`${E2E_BASE_URL}/`);
+  await viewerPage.waitForLoadState("domcontentloaded");
+  await expect(viewerPage.locator("html")).not.toHaveAttribute(
+    "data-accent",
+    /.+/,
+  );
+
+  const adminPage = await context.newPage();
+  await adminPage.goto(`${E2E_BASE_URL}/account`);
+  await adminPage.getByRole("tab", { name: /品牌外观|Branding/ }).click();
+  await adminPage.getByRole("button", { name: /翡翠|Jade/ }).click();
+
+  // The untouched timeline tab picks the change up without a reload.
+  await expect(viewerPage.locator("html")).toHaveAttribute(
+    "data-accent",
+    "jade",
+    { timeout: 15_000 },
+  );
+
+  await adminPage.getByRole("button", { name: /火焰|Flame/ }).click();
+  await expect(viewerPage.locator("html")).not.toHaveAttribute(
+    "data-accent",
+    /.+/,
+    { timeout: 15_000 },
+  );
+  await context.close();
 });

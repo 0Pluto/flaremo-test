@@ -270,21 +270,6 @@ export const MemoCard = memo(function MemoCard({
       )}
       style={{ animationDelay: `${Math.min(index, 7) * 35}ms` }}
     >
-      {memo.pinned && (
-        <span
-          aria-hidden="true"
-          className="bg-brand-gradient absolute top-4 bottom-4 left-0 w-[3px] rounded-full"
-        />
-      )}
-      {!memo.pinned && memo.visibility !== "private" && (
-        // Team identity strip: shared notes carry a left marker so the mixed
-        // timeline reads personal vs team at a glance; pinned notes already
-        // occupy the slot with the brand gradient.
-        <span
-          aria-hidden="true"
-          className="absolute top-4 bottom-4 left-0 w-[3px] rounded-full bg-emerald-400/60 dark:bg-emerald-400/40"
-        />
-      )}
       <div className="flex w-full items-center justify-between gap-2">
         <Link
           className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground transition-colors hover:text-foreground"

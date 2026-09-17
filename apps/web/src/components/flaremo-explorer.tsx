@@ -285,7 +285,7 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
           <button
             aria-current={activeSpace === item.value ? "page" : undefined}
             className={cn(
-              "relative flex h-9 items-center gap-3 rounded-lg px-2.5 text-left motion-safe:transition-[background-color,color,transform] motion-safe:duration-150",
+              "flex h-9 items-center gap-3 rounded-lg px-2.5 text-left motion-safe:transition-[background-color,color,transform] motion-safe:duration-150",
               activeSpace === item.value
                 ? "bg-accent font-medium text-accent-foreground"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground motion-safe:hover:translate-x-0.5",
@@ -297,12 +297,6 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
               onNavigate?.();
             }}
           >
-            {activeSpace === item.value && (
-              <span
-                aria-hidden="true"
-                className="bg-brand-gradient absolute top-2 bottom-2 left-0 w-[3px] rounded-full"
-              />
-            )}
             <item.icon />
             <span className="min-w-0 flex-1 truncate">{item.label}</span>
             {item.count !== undefined && (
@@ -322,7 +316,7 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
           <button
             aria-current={activeView === item.view ? "page" : undefined}
             className={cn(
-              "relative flex h-9 items-center gap-3 rounded-lg px-2.5 text-left motion-safe:transition-[background-color,color,transform] motion-safe:duration-150",
+              "flex h-9 items-center gap-3 rounded-lg px-2.5 text-left motion-safe:transition-[background-color,color,transform] motion-safe:duration-150",
               activeView === item.view
                 ? "bg-accent font-medium text-accent-foreground"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground motion-safe:hover:translate-x-0.5",
@@ -334,12 +328,6 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
               onNavigate?.();
             }}
           >
-            {activeView === item.view && (
-              <span
-                aria-hidden="true"
-                className="bg-brand-gradient absolute top-2 bottom-2 left-0 w-[3px] rounded-full"
-              />
-            )}
             <item.icon />
             <span className="min-w-0 flex-1 truncate">{item.label}</span>
             <span className="text-xs tabular-nums opacity-60">

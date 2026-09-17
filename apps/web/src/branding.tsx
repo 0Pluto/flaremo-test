@@ -127,11 +127,39 @@ function applyAccent(accent: BrandingAccent, accentHex: string | null) {
 }
 
 /**
+ * Branding resolves once per mount, so a tab that was already open would keep
+ * the old accent forever while the owner repaints it elsewhere — the "changed
+ * the theme and nothing happened" experience. Owner-side changes broadcast
+ * here and every open tab re-applies through its own BrandingProvider.
+ */
+const BRANDING_CHANNEL_NAME = "flaremo-branding";
+let brandingChannel: BroadcastChannel | null = null;
+
+function getBrandingChannel(): BroadcastChannel | null {
+  brandingChannel ??= (() => {
+    try {
+      return new BroadcastChannel(BRANDING_CHANNEL_NAME);
+    } catch {
+      // No BroadcastChannel (old browser, restrictive embed): the next page
+      // load still resolves branding fresh from the server.
+      return null;
+    }
+  })();
+  return brandingChannel;
+}
+
+/**
  * Applies an accent immediately (admin saves, optimistic updates) without
  * waiting for a BrandingProvider refetch; the next branding fetch agrees.
+ * Also fan-outs to every open tab so they repaint in the same frame.
  */
 export function setAccentAttribute(accent: BrandingAccent, accentHex?: string) {
   applyAccent(accent, accentHex ?? null);
+  getBrandingChannel()?.postMessage({
+    type: "accent",
+    accent,
+    accentHex: accentHex ?? null,
+  });
 }
 
 /**
@@ -172,6 +200,35 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
     // the bundled flame favicon rather than a broken /brand/custom/ URL.
     setFaviconAccent(branding.accent === "custom" ? "flame" : branding.accent);
   }, [branding.accent, branding.accentHex]);
+
+  // Sibling tabs paint owner-side accent changes instantly. Reuses the same
+  // apply effect above (favicon included); the broadcast sender never hears
+  // its own message, so there is no echo loop.
+  useEffect(() => {
+    const channel = getBrandingChannel();
+    if (!channel) return undefined;
+
+    const handleMessage = (event: MessageEvent) => {
+      const data = event.data as {
+        type?: string;
+        accent?: BrandingAccent;
+        accentHex?: string | null;
+      };
+      if (data?.type !== "accent") return;
+      setBranding((current) => {
+        const accent = normalizeBrandingAccent(data.accent, data.accentHex);
+        const accentHex =
+          accent === "custom" ? normalizeHexColor(data.accentHex ?? "") : null;
+        if (accent === current.accent && accentHex === current.accentHex) {
+          return current;
+        }
+        return { ...current, accent, accentHex };
+      });
+    };
+
+    channel.addEventListener("message", handleMessage);
+    return () => channel.removeEventListener("message", handleMessage);
+  }, []);
 
   const value = useMemo(() => branding, [branding]);
   return (
