@@ -125,9 +125,15 @@ FlareMo 探索了一条完全不同的道路：**仅凭一个免费的 Cloudflar
 
 ## 🚀 5 分钟极速部署
 
-FlareMo 刻意保持轻巧。部署流程完全透明，可由 AI Agent 代劳，亦可手动通过 CLI 执行。
+FlareMo 刻意保持轻巧。部署流程完全透明，支持一键部署、AI Agent 代劳，亦可手动通过 CLI 执行。
 
-### 方式一：让 AI Agent 替你部署（推荐）
+### 方式一：一键部署到 Cloudflare
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/realchendahuang/FlareMo)
+
+按钮流程会把仓库克隆到你的 GitHub 账号，并自动创建 D1 / R2 / Queue / Vectorize 资源。首次部署后按 [docs/deploy.md](./docs/deploy.md#一键部署社区支持) 设置 `FLAREMO_PUBLIC_URL` 与密钥。若首次尝试报 "Github API Limit Exceeded"，等待几分钟重试即可。
+
+### 方式二：让 AI Agent 替你部署（推荐）
 
 仓库内附带专为 AI 编写的部署指引：[docs/agent-deploy.md](./docs/agent-deploy.md)。
 
@@ -138,13 +144,13 @@ Agent 将自动完成创建 D1/R2 资源、写入配置、运行数据库迁移�
 
 ---
 
-### 方式二：GitHub Action 手动部署
+### 方式三：GitHub Action 手动部署
 
 自己的 fork 可在 Actions 里手动运行 `Deploy to Cloudflare`：创建 Cloudflare 资源、发布 Worker、同步认证密钥。push 不会自动发布。步骤见 [GitHub Action 部署教程](./docs/github-action-deploy.md)。
 
 ---
 
-### 方式三：手动 3 步部署
+### 方式四：手动 3 步部署
 
 #### 1. 创建 Cloudflare 存储资源
 ```bash
@@ -245,7 +251,7 @@ pnpm check
 # 单元测试与契约测试
 pnpm test
 
-# 全量门禁（9 步，含 E2E）：仅在维护者明确要求时运行
+# 全量门禁（13 步，含 E2E）：仅在维护者明确要求时运行
 # pnpm verify
 ```
 

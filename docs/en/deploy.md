@@ -24,8 +24,6 @@ Full steps: [Deploy with GitHub Actions](./github-action-deploy.md).
 
 The repository does not track `wrangler.jsonc` (manual deployers keep their config as a local file), and there is no CI or automatic deployer. Create the resources, copy the config template, fill in your own values, then run the deploy commands.
 
-## Manual Deployment
-
 ```bash
 pnpm install
 cp wrangler.jsonc.example wrangler.jsonc

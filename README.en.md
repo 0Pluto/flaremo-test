@@ -123,20 +123,24 @@ Many assume "free" means "severely limited". For text-heavy personal knowledge b
 
 ## 🚀 5-Minute Quick Deployment
 
-### Method 1: Deploy with an AI Agent (Recommended)
+### Method 1: One-click Deploy to Cloudflare
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/realchendahuang/FlareMo)
+
+Clones the repository into your GitHub account and provisions D1, R2, Queues, and Vectorize automatically. After the initial deploy, set `FLAREMO_PUBLIC_URL` and secrets (see [docs/en/deploy.md](./docs/en/deploy.md#one-click-deploy-community-supported)). If the first attempt reports "Github API Limit Exceeded", wait a few minutes and retry.
+
+### Method 2: GitHub Action (self-hosted fork)
+
+On your fork, run **Deploy to Cloudflare** from Actions to provision resources, publish the Worker, and sync auth secrets. Pushes do not publish. See [docs/github-action-deploy.md](./docs/github-action-deploy.md) or the [English guide](./docs/en/github-action-deploy.md).
+
+### Method 3: Deploy with an AI Agent (Recommended)
 
 Give the repository to an agent capable of executing terminal commands (e.g. Claude Code, Cursor Agent, Codex) along with [docs/agent-deploy.md](./docs/agent-deploy.md):
 > "Please deploy FlareMo to my Cloudflare account following docs/agent-deploy.md."
 
 ---
 
-### Method 2: GitHub Action (self-hosted fork)
-
-On your fork, run **Deploy to Cloudflare** from Actions. Full steps: [GitHub Action deploy](./docs/en/github-action-deploy.md).
-
----
-
-### Method 3: Manual 3-Step Deployment
+### Method 4: Manual 3-Step Deployment
 
 #### 1. Create Cloudflare Resources
 ```bash
