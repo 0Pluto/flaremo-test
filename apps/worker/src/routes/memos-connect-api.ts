@@ -19,7 +19,6 @@ import {
   deleteUserNotification,
   deleteUserWebhook,
   ForbiddenError,
-  finalizeAttachmentDelete,
   finalizeFlaremoMemberRemoval,
   getAttachmentById,
   getAuthBootstrapStatus,
@@ -53,7 +52,6 @@ import {
   listShortcuts,
   listUserNotifications,
   listUserWebhooks,
-  markAttachmentDeleting,
   markMemoAttachmentsDeleting,
   memosWireRole,
   type PlanLimits,
@@ -102,6 +100,7 @@ import { resolveEmailConfig } from "../email";
 import type { FlareMoEnv } from "../env";
 import { memoFilterScanLimit } from "../filter-scan-limit";
 import { getAuthUserCached, getFlaremoUserCached } from "../identity-cache";
+import { deleteMemosAttachment } from "../memos-compat/attachment-delete";
 import { base64ToUint8Array } from "../memos-compat/base64";
 import {
   isBetterAuthCredentialError,
@@ -646,13 +645,12 @@ async function deleteConnectAttachment(
   context: ConnectRequestContext,
   name: string,
 ) {
-  const attachment = await markAttachmentDeleting(
+  await deleteMemosAttachment(
+    env,
     context.db,
     context.user,
     normalizeAttachmentName(name),
   );
-  await env.ATTACHMENTS.delete(attachment.r2Key);
-  await finalizeAttachmentDelete(context.db, context.user, attachment.id);
 }
 
 async function connectUserMethod(

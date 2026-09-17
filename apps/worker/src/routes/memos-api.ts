@@ -23,7 +23,6 @@ import {
   dataTaskToDto,
   exportData,
   failDataTask,
-  finalizeAttachmentDelete,
   getAttachmentByClientId,
   getAttachmentById,
   getDataTask,
@@ -37,7 +36,6 @@ import {
   listMemoRevisions,
   listMemoShares,
   listMemos,
-  markAttachmentDeleting,
   moveMemoToTrash,
   normalizeAttachmentClientId,
   parseAttachmentDimensions,
@@ -70,9 +68,11 @@ import {
   MAX_INLINE_EXPORT_BYTES,
 } from "../attachment-http";
 import { getRequestContext, type HonoBindings } from "../context";
+import type { FlareMoEnv } from "../env";
 import { jsonError } from "../http";
 import { buildMemoContext } from "../memo-context";
 import { hardDeleteMemoWithAttachments } from "../memo-hard-delete";
+import { deleteMemosAttachment } from "../memos-compat/attachment-delete";
 import { base64ToUint8Array } from "../memos-compat/base64";
 
 export const memosApi = new Hono<HonoBindings>();
@@ -462,13 +462,12 @@ memosApi.get("/attachments/:id/blob", async (c) => {
 memosApi.delete("/attachments/:id", async (c) => {
   try {
     const { db, user } = await getRequestContext(c);
-    const attachment = await markAttachmentDeleting(
+    await deleteMemosAttachment(
+      c.env,
       db,
       user,
       parseAttachmentsResourceName(c.req.param("id")),
     );
-    await c.env.ATTACHMENTS.delete(attachment.r2Key);
-    await finalizeAttachmentDelete(db, user, attachment.id);
     return c.json({ ok: true });
   } catch (error) {
     return jsonError(c, error);
@@ -579,34 +578,21 @@ memosApi.post(
         { userLimits, userId: user.id },
       );
       await assertMemoCountQuota(db, userLimits, user.id, bundle.memos.length);
-      const r2Keys = new Map<string, string>();
-      const r2Etags = new Map<string, string | null>();
-      for (const attachment of bundle.attachments) {
-        if (!attachment.data_base64) continue;
-        const body = base64ToUint8Array(attachment.data_base64);
-        if (body.byteLength > MAX_ATTACHMENT_BYTES) {
-          return c.json(
-            { error: { message: "Imported attachment exceeds 25 MiB" } },
-            413,
-          );
-        }
-        const objectKey = createAttachmentObjectKey(
-          user.id,
-          attachment.filename,
-          "imports",
+      const uploaded = await importBundleUpload(
+        c.env,
+        user.id,
+        bundle.attachments,
+        writtenKeys,
+      );
+      if (!uploaded) {
+        return c.json(
+          { error: { message: "Imported attachment exceeds 25 MiB" } },
+          413,
         );
-        const object = await c.env.ATTACHMENTS.put(objectKey, body, {
-          httpMetadata: {
-            contentType: attachment.content_type ?? "application/octet-stream",
-          },
-        });
-        writtenKeys.push(objectKey);
-        r2Keys.set(attachment.name, objectKey);
-        r2Etags.set(attachment.name, object.httpEtag);
       }
       const result = await importData(db, user, bundle, {
-        attachmentR2Keys: r2Keys,
-        attachmentEtags: r2Etags,
+        attachmentR2Keys: uploaded.r2Keys,
+        attachmentEtags: uploaded.r2Etags,
         conflict: c.req.valid("query").conflict,
       });
       if (result.cleanupR2Keys.length > 0) {
@@ -899,35 +885,22 @@ memosApi.post(
         user.id,
         body.bundle.memos.length,
       );
-      const r2Keys = new Map<string, string>();
-      const r2Etags = new Map<string, string | null>();
-      for (const attachment of body.bundle.attachments) {
-        if (!attachment.data_base64) continue;
-        const bytes = base64ToUint8Array(attachment.data_base64);
-        if (bytes.byteLength > MAX_ATTACHMENT_BYTES) {
-          return c.json(
-            { error: { message: "Imported attachment exceeds 25 MiB" } },
-            413,
-          );
-        }
-        const objectKey = createAttachmentObjectKey(
-          user.id,
-          attachment.filename,
-          "imports",
+      const uploaded = await importBundleUpload(
+        c.env,
+        user.id,
+        body.bundle.attachments,
+        writtenKeys,
+      );
+      if (!uploaded) {
+        return c.json(
+          { error: { message: "Imported attachment exceeds 25 MiB" } },
+          413,
         );
-        const object = await c.env.ATTACHMENTS.put(objectKey, bytes, {
-          httpMetadata: {
-            contentType: attachment.content_type ?? "application/octet-stream",
-          },
-        });
-        writtenKeys.push(objectKey);
-        r2Keys.set(attachment.name, objectKey);
-        r2Etags.set(attachment.name, object.httpEtag);
       }
 
       const result = await runImportTask(db, user, task.id, body.bundle, {
-        attachmentR2Keys: r2Keys,
-        attachmentEtags: r2Etags,
+        attachmentR2Keys: uploaded.r2Keys,
+        attachmentEtags: uploaded.r2Etags,
         conflict: body.conflict,
       });
 
@@ -988,6 +961,52 @@ function bundleAttachmentBytes(attachments: { data_base64?: string }[]) {
         : sum,
     0,
   );
+}
+
+type ImportBundleAttachment = {
+  name: string;
+  filename: string;
+  content_type: string | null;
+  data_base64?: string;
+};
+
+/**
+ * Upload an import bundle's base64 attachment payloads to R2. Returns null
+ * when an attachment exceeds the 25 MiB limit so the caller can emit the
+ * exact 413 response the previous inline loops produced (an early return
+ * that leaves keys already written untouched); keys written so far
+ * accumulate into `writtenKeys` for caller-side failure cleanup.
+ */
+async function importBundleUpload(
+  env: FlareMoEnv,
+  userId: string,
+  attachments: readonly ImportBundleAttachment[],
+  writtenKeys: string[],
+): Promise<{
+  r2Keys: Map<string, string>;
+  r2Etags: Map<string, string | null>;
+} | null> {
+  const r2Keys = new Map<string, string>();
+  const r2Etags = new Map<string, string | null>();
+  for (const attachment of attachments) {
+    if (!attachment.data_base64) continue;
+    const bytes = base64ToUint8Array(attachment.data_base64);
+    if (bytes.byteLength > MAX_ATTACHMENT_BYTES) return null;
+    const objectKey = createAttachmentObjectKey(
+      userId,
+      attachment.filename,
+      "imports",
+    );
+    const object = await env.ATTACHMENTS.put(objectKey, bytes, {
+      httpMetadata: {
+        contentType: attachment.content_type ?? "application/octet-stream",
+      },
+    });
+    writtenKeys.push(objectKey);
+    r2Keys.set(attachment.name, objectKey);
+    r2Etags.set(attachment.name, object.httpEtag);
+  }
+  return { r2Keys, r2Etags };
 }
 
 function estimateBundleJsonBytes(bundle: {

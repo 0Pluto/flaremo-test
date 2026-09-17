@@ -9,7 +9,6 @@ import {
   createMemo,
   createMemoShare,
   type DomainError,
-  finalizeAttachmentDelete,
   finalizeFlaremoMemberRemoval,
   getAttachmentById,
   getAuthBootstrapStatus,
@@ -28,7 +27,6 @@ import {
   listMemoShares,
   listMemosForViewer,
   listMemosPersonalAccessTokens,
-  markAttachmentDeleting,
   moveMemoToTrash,
   replaceMemoRelations,
   revokeAuthSessionByToken,
@@ -62,6 +60,7 @@ import {
 import { resolveEmailConfig } from "../email";
 import { getAuthUserCached, getFlaremoUserCached } from "../identity-cache";
 import { hardDeleteMemoWithAttachments } from "../memo-hard-delete";
+import { deleteMemosAttachment } from "../memos-compat/attachment-delete";
 import { base64ToUint8Array } from "../memos-compat/base64";
 import {
   isBetterAuthCredentialError,
@@ -899,13 +898,12 @@ memosCurrentApi.delete("/attachments/:attachment", async (c, next) => {
   if (isLegacyWireRequest(c)) return next();
   try {
     const context = await getRequestContext(c);
-    const attachment = await markAttachmentDeleting(
+    await deleteMemosAttachment(
+      c.env,
       context.db,
       context.user,
       normalizeAttachmentName(c.req.param("attachment")),
     );
-    await c.env.ATTACHMENTS.delete(attachment.r2Key);
-    await finalizeAttachmentDelete(context.db, context.user, attachment.id);
     return c.body(null, 200);
   } catch (error) {
     return currentJsonError(c, error);
