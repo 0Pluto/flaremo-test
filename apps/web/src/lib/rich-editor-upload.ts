@@ -1,11 +1,17 @@
 import type { Editor } from "@tiptap/react";
 import type { RefObject } from "react";
-import {
-  addUploadPlaceholder,
-  findUploadPlaceholder,
-  removeUploadPlaceholder,
-} from "@/components/upload-placeholder-extension";
 import { inlineImageMarkdown } from "@/lib/image-insert";
+
+/**
+ * The upload-placeholder helpers import the ProseMirror plugin runtime
+ * (`@tiptap/pm/state` + `/view`). Load them lazily: this pipeline only runs
+ * once a TipTap editor is already on screen (its async chunk is live), so the
+ * import resolves from cache — while the eager app shell stays free of
+ * prosemirror.
+ */
+async function loadUploadPlaceholderModule() {
+  return import("@/components/upload-placeholder-extension");
+}
 
 type UploadedAttachment = { id: string; filename: string; name: string };
 
@@ -35,6 +41,12 @@ export async function uploadAndInsertImages(
   const { editorRef, files, position, upload, onUploaded, onError } = options;
   const editor = editorRef.current;
   if (!editor || files.length === 0) return;
+
+  const {
+    addUploadPlaceholder,
+    findUploadPlaceholder,
+    removeUploadPlaceholder,
+  } = await loadUploadPlaceholderModule();
 
   const placeholders = files.map((file, index) => ({
     file,
