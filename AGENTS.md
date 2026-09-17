@@ -70,13 +70,11 @@ pnpm deploy:dry-run
 
 ## Issue 和 PR 流程
 
-`main` 永远代表可发布状态。不要直接在 `main` 上做功能或文档任务；除非是维护者明确要求的紧急修正，否则都按 issue 分支和 PR 流程走。
+`main` 永远代表可发布状态。
 
-标准流程：
+**维护者当面指派的任务直接在 `main` 上提交并 push（2026-09-17 维护者定调）。** Kim 的日常节奏是"在 main 上快速迭代"——给他做的小步功能/修复，做完 `git switch main && git pull` 后直接 commit + push，**不要开分支、不要开 PR**（2026-09-17 我给一个已完成的设置弹窗改动擅自开 PR，被当即否决："我要在 main 上面快速迭代"）。
 
-```text
-issue -> branch -> commit -> push -> PR -> squash merge -> delete branch -> update local main
-```
+issue -> branch -> PR 流程只用于：对外贡献者、维护者明确要求走分支/审查的大型改动、以及需要 CI 门禁的外部 PR 门禁场景。Agent 拿不准时按直接进 main 处理，拿得准要开 PR 的理由时先问一句。
 
 操作规则：
 
