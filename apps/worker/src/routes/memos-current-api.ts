@@ -4,11 +4,13 @@ import {
   assertMemberQuota,
   beginFlaremoMemberRemoval,
   bindMemoAttachments,
+  ConflictError,
   createAttachmentMetadata,
   createFlaremoMemberWithLink,
   createMemo,
   createMemoShare,
-  type DomainError,
+  DomainError,
+  ForbiddenError,
   finalizeFlaremoMemberRemoval,
   getAttachmentById,
   getAuthBootstrapStatus,
@@ -28,10 +30,12 @@ import {
   listMemosForViewer,
   listMemosPersonalAccessTokens,
   moveMemoToTrash,
+  NotFoundError,
   replaceMemoRelations,
   revokeAuthSessionByToken,
   revokeMemoShare,
   SELF_HOST_UNLIMITED,
+  UnauthorizedError,
   updateMemo,
 } from "@flaremo/domain";
 import {
@@ -66,6 +70,7 @@ import {
   isBetterAuthCredentialError,
   splitBearerToken,
 } from "../memos-compat/credential";
+import { CompatValidationError, isDomainError } from "../memos-compat/errors";
 import { resolveMemoCreator } from "../memos-compat/memo-creator";
 import { memoRelationsToDtos } from "../memos-compat/memo-relations";
 import {
@@ -279,7 +284,7 @@ memosCurrentApi.post("/auth/signup", async (c, next) => {
     // cannot complete that flow, so refuse rather than minting unverified
     // accounts that bypass the deployment's anti-abuse gate.
     if (resolveEmailConfig(c.env).provider !== "none") {
-      throw new ForbiddenCurrentError(
+      throw new ForbiddenError(
         "Email verification is required. Please use the FlareMo web app to sign up.",
       );
     }
@@ -368,7 +373,7 @@ memosCurrentApi.post("/auth/refresh", async (c, next) => {
             request: c.req.raw,
             expectedAuthUserId: nativeAccess.authUserId,
           });
-          if (!rotated) throw new UnauthorizedCurrentError();
+          if (!rotated) throw new UnauthorizedError();
           return nativeRefreshResponse(c, rotated);
         }
 
@@ -381,7 +386,7 @@ memosCurrentApi.post("/auth/refresh", async (c, next) => {
           query: { disableCookieCache: true },
         });
         if (!session || session.user.id !== nativeAccess.authUserId) {
-          throw new UnauthorizedCurrentError();
+          throw new UnauthorizedError();
         }
         return noStoreResponse(
           c.json({
@@ -397,7 +402,7 @@ memosCurrentApi.post("/auth/refresh", async (c, next) => {
       // compatibility. A Memos PAT is an application credential, not a
       // refreshable browser session.
       if (!bearerContext.bearerSession || !bearerContext.session) {
-        throw new UnauthorizedCurrentError();
+        throw new UnauthorizedError();
       }
       return noStoreResponse(
         c.json({
@@ -413,7 +418,7 @@ memosCurrentApi.post("/auth/refresh", async (c, next) => {
       env: c.env,
       request: c.req.raw,
     });
-    if (!rotated) throw new UnauthorizedCurrentError();
+    if (!rotated) throw new UnauthorizedError();
     return nativeRefreshResponse(c, rotated);
   } catch (error) {
     return currentJsonError(c, error);
@@ -520,12 +525,12 @@ memosCurrentApi.post("/memos", async (c, next) => {
       currentMemoBodySchema.parse(await c.req.json()),
     );
     if (body.memoId) {
-      throw new ValidationCurrentError(
+      throw new CompatValidationError(
         "memoId is not supported; FlareMo generates memo resource names",
       );
     }
     if (typeof body.content !== "string" || !body.content.trim()) {
-      throw new ValidationCurrentError("Memo content is required");
+      throw new CompatValidationError("Memo content is required");
     }
     const context = await getRequestContext(c);
     const memo = await createMemo(
@@ -788,24 +793,22 @@ memosCurrentApi.post("/attachments", async (c, next) => {
       currentAttachmentBodySchema.parse(await c.req.json()),
     );
     if (body.attachmentId) {
-      throw new ValidationCurrentError(
+      throw new CompatValidationError(
         "attachmentId is not supported; FlareMo generates attachment resource names",
       );
     }
     if (body.externalLink) {
-      throw new ValidationCurrentError(
+      throw new CompatValidationError(
         "External attachments are not supported by FlareMo",
       );
     }
     if (!body.content)
-      throw new ValidationCurrentError("Attachment content is required");
+      throw new CompatValidationError("Attachment content is required");
     const filename = currentRequiredString(body.filename, "filename");
     const type = currentRequiredString(body.type, "type");
     const bytes = decodeBase64(body.content);
     if (bytes.byteLength > MAX_ATTACHMENT_BYTES) {
-      throw new PayloadTooLargeCurrentError(
-        "Attachment exceeds the 25 MiB limit",
-      );
+      throw new DomainError("Attachment exceeds the 25 MiB limit", 413);
     }
     const context = await getRequestContext(c);
     await assertAttachmentStorageQuota(
@@ -869,11 +872,11 @@ memosCurrentApi.patch("/attachments/:attachment", async (c, next) => {
       c.req.query("updateMask") ?? rawBody.updateMask,
     );
     if (!updateMask.every((field) => field === "memo")) {
-      throw new ValidationCurrentError(
+      throw new CompatValidationError(
         "Only the attachment memo field is mutable",
       );
     }
-    if (!body.memo) throw new ValidationCurrentError("A memo is required");
+    if (!body.memo) throw new CompatValidationError("A memo is required");
     const context = await getRequestContext(c);
     const attachment = await getAttachmentById(
       context.db,
@@ -1034,8 +1037,7 @@ memosCurrentApi.delete(
         authUserId: context.authUserId,
         keyId: tokenId,
       });
-      if (!existing)
-        throw new NotFoundCurrentError("Personal access token not found");
+      if (!existing) throw new NotFoundError("Personal access token not found");
       await createFlareMoAuth(c.env, context.db).api.updateApiKey({
         body: {
           configId: "memos",
@@ -1057,7 +1059,7 @@ memosCurrentApi.get("/users/:user", async (c, next) => {
     const context = await getRequestContext(c);
     const userId = normalizeUserName(c.req.param("user"));
     const user = await getFlaremoUserCached(context.db, userId);
-    if (!user) throw new NotFoundCurrentError("User not found");
+    if (!user) throw new NotFoundError("User not found");
     return c.json(await memosCompatUserDto(context.db, user, context.user.id));
   } catch (error) {
     return currentJsonError(c, error);
@@ -1071,7 +1073,7 @@ memosCurrentApi.delete("/users/:user", async (c, next) => {
     assertOwnerUser(context);
     const userId = normalizeUserName(c.req.param("user"));
     if (userId === context.user.id) {
-      throw new ForbiddenCurrentError("You cannot delete your own account");
+      throw new ForbiddenError("You cannot delete your own account");
     }
     const artifacts = await beginFlaremoMemberRemoval(context.db, userId);
     await cleanupFlaremoArtifacts(c.env, artifacts);
@@ -1139,14 +1141,14 @@ function assertSessionCredential(
   // PATs authorize memo data, but a credential-management endpoint must not
   // let a leaked PAT mint or revoke additional PATs. Cookie sessions and the
   // opaque Better Auth session bearer returned by the auth facade are allowed.
-  if (context.credential === "pat") throw new UnauthorizedCurrentError();
+  if (context.credential === "pat") throw new UnauthorizedError();
 }
 
 function assertOwnerUser(
   context: Awaited<ReturnType<typeof getRequestContext>>,
 ) {
   if (context.credential === "pat" || !isInstanceOwner(context.user)) {
-    throw new ForbiddenCurrentError(
+    throw new ForbiddenError(
       "An owner session is required for user management",
     );
   }
@@ -1158,10 +1160,10 @@ async function assertRegistrationOpen(
   const db = createDb(c.env.DB);
   const status = await getAuthBootstrapStatus(db);
   if (status.state !== "complete") {
-    throw new ConflictCurrentError("Registration is not available yet");
+    throw new ConflictError("Registration is not available yet");
   }
   if (!(await getUserRegistrationAllowed(db))) {
-    throw new ForbiddenCurrentError("User registration is disabled");
+    throw new ForbiddenError("User registration is disabled");
   }
 }
 
@@ -1171,10 +1173,10 @@ function currentListQuery(c: Parameters<typeof getRequestContext>[0]) {
   const rawState = c.req.query("state");
   const state = legacyMemoState(rawState);
   if (rawState && rawState !== "STATE_UNSPECIFIED" && !state) {
-    throw new ValidationCurrentError(`Unsupported memo state: ${rawState}`);
+    throw new CompatValidationError(`Unsupported memo state: ${rawState}`);
   }
   if (state === "trashed" || state === "deleted") {
-    throw new ValidationCurrentError(
+    throw new CompatValidationError(
       "Current Memos only exposes NORMAL and ARCHIVED list states",
     );
   }
@@ -1274,27 +1276,25 @@ function currentUpdateInput(
   for (const field of fields) {
     if (field === "content") {
       if (body.content === undefined)
-        throw new ValidationCurrentError("content is required by updateMask");
+        throw new CompatValidationError("content is required by updateMask");
       input.content = body.content;
     } else if (field === "visibility") {
       if (body.visibility === undefined)
-        throw new ValidationCurrentError(
-          "visibility is required by updateMask",
-        );
+        throw new CompatValidationError("visibility is required by updateMask");
       input.visibility = currentVisibilityToLegacy(body.visibility);
     } else if (field === "state") {
       if (body.state === undefined)
-        throw new ValidationCurrentError("state is required by updateMask");
+        throw new CompatValidationError("state is required by updateMask");
       const state = legacyMemoState(body.state);
       if (!state || state === "trashed" || state === "deleted") {
-        throw new ValidationCurrentError(
+        throw new CompatValidationError(
           "Only NORMAL and ARCHIVED memo states are supported by current Memos",
         );
       }
       input.status = state;
     } else if (field === "pinned") {
       if (body.pinned === undefined)
-        throw new ValidationCurrentError("pinned is required by updateMask");
+        throw new CompatValidationError("pinned is required by updateMask");
       input.pinned = body.pinned;
     } else if (
       field === "property" ||
@@ -1304,20 +1304,18 @@ function currentUpdateInput(
     ) {
       input.payload = currentPayload(body);
     } else {
-      throw new ValidationCurrentError(
-        `Unsupported updateMask field: ${field}`,
-      );
+      throw new CompatValidationError(`Unsupported updateMask field: ${field}`);
     }
   }
   if (Object.keys(input).length === 0)
-    throw new ValidationCurrentError("updateMask is required");
+    throw new CompatValidationError("updateMask is required");
   return input as Parameters<typeof updateMemo>[3];
 }
 
 function currentVisibilityToLegacy(value: string | undefined) {
   const normalized = parseMemosVisibility(value);
   if (!normalized) {
-    throw new ValidationCurrentError(`Unsupported memo visibility: ${value}`);
+    throw new CompatValidationError(`Unsupported memo visibility: ${value}`);
   }
   return normalized;
 }
@@ -1327,9 +1325,7 @@ function currentRelationToLegacy(
 ): "reference" | "comment" {
   const normalized = parseMemosRelationType(value);
   if (!normalized) {
-    throw new ValidationCurrentError(
-      `Unsupported memo relation type: ${value}`,
-    );
+    throw new CompatValidationError(`Unsupported memo relation type: ${value}`);
   }
   return normalized;
 }
@@ -1337,7 +1333,7 @@ function currentRelationToLegacy(
 function parseUpdateMask(value: string | undefined) {
   const fields = splitUpdateMaskFields(value);
   if (fields.length === 0)
-    throw new ValidationCurrentError("updateMask is required");
+    throw new CompatValidationError("updateMask is required");
   return fields;
 }
 
@@ -1348,7 +1344,7 @@ function normalizeCurrentOrderBy(value: string) {
     value.trim(),
   );
   if (!match) {
-    throw new ValidationCurrentError(
+    throw new CompatValidationError(
       "Only a single create_time, display_time, or update_time order is supported",
     );
   }
@@ -1366,13 +1362,13 @@ function parsePageSize(value: string | undefined, fallback: number) {
   if (!value) return fallback;
   const parsed = parseMemosPageSize(value);
   if (parsed === null)
-    throw new ValidationCurrentError("pageSize must be a positive integer");
+    throw new CompatValidationError("pageSize must be a positive integer");
   return Math.min(parsed, 100);
 }
 
 function parseBearerToken(value: string) {
   const token = splitBearerToken(value);
-  if (token === null) throw new UnauthorizedCurrentError();
+  if (token === null) throw new UnauthorizedError();
   return token;
 }
 
@@ -1386,20 +1382,20 @@ function assertCurrentUserPath(value: string, currentUserId: string) {
     ? value.replace(/^users\//, "")
     : value;
   if (normalized !== expected)
-    throw new ForbiddenCurrentError("Only the current user is available");
+    throw new ForbiddenError("Only the current user is available");
 }
 
 function decodeBase64(value: string) {
   try {
     return base64ToUint8Array(value);
   } catch {
-    throw new ValidationCurrentError("Attachment content must be valid base64");
+    throw new CompatValidationError("Attachment content must be valid base64");
   }
 }
 
 function currentRequiredString(value: string | undefined, field: string) {
   if (!value?.trim()) {
-    throw new ValidationCurrentError(`${field} is required`);
+    throw new CompatValidationError(`${field} is required`);
   }
   return value.trim();
 }
@@ -1468,7 +1464,6 @@ function currentJsonError(
 }
 
 function currentErrorStatus(error: unknown) {
-  if (error instanceof CurrentHttpError) return error.status;
   if (isDomainError(error)) return error.status;
   if (isBetterAuthCredentialError(error)) return 400;
   if (isRecord(error) && typeof error.statusCode === "number")
@@ -1486,7 +1481,6 @@ function currentErrorStatus(error: unknown) {
 }
 
 function currentErrorMessage(error: unknown) {
-  if (error instanceof CurrentHttpError) return error.message;
   if (isDomainError(error)) return error.message;
   if (isBetterAuthCredentialError(error))
     return "unmatched username and password";
@@ -1529,57 +1523,4 @@ function currentErrorCode(status: number) {
   if (status === 413) return 8;
   if (status === 429) return 8;
   return 13;
-}
-
-function isDomainError(error: unknown): error is DomainError {
-  return (
-    error instanceof Error &&
-    "status" in error &&
-    typeof error.status === "number"
-  );
-}
-
-class CurrentHttpError extends Error {
-  constructor(
-    message: string,
-    readonly status: number,
-  ) {
-    super(message);
-  }
-}
-
-class ValidationCurrentError extends CurrentHttpError {
-  constructor(message: string) {
-    super(message, 400);
-  }
-}
-
-class UnauthorizedCurrentError extends CurrentHttpError {
-  constructor(message = "Authentication required") {
-    super(message, 401);
-  }
-}
-
-class ForbiddenCurrentError extends CurrentHttpError {
-  constructor(message: string) {
-    super(message, 403);
-  }
-}
-
-class NotFoundCurrentError extends CurrentHttpError {
-  constructor(message: string) {
-    super(message, 404);
-  }
-}
-
-class ConflictCurrentError extends CurrentHttpError {
-  constructor(message: string) {
-    super(message, 409);
-  }
-}
-
-class PayloadTooLargeCurrentError extends CurrentHttpError {
-  constructor(message: string) {
-    super(message, 413);
-  }
 }

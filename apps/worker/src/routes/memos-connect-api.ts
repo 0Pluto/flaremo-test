@@ -13,7 +13,6 @@ import {
   createMemoShare,
   createShortcut,
   createUserWebhook,
-  type DomainError,
   deleteMemoReaction,
   deleteShortcut,
   deleteUserNotification,
@@ -106,6 +105,7 @@ import {
   isBetterAuthCredentialError,
   splitBearerToken,
 } from "../memos-compat/credential";
+import { CompatValidationError, isDomainError } from "../memos-compat/errors";
 import { resolveMemoCreator } from "../memos-compat/memo-creator";
 import { memoRelationsToDtos } from "../memos-compat/memo-relations";
 import {
@@ -177,7 +177,7 @@ memosConnectApi.post("/:service/:method", async (c) => {
       : await c.req.json();
   } catch (error) {
     if (binaryTransport) {
-      return connectBinaryError(c, binaryTransport, error);
+      return connectErrorFrom(c, error, binaryTransport);
     }
     return connectError(
       c,
@@ -414,8 +414,8 @@ memosConnectApi.post("/:service/:method", async (c) => {
         );
     }
   } catch (error) {
-    if (binaryTransport) return connectBinaryError(c, binaryTransport, error);
-    return connectDomainError(c, error);
+    if (binaryTransport) return connectErrorFrom(c, error, binaryTransport);
+    return connectErrorFrom(c, error);
   }
 });
 
@@ -463,7 +463,7 @@ async function connectShortcutMethod(
       const shortcut = record(body.shortcut);
       const updateMask = fieldMaskPaths(body.updateMask);
       if (updateMask.length === 0) {
-        throw new ConnectInputError("updateMask is required");
+        throw new CompatValidationError("updateMask is required");
       }
       const updated = await updateShortcut(context.db, context.user, {
         name: requiredString(shortcut.name, "shortcut.name"),
@@ -544,7 +544,7 @@ async function connectAttachmentMethod(
       const attachment = record(body.attachment);
       const fields = fieldMaskPaths(body.updateMask);
       if (fields.length !== 1 || fields[0] !== "memo") {
-        throw new ConnectInputError(
+        throw new CompatValidationError(
           "Only the attachment memo field is mutable",
         );
       }
@@ -593,12 +593,12 @@ async function createConnectAttachment(
   attachmentId?: string,
 ) {
   if (attachmentId) {
-    throw new ConnectInputError(
+    throw new CompatValidationError(
       "attachmentId is not supported; FlareMo generates attachment resource names",
     );
   }
   if (optionalString(attachment.externalLink)) {
-    throw new ConnectInputError(
+    throw new CompatValidationError(
       "External attachments are not supported by FlareMo",
     );
   }
@@ -606,10 +606,10 @@ async function createConnectAttachment(
   const type = requiredString(attachment.type, "attachment.type");
   const bytes = attachmentBytes(attachment.content);
   if (bytes.byteLength === 0) {
-    throw new ConnectInputError("attachment.content is required");
+    throw new CompatValidationError("attachment.content is required");
   }
   if (bytes.byteLength > MAX_ATTACHMENT_BYTES) {
-    throw new ConnectInputError("Attachment exceeds the 25 MiB limit");
+    throw new CompatValidationError("Attachment exceeds the 25 MiB limit");
   }
   await assertAttachmentStorageQuota(
     context.db,
@@ -696,7 +696,7 @@ async function connectUserMethod(
     }
     case "GetUser": {
       const user = await getUserByName(context.db, body.name);
-      if (!user) throw new ConnectInputError("User not found");
+      if (!user) throw new CompatValidationError("User not found");
       const dto = await memosCompatUserDto(
         context.db,
         user,
@@ -719,7 +719,7 @@ async function connectUserMethod(
       const username = requiredString(user.username, "user.username");
       const password = requiredString(user.password, "user.password");
       if (password.length < 8) {
-        throw new ConnectInputError(
+        throw new CompatValidationError(
           "user.password must be at least 8 characters",
         );
       }
@@ -752,9 +752,9 @@ async function connectUserMethod(
         );
       }
       const target = await getUserByName(context.db, body.name);
-      if (!target) throw new ConnectInputError("User not found");
+      if (!target) throw new CompatValidationError("User not found");
       if (target.id === context.user.id) {
-        throw new ConnectInputError("You cannot delete your own account");
+        throw new CompatValidationError("You cannot delete your own account");
       }
       const artifacts = await beginFlaremoMemberRemoval(context.db, target.id);
       await cleanupFlaremoArtifacts(c.env, artifacts);
@@ -775,7 +775,7 @@ async function connectUserMethod(
       assertConnectUserPath(user.name, context.user.id);
       const fields = fieldMaskPaths(body.updateMask);
       if (fields.length === 0)
-        throw new ConnectInputError("updateMask is required");
+        throw new CompatValidationError("updateMask is required");
       let nextAuthUser = authUser;
       if (fields.includes("username")) {
         const username = requiredString(user.username, "user.username");
@@ -932,7 +932,7 @@ async function connectUserMethod(
         expiresInDays < 0 ||
         expiresInDays > 365
       ) {
-        throw new ConnectInputError(
+        throw new CompatValidationError(
           "expiresInDays must be an integer between 0 and 365",
         );
       }
@@ -975,7 +975,7 @@ async function connectUserMethod(
         await listMemosPersonalAccessTokens(context.db, context.authUserId)
       ).find((item) => item.id === tokenId);
       if (!token)
-        throw new ConnectInputError("Personal access token not found");
+        throw new CompatValidationError("Personal access token not found");
       await getFlareMoRuntime(c.env).auth.api.updateApiKey({
         body: {
           configId: "memos",
@@ -1007,7 +1007,9 @@ async function connectUserMethod(
       const webhook = record(body.webhook);
       const signingSecret = webhook.signingSecret;
       if (signingSecret !== undefined && typeof signingSecret !== "string") {
-        throw new ConnectInputError("webhook.signingSecret must be a string");
+        throw new CompatValidationError(
+          "webhook.signingSecret must be a string",
+        );
       }
       return connectValue(
         c,
@@ -1034,7 +1036,9 @@ async function connectUserMethod(
       const webhook = record(body.webhook);
       const signingSecret = webhook.signingSecret;
       if (signingSecret !== undefined && typeof signingSecret !== "string") {
-        throw new ConnectInputError("webhook.signingSecret must be a string");
+        throw new CompatValidationError(
+          "webhook.signingSecret must be a string",
+        );
       }
       return connectValue(
         c,
@@ -1657,8 +1661,9 @@ async function connectBatchGetLinkMetadata(
 ) {
   const body = record(value);
   const urls = list(body.urls).map((url) => requiredString(url, "urls[]"));
-  if (urls.length === 0) throw new ConnectInputError("urls are required");
-  if (urls.length > 10) throw new ConnectInputError("too many urls (max 10)");
+  if (urls.length === 0) throw new CompatValidationError("urls are required");
+  if (urls.length > 10)
+    throw new CompatValidationError("too many urls (max 10)");
   const linkMetadata = await Promise.all(
     urls.map((url) => fetchLinkMetadata(url)),
   );
@@ -1748,7 +1753,7 @@ async function updateConnectMemo(
   const name = requiredString(memo.name, "memo.name");
   const fields = splitUpdateMaskFields(body.updateMask);
   if (fields.length === 0)
-    throw new ConnectInputError("updateMask is required");
+    throw new CompatValidationError("updateMask is required");
 
   const input: Parameters<typeof updateMemo>[3] = {};
   for (const field of fields) {
@@ -1761,7 +1766,7 @@ async function updateConnectMemo(
         break;
       case "pinned":
         if (typeof memo.pinned !== "boolean")
-          throw new ConnectInputError("memo.pinned must be a boolean");
+          throw new CompatValidationError("memo.pinned must be a boolean");
         input.pinned = memo.pinned;
         break;
       case "state":
@@ -1773,7 +1778,9 @@ async function updateConnectMemo(
         input.payload = currentPayload(memo);
         break;
       default:
-        throw new ConnectInputError(`Unsupported updateMask field: ${field}`);
+        throw new CompatValidationError(
+          `Unsupported updateMask field: ${field}`,
+        );
     }
   }
   const updated = await updateMemo(
@@ -2056,7 +2063,7 @@ function currentPayload(memo: Record<string, unknown>) {
 function visibilityToLegacy(value: unknown) {
   const normalized = parseMemosVisibility(value);
   if (!normalized) {
-    throw new ConnectInputError(`Unsupported visibility: ${String(value)}`);
+    throw new CompatValidationError(`Unsupported visibility: ${String(value)}`);
   }
   return normalized;
 }
@@ -2068,7 +2075,7 @@ function stateToLegacy(value: string | undefined) {
   if (normalized === "TRASHED") return "trashed" as const;
   if (normalized === "DELETED") return "deleted" as const;
   if (normalized === "STATE_UNSPECIFIED") return undefined;
-  throw new ConnectInputError(`Unsupported memo state: ${value}`);
+  throw new CompatValidationError(`Unsupported memo state: ${value}`);
 }
 
 function relationTypeToLegacy(
@@ -2076,7 +2083,7 @@ function relationTypeToLegacy(
 ): "reference" | "comment" {
   const normalized = parseMemosRelationType(value);
   if (!normalized) {
-    throw new ConnectInputError(`Unsupported relation type: ${value}`);
+    throw new CompatValidationError(`Unsupported relation type: ${value}`);
   }
   return normalized;
 }
@@ -2087,7 +2094,7 @@ function normalizeOrderBy(value: string) {
       value.trim(),
     );
   if (!match) {
-    throw new ConnectInputError(
+    throw new CompatValidationError(
       "orderBy must be one supported single-field order such as create_time desc",
     );
   }
@@ -2106,7 +2113,7 @@ function pageSize(value: unknown) {
   if (value === undefined) return 50;
   const parsed = parseMemosPageSize(value);
   if (parsed === null)
-    throw new ConnectInputError("pageSize must be a positive integer");
+    throw new CompatValidationError("pageSize must be a positive integer");
   return Math.min(parsed, 1_000);
 }
 
@@ -2114,7 +2121,7 @@ function reactionMemoName(value: string) {
   const parts = value.split("/").filter(Boolean);
   const marker = parts.lastIndexOf("reactions");
   if (marker <= 0 || marker + 2 !== parts.length) {
-    throw new ConnectInputError("Invalid reaction name");
+    throw new CompatValidationError("Invalid reaction name");
   }
   return parts.slice(0, marker).join("/");
 }
@@ -2123,10 +2130,10 @@ function shareTokenFromName(value: string) {
   const parts = value.split("/").filter(Boolean);
   const marker = parts.lastIndexOf("shares");
   if (marker < 0 || marker + 2 !== parts.length) {
-    throw new ConnectInputError("Invalid share name");
+    throw new CompatValidationError("Invalid share name");
   }
   const token = parts[marker + 1];
-  if (!token) throw new ConnectInputError("Invalid share name");
+  if (!token) throw new CompatValidationError("Invalid share name");
   return token;
 }
 
@@ -2172,7 +2179,9 @@ function attachmentBytes(value: unknown) {
     try {
       return base64ToUint8Array(value);
     } catch {
-      throw new ConnectInputError("attachment.content must be valid base64");
+      throw new CompatValidationError(
+        "attachment.content must be valid base64",
+      );
     }
   }
   return new Uint8Array();
@@ -2198,7 +2207,9 @@ function assertConnectUserPath(value: unknown, currentUserId: string) {
   const name = requiredString(value, "user");
   const normalized = name.startsWith("users/") ? name : `users/${name}`;
   if (normalized !== currentUserId) {
-    throw new ConnectInputError("Only the current FlareMo user is available");
+    throw new CompatValidationError(
+      "Only the current FlareMo user is available",
+    );
   }
 }
 
@@ -2206,7 +2217,7 @@ function assertConnectUserSettingPath(value: unknown, currentUserId: string) {
   const name = requiredString(value, "setting");
   const prefix = `${currentUserId}/settings/`;
   if (!name.startsWith(prefix) || name.slice(prefix.length).includes("/")) {
-    throw new ConnectInputError(
+    throw new CompatValidationError(
       "Only the current FlareMo user settings are available",
     );
   }
@@ -2215,7 +2226,7 @@ function assertConnectUserSettingPath(value: unknown, currentUserId: string) {
 function assertConnectPatPath(value: unknown, currentUserId: string) {
   const name = requiredString(value, "name");
   if (!name.startsWith(`${currentUserId}/personalAccessTokens/`)) {
-    throw new ConnectInputError(
+    throw new CompatValidationError(
       "Only the current FlareMo user's PATs are available",
     );
   }
@@ -2268,7 +2279,7 @@ async function listConnectUserSettings(context: ConnectRequestContext) {
 function instanceSettingKey(name: string) {
   const key = name.split("/").at(-1)?.toUpperCase();
   if (!key || !/^[A-Z_]+$/.test(key)) {
-    throw new ConnectInputError("Invalid instance setting name");
+    throw new CompatValidationError("Invalid instance setting name");
   }
   return key;
 }
@@ -2278,7 +2289,7 @@ async function instanceSettingResponse(
   name: string,
 ) {
   if (!name.startsWith("instance/settings/")) {
-    throw new ConnectInputError("Invalid instance setting name");
+    throw new CompatValidationError("Invalid instance setting name");
   }
   const key = instanceSettingKey(name);
   const stored = await getStoredSetting(
@@ -2356,7 +2367,9 @@ function publicInstanceSettingValue(key: string, value: unknown) {
       },
     };
   }
-  throw new ConnectInputError("This instance setting requires authentication");
+  throw new CompatValidationError(
+    "This instance setting requires authentication",
+  );
 }
 
 function defaultInstanceSetting(key: string) {
@@ -2398,7 +2411,7 @@ function defaultInstanceSetting(key: string) {
     case "TAGS":
       return { case: "tagsSetting", value: { tags: {} } };
     default:
-      throw new ConnectInputError(`Unsupported instance setting: ${key}`);
+      throw new CompatValidationError(`Unsupported instance setting: ${key}`);
   }
 }
 
@@ -2425,7 +2438,7 @@ async function updateBetterAuthUsername(
   username: string,
 ) {
   if (!c.req.raw.headers.get("cookie")) {
-    throw new ConnectInputError(
+    throw new CompatValidationError(
       "A Better Auth cookie session is required to update the username",
     );
   }
@@ -2447,7 +2460,7 @@ async function updateBetterAuthUsername(
   } catch {
     // Keep the stable compatibility error when Better Auth did not return JSON.
   }
-  throw new ConnectInputError(message);
+  throw new CompatValidationError(message);
 }
 
 function record(value: unknown): Record<string, unknown> {
@@ -2487,7 +2500,7 @@ function connectSettingRecord(value: unknown) {
 
 function requiredString(value: unknown, field: string) {
   if (typeof value !== "string" || !value.trim())
-    throw new ConnectInputError(`${field} is required`);
+    throw new CompatValidationError(`${field} is required`);
   return value.trim();
 }
 
@@ -2496,7 +2509,7 @@ function optionalTimestamp(value: unknown, field: string) {
   const normalized = requiredString(value, field);
   const date = new Date(normalized);
   if (Number.isNaN(date.getTime())) {
-    throw new ConnectInputError(`${field} must be a valid timestamp`);
+    throw new CompatValidationError(`${field} must be a valid timestamp`);
   }
   return date.toISOString();
 }
@@ -2537,14 +2550,9 @@ function connectNotificationToDto(notification: UserNotificationDto) {
 function notificationStatusFromDto(value: unknown) {
   if (value === "UNREAD" || value === "unread") return "unread" as const;
   if (value === "ARCHIVED" || value === "archived") return "archived" as const;
-  throw new ConnectInputError("notification.status must be UNREAD or ARCHIVED");
-}
-
-class ConnectInputError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "ConnectInputError";
-  }
+  throw new CompatValidationError(
+    "notification.status must be UNREAD or ARCHIVED",
+  );
 }
 
 function connectJson(c: ConnectContext, value: unknown) {
@@ -2641,9 +2649,7 @@ async function connectAuthSignIn(
             400,
           );
     }
-    return transport
-      ? connectBinaryError(c, transport, error)
-      : connectDomainError(c, error);
+    return connectErrorFrom(c, error, transport);
   }
 }
 
@@ -2680,9 +2686,7 @@ async function connectAuthRefresh(
     response.headers.set("cache-control", "no-store");
     return response;
   } catch (error) {
-    return transport
-      ? connectBinaryError(c, transport, error)
-      : connectDomainError(c, error);
+    return connectErrorFrom(c, error, transport);
   }
 }
 
@@ -2719,9 +2723,7 @@ async function connectAuthSignOut(
     response.headers.set("cache-control", "no-store");
     return response;
   } catch (error) {
-    return transport
-      ? connectBinaryError(c, transport, error)
-      : connectDomainError(c, error);
+    return connectErrorFrom(c, error, transport);
   }
 }
 
@@ -2754,7 +2756,7 @@ function connectErrorForTransport(
   transport: BinaryTransport | undefined,
   code: string,
   message: string,
-  status: 400 | 401 | 403 | 404 | 409 | 415 | 500 | 501,
+  status: 400 | 401 | 403 | 404 | 409 | 415 | 429 | 500 | 501,
 ) {
   if (!transport) return connectError(c, code, message, status);
   const headers = new Headers({
@@ -2772,50 +2774,60 @@ function connectErrorForTransport(
   );
 }
 
-function connectBinaryError(
+/**
+ * Single Connect error envelope: picks the JSON or binary representation
+ * from the transport and maps the classified error onto it. Both the legacy
+ * connectDomainError and connectBinaryError paths used to re-implement this
+ * mapping, and the binary copy silently demoted HTTP 429 to 400 — the
+ * resource_exhausted status now survives the binary path like it always did
+ * on JSON.
+ */
+function connectErrorFrom(
   c: ConnectContext,
-  transport: BinaryTransport,
   error: unknown,
+  transport?: BinaryTransport,
 ) {
-  if (error instanceof ConnectInputError) {
-    return connectErrorForTransport(
-      c,
-      transport,
-      "invalid_argument",
-      error.message,
-      400,
-    );
+  const status = connectStatusForError(error);
+  const code =
+    error instanceof CompatValidationError || error instanceof ProtoCodecError
+      ? "invalid_argument"
+      : isDomainError(error)
+        ? domainCode(status)
+        : "internal";
+  const message =
+    error instanceof CompatValidationError ||
+    error instanceof ProtoCodecError ||
+    isDomainError(error)
+      ? error.message
+      : "Internal error";
+  if (transport) {
+    return connectErrorForTransport(c, transport, code, message, status);
   }
-  if (error instanceof ProtoCodecError) {
-    return connectErrorForTransport(
-      c,
-      transport,
-      "invalid_argument",
-      error.message,
-      400,
-    );
-  }
+  return connectError(c, code, message, status);
+}
+
+function connectStatusForError(error: unknown) {
   if (isDomainError(error)) {
     const status = error.status;
-    return connectErrorForTransport(
-      c,
-      transport,
-      domainCode(status),
-      error.message,
-      status === 401 || status === 403 || status === 404 || status === 409
+    return (
+      status === 401 ||
+      status === 403 ||
+      status === 404 ||
+      status === 409 ||
+      status === 429
         ? status
         : status >= 500
           ? 500
-          : 400,
-    );
+          : 400
+    ) as 400 | 401 | 403 | 404 | 409 | 415 | 429 | 500 | 501;
   }
-  return connectErrorForTransport(
-    c,
-    transport,
-    "internal",
-    "Internal error",
-    500,
-  );
+  if (
+    error instanceof CompatValidationError ||
+    error instanceof ProtoCodecError
+  ) {
+    return 400;
+  }
+  return 500;
 }
 
 function binaryContentType(transport: BinaryTransport) {
@@ -2906,7 +2918,7 @@ async function connectAuthSignUp(
     const username = requiredString(body.username, "username");
     const password = requiredString(body.password, "password");
     if (password.length < 8) {
-      throw new ConnectInputError("password must be at least 8 characters");
+      throw new CompatValidationError("password must be at least 8 characters");
     }
     const displayName =
       optionalString(body.displayName) ??
@@ -2976,44 +2988,8 @@ async function connectAuthSignUp(
     response.headers.set("cache-control", "no-store");
     return response;
   } catch (error) {
-    return transport
-      ? connectBinaryError(c, transport, error)
-      : connectDomainError(c, error);
+    return connectErrorFrom(c, error, transport);
   }
-}
-
-function connectDomainError(c: ConnectContext, error: unknown) {
-  if (error instanceof ConnectInputError) {
-    return connectError(c, "invalid_argument", error.message, 400);
-  }
-  if (isDomainError(error)) {
-    const status = error.status;
-    return connectError(
-      c,
-      domainCode(status),
-      error.message,
-      status === 401 ||
-        status === 403 ||
-        status === 404 ||
-        status === 409 ||
-        status === 429
-        ? status
-        : status >= 500
-          ? 500
-          : 400,
-    );
-  }
-  return connectError(c, "internal", "Internal error", 500);
-}
-
-function isDomainError(error: unknown): error is DomainError {
-  return Boolean(
-    error &&
-      typeof error === "object" &&
-      "status" in error &&
-      typeof error.status === "number" &&
-      "message" in error,
-  );
 }
 
 function domainCode(status: number) {
@@ -3028,6 +3004,6 @@ function domainCode(status: number) {
 function parseBearerForSignOut(value: string) {
   const token = splitBearerToken(value);
   if (token === null)
-    throw new ConnectInputError("Invalid authorization header");
+    throw new CompatValidationError("Invalid authorization header");
   return token;
 }
