@@ -133,6 +133,12 @@ export function RichComposerEditor({
       attributes: {
         id: inputId,
         "aria-label": ariaLabel,
+        // A contenteditable div no longer gets an implicit textbox role in
+        // recent Chromium builds (153+), so assistive tech and
+        // getByRole("textbox") would lose the composer. Declare it and its
+        // multiline nature explicitly, per ARIA practice for rich editors.
+        role: "textbox",
+        "aria-multiline": "true",
         class: "composer-editor-content",
       },
       handleKeyDown: (view, event) => {

@@ -59,8 +59,14 @@ export async function uploadAndInsertImages(
       attachment = await upload(placeholder.file);
     } catch {
       onError();
-      if (editorRef.current) {
-        removeUploadPlaceholder(editorRef.current, placeholder.id);
+      // The failure stops the whole batch: the failing chip and every not-yet-
+      // started chip must go, or stale "uploading…" widgets would linger in
+      // the editor forever (they also leak into the editor's text content).
+      const editorNow = editorRef.current;
+      if (editorNow) {
+        for (const stale of placeholders) {
+          removeUploadPlaceholder(editorNow, stale.id);
+        }
       }
       return;
     }
