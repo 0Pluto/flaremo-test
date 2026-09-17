@@ -18,6 +18,23 @@ export default defineConfig({
     maxWorkers: 1,
     hookTimeout: 60_000,
     testTimeout: 60_000,
+    coverage: {
+      // Advisory only — intentionally NOT wired into CI; full-suite coverage
+      // runs cost minutes and the unit gate (pnpm test) stays fast.
+      provider: "v8",
+      include: ["apps/web/src/**", "apps/worker/src/**", "packages/*/src/**"],
+      exclude: [
+        "**/node_modules/**",
+        "**/dist/**",
+        // Generated and type-stub files never carry testable logic.
+        "apps/worker/src/worker-configuration.d.ts",
+        "apps/worker/src/memos-generated/**",
+        // Tests, stories and co-located test companions.
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.spec.ts",
+      ],
+    },
     exclude: [
       "**/node_modules/**",
       "**/.git/**",

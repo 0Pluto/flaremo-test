@@ -9,6 +9,7 @@ dist/
 *.tsbuildinfo
 test-results/
 playwright-report/
+coverage/
 backups/
 .zcode/
 /wrangler.jsonc
