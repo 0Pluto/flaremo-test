@@ -1,6 +1,6 @@
 import type { FlareMoDb, MemoryItemRow, UserRow } from "@flaremo/db";
 import { memoryItems, memoryRelations, memoryRevisions } from "@flaremo/db";
-import { and, desc, eq, or, sql } from "drizzle-orm";
+import { and, desc, eq, or } from "drizzle-orm";
 import { memoryRelationToDto, memoryRevisionToDto, memoryToDto } from "./dto";
 import { buildFtsCondition, requireMemory } from "./shared";
 

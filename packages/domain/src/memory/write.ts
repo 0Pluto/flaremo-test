@@ -1,5 +1,5 @@
 import type { UpdateMemoryInput } from "@flaremo/contracts";
-import type { FlareMoDb, MemoryItemRow, UserRow } from "@flaremo/db";
+import type { FlareMoDb, UserRow } from "@flaremo/db";
 import { memoryItems } from "@flaremo/db";
 import { and, eq, sql } from "drizzle-orm";
 import { insertEmbeddingTask } from "../embedding-outbox";

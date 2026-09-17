@@ -1,6 +1,6 @@
 import type { FlareMoDb, MemoryItemRow, UserRow } from "@flaremo/db";
 import { memoryItems, memoryRevisions } from "@flaremo/db";
-import { and, eq, type SQL, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { ForbiddenError, NotFoundError, ValidationError } from "../errors";
 import { createResourceId } from "../ids";
 
