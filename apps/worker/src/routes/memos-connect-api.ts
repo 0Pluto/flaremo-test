@@ -7,7 +7,6 @@ import {
   bindMemoAttachments,
   compileAttachmentFilter,
   createAttachmentMetadata,
-  createFlaremoMemberWithLink,
   createMemo,
   createMemoComment,
   createMemoShare,
@@ -106,6 +105,7 @@ import {
   splitBearerToken,
 } from "../memos-compat/credential";
 import { CompatValidationError, isDomainError } from "../memos-compat/errors";
+import { registerCompatMember } from "../memos-compat/member-service";
 import { resolveMemoCreator } from "../memos-compat/memo-creator";
 import { memoRelationsToDtos } from "../memos-compat/memo-relations";
 import {
@@ -115,6 +115,7 @@ import {
   splitUpdateMaskFields,
 } from "../memos-compat/parsing";
 import { personalAccessTokenToDto } from "../memos-compat/pat";
+import { compatMemoPayload } from "../memos-compat/payload";
 import {
   normalizeAttachmentName,
   normalizeMemoName,
@@ -1330,7 +1331,7 @@ async function createConnectMemoComment(
     normalizeMemoName(requiredString(body.name, "name")),
     {
       content: requiredString(comment.content, "comment.content"),
-      payload: currentPayload(comment),
+      payload: compatMemoPayload(comment),
       source: "memos-connect",
       ...(optionalString(body.commentId)
         ? { commentId: optionalString(body.commentId) }
@@ -1682,7 +1683,7 @@ async function createConnectMemo(
     {
       content: requiredString(memo.content, "memo.content"),
       visibility: visibilityToLegacy(memo.visibility),
-      payload: currentPayload(memo),
+      payload: compatMemoPayload(memo),
       source: "memos-connect",
     },
     { userLimits: context.userLimits, userId: context.user.id },
@@ -1775,7 +1776,7 @@ async function updateConnectMemo(
       case "property":
       case "location":
       case "tags":
-        input.payload = currentPayload(memo);
+        input.payload = compatMemoPayload(memo);
         break;
       default:
         throw new CompatValidationError(
@@ -2046,18 +2047,6 @@ async function hydrateConnectPublicMemos(
       });
     }),
   );
-}
-
-function currentPayload(memo: Record<string, unknown>) {
-  const payload = record(memo.payload);
-  if (Array.isArray(memo.tags)) payload.tags = memo.tags;
-  if (memo.property && typeof memo.property === "object") {
-    payload.property = memo.property;
-  }
-  if (memo.location && typeof memo.location === "object") {
-    payload.location = memo.location;
-  }
-  return payload;
 }
 
 function visibilityToLegacy(value: unknown) {
@@ -2879,31 +2868,16 @@ async function createConnectUser(
   },
   limits: PlanLimits,
 ) {
-  const auth = createFlareMoAuth(c.env, db, {
-    allowBootstrapSignUp: true,
-  });
-  const result = await auth.api.signUpEmail({
-    body: {
-      email: input.email,
-      name: input.displayName,
-      password: input.password,
-      username: input.username,
-      displayUsername: input.username,
-    },
-  });
-  const user = await createFlaremoMemberWithLink(
+  const { authUserId, user } = await registerCompatMember({
+    env: c.env,
     db,
-    {
-      authUserId: result.user.id,
-      email: input.email,
-      name: input.displayName,
-    },
     limits,
-  );
+    ...input,
+  });
   return {
-    authUserId: result.user.id,
+    authUserId,
     user,
-    dto: currentUserToDto(user, await getAuthUserCached(db, result.user.id)),
+    dto: currentUserToDto(user, await getAuthUserCached(db, authUserId)),
   };
 }
 

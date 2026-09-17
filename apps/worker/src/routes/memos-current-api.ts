@@ -1,12 +1,10 @@
 import { createDb, type UserRow } from "@flaremo/db";
 import {
   assertAttachmentStorageQuota,
-  assertMemberQuota,
   beginFlaremoMemberRemoval,
   bindMemoAttachments,
   ConflictError,
   createAttachmentMetadata,
-  createFlaremoMemberWithLink,
   createMemo,
   createMemoShare,
   DomainError,
@@ -71,6 +69,7 @@ import {
   splitBearerToken,
 } from "../memos-compat/credential";
 import { CompatValidationError, isDomainError } from "../memos-compat/errors";
+import { registerCompatMember } from "../memos-compat/member-service";
 import { resolveMemoCreator } from "../memos-compat/memo-creator";
 import { memoRelationsToDtos } from "../memos-compat/memo-relations";
 import {
@@ -80,6 +79,7 @@ import {
   splitUpdateMaskFields,
 } from "../memos-compat/parsing";
 import { personalAccessTokenToDto } from "../memos-compat/pat";
+import { compatMemoPayload } from "../memos-compat/payload";
 import {
   normalizeAttachmentName,
   normalizeMemoName,
@@ -292,37 +292,20 @@ memosCurrentApi.post("/auth/signup", async (c, next) => {
     const username = input.username.trim();
     const email = input.email?.trim() || `${username}@flaremo.local`;
     const dbContext = await createAuthContext(c);
-    // Pre-check before the Better Auth identity exists so a spent member
-    // quota cannot orphan an auth user.
-    await assertMemberQuota(
-      dbContext.db,
-      c.get("planLimits") ?? SELF_HOST_UNLIMITED,
-    );
-    const auth = createFlareMoAuth(c.env, dbContext.db, {
-      allowBootstrapSignUp: true,
+    const displayName = input.displayName?.trim() || username;
+    const { authUserId, user } = await registerCompatMember({
+      env: c.env,
+      db: dbContext.db,
+      limits: c.get("planLimits") ?? SELF_HOST_UNLIMITED,
+      username,
+      password: input.password,
+      displayName,
+      email,
     });
-    const result = await auth.api.signUpEmail({
-      body: {
-        email,
-        name: input.displayName?.trim() || username,
-        password: input.password,
-        username,
-        displayUsername: username,
-      },
-    });
-    const user = await createFlaremoMemberWithLink(
-      dbContext.db,
-      {
-        authUserId: result.user.id,
-        email,
-        name: input.displayName?.trim() || username,
-      },
-      c.get("planLimits") ?? SELF_HOST_UNLIMITED,
-    );
     const nativeTokens = await issueMemosNativeTokens({
       db: dbContext.db,
       env: c.env,
-      authUserId: result.user.id,
+      authUserId,
       user,
       request: c.req.raw,
     });
@@ -332,7 +315,7 @@ memosCurrentApi.post("/auth/signup", async (c, next) => {
           user: await currentUserForContext({
             ...dbContext,
             user,
-            authUserId: result.user.id,
+            authUserId,
           }),
           accessToken: nativeTokens.accessToken,
           accessTokenExpiresAt: nativeTokens.accessTokenExpiresAt.toISOString(),
@@ -539,7 +522,7 @@ memosCurrentApi.post("/memos", async (c, next) => {
       {
         content: body.content.trim(),
         visibility: currentVisibilityToLegacy(body.visibility),
-        payload: currentPayload(body),
+        payload: compatMemoPayload(body),
         source: "memos-api",
       },
       { userLimits: context.userLimits, userId: context.user.id },
@@ -939,33 +922,20 @@ memosCurrentApi.post("/users", async (c, next) => {
     const body = currentSignupSchema.parse(await c.req.json());
     const username = body.username.trim();
     const email = `${username}@flaremo.local`;
-    await assertMemberQuota(context.db, context.limits);
-    const auth = createFlareMoAuth(c.env, context.db, {
-      allowBootstrapSignUp: true,
+    const { authUserId, user } = await registerCompatMember({
+      env: c.env,
+      db: context.db,
+      limits: context.limits,
+      username,
+      password: body.password,
+      displayName: body.displayName?.trim() || username,
+      email,
     });
-    const result = await auth.api.signUpEmail({
-      body: {
-        email,
-        name: body.displayName?.trim() || username,
-        password: body.password,
-        username,
-        displayUsername: username,
-      },
-    });
-    const user = await createFlaremoMemberWithLink(
-      context.db,
-      {
-        authUserId: result.user.id,
-        email,
-        name: body.displayName?.trim() || username,
-      },
-      context.limits,
-    );
     return c.json(
       await currentUserForContext({
         db: context.db,
         user,
-        authUserId: result.user.id,
+        authUserId,
       }),
       201,
     );
@@ -1195,32 +1165,6 @@ function parseCurrentFilter(filter: string | undefined) {
   return filter?.trim() ? { expression: filter.trim() } : {};
 }
 
-function currentPayload(body: z.infer<typeof currentMemoBodySchema>) {
-  const payload = { ...(body.payload ?? {}) };
-  if (body.tags) payload.tags = body.tags;
-  if (body.property) {
-    payload.property = {
-      ...(typeof body.property.title === "string"
-        ? { title: body.property.title }
-        : {}),
-      ...(typeof body.property.hasLink === "boolean"
-        ? { has_link: body.property.hasLink }
-        : {}),
-      ...(typeof body.property.hasTaskList === "boolean"
-        ? { has_task_list: body.property.hasTaskList }
-        : {}),
-      ...(typeof body.property.hasCode === "boolean"
-        ? { has_code: body.property.hasCode }
-        : {}),
-      ...(typeof body.property.hasIncompleteTasks === "boolean"
-        ? { has_incomplete_tasks: body.property.hasIncompleteTasks }
-        : {}),
-    };
-  }
-  if (body.location) payload.location = body.location;
-  return payload;
-}
-
 function unwrapMemoBody(body: z.infer<typeof currentMemoBodySchema>) {
   const nested = isRecord(body.memo) ? body.memo : undefined;
   return {
@@ -1302,7 +1246,7 @@ function currentUpdateInput(
       field === "tags" ||
       field === "payload"
     ) {
-      input.payload = currentPayload(body);
+      input.payload = compatMemoPayload(body);
     } else {
       throw new CompatValidationError(`Unsupported updateMask field: ${field}`);
     }
