@@ -60,10 +60,7 @@ import { memoryApi } from "./routes/memory-api";
 import { memoryMcpApi } from "./routes/memory-mcp";
 import { memosApi } from "./routes/memos-api";
 import { memosConnectApi } from "./routes/memos-connect";
-import {
-  isLegacyWireRequest,
-  memosCurrentApi,
-} from "./routes/memos-current-api";
+import { isLegacyWireRequest, memosCurrentApi } from "./routes/memos-current";
 import { memosFileApi } from "./routes/memos-file-api";
 import { memosSocialApi } from "./routes/memos-social-api";
 import { memosSseApi } from "./routes/memos-sse";
