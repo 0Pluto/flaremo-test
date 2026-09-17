@@ -699,7 +699,7 @@ const messages = {
   "memory.scope.global": "全局",
   "memory.scope.workspace": "工作区",
   "memory.scope.project": "项目",
-  "memory.scope.agent": "Agent",
+  "memory.scope.agent": "智能体",
   "memory.verification.inferred": "推测",
   "memory.verification.observed": "观察到",
   "memory.verification.confirmed": "已确认",

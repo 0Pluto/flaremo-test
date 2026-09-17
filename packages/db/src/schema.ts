@@ -336,6 +336,12 @@ export const memos = sqliteTable(
       table.visibility,
       table.status,
     ),
+    // The daily recycle-bin sweep filters `status = 'trashed' and
+    // deleted_at < cutoff`; keep it off a full table scan (mirrors
+    // attachments_cleanup_idx).
+    index("memos_recycle_sweep_idx")
+      .on(table.deletedAt)
+      .where(sql`status = 'trashed'`),
   ],
 );
 
@@ -1132,6 +1138,8 @@ export const projects = sqliteTable(
       table.status,
       table.createdAt,
     ),
+    // Daily recycle-bin TTL sweep scans `deleted_at < cutoff`.
+    index("projects_recycle_sweep_idx").on(table.deletedAt),
   ],
 );
 
@@ -1175,6 +1183,8 @@ export const tasks = sqliteTable(
       table.sortOrder,
     ),
     index("tasks_user_due_idx").on(table.userId, table.dueAt),
+    // Daily recycle-bin TTL sweep scans `deleted_at < cutoff`.
+    index("tasks_recycle_sweep_idx").on(table.deletedAt),
   ],
 );
 

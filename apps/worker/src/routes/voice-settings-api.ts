@@ -4,6 +4,7 @@ import {
   readVoiceService,
   writeVoiceService,
 } from "@flaremo/domain";
+import type { Context } from "hono";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { z } from "zod";
@@ -44,6 +45,14 @@ function maskCredential(value: string) {
 }
 
 voiceSettingsApi.get("/", async (c) => {
+  try {
+    return await getVoiceSettings(c);
+  } catch (error) {
+    return jsonError(c, error);
+  }
+});
+
+async function getVoiceSettings(c: Context<HonoBindings>) {
   const { db } = await getBrowserRequestContext(c);
   const row = await readVoiceService(db);
   let credentials: VoiceCredentials | null = null;
@@ -94,7 +103,7 @@ voiceSettingsApi.get("/", async (c) => {
     200,
     { "Cache-Control": "no-store" },
   );
-});
+}
 
 const inputSchema = z
   .object({
@@ -104,6 +113,14 @@ const inputSchema = z
   })
   .strict();
 voiceSettingsApi.put("/", async (c) => {
+  try {
+    return await putVoiceSettings(c);
+  } catch (error) {
+    return jsonError(c, error);
+  }
+});
+
+async function putVoiceSettings(c: Context<HonoBindings>) {
   const parsed = inputSchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success)
     return c.json({ error: { message: "Invalid configuration" } }, 400);
@@ -194,8 +211,17 @@ voiceSettingsApi.put("/", async (c) => {
   )
     return c.json({ error: { message: "Configuration changed" } }, 409);
   return c.json({ ok: true }, 200, { "Cache-Control": "no-store" });
-});
+}
+
 voiceSettingsApi.delete("/", async (c) => {
+  try {
+    return await deleteVoiceSettings(c);
+  } catch (error) {
+    return jsonError(c, error);
+  }
+});
+
+async function deleteVoiceSettings(c: Context<HonoBindings>) {
   const input = z
     .object({ revision: z.string().nullable() })
     .strict()
@@ -211,7 +237,7 @@ voiceSettingsApi.delete("/", async (c) => {
   )
     return c.json({ error: { message: "Configuration changed" } }, 409);
   return c.json({ ok: true }); // A disabled tombstone prevents any implicit reactivation after deletion.
-});
+}
 
 // Builds 3 seconds of 16 kHz mono s16le silence in a 44-byte RIFF container
 // (MiniMax rejects bare PCM). Used to give the batch provider a real —
@@ -244,6 +270,14 @@ export function buildSilenceWavBytes(durationMs = 3_000): ArrayBuffer {
 // Tests the effective configuration (environment or saved); it never returns
 // upstream error text.
 voiceSettingsApi.post("/test", async (c) => {
+  try {
+    return await testVoiceSettings(c);
+  } catch (error) {
+    return jsonError(c, error);
+  }
+});
+
+async function testVoiceSettings(c: Context<HonoBindings>) {
   const { user, db } = await getBrowserRequestContext(c);
   const limited = await rateLimitGuard(c, "capture", user.id);
   if (limited) return limited;
@@ -290,4 +324,4 @@ voiceSettingsApi.post("/test", async (c) => {
     clearTimeout(timer);
     abort.abort();
   }
-});
+}

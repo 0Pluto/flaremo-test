@@ -193,10 +193,17 @@ export function ShareImageDialog({
     return Number.isNaN(parsed.getTime()) ? "" : String(parsed.getDate());
   }, [memo.display_time]);
   const body = useMemo(() => shareBodyText(memo.content), [memo.content]);
-  const stats = t("share.imageStats", {
-    count: statsQuery.data?.counts.total ?? 0,
-    days: statsQuery.data?.active_days ?? 0,
-  });
+  // The card shows real account stats, so while the query is in flight the
+  // stats line stays blank rather than flashing "0 memos · 0 days" — and the
+  // export button stays disabled so an early export cannot bake zeros into
+  // the image.
+  const stats =
+    statsQuery.isPending || statsQuery.isError
+      ? ""
+      : t("share.imageStats", {
+          count: statsQuery.data.counts.total,
+          days: statsQuery.data.active_days,
+        });
 
   const exportImage = async () => {
     const node = previewRef.current;
@@ -259,7 +266,7 @@ export function ShareImageDialog({
         <DialogFooter>
           <Button
             className="w-full sm:w-auto"
-            disabled={isExporting}
+            disabled={isExporting || statsQuery.isPending}
             onClick={() => void exportImage()}
             type="button"
             variant="brand"

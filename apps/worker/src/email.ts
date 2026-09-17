@@ -88,7 +88,17 @@ async function deliverEmail(
       text: input.text,
     });
     return true;
-  } catch {
+  } catch (error) {
+    // Callers degrade to a generic "email unavailable" response; the server
+    // log is the only place the actual delivery failure is visible.
+    console.error(
+      JSON.stringify({
+        level: "error",
+        message: "Email delivery failed",
+        to: input.to,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    );
     return false;
   }
 }

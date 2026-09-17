@@ -9,7 +9,6 @@ import type {
   MemoContextResponse,
   MemoDto,
   MemoryDto,
-  MemoryRelationDto,
   MemoryRevisionDto,
   MemoState,
   MemoStatsResponse,
@@ -32,7 +31,6 @@ import type {
 
 export type Attachment = AttachmentDto;
 export type Memo = MemoDto;
-export type MemoPayload = MemoDto["payload"];
 export type Share = ShareDto;
 export type PublicShare = PublicShareDto;
 export type MemoContext = MemoContextResponse;
@@ -41,7 +39,6 @@ export type TagHierarchyNode = TagHierarchyResponse["tags"][number];
 export type AppNotification = AppNotificationDto;
 export type Memory = MemoryDto;
 export type MemoryRevision = MemoryRevisionDto;
-export type MemoryRelation = MemoryRelationDto;
 export type {
   MemoState,
   MemoStatsResponse,

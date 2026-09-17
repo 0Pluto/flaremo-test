@@ -133,10 +133,6 @@ export function parseAttachmentsResourceName(name: string) {
   return parseResourceName(name, "attachments");
 }
 
-export function parseSharesResourceName(name: string) {
-  return parseResourceName(name, "shares");
-}
-
 function parseResourceName(
   name: string,
   prefix: "attachments" | "memos" | "shares",

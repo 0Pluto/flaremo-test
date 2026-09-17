@@ -86,17 +86,6 @@ export function currentMemosToListResponse(input: {
   };
 }
 
-export function currentMemoCommentsToListResponse(input: {
-  memos: MemoRow[];
-  user: UserRow;
-  attachmentsByMemo?: ReadonlyMap<string, AttachmentRow[]>;
-  reactionsByMemo?: ReadonlyMap<string, ReactionRow[]>;
-  parentsByMemo?: ReadonlyMap<string, string>;
-  nextPageToken?: string;
-}) {
-  return currentMemosToListResponse(input);
-}
-
 export function currentAttachmentToDto(attachment: AttachmentRow) {
   return {
     name: attachment.id,

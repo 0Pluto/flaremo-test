@@ -709,7 +709,3 @@ export async function importData(
     cleanupR2Keys,
   };
 }
-
-export function mapImportedMemoName(name: string) {
-  return parseResourceName(name, "memos");
-}

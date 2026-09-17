@@ -183,6 +183,13 @@
       "when": 1789584977482,
       "tag": "0025_clammy_sunspot",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1789677001522,
+      "tag": "0026_workable_nemesis",
+      "breakpoints": true
     }
   ]
 }

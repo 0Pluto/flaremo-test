@@ -8,6 +8,7 @@ import {
 import { type ReactNode, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { listProjects, listTasks, restoreProject, restoreTask } from "@/api";
+import { QueryErrorState } from "@/components/query-error-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/i18n";
@@ -67,11 +68,31 @@ export function TrashSection({ onMutated }: { onMutated: () => void }) {
       </button>
       {open && (
         <div className="flex flex-col gap-0.5">
-          {count === 0 && (
-            <p className="px-3 py-1 text-xs text-muted-foreground">
-              {t("projects.trashEmpty")}
-            </p>
+          {(projectsQuery.isError || tasksQuery.isError) && (
+            <QueryErrorState
+              className="min-h-24 py-2 text-xs"
+              onRetry={() => {
+                if (projectsQuery.isError) void projectsQuery.refetch();
+                if (tasksQuery.isError) void tasksQuery.refetch();
+              }}
+            />
           )}
+          {!projectsQuery.isError &&
+            !tasksQuery.isError &&
+            (projectsQuery.isPending || tasksQuery.isPending) && (
+              <p className="px-3 py-1 text-xs text-muted-foreground">
+                {t("common.loading")}
+              </p>
+            )}
+          {!projectsQuery.isError &&
+            !tasksQuery.isError &&
+            !projectsQuery.isPending &&
+            !tasksQuery.isPending &&
+            count === 0 && (
+              <p className="px-3 py-1 text-xs text-muted-foreground">
+                {t("projects.trashEmpty")}
+              </p>
+            )}
           {deletedProjects.map((project) => (
             <TrashRow
               icon={<ListTodoIcon className="size-3.5" />}
