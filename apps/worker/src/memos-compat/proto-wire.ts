@@ -1,11 +1,13 @@
 /**
  * Wire-level primitives shared by the Memos compatibility codecs.
  *
- * Everything in this file was moved verbatim from memos-protobuf.ts: the
- * hand-written protobuf varint/length-delimited reader and writer, the
- * Connect/gRPC/gRPC-Web unary framing, the base64 helpers used by the framed
- * transports, the enum name/value mapping tables, and the small value-coercion
- * helpers used by both the encode and decode sides. The wire format produced
+ * The upstream request/response messages are encoded and decoded through the
+ * generated @bufbuild/protobuf runtime in memos-generated/ (see
+ * memos-protobuf.ts). Only the transports that the generated runtime does not
+ * cover remain hand-written here: the Connect/gRPC/gRPC-Web unary framing,
+ * the base64 helpers used by the framed transports, the google.rpc.Status
+ * body writer used for Connect binary errors, and the tiny field-1 reader
+ * for FlareMo's historical GetSharedMemo request. The wire format produced
  * and accepted here is part of the Memos client contract — one byte changed
  * here is a compatibility regression, so treat edits as wire-format changes.
  */
@@ -17,106 +19,6 @@ export class ProtoCodecError extends Error {
     super(message);
     this.name = "ProtoCodecError";
   }
-}
-
-export function stateName(value: number) {
-  if (value === 1) return "NORMAL";
-  if (value === 2) return "ARCHIVED";
-  return "STATE_UNSPECIFIED";
-}
-
-export function stateValue(value: unknown) {
-  if (value === "NORMAL") return 1;
-  if (value === "ARCHIVED") return 2;
-  return 0;
-}
-
-export function visibilityName(value: number) {
-  if (value === 1) return "PRIVATE";
-  if (value === 2) return "PROTECTED";
-  if (value === 3) return "PUBLIC";
-  return "VISIBILITY_UNSPECIFIED";
-}
-
-export function visibilityValue(value: unknown) {
-  if (value === "PRIVATE") return 1;
-  if (value === "PROTECTED") return 2;
-  if (value === "PUBLIC") return 3;
-  return 0;
-}
-
-export function userRoleName(value: number) {
-  if (value === 2) return "ADMIN";
-  if (value === 3) return "USER";
-  return "ROLE_UNSPECIFIED";
-}
-
-export function notificationStatusName(value: number) {
-  if (value === 1) return "UNREAD";
-  if (value === 2) return "ARCHIVED";
-  return "STATUS_UNSPECIFIED";
-}
-
-export function notificationStatusValue(value: unknown) {
-  if (value === "UNREAD") return 1;
-  if (value === "ARCHIVED") return 2;
-  return 0;
-}
-
-export function notificationTypeName(value: number) {
-  if (value === 1) return "MEMO_COMMENT";
-  if (value === 2) return "MEMO_MENTION";
-  return "TYPE_UNSPECIFIED";
-}
-
-export function notificationTypeValue(value: unknown) {
-  if (value === "MEMO_COMMENT") return 1;
-  if (value === "MEMO_MENTION") return 2;
-  return 0;
-}
-
-export function relationTypeName(value: number) {
-  if (value === 1) return "REFERENCE";
-  if (value === 2) return "COMMENT";
-  return "TYPE_UNSPECIFIED";
-}
-
-export function relationTypeValue(value: unknown) {
-  if (value === "REFERENCE") return 1;
-  if (value === "COMMENT") return 2;
-  return 0;
-}
-
-export function push(record: ProtoMessage, key: string, value: unknown) {
-  const values = Array.isArray(record[key]) ? (record[key] as unknown[]) : [];
-  values.push(value);
-  record[key] = values;
-}
-
-export function asRecord(value: unknown): ProtoMessage {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as ProtoMessage)
-    : {};
-}
-
-export function records(value: unknown) {
-  return Array.isArray(value) ? value : [];
-}
-
-export function strings(value: unknown) {
-  return Array.isArray(value)
-    ? value.filter((item): item is string => typeof item === "string")
-    : [];
-}
-
-export function stringValue(value: unknown) {
-  return typeof value === "string" ? value : "";
-}
-
-export function numberValue(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value)
-    ? value
-    : undefined;
 }
 
 export class ProtoWriter {
@@ -134,75 +36,11 @@ export class ProtoWriter {
     return this;
   }
 
-  message(field: number, value: Uint8Array) {
-    if (value.length === 0) return this;
-    return this.bytes(field, value);
-  }
-
-  repeatedStrings(field: number, values: string[]) {
-    for (const value of values) this.string(field, value);
-    return this;
-  }
-
-  repeatedMessages(
-    field: number,
-    values: unknown[],
-    encoder: (value: unknown) => Uint8Array,
-  ) {
-    for (const value of values) this.message(field, encoder(value));
-    return this;
-  }
-
-  bool(field: number, value: boolean) {
-    if (!value) return this;
-    this.tag(field, 0);
-    this.varint(value ? 1 : 0);
-    return this;
-  }
-
   int32(field: number, value: number | undefined) {
     if (value === undefined || !Number.isFinite(value) || value === 0)
       return this;
     this.tag(field, 0);
     this.varint(Math.trunc(value));
-    return this;
-  }
-
-  mapStringInt32(field: number, value: ProtoMessage) {
-    for (const [key, rawValue] of Object.entries(value)) {
-      const parsed = typeof rawValue === "number" ? rawValue : Number(rawValue);
-      if (!Number.isFinite(parsed)) continue;
-      this.message(
-        field,
-        new ProtoWriter().string(1, key).int32(2, parsed).finish(),
-      );
-    }
-    return this;
-  }
-
-  int64(field: number, value: unknown) {
-    let parsed: bigint;
-    try {
-      if (typeof value === "bigint") parsed = value;
-      else if (typeof value === "number" && Number.isFinite(value))
-        parsed = BigInt(Math.trunc(value));
-      else if (typeof value === "string" && value) parsed = BigInt(value);
-      else return this;
-    } catch {
-      return this;
-    }
-    if (parsed === 0n) return this;
-    this.tag(field, 0);
-    this.varint(parsed);
-    return this;
-  }
-
-  double(field: number, value: number | undefined) {
-    if (value === undefined) return this;
-    this.tag(field, 1);
-    const bytes = new Uint8Array(8);
-    new DataView(bytes.buffer).setFloat64(0, value, true);
-    this.chunks.push(bytes);
     return this;
   }
 
@@ -244,56 +82,17 @@ export class ProtoReader {
   }
 
   tag(): [number, number] {
-    const value = this.varint(0);
+    const value = this.varintRaw();
     return [Number(value >> 3n), Number(value & 7n)];
-  }
-
-  varint(wire: number) {
-    if (wire !== 0) throw new ProtoCodecError("Expected protobuf varint");
-    let value = 0n;
-    let shift = 0n;
-    while (this.offset < this.bytes.length) {
-      const byte = this.bytes[this.offset++] ?? 0;
-      value |= BigInt(byte & 127) << shift;
-      if ((byte & 128) === 0) return value;
-      shift += 7n;
-      if (shift > 63n) throw new ProtoCodecError("Protobuf varint is too long");
-    }
-    throw new ProtoCodecError("Truncated protobuf varint");
-  }
-
-  int32(wire: number) {
-    return Number(this.varint(wire));
-  }
-
-  int64(wire: number) {
-    return this.varint(wire).toString();
-  }
-
-  bool(wire: number) {
-    return this.varint(wire) !== 0n;
   }
 
   string(wire: number) {
     return new TextDecoder().decode(this.bytesValue(wire));
   }
 
-  double(wire: number) {
-    if (wire !== 1 || this.offset + 8 > this.bytes.length) {
-      throw new ProtoCodecError("Expected protobuf double");
-    }
-    const value = new DataView(
-      this.bytes.buffer,
-      this.bytes.byteOffset + this.offset,
-      8,
-    ).getFloat64(0, true);
-    this.offset += 8;
-    return value;
-  }
-
   bytesValue(wire: number) {
     if (wire !== 2) throw new ProtoCodecError("Expected protobuf bytes");
-    const length = Number(this.varint(0));
+    const length = Number(this.varintRaw());
     if (
       !Number.isSafeInteger(length) ||
       length < 0 ||
@@ -306,18 +105,27 @@ export class ProtoReader {
     return value;
   }
 
-  message(wire: number) {
-    return new ProtoReader(this.bytesValue(wire));
-  }
-
   skip(wire: number) {
-    if (wire === 0) this.varint(wire);
+    if (wire === 0) this.varintRaw();
     else if (wire === 1) this.offset += 8;
-    else if (wire === 2) this.offset += Number(this.varint(wire));
+    else if (wire === 2) this.offset += Number(this.varintRaw());
     else if (wire === 5) this.offset += 4;
     else throw new ProtoCodecError(`Unsupported protobuf wire type: ${wire}`);
     if (this.offset > this.bytes.length)
       throw new ProtoCodecError("Truncated protobuf field");
+  }
+
+  varintRaw() {
+    let value = 0n;
+    let shift = 0n;
+    while (this.offset < this.bytes.length) {
+      const byte = this.bytes[this.offset++] ?? 0;
+      value |= BigInt(byte & 127) << shift;
+      if ((byte & 128) === 0) return value;
+      shift += 7n;
+      if (shift > 63n) throw new ProtoCodecError("Protobuf varint is too long");
+    }
+    throw new ProtoCodecError("Truncated protobuf varint");
   }
 }
 
