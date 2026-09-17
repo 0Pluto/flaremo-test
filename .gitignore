@@ -13,3 +13,9 @@ backups/
 .zcode/
 /wrangler.jsonc
 .wrangler-shots/
+
+# 杂项兜底（2026-09-17 依赖卫生清理）
+*.log
+.DS_Store
+*.local
+Thumbs.db
