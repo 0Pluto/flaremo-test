@@ -49,6 +49,7 @@ import {
   type ConnectRequestContext,
   getAuthUserForContext,
   getPublicInstanceContext,
+  record,
 } from "./shared";
 import { connectShortcutMethod } from "./shortcut-methods";
 import {
@@ -85,16 +86,33 @@ memosConnectApi.post("/:service/:method", async (c) => {
     );
   }
 
+  const service = c.req.param("service") ?? "";
+  let method = c.req.param("method") ?? "";
+  // The historical GetSharedMemo alias is the canonical GetMemoByShare RPC:
+  // reconcile the request key, then evaluate the whole dispatch table under
+  // the canonical name so aliases cannot drift out of the method coverage.
+  const isSharedMemoAlias =
+    service === "memos.api.v1.MemoService" && method === "GetSharedMemo";
+  if (isSharedMemoAlias) {
+    method = "GetMemoByShare";
+  }
+
   let body: unknown;
   try {
     body = binaryTransport
       ? decodeBinaryRequest(
-          c.req.param("service"),
-          c.req.param("method"),
+          service,
+          method,
           new Uint8Array(await c.req.raw.arrayBuffer()),
           binaryTransport,
         )
       : await c.req.json();
+    if (isSharedMemoAlias) {
+      // JSON alias callers may send either key; binary callers already have
+      // the canonical shareId field.
+      const request = record(body);
+      body = { shareToken: request.shareToken ?? request.shareId };
+    }
   } catch (error) {
     if (binaryTransport) {
       return connectErrorFrom(c, error, binaryTransport);
@@ -106,11 +124,8 @@ memosConnectApi.post("/:service/:method", async (c) => {
       400,
     );
   }
-
   try {
     assertRequestCredentialBoundary(c);
-    const service = c.req.param("service") ?? "";
-    const method = c.req.param("method") ?? "";
     if (service === "memos.api.v1.AuthService" && method === "SignIn") {
       return connectAuthSignIn(c, body, binaryTransport);
     }
@@ -120,10 +135,7 @@ memosConnectApi.post("/:service/:method", async (c) => {
     if (service === "memos.api.v1.AuthService" && method === "RefreshToken") {
       return connectAuthRefresh(c, binaryTransport);
     }
-    if (
-      service === memoService &&
-      (method === "GetMemoByShare" || method === "GetSharedMemo")
-    ) {
+    if (service === memoService && method === "GetMemoByShare") {
       return await connectGetSharedMemo(c, body, binaryTransport);
     }
     if (service === memoService && isPublicMemoReadMethod(method)) {

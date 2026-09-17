@@ -8,11 +8,12 @@
  * official upstream schema for both the protobuf-JSON and the binary
  * (Connect proto / gRPC / gRPC-Web / gRPC-Web-text) transports.
  *
- * The only message outside the upstream schema is FlareMo's historical
- * `GetSharedMemo` alias; it gets a ten-line field-1 request decoder and
- * encodes its Memo response through the generated `MemoSchema`.
+ * The generated set already covers every method the Worker serves, including
+ * the canonical `GetMemoByShare` request (field 1 = share_id); FlareMo's
+ * historical `GetSharedMemo` alias dispatches to the same canonical request
+ * schema, so no hand-written message codec remains.
  *
- * The wire-level primitives (framing, base64, reader/writer) live in
+ * The wire-level primitives (framing, base64) live in
  * memos-compat/proto-wire.ts.
  */
 
@@ -23,13 +24,12 @@ import {
   decodeGrpcUnaryFrame,
   decodeGrpcWebUnaryResponse,
   encodeBase64,
+  encodeGoogleRpcStatus,
   encodeGrpcUnaryFrame,
   encodeGrpcWebResponse,
   encodeGrpcWebTrailerFrame,
   ProtoCodecError,
   type ProtoMessage,
-  ProtoReader,
-  ProtoWriter,
 } from "./memos-compat/proto-wire";
 import { AIService } from "./memos-generated/api/v1/ai_service_pb";
 import { AttachmentService } from "./memos-generated/api/v1/attachment_service_pb";
@@ -90,18 +90,6 @@ export function normalizeMemosJsonResponse(
 ): unknown {
   const descriptor = getGeneratedUnaryMethod(service, method);
   if (!descriptor) {
-    // GetSharedMemo responds with an upstream Memo message; validate it
-    // through the generated schema even though its request has no descriptor.
-    if (method === "GetSharedMemo") {
-      try {
-        fromJson(memoSchema(), toProtoJsonValue(value));
-        return toProtoJsonValue(value);
-      } catch (error) {
-        throw new ProtoCodecError(
-          `Failed to normalize generated protobuf JSON response for ${service}/${method}: ${error instanceof Error ? error.message : String(error)}`,
-        );
-      }
-    }
     return toProtoJsonValue(value);
   }
 
@@ -164,9 +152,6 @@ export function decodeBinaryRequest(
         );
   const descriptor = getGeneratedUnaryMethod(service, method);
   if (descriptor) return decodeGeneratedMessage(descriptor.input, payload);
-  if (service === "memos.api.v1.MemoService" && method === "GetSharedMemo") {
-    return decodeSharedMemoRequest(payload);
-  }
   throw new ProtoCodecError(
     `Unsupported protobuf service or method: ${service}/${method}`,
   );
@@ -196,7 +181,7 @@ export function encodeBinaryError(
   // headers remain authoritative for Connect/gRPC clients, but the body must
   // carry the same status code instead of always pretending every failure is
   // INVALID_ARGUMENT.
-  const status = new ProtoWriter().int32(1, code).string(2, message).finish();
+  const status = encodeGoogleRpcStatus(code, message);
   if (transport === "connect-proto") return status;
   // gRPC-Web application errors are carried in a trailers-only frame. A
   // protobuf google.rpc.Status data frame would be interpreted as a normal
@@ -231,9 +216,6 @@ export function decodeBinaryResponse(
         : decodeGrpcUnaryFrame(input);
   const descriptor = getGeneratedUnaryMethod(service, method);
   if (descriptor) return decodeGeneratedMessage(descriptor.output, payload);
-  if (service === "memos.api.v1.MemoService" && method === "GetSharedMemo") {
-    return decodeGeneratedMessage(memoSchema(), payload);
-  }
   throw new ProtoCodecError(
     `Unsupported protobuf service or method: ${service}/${method}`,
   );
@@ -245,26 +227,22 @@ function encodeResponseMessage(
   value: unknown,
 ): Uint8Array {
   const descriptor = getGeneratedUnaryMethod(service, method);
+  if (!descriptor) {
+    throw new ProtoCodecError(
+      `Unsupported protobuf service or method: ${service}/${method}`,
+    );
+  }
   try {
-    if (descriptor) {
-      const message = fromJson(
-        descriptor.output,
-        toCanonicalProtoJsonValue(value),
-      );
-      return toBinary(descriptor.output, message);
-    }
-    if (service === "memos.api.v1.MemoService" && method === "GetSharedMemo") {
-      const message = fromJson(memoSchema(), toCanonicalProtoJsonValue(value));
-      return toBinary(memoSchema(), message);
-    }
+    const message = fromJson(
+      descriptor.output,
+      toCanonicalProtoJsonValue(value),
+    );
+    return toBinary(descriptor.output, message);
   } catch (error) {
     throw new ProtoCodecError(
       `Failed to encode generated protobuf response for ${service}/${method}: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
-  throw new ProtoCodecError(
-    `Unsupported protobuf service or method: ${service}/${method}`,
-  );
 }
 
 function getGeneratedUnaryMethod(
@@ -278,11 +256,7 @@ function getGeneratedUnaryMethod(
   return descriptor?.methodKind === "unary" ? descriptor : undefined;
 }
 
-function memoSchema() {
-  return MemoSchema;
-}
-
-function decodeGeneratedMessage(
+export function decodeGeneratedMessage(
   descriptor: DescMessage,
   payload: Uint8Array,
 ): ProtoMessage {
@@ -297,17 +271,6 @@ function decodeGeneratedMessage(
       `Failed to decode generated protobuf message: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
-}
-
-function decodeSharedMemoRequest(payload: Uint8Array): ProtoMessage {
-  const reader = new ProtoReader(payload);
-  let shareToken = "";
-  while (!reader.done) {
-    const [field, wire] = reader.tag();
-    if (field === 1) shareToken = reader.string(wire);
-    else reader.skip(wire);
-  }
-  return { shareToken };
 }
 
 function toProtoJsonValue(value: unknown): JsonValue {
