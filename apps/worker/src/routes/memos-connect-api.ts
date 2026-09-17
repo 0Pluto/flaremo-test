@@ -105,6 +105,17 @@ import { resolveEmailConfig } from "../email";
 import type { FlareMoEnv } from "../env";
 import { memoFilterScanLimit } from "../filter-scan-limit";
 import { getAuthUserCached, getFlaremoUserCached } from "../identity-cache";
+import { base64ToUint8Array } from "../memos-compat/base64";
+import {
+  isBetterAuthCredentialError,
+  splitBearerToken,
+} from "../memos-compat/credential";
+import { resolveMemoCreator } from "../memos-compat/memo-creator";
+import { personalAccessTokenToDto } from "../memos-compat/pat";
+import {
+  normalizeAttachmentName,
+  normalizeMemoName,
+} from "../memos-compat/resource-names";
 import { fetchLinkMetadata } from "../memos-link-metadata";
 import {
   clearMemosRefreshCookie,
@@ -895,7 +906,7 @@ async function connectUserMethod(
         c,
         {
           personalAccessTokens: tokens.map((token) =>
-            connectPatToDto(token, context.user.id),
+            personalAccessTokenToDto(token, context.user.id),
           ),
           totalSize: tokens.length,
         },
@@ -938,7 +949,10 @@ async function connectUserMethod(
       return connectValue(
         c,
         {
-          personalAccessToken: connectPatToDto(created, context.user.id),
+          personalAccessToken: personalAccessTokenToDto(
+            created,
+            context.user.id,
+          ),
           token: created.key,
         },
         transport,
@@ -1644,7 +1658,7 @@ async function connectPublicMemoWithDetails(
       }
     }),
   );
-  const creator = await getMemoCreatorForViewer(context, memo);
+  const creator = await resolveMemoCreator(context, memo);
   return currentMemoToDto(memo, creator, {
     attachments,
     reactions: reactions.reactions,
@@ -1653,16 +1667,6 @@ async function connectPublicMemoWithDetails(
     ),
     ...(parent ? { parent } : {}),
   });
-}
-
-async function getMemoCreatorForViewer(
-  context: ConnectReadContext,
-  memo: Awaited<ReturnType<typeof getMemoByIdForViewer>>,
-) {
-  if (context.user?.id === memo.userId) return context.user;
-  const creator = await getFlaremoUserCached(context.db, memo.userId);
-  if (!creator) throw new Error("Memo creator not found");
-  return creator;
 }
 
 function isPublicMemoReadMethod(method: string) {
@@ -2108,7 +2112,7 @@ async function hydrateConnectPublicMemos(
       );
       let creator = creators.get(memo.userId);
       if (!creator) {
-        creator = await getMemoCreatorForViewer(context, memo);
+        creator = await resolveMemoCreator(context, memo);
         creators.set(memo.userId, creator);
       }
       return currentMemoToDto(memo, creator, {
@@ -2191,10 +2195,6 @@ function pageSize(value: unknown) {
   return Math.min(parsed, 1_000);
 }
 
-function normalizeMemoName(value: string) {
-  return value.startsWith("memos/") ? value : `memos/${value}`;
-}
-
 function reactionMemoName(value: string) {
   const parts = value.split("/").filter(Boolean);
   const marker = parts.lastIndexOf("reactions");
@@ -2213,10 +2213,6 @@ function shareTokenFromName(value: string) {
   const token = parts[marker + 1];
   if (!token) throw new ConnectInputError("Invalid share name");
   return token;
-}
-
-function normalizeAttachmentName(value: string) {
-  return value.startsWith("attachments/") ? value : `attachments/${value}`;
 }
 
 async function getPublicInstanceContext(
@@ -2259,12 +2255,7 @@ function attachmentBytes(value: unknown) {
   if (value instanceof ArrayBuffer) return new Uint8Array(value);
   if (typeof value === "string") {
     try {
-      const binary = atob(value);
-      const bytes = new Uint8Array(binary.length);
-      for (let index = 0; index < binary.length; index += 1) {
-        bytes[index] = binary.charCodeAt(index);
-      }
-      return bytes;
+      return base64ToUint8Array(value);
     } catch {
       throw new ConnectInputError("attachment.content must be valid base64");
     }
@@ -2510,27 +2501,6 @@ function userStatsFromMemoStats(
     pinnedMemos: [],
     memoCreatedTimestamps: [],
     memoUpdatedTimestamps: [],
-  };
-}
-
-function connectPatToDto(
-  token: {
-    id: string;
-    name: string | null;
-    createdAt: Date;
-    expiresAt: Date | null;
-    lastRequest: Date | null;
-  },
-  userId: string,
-) {
-  return {
-    name: `${userId}/personalAccessTokens/${token.id}`,
-    ...(token.name ? { description: token.name } : {}),
-    createdAt: token.createdAt.toISOString(),
-    ...(token.expiresAt ? { expiresAt: token.expiresAt.toISOString() } : {}),
-    ...(token.lastRequest
-      ? { lastUsedAt: token.lastRequest.toISOString() }
-      : {}),
   };
 }
 
@@ -3169,15 +3139,9 @@ function domainCode(status: number) {
   return "invalid_argument";
 }
 
-function isBetterAuthCredentialError(error: unknown) {
-  const value = record(error);
-  return value.code === "INVALID_USERNAME_OR_PASSWORD";
-}
-
 function parseBearerForSignOut(value: string) {
-  const parts = value.trim().split(/\s+/);
-  if (parts.length !== 2 || parts[0]?.toLowerCase() !== "bearer" || !parts[1]) {
+  const token = splitBearerToken(value);
+  if (token === null)
     throw new ConnectInputError("Invalid authorization header");
-  }
-  return parts[1];
+  return token;
 }

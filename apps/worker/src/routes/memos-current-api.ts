@@ -65,6 +65,17 @@ import {
 import { resolveEmailConfig } from "../email";
 import { getAuthUserCached, getFlaremoUserCached } from "../identity-cache";
 import { hardDeleteMemoWithAttachments } from "../memo-hard-delete";
+import { base64ToUint8Array } from "../memos-compat/base64";
+import {
+  isBetterAuthCredentialError,
+  splitBearerToken,
+} from "../memos-compat/credential";
+import { resolveMemoCreator } from "../memos-compat/memo-creator";
+import { personalAccessTokenToDto } from "../memos-compat/pat";
+import {
+  normalizeAttachmentName,
+  normalizeMemoName,
+} from "../memos-compat/resource-names";
 import {
   authenticateMemosAccessToken,
   clearMemosRefreshCookie,
@@ -486,7 +497,7 @@ memosCurrentApi.get("/memos", async (c, next) => {
     return c.json({
       memos: await Promise.all(
         result.memos.map(async (memo) =>
-          currentMemoToDto(memo, await currentMemoCreator(context, memo), {
+          currentMemoToDto(memo, await resolveMemoCreator(context, memo), {
             attachments: byMemo.get(memo.id) ?? [],
           }),
         ),
@@ -978,7 +989,7 @@ memosCurrentApi.get("/users/:user/personalAccessTokens", async (c, next) => {
     );
     return c.json({
       personalAccessTokens: tokens.map((token) =>
-        currentPatToDto(token, context.user.id),
+        personalAccessTokenToDto(token, context.user.id),
       ),
     });
   } catch (error) {
@@ -1007,7 +1018,7 @@ memosCurrentApi.post("/users/:user/personalAccessTokens", async (c, next) => {
     });
     return noStoreResponse(
       c.json({
-        personalAccessToken: currentPatToDto(created, context.user.id),
+        personalAccessToken: personalAccessTokenToDto(created, context.user.id),
         token: created.key,
       }),
     );
@@ -1093,7 +1104,7 @@ async function currentMemoWithDetails(
     listMemoAttachmentsForViewer(context.db, context.user, memo.id),
     currentRelations(context, memo.id),
   ]);
-  return currentMemoToDto(memo, await currentMemoCreator(context, memo), {
+  return currentMemoToDto(memo, await resolveMemoCreator(context, memo), {
     attachments,
     relations,
   });
@@ -1134,15 +1145,6 @@ async function currentRelations(
   return related.filter(
     (value): value is NonNullable<typeof value> => value !== null,
   );
-}
-async function currentMemoCreator(
-  context: Awaited<ReturnType<typeof getOptionalRequestContext>>,
-  memo: Awaited<ReturnType<typeof getMemoById>>,
-) {
-  if (context.user?.id === memo.userId) return context.user;
-  const creator = await getFlaremoUserCached(context.db, memo.userId);
-  if (!creator) throw new Error("Memo creator not found");
-  return creator;
 }
 
 async function currentUserForContext(context: {
@@ -1401,19 +1403,9 @@ function parsePageSize(value: string | undefined, fallback: number) {
 }
 
 function parseBearerToken(value: string) {
-  const parts = value.trim().split(/\s+/);
-  if (parts.length !== 2 || parts[0]?.toLowerCase() !== "bearer" || !parts[1]) {
-    throw new UnauthorizedCurrentError();
-  }
-  return parts[1];
-}
-
-function normalizeMemoName(value: string) {
-  return value.startsWith("memos/") ? value : `memos/${value}`;
-}
-
-function normalizeAttachmentName(value: string) {
-  return value.startsWith("attachments/") ? value : `attachments/${value}`;
+  const token = splitBearerToken(value);
+  if (token === null) throw new UnauthorizedCurrentError();
+  return token;
 }
 
 function normalizeUserName(value: string) {
@@ -1429,35 +1421,9 @@ function assertCurrentUserPath(value: string, currentUserId: string) {
     throw new ForbiddenCurrentError("Only the current user is available");
 }
 
-function currentPatToDto(
-  token: {
-    id: string;
-    name: string | null;
-    createdAt: Date;
-    expiresAt: Date | null;
-    lastRequest: Date | null;
-  },
-  userId: string,
-) {
-  return {
-    name: `${userId}/personalAccessTokens/${token.id}`,
-    ...(token.name ? { description: token.name } : {}),
-    createdAt: token.createdAt.toISOString(),
-    ...(token.expiresAt ? { expiresAt: token.expiresAt.toISOString() } : {}),
-    ...(token.lastRequest
-      ? { lastUsedAt: token.lastRequest.toISOString() }
-      : {}),
-  };
-}
-
 function decodeBase64(value: string) {
   try {
-    const binary = atob(value);
-    const bytes = new Uint8Array(binary.length);
-    for (let index = 0; index < binary.length; index += 1) {
-      bytes[index] = binary.charCodeAt(index);
-    }
-    return bytes;
+    return base64ToUint8Array(value);
   } catch {
     throw new ValidationCurrentError("Attachment content must be valid base64");
   }
@@ -1584,10 +1550,6 @@ function controlledErrorStatus(error: Record<string, unknown>): number | null {
         ? error.status
         : null;
   return status !== null && status < 500 ? status : null;
-}
-
-function isBetterAuthCredentialError(error: unknown) {
-  return isRecord(error) && error.code === "INVALID_USERNAME_OR_PASSWORD";
 }
 
 function currentErrorCode(status: number) {

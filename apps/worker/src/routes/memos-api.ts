@@ -73,6 +73,7 @@ import { getRequestContext, type HonoBindings } from "../context";
 import { jsonError } from "../http";
 import { buildMemoContext } from "../memo-context";
 import { hardDeleteMemoWithAttachments } from "../memo-hard-delete";
+import { base64ToUint8Array } from "../memos-compat/base64";
 
 export const memosApi = new Hono<HonoBindings>();
 
@@ -649,15 +650,6 @@ function arrayBufferToBase64(buffer: ArrayBuffer) {
     );
   }
   return chunks.join("");
-}
-
-function base64ToUint8Array(value: string) {
-  const binary = atob(value);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-  return bytes;
 }
 
 // ---------------------------------------------------------------------------
