@@ -13,7 +13,6 @@ import {
   finalizeFlaremoMemberRemoval,
   getAttachmentById,
   getAuthBootstrapStatus,
-  getAuthUserIdByFlaremoUserId,
   getFlaremoUserByAuthSessionToken,
   type getMemoById,
   getMemoByIdForViewer,
@@ -76,6 +75,7 @@ import {
   normalizeAttachmentName,
   normalizeMemoName,
 } from "../memos-compat/resource-names";
+import { memosCompatUserDto } from "../memos-compat/user-dto";
 import {
   authenticateMemosAccessToken,
   clearMemosRefreshCookie,
@@ -915,18 +915,9 @@ memosCurrentApi.get("/users", async (c, next) => {
     // Non-self entries keep their display fields but never the email — the
     // compatibility surface must not become an email directory.
     const dtos = await Promise.all(
-      users.map(async (user) => {
-        const authUserId = await getAuthUserIdByFlaremoUserId(
-          context.db,
-          user.id,
-        );
-        const authUser = authUserId
-          ? await getAuthUserCached(context.db, authUserId)
-          : null;
-        return user.id === context.user.id
-          ? currentUserToDto(user, authUser)
-          : publicUserToDto(user, authUser?.username ?? undefined);
-      }),
+      users.map((user) =>
+        memosCompatUserDto(context.db, user, context.user.id),
+      ),
     );
     return c.json({ users: dtos });
   } catch (error) {
@@ -1064,15 +1055,7 @@ memosCurrentApi.get("/users/:user", async (c, next) => {
     const userId = normalizeUserName(c.req.param("user"));
     const user = await getFlaremoUserCached(context.db, userId);
     if (!user) throw new NotFoundCurrentError("User not found");
-    const authUserId = await getAuthUserIdByFlaremoUserId(context.db, user.id);
-    const authUser = authUserId
-      ? await getAuthUserCached(context.db, authUserId)
-      : null;
-    return c.json(
-      user.id === context.user.id
-        ? currentUserToDto(user, authUser)
-        : publicUserToDto(user, authUser?.username ?? undefined),
-    );
+    return c.json(await memosCompatUserDto(context.db, user, context.user.id));
   } catch (error) {
     return currentJsonError(c, error);
   }

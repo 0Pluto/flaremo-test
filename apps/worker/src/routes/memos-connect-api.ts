@@ -24,7 +24,6 @@ import {
   getAttachmentById,
   getAuthBootstrapStatus,
   type getAuthUserById,
-  getAuthUserIdByFlaremoUserId,
   getFlaremoUserByAuthSessionToken,
   getMemoById,
   getMemoByIdForViewer,
@@ -116,6 +115,7 @@ import {
   normalizeAttachmentName,
   normalizeMemoName,
 } from "../memos-compat/resource-names";
+import { memosCompatUserDto } from "../memos-compat/user-dto";
 import { fetchLinkMetadata } from "../memos-link-metadata";
 import {
   clearMemosRefreshCookie,
@@ -663,10 +663,8 @@ async function connectUserMethod(
     case "ListUsers": {
       const filter = optionalString(body.filter);
       const users = await Promise.all(
-        (await listFlaremoUsers(context.db)).map(async (user) =>
-          user.id === context.user.id
-            ? connectUserToDto(context.db, user, authUser)
-            : connectPublicUserToDto(context.db, user),
+        (await listFlaremoUsers(context.db)).map((user) =>
+          memosCompatUserDto(context.db, user, context.user.id, authUser),
         ),
       );
       const matched = filter
@@ -683,10 +681,8 @@ async function connectUserMethod(
         (username): username is string => typeof username === "string",
       );
       const all = await Promise.all(
-        (await listFlaremoUsers(context.db)).map(async (user) =>
-          user.id === context.user.id
-            ? connectUserToDto(context.db, user, authUser)
-            : connectPublicUserToDto(context.db, user),
+        (await listFlaremoUsers(context.db)).map((user) =>
+          memosCompatUserDto(context.db, user, context.user.id, authUser),
         ),
       );
       const users =
@@ -698,10 +694,12 @@ async function connectUserMethod(
     case "GetUser": {
       const user = await getUserByName(context.db, body.name);
       if (!user) throw new ConnectInputError("User not found");
-      const dto =
-        user.id === context.user.id
-          ? await connectUserToDto(context.db, user, authUser)
-          : await connectPublicUserToDto(context.db, user);
+      const dto = await memosCompatUserDto(
+        context.db,
+        user,
+        context.user.id,
+        authUser,
+      );
       return connectValue(c, dto, transport);
     }
     case "CreateUser": {
@@ -2857,35 +2855,6 @@ async function getUserByName(db: ReturnType<typeof createDb>, name: unknown) {
   const value = requiredString(name, "name");
   const id = value.startsWith("users/") ? value : `users/${value}`;
   return getFlaremoUserCached(db, id);
-}
-
-async function connectUserToDto(
-  db: ReturnType<typeof createDb>,
-  user: UserRow,
-  authUser?: Awaited<ReturnType<typeof getAuthUserById>> | null,
-) {
-  if (authUser !== undefined) {
-    return currentUserToDto(user, authUser);
-  }
-  const authUserId = await getAuthUserIdByFlaremoUserId(db, user.id);
-  return currentUserToDto(
-    user,
-    authUserId ? await getAuthUserCached(db, authUserId) : null,
-  );
-}
-
-/**
- * Non-self user DTO: keeps the display fields (including the real username)
- * but never the email — a member must not be able to enumerate teammates'
- * email addresses through the Memos compatibility surface.
- */
-async function connectPublicUserToDto(
-  db: ReturnType<typeof createDb>,
-  user: UserRow,
-) {
-  const authUserId = await getAuthUserIdByFlaremoUserId(db, user.id);
-  const authUser = authUserId ? await getAuthUserCached(db, authUserId) : null;
-  return publicUserToDto(user, authUser?.username ?? undefined);
 }
 
 async function createConnectUser(
