@@ -66,6 +66,7 @@ import { memosSocialApi } from "./routes/memos-social-api";
 import { memosSseApi } from "./routes/memos-sse";
 import { projectsApi } from "./routes/projects-api";
 import { publicApi } from "./routes/public-api";
+import { registerSharePage } from "./routes/share-page";
 import { tasksApi } from "./routes/tasks-api";
 import { voiceSettingsApi } from "./routes/voice-settings-api";
 
@@ -227,6 +228,7 @@ export function createFlareMoApp(
   app.route("/api/app/tasks", tasksApi);
   app.route("/api/app", appApi);
   app.route("/api/public", publicApi);
+  registerSharePage(app);
   app.route("/file", memosFileApi);
   app.route("/mcp", mcpStreamableApi);
   app.route("/memory/mcp", memoryMcpApi);
