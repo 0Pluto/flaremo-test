@@ -39,8 +39,10 @@ import { CompatValidationError } from "../../memos-compat/errors";
 import { resolveMemoCreator } from "../../memos-compat/memo-creator";
 import { memoRelationsToDtos } from "../../memos-compat/memo-relations";
 import {
-  parseMemosRelationType,
-  parseMemosVisibility,
+  compatMemoRelationType,
+  compatMemoVisibility,
+  parseMemosOrderBy,
+  parseMemosState,
   splitUpdateMaskFields,
 } from "../../memos-compat/parsing";
 import { compatMemoPayload } from "../../memos-compat/payload";
@@ -396,7 +398,7 @@ export async function createConnectMemo(
     context.user,
     {
       content: requiredString(memo.content, "memo.content"),
-      visibility: visibilityToLegacy(memo.visibility),
+      visibility: compatMemoVisibility(memo.visibility),
       payload: compatMemoPayload(memo),
       source: "memos-connect",
     },
@@ -411,12 +413,18 @@ export async function createConnectMemo(
  * identical copies of this shape.
  */
 function connectMemoListQuery(body: Record<string, unknown>) {
+  const orderBy = parseMemosOrderBy(
+    optionalString(body.orderBy) ?? "create_time desc",
+  );
+  if (!orderBy) {
+    throw new CompatValidationError(
+      "orderBy must be one supported single-field order such as create_time desc",
+    );
+  }
   return {
     page_size: pageSize(body.pageSize),
     page_token: optionalString(body.pageToken),
-    order_by: normalizeOrderBy(
-      optionalString(body.orderBy) ?? "create_time desc",
-    ),
+    order_by: orderBy,
     state: stateToLegacy(optionalString(body.state)),
     filter: optionalString(body.filter),
     include_deleted: body.showDeleted === true,
@@ -477,7 +485,7 @@ export async function updateConnectMemo(
         input.content = requiredString(memo.content, "memo.content");
         break;
       case "visibility":
-        input.visibility = visibilityToLegacy(memo.visibility);
+        input.visibility = compatMemoVisibility(memo.visibility);
         break;
       case "pinned":
         if (typeof memo.pinned !== "boolean")
@@ -578,7 +586,7 @@ export async function setConnectRelations(
       related_memo:
         optionalString(relatedMemo.name) ??
         requiredString(relation.relatedMemo, "relations[].relatedMemo"),
-      type: relationTypeToLegacy(optionalString(relation.type)),
+      type: compatMemoRelationType(optionalString(relation.type)),
     };
   });
   await replaceMemoRelations(
@@ -763,53 +771,24 @@ async function hydrateConnectPublicMemos(
   );
 }
 
-function visibilityToLegacy(value: unknown) {
-  const normalized = parseMemosVisibility(value);
-  if (!normalized) {
-    throw new CompatValidationError(`Unsupported visibility: ${String(value)}`);
-  }
-  return normalized;
-}
-
+/**
+ * State to the domain status. The upstream ListMemosRequest.state only
+ * exposes NORMAL and ARCHIVED (STATE_UNSPECIFIED means "no filter"), so
+ * trashed/deleted rows are reached through DeleteMemo and showDeleted, never
+ * through the state field — matching the current REST surface.
+ */
 function stateToLegacy(value: string | undefined) {
-  const normalized = (value ?? "NORMAL").toUpperCase();
-  if (normalized === "NORMAL") return "normal" as const;
-  if (normalized === "ARCHIVED") return "archived" as const;
-  if (normalized === "TRASHED") return "trashed" as const;
-  if (normalized === "DELETED") return "deleted" as const;
-  if (normalized === "STATE_UNSPECIFIED") return undefined;
-  throw new CompatValidationError(`Unsupported memo state: ${value}`);
-}
-
-function relationTypeToLegacy(
-  value: string | undefined,
-): "reference" | "comment" {
-  const normalized = parseMemosRelationType(value);
-  if (!normalized) {
-    throw new CompatValidationError(`Unsupported relation type: ${value}`);
+  const normalized = parseMemosState(value ?? "NORMAL");
+  if (
+    !normalized &&
+    (value ?? "NORMAL").trim().toUpperCase() !== "STATE_UNSPECIFIED"
+  ) {
+    throw new CompatValidationError(`Unsupported memo state: ${value}`);
+  }
+  if (normalized && normalized !== "normal" && normalized !== "archived") {
+    throw new CompatValidationError(`Unsupported memo state: ${value}`);
   }
   return normalized;
-}
-
-function normalizeOrderBy(value: string) {
-  const match =
-    /^(created_at|created_time|create_time|updated_at|updated_time|update_time)\s+(asc|desc)$/i.exec(
-      value.trim(),
-    );
-  if (!match) {
-    throw new CompatValidationError(
-      "orderBy must be one supported single-field order such as create_time desc",
-    );
-  }
-  const field = match[1]?.toLowerCase().startsWith("update")
-    ? "updated_at"
-    : "created_at";
-  const direction = match[2]?.toLowerCase() === "asc" ? "asc" : "desc";
-  return `${field} ${direction}` as
-    | "created_at asc"
-    | "created_at desc"
-    | "updated_at asc"
-    | "updated_at desc";
 }
 
 function reactionMemoName(value: string) {

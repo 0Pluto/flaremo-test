@@ -231,22 +231,6 @@ export function currentRelationType(
   return value === "comment" ? "COMMENT" : "REFERENCE";
 }
 
-export function legacyMemoState(
-  value: unknown,
-): "normal" | "archived" | "trashed" | "deleted" | undefined {
-  if (value === "NORMAL") return "normal";
-  if (value === "ARCHIVED") return "archived";
-  if (
-    value === "normal" ||
-    value === "archived" ||
-    value === "trashed" ||
-    value === "deleted"
-  ) {
-    return value;
-  }
-  return undefined;
-}
-
 function currentProperty(value: unknown) {
   if (!isRecord(value)) return undefined;
   const property = {

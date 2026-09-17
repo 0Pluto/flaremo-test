@@ -27,6 +27,10 @@ import {
 import { hardDeleteMemoWithAttachments } from "../../memo-hard-delete";
 import { CompatValidationError } from "../../memos-compat/errors";
 import { resolveMemoCreator } from "../../memos-compat/memo-creator";
+import {
+  compatMemoRelationType,
+  compatMemoVisibility,
+} from "../../memos-compat/parsing";
 import { compatMemoPayload } from "../../memos-compat/payload";
 import { normalizeMemoName } from "../../memos-compat/resource-names";
 import { currentJsonError } from "./errors";
@@ -35,9 +39,7 @@ import {
   currentListQuery,
   currentMemoWithDetails,
   currentRelations,
-  currentRelationToLegacy,
   currentUpdateInput,
-  currentVisibilityToLegacy,
   isLegacyWireRequest,
   isRecord,
   parseUpdateMask,
@@ -110,7 +112,7 @@ export function registerMemoRoutes(app: Hono<HonoBindings>) {
         context.user,
         {
           content: body.content.trim(),
-          visibility: currentVisibilityToLegacy(body.visibility),
+          visibility: compatMemoVisibility(body.visibility),
           payload: compatMemoPayload(body),
           source: "memos-api",
         },
@@ -248,7 +250,7 @@ export function registerMemoRoutes(app: Hono<HonoBindings>) {
         return [
           {
             related_memo: relatedName,
-            type: currentRelationToLegacy(relation.type),
+            type: compatMemoRelationType(relation.type),
           },
         ];
       });

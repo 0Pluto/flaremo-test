@@ -53,6 +53,7 @@ import {
 import type { FlareMoEnv } from "../env";
 import { jsonError } from "../http";
 import { hardDeleteMemoWithAttachments } from "../memo-hard-delete";
+import { parseMemosOrderBy } from "../memos-compat/parsing";
 
 export const mcpApi = new Hono<HonoBindings>();
 
@@ -1602,18 +1603,13 @@ function normalizeUpdateMask(value: string) {
 }
 
 function normalizeOrderBy(value: string) {
-  const match =
-    /^(created_at|created_time|create_time|updated_at|updated_time|update_time)\s+(asc|desc)$/i.exec(
-      value.trim(),
-    );
-  if (!match) {
+  const parsed = parseMemosOrderBy(value);
+  if (!parsed) {
     throw new ValidationError(
       "orderBy must be one supported single-field order such as create_time desc.",
     );
   }
-  const field = match[1]?.toLowerCase() ?? "";
-  const direction = match[2]?.toLowerCase() ?? "";
-  return `${field.startsWith("update") ? "updated_at" : "created_at"} ${direction}`;
+  return parsed;
 }
 
 function pageSize(args: JsonObject) {

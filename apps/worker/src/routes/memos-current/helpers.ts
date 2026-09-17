@@ -12,11 +12,7 @@ import {
   UnauthorizedError,
   type updateMemo,
 } from "@flaremo/domain";
-import {
-  currentMemoToDto,
-  currentUserToDto,
-  legacyMemoState,
-} from "@flaremo/memos";
+import { currentMemoToDto, currentUserToDto } from "@flaremo/memos";
 import type { z } from "zod";
 import { createFlareMoAuth } from "../../auth";
 import {
@@ -31,9 +27,11 @@ import { CompatValidationError } from "../../memos-compat/errors";
 import { resolveMemoCreator } from "../../memos-compat/memo-creator";
 import { memoRelationsToDtos } from "../../memos-compat/memo-relations";
 import {
+  compatMemoRelationType,
+  compatMemoVisibility,
+  parseMemosOrderBy,
   parseMemosPageSize,
-  parseMemosRelationType,
-  parseMemosVisibility,
+  parseMemosState,
   splitUpdateMaskFields,
 } from "../../memos-compat/parsing";
 import { compatMemoPayload } from "../../memos-compat/payload";
@@ -134,10 +132,19 @@ export async function assertRegistrationOpen(
 
 export function currentListQuery(c: Parameters<typeof getRequestContext>[0]) {
   const rawOrderBy = c.req.query("orderBy") ?? "create_time desc";
-  const orderBy = normalizeCurrentOrderBy(rawOrderBy);
+  const orderBy = parseMemosOrderBy(rawOrderBy);
+  if (!orderBy) {
+    throw new CompatValidationError(
+      "Only a single create_time, display_time, or update_time order is supported",
+    );
+  }
   const rawState = c.req.query("state");
-  const state = legacyMemoState(rawState);
-  if (rawState && rawState !== "STATE_UNSPECIFIED" && !state) {
+  const state = parseMemosState(rawState);
+  if (
+    rawState &&
+    rawState.trim().toUpperCase() !== "STATE_UNSPECIFIED" &&
+    !state
+  ) {
     throw new CompatValidationError(`Unsupported memo state: ${rawState}`);
   }
   if (state === "trashed" || state === "deleted") {
@@ -220,11 +227,11 @@ export function currentUpdateInput(
     } else if (field === "visibility") {
       if (body.visibility === undefined)
         throw new CompatValidationError("visibility is required by updateMask");
-      input.visibility = currentVisibilityToLegacy(body.visibility);
+      input.visibility = compatMemoVisibility(body.visibility);
     } else if (field === "state") {
       if (body.state === undefined)
         throw new CompatValidationError("state is required by updateMask");
-      const state = legacyMemoState(body.state);
+      const state = parseMemosState(body.state);
       if (!state || state === "trashed" || state === "deleted") {
         throw new CompatValidationError(
           "Only NORMAL and ARCHIVED memo states are supported by current Memos",
@@ -251,50 +258,11 @@ export function currentUpdateInput(
   return input as Parameters<typeof updateMemo>[3];
 }
 
-export function currentVisibilityToLegacy(value: string | undefined) {
-  const normalized = parseMemosVisibility(value);
-  if (!normalized) {
-    throw new CompatValidationError(`Unsupported memo visibility: ${value}`);
-  }
-  return normalized;
-}
-
-export function currentRelationToLegacy(
-  value: string | undefined,
-): "reference" | "comment" {
-  const normalized = parseMemosRelationType(value);
-  if (!normalized) {
-    throw new CompatValidationError(`Unsupported memo relation type: ${value}`);
-  }
-  return normalized;
-}
-
 export function parseUpdateMask(value: string | undefined) {
   const fields = splitUpdateMaskFields(value);
   if (fields.length === 0)
     throw new CompatValidationError("updateMask is required");
   return fields;
-}
-
-export function normalizeCurrentOrderBy(value: string) {
-  // display_time is the user-facing alias Memos Web and third-party sync
-  // clients (e.g. Obsidian memos-sync) send for creation order.
-  const match = /^(create_time|update_time|display_time)\s+(asc|desc)$/i.exec(
-    value.trim(),
-  );
-  if (!match) {
-    throw new CompatValidationError(
-      "Only a single create_time, display_time, or update_time order is supported",
-    );
-  }
-  const field = match[1]?.toLowerCase().startsWith("update")
-    ? "updated_at"
-    : "created_at";
-  return `${field} ${match[2]?.toLowerCase()}` as
-    | "created_at asc"
-    | "created_at desc"
-    | "updated_at asc"
-    | "updated_at desc";
 }
 
 export function parsePageSize(value: string | undefined, fallback: number) {
