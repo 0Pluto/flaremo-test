@@ -215,7 +215,9 @@ test("pasting an image into the composer inserts a reference and binds it on sen
     timeout: 15_000,
   });
   await composer.pressSequentially(` Marker ${marker}`);
-  await page.getByRole("button", { name: /^(发送|Send)/ }).click();
+  // Anchored match: the composer row also has a "Send target" dropdown
+  // trigger next to the submit button (spaces feature).
+  await page.getByRole("button", { name: /^(发送|Send)$/i }).click();
   await expect(composer).toHaveText("", { timeout: 15_000 });
 
   const listResponse = await request.get("/api/app/memos?page_size=50");
