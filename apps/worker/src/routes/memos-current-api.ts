@@ -42,7 +42,6 @@ import {
   currentShareToDto,
   currentUserToDto,
   legacyMemoState,
-  publicUserToDto,
 } from "@flaremo/memos";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -70,6 +69,12 @@ import {
 } from "../memos-compat/credential";
 import { resolveMemoCreator } from "../memos-compat/memo-creator";
 import { memoRelationsToDtos } from "../memos-compat/memo-relations";
+import {
+  parseMemosPageSize,
+  parseMemosRelationType,
+  parseMemosVisibility,
+  splitUpdateMaskFields,
+} from "../memos-compat/parsing";
 import { personalAccessTokenToDto } from "../memos-compat/pat";
 import {
   normalizeAttachmentName,
@@ -1312,30 +1317,27 @@ function currentUpdateInput(
 }
 
 function currentVisibilityToLegacy(value: string | undefined) {
-  const normalized = (value ?? "PRIVATE").toLowerCase();
-  if (
-    normalized === "private" ||
-    normalized === "protected" ||
-    normalized === "public"
-  ) {
-    return normalized;
+  const normalized = parseMemosVisibility(value);
+  if (!normalized) {
+    throw new ValidationCurrentError(`Unsupported memo visibility: ${value}`);
   }
-  throw new ValidationCurrentError(`Unsupported memo visibility: ${value}`);
+  return normalized;
 }
 
 function currentRelationToLegacy(
   value: string | undefined,
 ): "reference" | "comment" {
-  const normalized = (value ?? "REFERENCE").toLowerCase();
-  if (normalized === "reference" || normalized === "comment") return normalized;
-  throw new ValidationCurrentError(`Unsupported memo relation type: ${value}`);
+  const normalized = parseMemosRelationType(value);
+  if (!normalized) {
+    throw new ValidationCurrentError(
+      `Unsupported memo relation type: ${value}`,
+    );
+  }
+  return normalized;
 }
 
 function parseUpdateMask(value: string | undefined) {
-  const fields = (value ?? "")
-    .split(",")
-    .map((field) => field.trim())
-    .filter(Boolean);
+  const fields = splitUpdateMaskFields(value);
   if (fields.length === 0)
     throw new ValidationCurrentError("updateMask is required");
   return fields;
@@ -1364,8 +1366,8 @@ function normalizeCurrentOrderBy(value: string) {
 
 function parsePageSize(value: string | undefined, fallback: number) {
   if (!value) return fallback;
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 1)
+  const parsed = parseMemosPageSize(value);
+  if (parsed === null)
     throw new ValidationCurrentError("pageSize must be a positive integer");
   return Math.min(parsed, 100);
 }

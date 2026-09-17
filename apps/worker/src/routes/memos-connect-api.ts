@@ -23,7 +23,6 @@ import {
   finalizeFlaremoMemberRemoval,
   getAttachmentById,
   getAuthBootstrapStatus,
-  type getAuthUserById,
   getFlaremoUserByAuthSessionToken,
   getMemoById,
   getMemoByIdForViewer,
@@ -110,6 +109,12 @@ import {
 } from "../memos-compat/credential";
 import { resolveMemoCreator } from "../memos-compat/memo-creator";
 import { memoRelationsToDtos } from "../memos-compat/memo-relations";
+import {
+  parseMemosPageSize,
+  parseMemosRelationType,
+  parseMemosVisibility,
+  splitUpdateMaskFields,
+} from "../memos-compat/parsing";
 import { personalAccessTokenToDto } from "../memos-compat/pat";
 import {
   normalizeAttachmentName,
@@ -1489,16 +1494,7 @@ async function connectPublicMemoRead(
       const result = await listMemosForViewer(
         context.db,
         context.user,
-        {
-          page_size: pageSize(body.pageSize),
-          page_token: optionalString(body.pageToken),
-          order_by: normalizeOrderBy(
-            optionalString(body.orderBy) ?? "create_time desc",
-          ),
-          state: stateToLegacy(optionalString(body.state)),
-          filter: optionalString(body.filter),
-          include_deleted: body.showDeleted === true,
-        },
+        connectMemoListQuery(body),
         { celScanLimit: context.memoFilterScanLimit },
       );
       const memos = await hydrateConnectPublicMemos(context, result.memos);
@@ -1691,12 +1687,13 @@ async function createConnectMemo(
   return connectMemoWithDetails(context, created.id);
 }
 
-async function listConnectMemos(
-  context: Awaited<ReturnType<typeof getRequestContext>>,
-  value: unknown,
-) {
-  const body = record(value);
-  const query = {
+/**
+ * Shared body-to-legacy-list-query mapping for the authenticated
+ * ListMemos and the anonymous public ListMemos read; both surfaces parsed
+ * identical copies of this shape.
+ */
+function connectMemoListQuery(body: Record<string, unknown>) {
+  return {
     page_size: pageSize(body.pageSize),
     page_token: optionalString(body.pageToken),
     order_by: normalizeOrderBy(
@@ -1706,6 +1703,14 @@ async function listConnectMemos(
     filter: optionalString(body.filter),
     include_deleted: body.showDeleted === true,
   };
+}
+
+async function listConnectMemos(
+  context: Awaited<ReturnType<typeof getRequestContext>>,
+  value: unknown,
+) {
+  const body = record(value);
+  const query = connectMemoListQuery(body);
   const result = await listMemos(context.db, context.user, query, {
     celScanLimit: context.memoFilterScanLimit,
   });
@@ -1743,10 +1748,7 @@ async function updateConnectMemo(
   const body = record(value);
   const memo = record(body.memo);
   const name = requiredString(memo.name, "memo.name");
-  const fields = String(body.updateMask ?? "")
-    .split(",")
-    .map((field) => field.trim())
-    .filter(Boolean);
+  const fields = splitUpdateMaskFields(body.updateMask);
   if (fields.length === 0)
     throw new ConnectInputError("updateMask is required");
 
@@ -2054,15 +2056,11 @@ function currentPayload(memo: Record<string, unknown>) {
 }
 
 function visibilityToLegacy(value: unknown) {
-  const normalized = String(value ?? "PRIVATE").toLowerCase();
-  if (
-    normalized === "private" ||
-    normalized === "protected" ||
-    normalized === "public"
-  ) {
-    return normalized;
+  const normalized = parseMemosVisibility(value);
+  if (!normalized) {
+    throw new ConnectInputError(`Unsupported visibility: ${String(value)}`);
   }
-  throw new ConnectInputError(`Unsupported visibility: ${String(value)}`);
+  return normalized;
 }
 
 function stateToLegacy(value: string | undefined) {
@@ -2075,11 +2073,14 @@ function stateToLegacy(value: string | undefined) {
   throw new ConnectInputError(`Unsupported memo state: ${value}`);
 }
 
-function relationTypeToLegacy(value: string | undefined) {
-  const normalized = (value ?? "REFERENCE").toUpperCase();
-  if (normalized === "REFERENCE") return "reference" as const;
-  if (normalized === "COMMENT") return "comment" as const;
-  throw new ConnectInputError(`Unsupported relation type: ${value}`);
+function relationTypeToLegacy(
+  value: string | undefined,
+): "reference" | "comment" {
+  const normalized = parseMemosRelationType(value);
+  if (!normalized) {
+    throw new ConnectInputError(`Unsupported relation type: ${value}`);
+  }
+  return normalized;
 }
 
 function normalizeOrderBy(value: string) {
@@ -2105,8 +2106,8 @@ function normalizeOrderBy(value: string) {
 
 function pageSize(value: unknown) {
   if (value === undefined) return 50;
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 1)
+  const parsed = parseMemosPageSize(value);
+  if (parsed === null)
     throw new ConnectInputError("pageSize must be a positive integer");
   return Math.min(parsed, 1_000);
 }
@@ -2422,7 +2423,7 @@ function userStatsFromMemoStats(
 
 async function updateBetterAuthUsername(
   c: ConnectContext,
-  context: ConnectRequestContext,
+  _context: ConnectRequestContext,
   username: string,
 ) {
   if (!c.req.raw.headers.get("cookie")) {
