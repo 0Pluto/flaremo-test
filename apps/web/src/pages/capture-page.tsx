@@ -299,7 +299,13 @@ export function CapturePage() {
         else lock = value;
       })
       .catch(() =>
-        toast.warning(t("capture.wakeLockFailed"), { duration: 6000 }),
+        // Bottom toasts overlap the recording controls and intercept taps on
+        // them (pointer hover over the toast also suspends sonner's auto
+        // dismiss), so keep this warning above the controls instead.
+        toast.warning(t("capture.wakeLockFailed"), {
+          duration: 6000,
+          position: "top-center",
+        }),
       );
     return () => {
       cancelled = true;
