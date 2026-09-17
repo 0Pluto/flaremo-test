@@ -443,6 +443,12 @@
     @apply min-h-32 max-h-80 overflow-y-auto px-4 pt-4 pb-2 text-[15px] leading-7 outline-none;
   }
 
+  /* flomo-style idle composer: an unfocused empty box shrinks to one quiet
+     line; focusing (or content) expands it back to the full editor. */
+  form[data-compact="true"] .composer-editor-content {
+    @apply min-h-11 max-h-11 overflow-hidden px-4 pt-2 pb-1;
+  }
+
   .composer-editor-content p {
     @apply my-0 min-h-7;
   }

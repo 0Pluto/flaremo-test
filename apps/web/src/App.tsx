@@ -38,6 +38,7 @@ import { LocaleSwitcher } from "@/components/locale-switcher";
 import { MemoList } from "@/components/memo-list";
 import { NotificationBell } from "@/components/notification-bell";
 import { PwaUpdatePrompt } from "@/components/pwa-update-prompt";
+import { ScopeSwitcher } from "@/components/scope-switcher";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -377,6 +378,7 @@ export function FlareMoApp() {
     invalidateWorkspace,
     renameTagMutation,
     restoreMutation,
+    revokeShareMutation,
     sharesByMemo,
     shareMutation,
     trashMutation,
@@ -448,10 +450,6 @@ export function FlareMoApp() {
   const renderExplorer = (importInputId: string, onNavigate?: () => void) => (
     <FlareMoExplorer
       activeTag={activeTag}
-      activeView={view}
-      activeSpace={space}
-      team={currentUserQuery.data?.team ?? null}
-      onSpaceChange={setSpace}
       headerAction={
         <div className="mr-8 flex items-center gap-1 lg:mr-0">
           <NotificationBell />
@@ -524,7 +522,6 @@ export function FlareMoApp() {
       onRenameTag={(from, to) => renameTagMutation.mutate({ from, to })}
       onTagChange={setActiveTag}
       onUntaggedChange={setUntagged}
-      onViewChange={setView}
       onDaySelect={(date) => {
         void navigate({
           replace: true,
@@ -588,16 +585,13 @@ export function FlareMoApp() {
                 </SheetContent>
               </Sheet>
               <div className="flex min-w-0 flex-1 items-center gap-1.5">
-                <span className="hidden text-muted-foreground sm:inline">
-                  /
-                </span>
-                <div className="truncate px-1.5 py-1 text-sm font-semibold">
-                  {dayFilter
-                    ? formatDayTitle(dayFilter, locale)
-                    : query.trim()
-                      ? t("search.results")
-                      : viewTitle(view, t)}
-                </div>
+                <ScopeSwitcher
+                  activeSpace={space}
+                  activeView={view}
+                  team={currentUserQuery.data?.team ?? null}
+                  onSpaceChange={setSpace}
+                  onViewChange={setView}
+                />
               </div>
               <WorkspaceSearch
                 className="hidden w-[280px] min-w-0 shrink md:block"
@@ -819,6 +813,7 @@ export function FlareMoApp() {
                 onPin={handlePin}
                 onRestore={restoreMemo}
                 onRetry={handleRetry}
+                onRevokeShare={(share) => revokeShareMutation.mutate(share.id)}
                 onShare={shareMemo}
                 onTagClick={setActiveTag}
                 onTrash={trashMemo}
@@ -879,17 +874,6 @@ export function FlareMoApp() {
       </Dialog>
     </div>
   );
-}
-
-function viewTitle(view: ViewMode, t: (key: TranslationKey) => string) {
-  switch (view) {
-    case "archived":
-      return t("view.archive");
-    case "trashed":
-      return t("view.trash");
-    default:
-      return t("view.timeline");
-  }
 }
 
 export default function App() {

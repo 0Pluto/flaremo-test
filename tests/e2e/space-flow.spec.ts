@@ -46,8 +46,12 @@ test("switching spaces scopes the timeline request and keeps the URL restorable"
   ).toBeVisible();
   expect(requestedSpaces.every((space) => space === "all")).toBe(true);
 
-  const spacesNav = page.getByRole("navigation", { name: /spaces|空间/i });
-  await spacesNav.getByRole("button", { name: /team space|团队空间/i }).click();
+  // Spaces moved to the header ScopeSwitcher.
+  const scopeTrigger = page.getByRole("button", {
+    name: /note scope|笔记范围/i,
+  });
+  await scopeTrigger.click();
+  await page.getByRole("menuitem", { name: /team space|团队空间/i }).click();
   await expect(
     page.locator("article").filter({ hasText: "Space note team-only" }),
   ).toBeVisible();
@@ -70,7 +74,8 @@ test("switching spaces scopes the timeline request and keeps the URL restorable"
     page.locator("article").filter({ hasText: "Space note team-only" }),
   ).toHaveCount(0);
 
-  await spacesNav.getByRole("button", { name: /^all|全部$/i }).click();
+  await scopeTrigger.click();
+  await page.getByRole("menuitem", { name: /^all|全部$/i }).click();
   await expect(
     page.locator("article").filter({ hasText: "Space note team-only" }),
   ).toBeVisible();

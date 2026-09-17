@@ -17,6 +17,7 @@ import {
   type Memo,
   type MemoState,
   renameTag,
+  revokeShare,
   trashMemo,
   updateMemo,
 } from "@/api";
@@ -169,6 +170,21 @@ export function useMemoMutations() {
     onError: handleMutationError,
   });
 
+  // Visibility demoted from public: the link must not outlive the permission.
+  const revokeShareMutation = useMutation({
+    mutationFn: revokeShare,
+    onSuccess: (_share, shareId) => {
+      setSharesByMemo((current) => {
+        const next = new Map(current);
+        for (const [memoName, share] of current) {
+          if (share.id === shareId) next.delete(memoName);
+        }
+        return next;
+      });
+    },
+    onError: handleMutationError,
+  });
+
   return {
     createMemoAsync,
     isCreatingMemo,
@@ -178,6 +194,7 @@ export function useMemoMutations() {
     invalidateWorkspace,
     renameTagMutation,
     restoreMutation,
+    revokeShareMutation,
     sharesByMemo,
     shareMutation,
     trashMutation,

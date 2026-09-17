@@ -39,6 +39,8 @@ type MemoListProps = {
   onArchive: (id: string) => void;
   onPin: (id: string, pinned: boolean) => void;
   onShare: (id: string) => void;
+  /** Tear down the public link after a memo leaves "public". */
+  onRevokeShare?: (share: Share) => void;
   onUpdate: (
     id: string,
     input: { content: string; visibility: MemoVisibility },
@@ -91,6 +93,7 @@ export const MemoList = memo(function MemoList({
   onArchive,
   onPin,
   onShare,
+  onRevokeShare,
   onUpdate,
   onTrash,
   onRestore,
@@ -227,6 +230,7 @@ export const MemoList = memo(function MemoList({
             onHardDelete={onHardDelete}
             onPin={onPin}
             onRestore={onRestore}
+            onRevokeShare={onRevokeShare}
             onShare={onShare}
             onTagClick={onTagClick}
             onTrash={onTrash}

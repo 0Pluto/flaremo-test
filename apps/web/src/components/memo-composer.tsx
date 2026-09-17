@@ -101,6 +101,10 @@ export function MemoComposer({
   const editorRef = useRef<Editor | null>(null);
   const canSubmit = Boolean(draft.content.trim() || draft.files.length > 0);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
+  // Idle state shrinks to one line (flomo-style): unfocused and empty. Focus
+  // or any content expands the editor back to full height.
+  const [isComposerFocused, setIsComposerFocused] = useState(false);
+  const isCompact = !isComposerFocused && !canSubmit && !isPending;
   // "#" autocomplete: the in-progress tag token under the caret (reported by
   // the editor's transactions) plus the highlighted row.
   const [activeTagToken, setActiveTagToken] = useState<{
@@ -281,6 +285,13 @@ export function MemoComposer({
   return (
     <form
       className="group relative flex w-full flex-col rounded-xl border border-border bg-card shadow-xs motion-safe:animate-rise motion-safe:transition-[border-color,box-shadow] motion-safe:duration-200 focus-within:border-brand-400/60 focus-within:shadow-md focus-within:ring-2 focus-within:ring-brand-400/25"
+      data-compact={isCompact ? "true" : undefined}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) {
+          setIsComposerFocused(false);
+        }
+      }}
+      onFocus={() => setIsComposerFocused(true)}
       onSubmit={(event) => {
         event.preventDefault();
         void submit();
@@ -532,11 +543,11 @@ export function MemoComposer({
                 render={
                   <Button
                     aria-label={t("composer.visibility.aria")}
-                    className="h-8 px-2 text-xs"
+                    className="h-7 gap-1 rounded-full border-border bg-card px-2.5 text-xs"
                     disabled={isPending}
                     size="sm"
                     type="button"
-                    variant="ghost"
+                    variant="outline"
                   />
                 }
               >
@@ -575,29 +586,23 @@ export function MemoComposer({
               </DropdownMenuContent>
             </DropdownMenu>
           )}
+          {/* flomo's round send: the icon is the affordance, the label lives
+              in the aria name. */}
           <Button
-            className="h-8 px-3"
+            aria-label={t("composer.send")}
+            className="size-8 rounded-full"
             disabled={
               isPending || isUploadingImages || !canSubmit || voiceActive
             }
+            size="icon-sm"
             type="submit"
             variant="brand"
           >
             {isPending ? (
-              <>
-                <Loader2Icon
-                  className="motion-safe:animate-spin"
-                  data-icon="inline-start"
-                />
-                {t("composer.sending")}
-              </>
+              <Loader2Icon className="motion-safe:animate-spin" />
             ) : (
-              <SendIcon
-                className="motion-safe:animate-scale-in"
-                data-icon="inline-start"
-              />
+              <SendIcon className="motion-safe:animate-scale-in" />
             )}
-            <span>{t("composer.send")}</span>
           </Button>
         </div>
       </div>

@@ -66,7 +66,9 @@ describe("WAV container", () => {
     }
     // The full-recording blob (rollout §4.1) is one standalone WAV: exactly
     // one header and every slice's payload, headers stripped.
-    const recording = audio.recording!;
+    const recording = audio.recording;
+    expect(recording).toBeInstanceOf(Blob);
+    if (!recording) throw new Error("finalize() lost the recording blob");
     expect(recording.type).toBe("audio/wav");
     const recordingView = new DataView(
       await recording.slice(0, 44).arrayBuffer(),
