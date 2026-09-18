@@ -462,7 +462,12 @@ export function registerArticlePage(app: Hono<HonoBindings>): void {
       )
       .orderBy(desc(articles.publishedAt))
       .limit(2000);
-    const stream = new SitemapStream({ hostname: `${origin}/` });
+    // suppressErrors: an instance with zero published articles still emits
+    // a valid empty urlset instead of the package's EmptySitemap throw.
+    const stream = new SitemapStream({
+      hostname: `${origin}/`,
+      suppressErrors: true,
+    });
     for (const row of rows) {
       stream.write({
         url: `${origin}/article/${encodeURIComponent(row.slug)}`,
