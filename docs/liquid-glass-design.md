@@ -1,7 +1,7 @@
 # Liquid Glass（液态玻璃）材质三端统一技术方案
 
-状态：**待拍板**（方案先行，未动工）
-日期：2026-09-19
+状态：**待拍板**（09-19 二轮修订：折射按引擎全开、含 Android；落点挑项与官网接入仍待定）
+日期：2026-09-19（同日二轮修订）
 范围：apps/web（应用）+ apps/worker（分享页 SSR 模板）+ apps/site（官网）；零新增 npm 依赖、零 worker 业务逻辑改动
 前置：社区调研结论（2026-09-19 会话）——真折射只有 Chromium 可跑，方案核心是「统一规格、分层降级」
 
@@ -99,6 +99,7 @@ document.documentElement.dataset.glassEngine = e;
 - **为什么服务端不做**：SSR（分享页）不输出该属性 → CSS 默认走基线配方，天然 no-JS 安全。
 - iOS 上所有浏览器（含 Chrome iOS）都是 WebKit，落进 webkit 分支拿基线——正确。
 - 未来 WebKit 修复 Bug 245510 后，把 webkit 分支也打开折射即可，一处改动。
+- **三道门收敛为一个属性**：bootstrap 计算「引擎 = blink 且设备达标且未被降级」→ 输出 `<html data-glass-refract="on">`（引擎能力另存 `data-glass-engine` 供调试）；CSS 折射分支只认 `data-glass-refract`，运行时降级 = 摘属性，CSS 零改动。
 
 ### 4.3 配方层
 
@@ -130,7 +131,7 @@ document.documentElement.dataset.glassEngine = e;
 **折射增强（仅 blink）：**
 
 ```css
-[data-glass-engine="blink"] .glass--refract {
+[data-glass-refract="on"] .glass--refract {
   backdrop-filter: url(#lg-refract) blur(var(--glass-blur)) saturate(var(--glass-saturate));
 }
 ```
@@ -157,15 +158,17 @@ document.documentElement.dataset.glassEngine = e;
 - **SVG defs 单例**：`<svg width="0" height="0" aria-hidden>` 只注入一份。应用端放在 App 根（与 Portal 浮层同树）；分享页 SSR v1 不注入（分享页只用基线，见 §9）。
 - **混合链风险**：`url(#f) blur() saturate()` 混合 filter list 在 Chromium 的 backdrop-filter 上按社区 demo 是可行的，但属本方案唯一没有一手实测的环节——**M0 第一件事就是验证它**；若实测不支持，退路是把 blur 留在元素、折射单独放 `::before` 层（成本：多一次合成采样，仍然可行）。
 
-## 6. 性能与护栏
+## 6. 性能策略与护栏（二轮修订：折射按引擎全开）
 
-`backdrop-filter` 是逐帧重采样，玻璃成本 ∝ 面积 × 背后重绘频率。
+`backdrop-filter` 是逐帧重采样，玻璃成本 ∝ 面积 × 背后重绘频率。先校准量级：**成本大头是 blur**（多轮高斯采样），折射（`feDisplacementMap`）只是其上多一次贴图采样与两次乘加，增量约 +30–50%，不是数量级差异——这是 Android 敢与桌面同开的依据。防线三层：
 
-1. **折射只在桌面 blink 开**。移动端（webkit 全系 + blink Android）统一基线档——iOS Safari 的大面积 blur 掉帧史 + 移动端 GPU 参差，不值得为折射赌稳定性；未来单点放开。
-2. **面积上限**：玻璃面 ≤ 视口 1/4；落点全部是天然小面的浮层（§9），没有全屏玻璃。
-3. **禁区**：composer、MemoCard、时间线长列表内部——背后高频重绘（打字/滚动）会让采样成本爆炸，也是可读性灾区。
-4. **禁止玻璃嵌套**：玻璃面上再开玻璃浮层 = 双重采样。Dialog 内不再加类（Dialog 本身已是玻璃，Spotlight 天然覆盖）。
-5. **动画纪律**：只准动 `transform/opacity`（现行规范本来如此）；**严禁**对 `--glass-blur` / 位移 scale 做过渡动画——backdrop-filter 插值在 blink 上是逐帧重算。液态 morph 形变动画明确不做（§12）。
+1. **引擎门：按引擎开，不按设备开**。折射在全部 blink 端开启——桌面 Chrome/Edge + **Android Chrome**，同一套 CSS 零额外改动。iOS 不开不是保守而是物理不可行：iOS 全部浏览器内核都是 WebKit（Bug 245510 未修，Safari 26 未加、Safari 27 也没提），iPhone 上任何网站任何库都做不了真折射，只能等 WebKit 开放——届时探测分支一行放开，全端自动升级。
+2. **设备门（blink 内二道门）**：`navigator.deviceMemory < 4 || navigator.hardwareConcurrency <= 4` → 本会话降基线。一行判断，把低端 Android 摁在安全档。
+3. **运行时门（自适应降级）**：玻璃可见时监测长帧（1s 内连续 ≥3 帧 >50ms 即判定），触发后本会话降基线并记入 localStorage，下次会话直接基线。"先给最好效果、卡了自动退"优于"先不给"。
+4. **面积上限**：玻璃面 ≤ 视口 1/4；落点全部是天然小面的浮层（§9），没有全屏玻璃。
+5. **禁区**：composer、MemoCard、时间线长列表内部——背后高频重绘（打字/滚动）会让采样成本爆炸，也是可读性灾区。
+6. **禁止玻璃嵌套**：玻璃面上再开玻璃浮层 = 双重采样。Dialog 内不再加类（Dialog 本身已是玻璃，Spotlight 天然覆盖）。
+7. **动画纪律**：只准动 `transform/opacity`（现行规范本来如此）；**严禁**对 `--glass-blur` / 位移 scale 做过渡动画——backdrop-filter 插值在 blink 上是逐帧重算。液态 morph 形变动画明确不做（§12）。
 
 ## 7. 无障碍与明暗
 
@@ -185,7 +188,7 @@ document.documentElement.dataset.glassEngine = e;
 
 ## 9. 落点清单（待挑项）
 
-全部是"现有组件加一个类名"级别的改动：
+全部是"现有组件加一个类名"级别的改动。折射档生效范围 = blink 且过设备门的端（桌面 + Android）；WebKit/Gecko/未达门槛设备自动基线，同一份类名无需任何分支：
 
 | 优先级 | 落点 | 端 | 改法 |
 |---|---|---|---|
@@ -202,8 +205,8 @@ document.documentElement.dataset.glassEngine = e;
 
 | 阶段 | 内容 | 工时 |
 |---|---|---|
-| M0 | 折射混合链实测 + `/dev/glass` 临时 demo 路由（三引擎模拟切换、三档强度、明暗），Kim 目检定调 | 0.5 天 |
-| M1 | token + 配方 + 引擎探测 + P0 四落点 + 位移图脚本 | 1 天 |
+| M0 | 折射混合链实测（桌面 + Android Chrome 真机）+ `/dev/glass` 临时 demo 路由（三引擎模拟切换、三档强度、明暗），Kim 目检定调 | 0.5 天 |
+| M1 | token + 配方 + 引擎探测 + 设备/运行时降级器 + P0 四落点 + 位移图脚本 | 1.5 天 |
 | M2 | 分享页头卡 + 官网接入（可选，视 Kim 是否要官网一起） | 0.5 天 |
 | M3（可选，暂不承诺） | 运行时位移图（任意半径）、液态 morph 动画 | 另议 |
 
@@ -211,7 +214,7 @@ document.documentElement.dataset.glassEngine = e;
 
 - tsc + 定向 vitest：引擎探测函数的 UA 矩阵单测（Chrome/Edge/Firefox/Safari/iOS Chrome/UA 缩减）+ 降级块生效断言
 - biome format 先过；`pnpm build` 通过
-- dev 目检清单：桌面 Chrome（折射四落点）/ Safari 真机（基线四落点）/ Firefox（**重点：不得出现透明塑料布**，验证探测分支）/ 暗色 / `prefers-reduced-transparency` 模拟
+- dev 目检清单：桌面 Chrome（折射四落点）/ Android Chrome 真机（折射档）/ Safari 真机（基线四落点）/ Firefox（**重点：不得出现透明塑料布**，验证探测分支）/ 暗色 / `prefers-reduced-transparency` 模拟
 - **不跑 Playwright**（不主动跑 e2e，Kim 明确要求才跑）
 
 ## 12. 明确不做（非目标）
@@ -228,6 +231,6 @@ document.documentElement.dataset.glassEngine = e;
 |---|---|
 | Firefox 误判进折射分支 → 透明塑料布 | 探测按引擎不按特性；M0 目检专项；`data-glass="off"` 兜底 |
 | `url()+blur()` 混合链不支持 | M0 首项实测；退路 `::before` 分层（§5） |
-| 低端设备掉帧 | 折射仅桌面 blink；面积护栏；kill switch |
+| 低端 Android 掉帧 | 设备分级门槛 + 运行时自适应降级 + 面积护栏；kill switch |
 | WebKit 未来修复 Bug 245510 | 探测自动升级折射，改动一行 |
 | 视觉回归（现有浮层样式） | 玻璃类是纯增量，出问题删类名即回滚，无迁移成本 |
