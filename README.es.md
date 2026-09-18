@@ -99,6 +99,13 @@ La respuesta es rotundamente sí:
 
 ---
 
+### 9. Sistema de complementos: las tarjetas son complementos
+- **Cinco tarjetas incluidas**: Sencilla, Diaria, Billete, Postal y un Matasellos dibujado con canvas.
+- **Tienda y gestión**: en los ajustes — explorar directorios, instalación en un clic (verificación SHA-256), activar/desactivar, orden, tarjeta predeterminada, ocultar. El directorio oficial: [flaremo.app/plugins](https://flaremo.app/plugins/registry.json).
+- **Sube los tuyos**: un administrador puede instalar un paquete local — solo existe en esa instancia y nunca se envía a ningún sitio.
+- **Herramientas de autor**: `pnpm plugin:new` genera el esqueleto, `pnpm plugin:check` valida con **exactamente las reglas que se aplican al instalar**, `pnpm plugins:build` empaqueta. Las tarjetas document son maquetación JSON pura; las sandbox ejecutan tu propio HTML/CSS/JS. Ver la [guía de complementos](./docs/plugins.md).
+- **Seguro por defecto**: las tarjetas se ejecutan en un sandbox de origen opaco y **sin acceso a la red**; los paquetes de comunidad y de marca permanecen desactivados hasta que un administrador los active.
+
 ## 📊 ¿Cuánto rinde el plan gratuito de Cloudflare?
 
 | Recurso | Cuota Gratuita | Capacidad Estimada | Tiempo de uso práctico |

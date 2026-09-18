@@ -16,7 +16,9 @@
     "zh-CN": "素白、日签、票根、明信片——四张随 FlareMo 内置的基础卡。",
     "en-US": "Plain, daily, ticket, and postcard — the four cards bundled with FlareMo."
   },
-  "author": { "name": "FlareMo" },
+  "author": {
+    "name": "FlareMo"
+  },
   "license": "AGPL-3.0-only",
   "defaultEnabled": true,
   "contributes": {
@@ -34,7 +36,8 @@
           "es": "Sencillo",
           "ar": "أبيض"
         },
-        "document": "cards/plain.json"
+        "document": "cards/plain.json",
+        "preview": "cards/plain.preview.png"
       },
       {
         "id": "daily",
@@ -49,7 +52,8 @@
           "es": "Diario",
           "ar": "يومية"
         },
-        "document": "cards/daily.json"
+        "document": "cards/daily.json",
+        "preview": "cards/daily.preview.png"
       },
       {
         "id": "ticket",
@@ -64,7 +68,8 @@
           "es": "Billete",
           "ar": "تذكرة"
         },
-        "document": "cards/ticket.json"
+        "document": "cards/ticket.json",
+        "preview": "cards/ticket.preview.png"
       },
       {
         "id": "postcard",
@@ -79,7 +84,8 @@
           "es": "Postal",
           "ar": "بطاقة بريدية"
         },
-        "document": "cards/postcard.json"
+        "document": "cards/postcard.json",
+        "preview": "cards/postcard.preview.png"
       }
     ]
   }

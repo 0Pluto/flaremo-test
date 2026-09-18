@@ -57,6 +57,25 @@ const registryEntrySchema = z.object({
   license: z.string().optional(),
   minAppVersion: z.string().optional(),
   preview: z.string().nullable().optional(),
+  contributes: z
+    .object({
+      shareCardTemplates: z
+        .array(
+          z.object({
+            id: z.string(),
+            kind: z.enum(["document", "sandbox"]),
+            name: z.record(z.string(), z.string()),
+            description: z.record(z.string(), z.string()).optional(),
+            size: z
+              .object({ width: z.number(), height: z.number() })
+              .optional(),
+            options: z.array(z.unknown()).optional(),
+            preview: z.string().optional(),
+          }),
+        )
+        .optional(),
+    })
+    .optional(),
   artifact: z.object({
     url: z.string().trim().min(1),
     sha256: z
@@ -155,6 +174,21 @@ pluginsStoreApi.get("/store", async (c) => {
           ...entry,
           sourceId: directory.source.id,
           preview: directory.previews[entry.id] ?? null,
+          // Card previews resolve against the same directory base, so the
+          // admin UI can show what each card looks like before installing.
+          contributes: entry.contributes
+            ? {
+                ...entry.contributes,
+                shareCardTemplates: (
+                  entry.contributes.shareCardTemplates ?? []
+                ).map((card) => ({
+                  ...card,
+                  preview: card.preview
+                    ? resolveUrl(directory.source.url, card.preview)
+                    : null,
+                })),
+              }
+            : entry.contributes,
           installedVersion: installedById.get(entry.id)?.version ?? null,
           installedSource: installedById.get(entry.id)?.source ?? null,
         })),

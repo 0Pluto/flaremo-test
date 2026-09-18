@@ -49,6 +49,8 @@ type StorePlugin = {
       description?: Record<string, string>;
       size?: { width: number; height: number };
       options?: unknown[];
+      /** Registry-relative card preview image, when the plugin ships one. */
+      preview?: string;
     }>;
   };
   artifact: { url: string; sha256: string; size: number };
@@ -160,6 +162,20 @@ async function buildTier(
       preview = `${manifest.id}/preview.png`;
     }
 
+    // Card-level previews are mirrored too (flattened to `<id>/<cardId>.png`)
+    // so the site and the store can show the actual cards.
+    const cardPreviews: Record<string, string> = {};
+    for (const card of manifest.contributes.shareCardTemplates ?? []) {
+      if (!card.preview) continue;
+      const cardPreviewBytes = files[`${prefix}${card.preview}`];
+      if (!cardPreviewBytes) continue;
+      await writeFile(
+        path.join(storeDir, manifest.id, `${card.id}.png`),
+        cardPreviewBytes,
+      );
+      cardPreviews[card.id] = `${manifest.id}/${card.id}.png`;
+    }
+
     output.push({
       id: manifest.id,
       version: manifest.version,
@@ -185,6 +201,9 @@ async function buildTier(
           ...(card.description ? { description: card.description } : {}),
           ...(card.size ? { size: card.size } : {}),
           ...(card.options ? { options: card.options } : {}),
+          ...(cardPreviews[card.id]
+            ? { preview: cardPreviews[card.id] }
+            : {}),
         })),
       },
       artifact: {

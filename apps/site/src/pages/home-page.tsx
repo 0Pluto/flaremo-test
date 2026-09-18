@@ -17,6 +17,7 @@ import {
   WifiOff,
   Zap,
 } from "lucide-react";
+import { CardGallerySection } from "@/components/card-gallery-section";
 import { InteractiveShowcase } from "@/components/interactive-showcase";
 import {
   AnimatedNumber,
@@ -96,6 +97,7 @@ export function HomePage() {
         subtitle={home.comparisonSubtitle}
       />
       <EcosystemSection locale={locale} />
+      <CardGallerySection locale={locale} />
       <FaqSection
         badge={home.faqBadge}
         heading={home.faqHeading}

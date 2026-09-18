@@ -24,6 +24,14 @@ export type PluginSettings = {
   };
 };
 
+export type PluginStoreCard = {
+  id: string;
+  kind: "document" | "sandbox";
+  name: Record<string, string>;
+  description?: Record<string, string>;
+  preview?: string | null;
+};
+
 export type PluginStoreEntry = {
   id: string;
   version: string;
@@ -34,6 +42,7 @@ export type PluginStoreEntry = {
   license?: string;
   minAppVersion?: string;
   preview: string | null;
+  contributes?: { shareCardTemplates?: PluginStoreCard[] };
   artifact: { url: string; sha256: string; size: number };
   sourceId: string;
   installedVersion: string | null;

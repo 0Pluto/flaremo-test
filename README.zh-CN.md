@@ -97,6 +97,13 @@ FlareMo 探索了一条完全不同的道路：**仅凭一个免费的 Cloudflar
 
 ---
 
+### 9. 插件系统：卡片即插件
+- **五张内置卡片**：素白、日签、票根、明信片，以及自绘 canvas 的邮戳演示卡。
+- **商店与管理**：账户设置里浏览目录、一键安装（sha256 校验）、启用/停用、排序、设默认、隐藏；官方目录在 [flaremo.app/plugins](https://flaremo.app/plugins/registry.json)。
+- **可上传**：管理员可上传本地插件包——只存在于自己实例，永不外传。
+- **可创作**：`pnpm plugin:new` 生成脚手架、`pnpm plugin:check` 用与实例安装**完全相同**的规则校验、`pnpm plugins:build` 出包；document 卡是纯 JSON 排版，sandbox 卡写自己的 HTML/CSS/JS。详见 [插件文档](./docs/plugins.md)。
+- **默认安全**：卡片跑在不透明源沙箱里，**无任何网络访问**；社区/品牌插件默认关闭，管理员显式启用才可见。
+
 ## 📊 免费额度到底够用多少？
 
 很多人对 Cloudflare 免费计划的容量缺乏概念，实际上对于个人或小团队知识库场景，免费配额几乎是**永久溢出**的：
@@ -214,6 +221,7 @@ flowchart LR
 - **存储层**：Cloudflare R2 (S3 兼容对象存储)
 - **鉴权体系**：Better Auth 原生方案（HttpOnly Cookie + 可撤销 `memos_pat_`）
 - **AI 与搜索**：Cloudflare Workers AI, Vectorize 向量检索, SQLite FTS5 全文搜索
+- **插件**：槽位式扩展平台（[规范](./docs/plugin-platform-standard.md)、[指南](./docs/plugins.md)）；插件包存于 R2，沙箱卡片无网络访问
 
 ---
 

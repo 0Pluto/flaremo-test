@@ -97,6 +97,13 @@ FlareMo answers a simpler question: **Can you get a 24/7 online, resilient, glob
 
 ---
 
+### 9. Plugin System: Cards as Plugins
+- **Five built-in cards**: Plain, Daily, Ticket, Postcard, plus a canvas-drawn Postmark demo.
+- **Store and curation**: browse directories, one-click install (SHA-256 verified), enable/disable, reorder, set the default, hide — all in account settings. The official directory lives at [flaremo.app/plugins](https://flaremo.app/plugins/registry.json).
+- **Upload your own**: admins can install a local package — it exists only on that instance and is never sent anywhere.
+- **Authoring tools**: `pnpm plugin:new` scaffolds, `pnpm plugin:check` validates with the **exact rules instances enforce on install**, `pnpm plugins:build` packages. Document cards are pure JSON layouts; sandbox cards run your own HTML/CSS/JS. See the [plugin guide](./docs/en/plugins.md).
+- **Safe by default**: cards run in an opaque-origin sandbox with **no network access**; community and brand packs stay off until an admin enables them.
+
 ## 📊 How Generous Is Cloudflare's Free Tier?
 
 Many assume "free" means "severely limited". For text-heavy personal knowledge bases, Cloudflare's free quota is virtually inexhaustible:
@@ -194,6 +201,7 @@ flowchart LR
 - **Storage**: Cloudflare R2
 - **Auth**: Better Auth (HttpOnly cookie session + revocable `memos_pat_`)
 - **AI & Search**: Workers AI, Vectorize, SQLite FTS5
+- **Plugins**: slot-based extension platform ([standard](./docs/plugin-platform-standard.md), [guide](./docs/en/plugins.md)); packages live in R2, sandboxed cards run without network access
 
 ---
 

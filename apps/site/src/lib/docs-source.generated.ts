@@ -19,6 +19,8 @@ import enUpdate from "../../../../docs/en/update.md?raw";
 import maintenance from "../../../../docs/maintenance.md?raw";
 import memosCompatibility from "../../../../docs/memos-compatibility.md?raw";
 import memosEcosystem from "../../../../docs/memos-ecosystem.md?raw";
+import plugins from "../../../../docs/plugins.md?raw";
+import enPlugins from "../../../../docs/en/plugins.md?raw";
 import productRequirements from "../../../../docs/product-requirements.md?raw";
 import release from "../../../../docs/release.md?raw";
 import semanticSearch from "../../../../docs/semantic-search.md?raw";
@@ -99,6 +101,11 @@ const ZH_DOCS: Record<
     group: "compatibility",
     body: memosEcosystem,
   },
+  plugins: {
+    title: "插件系统",
+    group: "compatibility",
+    body: plugins,
+  },
   "product-requirements": {
     title: "产品需求梳理（对标 flomo）",
     group: "reference",
@@ -144,6 +151,11 @@ const EN_DOCS: Record<
     title: "Memos Compatibility Matrix",
     group: "compatibility",
     body: enMemosCompatibility,
+  },
+  plugins: {
+    title: "Plugin System",
+    group: "compatibility",
+    body: enPlugins,
   },
   update: {
     title: "Updating FlareMo",
@@ -230,6 +242,7 @@ const DESCRIPTIONS_ZH: Record<string, string> = {
   maintenance: "运维手册：备份、灾备演练、迁移、回滚。",
   "memos-compatibility": "/api/v1 子集与四类 memo 事件的 webhook outbox 边界。",
   "memos-ecosystem": "已验证的 Memos 第三方客户端与配置示例。",
+  plugins: "分享卡片插件：商店安装、自行上传、管理员挑选排序；作者用 plugin:check / plugin:new 开发。",
   "product-requirements": "对标 flomo 的需求池与依赖关系，决策输入而非承诺。",
   release: "发版流程：tag、CHANGELOG、migration notes、升级说明。",
   "semantic-search":
@@ -246,6 +259,8 @@ const DESCRIPTIONS_EN: Record<string, string> = {
   "memos-compatibility":
     "The /api/v1 subset and the four memo-event webhook outbox boundaries.",
   update: "Upgrading FlareMo: upstream sync workflow, PR flow, and rollbacks.",
+  plugins:
+    "Share-card plugins: install from the store, upload your own, curate per instance; authors build with plugin:check / plugin:new.",
   "agent-ingestion":
     "Designing Agent, Telegram, and IM capture paths and conflict policies. (Chinese source; English translation pending.)",
   "agent-memory":

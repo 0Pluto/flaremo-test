@@ -16,7 +16,9 @@
     "zh-CN": "一张用自由 HTML/Canvas 绘制的邮戳卡，演示沙箱插件能力。",
     "en-US": "A postmark card drawn with free-form HTML/Canvas, demonstrating sandbox plugins."
   },
-  "author": { "name": "FlareMo" },
+  "author": {
+    "name": "FlareMo"
+  },
   "license": "AGPL-3.0-only",
   "defaultEnabled": true,
   "contributes": {
@@ -51,7 +53,8 @@
             },
             "default": "#c2410c"
           }
-        ]
+        ],
+        "preview": "cards/stamp.preview.png"
       }
     ]
   }

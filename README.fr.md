@@ -99,6 +99,13 @@ La réponse est oui :
 
 ---
 
+### 9. Système d'extensions : les cartes sont des extensions
+- **Cinq cartes incluses** : Blanc, Citation du jour, Ticket, Carte postale, plus un Cachet dessiné au canvas.
+- **Boutique et gestion** : dans les réglages — parcourir les répertoires, installation en un clic (vérification SHA-256), activation/désactivation, ordre, carte par défaut, masquage. Le répertoire officiel : [flaremo.app/plugins](https://flaremo.app/plugins/registry.json).
+- **Importez les vôtres** : un administrateur peut installer un paquet local — il n'existe que sur cette instance et n'est jamais transmis.
+- **Outils d'auteur** : `pnpm plugin:new` génère un squelette, `pnpm plugin:check` valide avec **exactement les règles appliquées à l'installation**, `pnpm plugins:build` empaquette. Les cartes document sont de pures mises en page JSON ; les cartes sandbox exécutent votre HTML/CSS/JS. Voir le [guide des extensions](./docs/plugins.md).
+- **Sûr par défaut** : les cartes s'exécutent dans un bac à sable à origine opaque, **sans aucun accès réseau** ; les paquets communautaires et de marque restent désactivés jusqu'à validation par un administrateur.
+
 ## 📊 La générosité du niveau gratuit Cloudflare
 
 | Ressource | Quota gratuit Cloudflare | Équivalent en volume | Durée d'utilisation estimée |

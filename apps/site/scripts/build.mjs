@@ -32,6 +32,7 @@ const DOC_SLUGS = [
   "maintenance",
   "memos-compatibility",
   "memos-ecosystem",
+  "plugins",
   "product-requirements",
   "release",
   "semantic-search",

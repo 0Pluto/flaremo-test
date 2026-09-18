@@ -739,6 +739,25 @@ export function PluginsCard() {
                       entry.author?.name ||
                       storeSourceName(entry.sourceId)}
                   </p>
+                  {(entry.contributes?.shareCardTemplates ?? []).some(
+                    (card) => card.preview,
+                  ) && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {(entry.contributes?.shareCardTemplates ?? [])
+                        .filter((card) => card.preview)
+                        .slice(0, 5)
+                        .map((card) => (
+                          <img
+                            alt={localized(card.name, locale, card.id)}
+                            className="h-14 w-auto rounded border object-cover"
+                            key={card.id}
+                            loading="lazy"
+                            src={card.preview ?? ""}
+                            title={localized(card.name, locale, card.id)}
+                          />
+                        ))}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-2">
