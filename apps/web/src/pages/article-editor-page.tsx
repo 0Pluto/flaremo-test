@@ -120,6 +120,13 @@ export function ArticleEditorPage({ articleId }: { articleId: string }) {
       !current ||
       (next.title === current.title && next.content === current.content)
     ) {
+      // Nothing to persist. TipTap normalizes markdown on mount and the
+      // resulting onUpdate schedules a save whose round-trip is a no-op;
+      // leaving the indicator on "dirty" would show 未保存 forever for an
+      // article that is fully saved.
+      if (current) {
+        setSaveState((state) => (state === "dirty" ? "saved" : state));
+      }
       return;
     }
     setSaveState("saving");
