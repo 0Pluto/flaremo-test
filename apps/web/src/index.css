@@ -160,6 +160,16 @@
     --shadow-lg:
         0 12px 32px -8px oklch(0.30 0.02 60 / 0.14),
         0 4px 8px -4px oklch(0.30 0.02 60 / 0.06);
+
+    /* Liquid Glass material (docs/liquid-glass-design.md). Neutral by design:
+       [data-accent] presets never tint the glass, so the accent matrix stays
+       8 presets x 2 themes regardless of the material. */
+    --glass-blur: 18px;
+    --glass-saturate: 1.7;
+    --glass-tint: oklch(1 0 0 / 0.62);
+    --glass-rim: oklch(1 0 0 / 0.9);
+    --glass-edge: oklch(1 0 0 / 0.28);
+    --glass-shadow: oklch(0.2 0.02 60 / 0.16);
 }
 
 .dark {
@@ -195,6 +205,12 @@
     --shadow-sm: 0 0 0 transparent;
     --shadow-md: 0 0 0 transparent;
     --shadow-lg: 0 0 0 transparent;
+    /* Dark hierarchy comes from tint depth, not shadows — same rule as the
+       shadow tokens above. */
+    --glass-tint: oklch(0.22 0.012 60 / 0.55);
+    --glass-rim: oklch(1 0 0 / 0.24);
+    --glass-edge: oklch(1 0 0 / 0.08);
+    --glass-shadow: transparent;
 }
 
 /* Accent presets, derived from Radix Colors v3 (single shared ramp per preset;
@@ -366,6 +382,76 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background-color: color-mix(in oklab, var(--muted-foreground) 55%, transparent);
+}
+
+/* Liquid Glass baseline material (docs/liquid-glass-design.md): one recipe for
+   every engine — backdrop blur + saturate under a specular gradient rim.
+   Unlayered on purpose: the material must out-rank any bg-*/ring-*/shadow-*
+   utilities on the same element. A glass surface must be positioned
+   (fixed/sticky/relative) so the rim pseudo-element anchors to it. */
+.glass {
+  background: var(--glass-tint);
+  -webkit-backdrop-filter: blur(var(--glass-blur))
+    saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  box-shadow:
+    0 12px 32px -12px var(--glass-shadow),
+    inset 0 1px 0 var(--glass-rim);
+}
+
+.glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    160deg,
+    var(--glass-rim),
+    transparent 38%,
+    transparent 62%,
+    var(--glass-edge)
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* sonner injects its [data-sonner-toast] rules at runtime, after this sheet;
+   the attribute+class combo out-ranks them so the material still lands. */
+[data-sonner-toast].glass {
+  background: var(--glass-tint);
+  -webkit-backdrop-filter: blur(var(--glass-blur))
+    saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+}
+
+/* Degrade: OS-level reduced transparency, or the emergency kill switch
+   <html data-glass="off"> — both fall back to the solid card surface. */
+@media (prefers-reduced-transparency: reduce) {
+  .glass,
+  [data-sonner-toast].glass {
+    background: var(--card);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .glass::after {
+    display: none;
+  }
+}
+
+:root[data-glass="off"] .glass,
+:root[data-glass="off"] [data-sonner-toast].glass {
+  background: var(--card);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+:root[data-glass="off"] .glass::after {
+  display: none;
 }
 
 @layer utilities {
