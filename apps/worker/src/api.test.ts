@@ -2182,6 +2182,14 @@ describe("FlareMo Worker API", () => {
     expect(report.plan?.usage.maxMembersPerDeployment).toBe(1);
   });
 
+  it("hides the Cloudflare usage section until analytics secrets are set", async () => {
+    const report = await json<{ available: boolean }>(
+      await fetchApp("http://flaremo.test/api/app/usage/cloudflare"),
+    );
+    // Owner session, but FLAREMO_CF_* secrets absent -> feature off.
+    expect(report.available).toBe(false);
+  });
+
   it("rejects an attachment upload over the storage quota with 429", async () => {
     const quotaApp = createFlareMoApp({
       resolvePlanLimits: () => ({

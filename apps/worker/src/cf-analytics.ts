@@ -101,19 +101,19 @@ query($accountTag: string!, $databaseId: string!, $since: Date!, $until: Date!) 
 }`;
 
 const R2_QUERY = `
-query($accountTag: string!, $bucketName: string!, $since: Date!, $until: Date!) {
+query($accountTag: string!, $bucketName: string!, $since: Time!, $until: Time!) {
   viewer {
     accounts(filter: { accountTag: $accountTag }) {
       storage: r2StorageAdaptiveGroups(
         limit: 1
-        filter: { bucketName: $bucketName, date_geq: $since, date_leq: $until }
+        filter: { bucketName: $bucketName, datetime_geq: $since, datetime_leq: $until }
         orderBy: [datetime_DESC]
       ) {
         max { payloadSize metadataSize objectCount }
       }
       ops: r2OperationsAdaptiveGroups(
         limit: 10000
-        filter: { bucketName: $bucketName, date_geq: $since, date_leq: $until }
+        filter: { bucketName: $bucketName, datetime_geq: $since, datetime_leq: $until }
       ) {
         sum { requests }
         dimensions { actionType }
@@ -296,14 +296,13 @@ async function fetchR2Usage(
   window: CloudflareUsageWindow,
 ): Promise<{ section: CloudflareUsageReport["r2"]; error?: string }> {
   if (!config.r2Bucket) return { section: null };
-  const since = window.since.slice(0, 10);
-  const until = window.until.slice(0, 10);
   try {
+    // R2 datasets filter on datetime (Time), unlike D1 which uses date.
     const data = await graphqlQuery(config.token, R2_QUERY, {
       accountTag: config.accountId,
       bucketName: config.r2Bucket,
-      since,
-      until,
+      since: window.since,
+      until: window.until,
     });
     const storage = pick(data, `${ACCOUNT_PATH}.storage.0.max`) as Record<
       string,
@@ -355,7 +354,9 @@ export async function fetchCloudflareUsage(
   const config = resolveAnalyticsConfig(env);
   if (!config) throw new Error("Cloudflare analytics is not configured.");
   const now = options.now ?? new Date();
-  const key = config.accountId;
+  // Token is part of the key so a swapped token (setup:usage --reset) never
+  // serves up to an hour of stale data minted under the old credential.
+  const key = `${config.accountId}:${config.token}`;
   if (
     !options.force &&
     cache &&

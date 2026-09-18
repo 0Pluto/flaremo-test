@@ -179,6 +179,8 @@ describe("fetchCloudflareUsage", () => {
       variables: Record<string, string>;
     };
     expect(r2Body.variables.bucketName).toBe("flaremo-attachments");
+    // R2 datasets filter on datetime (Time), unlike D1's date filters.
+    expect(r2Body.variables.since).toBe("2026-09-01T00:00:00.000Z");
   });
 
   it("isolates per-section failures and keeps the rest of the report", async () => {
