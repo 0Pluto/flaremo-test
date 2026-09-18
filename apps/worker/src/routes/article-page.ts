@@ -462,21 +462,21 @@ export function registerArticlePage(app: Hono<HonoBindings>): void {
       )
       .orderBy(desc(articles.publishedAt))
       .limit(2000);
-    // suppressErrors: an instance with zero published articles still emits
-    // a valid empty urlset instead of the package's EmptySitemap throw.
-    const stream = new SitemapStream({
-      hostname: `${origin}/`,
-      suppressErrors: true,
-    });
-    for (const row of rows) {
-      stream.write({
-        url: `${origin}/article/${encodeURIComponent(row.slug)}`,
-        lastmod: row.updatedAt,
-      });
+    // The package throws EmptySitemap on a zero-entry stream; an instance
+    // with no published articles must still answer a valid empty urlset.
+    let xml = '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>';
+    if (rows.length > 0) {
+      const stream = new SitemapStream({ hostname: `${origin}/` });
+      for (const row of rows) {
+        stream.write({
+          url: `${origin}/article/${encodeURIComponent(row.slug)}`,
+          lastmod: row.updatedAt,
+        });
+      }
+      stream.end();
+      xml = (await streamToPromise(stream)).toString();
     }
-    stream.end();
-    const xml = await streamToPromise(stream);
-    return new Response(xml.toString(), {
+    return new Response(xml, {
       headers: {
         "content-type": "application/xml; charset=utf-8",
         "cache-control": SYNDICATION_CACHE_CONTROL,
