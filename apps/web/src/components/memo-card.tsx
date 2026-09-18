@@ -25,6 +25,7 @@ import {
   createTask,
   getMemoContext,
   getRelatedMemos,
+  listShares,
   uploadAttachment,
 } from "@/api";
 import { AttachmentGallery } from "@/components/attachment-gallery";
@@ -79,7 +80,9 @@ type MemoCardProps = {
   attachments: Attachment[];
   onArchive: (id: string) => void;
   onPin: (id: string, pinned: boolean) => void;
-  onShare: (id: string) => void;
+  /** Creates (or reuses) the memo's public share and resolves with it, so a
+      caller that has no share yet can still obtain the token in one step. */
+  onShare: (id: string) => Promise<Share>;
   /** Tear down the public link after a memo leaves "public". */
   onRevokeShare?: (share: Share) => void;
   onUpdate: (
@@ -227,17 +230,43 @@ export const MemoCard = memo(function MemoCard({
         content: memo.content,
         visibility,
       });
-      if (visibility === "public" && !share) onShare(id);
-      if (visibility !== "public" && share) onRevokeShare?.(share);
+      if (visibility === "public" && !share) await onShare(id);
+      if (visibility !== "public") {
+        if (share) {
+          onRevokeShare?.(share);
+        } else {
+          // The card may not know the share (e.g. the memo was made public in
+          // an earlier session): ask the server for the still-live links and
+          // revoke every one, so demotion always kills the public URL.
+          const { shares } = await listShares(memo.name);
+          for (const liveShare of shares) onRevokeShare?.(liveShare);
+        }
+      }
     } catch {
       // The mutation displays the error; the card keeps its current state.
     }
   };
 
   const copyShareLink = async () => {
-    if (!shareUrl) return;
+    if (shareUrl && share) {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        toast.success(t("toast.linkCopied"));
+      } catch {
+        toast.error(t("share.copyFailed"));
+      }
+      return;
+    }
+    // A public memo can lack a locally known share (promoted in an earlier
+    // session, created public from the composer, or another client). The
+    // server reuses any still-active share, so one idempotent POST yields
+    // the same token everyone else sees. If the write lands after clipboard
+    // activation expires (strict Safari), the next click copies directly.
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      const ensuredShare = await onShare(id);
+      await navigator.clipboard.writeText(
+        `${globalThis.location.origin}/share/${ensuredShare.token}`,
+      );
       toast.success(t("toast.linkCopied"));
     } catch {
       toast.error(t("share.copyFailed"));
@@ -381,13 +410,13 @@ export const MemoCard = memo(function MemoCard({
                         {/* Output is an action: a link to copy, or an image
                             card to export — never a permission editor. */}
                         <DropdownMenuItem
-                          disabled={!shareUrl}
+                          disabled={memo.visibility !== "public"}
                           onClick={() => void copyShareLink()}
                         >
                           <LinkIcon />
                           <span className="flex min-w-0 flex-col">
                             <span>{t("share.copyLink")}</span>
-                            {!shareUrl && (
+                            {memo.visibility !== "public" && (
                               <span className="text-xs text-muted-foreground">
                                 {t("share.copyLinkHint")}
                               </span>

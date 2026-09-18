@@ -411,7 +411,7 @@ export function FlareMoApp() {
   const { mutate: updateMemo, mutateAsync: updateMemoAsync } = updateMutation;
   const { mutate: trashMemo } = trashMutation;
   const { mutate: restoreMemo } = restoreMutation;
-  const { mutate: shareMemo } = shareMutation;
+  const { mutateAsync: shareMemo } = shareMutation;
   const { mutateAsync: hardDeleteMemo } = hardDeleteMutation;
   const handleArchive = useCallback(
     (id: string) => {

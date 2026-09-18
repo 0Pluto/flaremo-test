@@ -14,14 +14,13 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   extractReferencedAttachmentIds as webExtractRefs,
   injectShareTokenIntoFileUrls as webInjectShareToken,
-} from "../../apps/web/src/lib/attachment-refs";
+} from "../../web/src/lib/attachment-refs";
 import app, { createFlareMoApp } from "./index";
 import {
   extractReferencedAttachmentIds as workerExtractRefs,
   injectShareTokenIntoFileUrls as workerInjectShareToken,
 } from "./routes/share-page";
 import {
-  isKnownFrontendPath,
   SPA_EXACT_ROUTES,
   SPA_PREFIX_ROUTES,
   WORKER_OWNED_PREFIXES,
