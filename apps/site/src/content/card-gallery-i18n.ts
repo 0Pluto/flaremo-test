@@ -101,7 +101,10 @@ const CONTENT: Record<SupportedLocale, CardGalleryContent> = {
       { name: "Blanc", caption: "La note, tranquille sur le papier." },
       { name: "Citation du jour", caption: "La date en vedette." },
       { name: "Ticket", caption: "Un souvenir avec bande de codes-barres." },
-      { name: "Carte postale", caption: "Un horizon aquarelle, dessiné en SVG." },
+      {
+        name: "Carte postale",
+        caption: "Un horizon aquarelle, dessiné en SVG.",
+      },
       { name: "Cachet", caption: "Une carte sandbox dessinée au canvas." },
     ],
     cta: "Lire le guide des extensions",
@@ -117,7 +120,10 @@ const CONTENT: Record<SupportedLocale, CardGalleryContent> = {
       { name: "Diaria", caption: "La fecha como protagonista." },
       { name: "Billete", caption: "Un recuerdo con tira de código de barras." },
       { name: "Postal", caption: "Un horizonte en acuarela, dibujado en SVG." },
-      { name: "Matasellos", caption: "Una tarjeta sandbox dibujada con canvas." },
+      {
+        name: "Matasellos",
+        caption: "Una tarjeta sandbox dibujada con canvas.",
+      },
     ],
     cta: "Leer la guía de complementos",
     ctaHref: "/docs/plugins",
@@ -147,6 +153,8 @@ export const CARD_IMAGES = [
   "/showcase/card-stamp.png",
 ] as const;
 
-export function getCardGalleryContent(locale: SupportedLocale): CardGalleryContent {
+export function getCardGalleryContent(
+  locale: SupportedLocale,
+): CardGalleryContent {
   return CONTENT[locale] ?? CONTENT.en;
 }

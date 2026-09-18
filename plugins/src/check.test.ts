@@ -156,9 +156,12 @@ describe("checkPluginFiles — document cards", () => {
   });
 
   it("accepts a declared option binding", () => {
-    const manifest = baseManifest();
-    (manifest.contributes as { shareCardTemplates: Record<string, unknown>[] })
-      .shareCardTemplates[0]!.options = [
+    const contributes = baseManifest().contributes as {
+      shareCardTemplates: Record<string, unknown>[];
+    };
+    const card = contributes.shareCardTemplates[0];
+    if (!card) throw new Error("fixture is missing its card");
+    card.options = [
       {
         key: "accent",
         type: "color",
@@ -166,6 +169,7 @@ describe("checkPluginFiles — document cards", () => {
         default: "#000000",
       },
     ];
+    const manifest = baseManifest({ contributes });
     const errors = errorsOf({
       files: packageFiles(manifest, {
         "cards/demo.json": file({

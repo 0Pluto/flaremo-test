@@ -1,7 +1,7 @@
 {
   "specVersion": 1,
   "name": "FlareMo 官方目录",
-  "updatedAt": "2026-09-18T08:46:47.615Z",
+  "updatedAt": "2026-09-18T09:17:08.870Z",
   "plugins": [
     {
       "id": "flaremo-cards",
@@ -26,7 +26,7 @@
       },
       "license": "AGPL-3.0-only",
       "defaultEnabled": true,
-      "preview": null,
+      "preview": "flaremo-cards/preview.png",
       "contributes": {
         "shareCardTemplates": [
           {
@@ -45,7 +45,8 @@
             "size": {
               "width": 340,
               "height": 420
-            }
+            },
+            "preview": "flaremo-cards/plain.png"
           },
           {
             "id": "daily",
@@ -63,7 +64,8 @@
             "size": {
               "width": 340,
               "height": 420
-            }
+            },
+            "preview": "flaremo-cards/daily.png"
           },
           {
             "id": "ticket",
@@ -81,7 +83,8 @@
             "size": {
               "width": 340,
               "height": 420
-            }
+            },
+            "preview": "flaremo-cards/ticket.png"
           },
           {
             "id": "postcard",
@@ -99,14 +102,15 @@
             "size": {
               "width": 340,
               "height": 420
-            }
+            },
+            "preview": "flaremo-cards/postcard.png"
           }
         ]
       },
       "artifact": {
         "url": "flaremo-cards/flaremo-cards-1.1.0.zip",
-        "sha256": "dbddde856d0103b1bba60d845cc99ee4d219696392db4c5b471313aaa6e6b75b",
-        "size": 5096
+        "sha256": "fc3ef490c0c6708be727b66d173f9bb2fad5401a51e115a36f9dcf1ba3230e1e",
+        "size": 197001
       }
     },
     {
@@ -132,7 +136,7 @@
       },
       "license": "AGPL-3.0-only",
       "defaultEnabled": true,
-      "preview": null,
+      "preview": "sandbox-demo/preview.png",
       "contributes": {
         "shareCardTemplates": [
           {
@@ -168,14 +172,15 @@
                 },
                 "default": "#c2410c"
               }
-            ]
+            ],
+            "preview": "sandbox-demo/stamp.png"
           }
         ]
       },
       "artifact": {
         "url": "sandbox-demo/sandbox-demo-1.0.0.zip",
-        "sha256": "7bc14fe9ae78c16f838ede0e43f8a64520be47ace81e2656091ac68eb75f46aa",
-        "size": 2516
+        "sha256": "66da151f48c6590f4671e07585d2362b6c4828b961bfa999b45971a8d258e054",
+        "size": 111325
       }
     },
     {

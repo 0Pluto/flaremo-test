@@ -15,12 +15,12 @@ import designSystem from "../../../../docs/design-system.md?raw";
 import enAgentDeploy from "../../../../docs/en/agent-deploy.md?raw";
 import enDeploy from "../../../../docs/en/deploy.md?raw";
 import enMemosCompatibility from "../../../../docs/en/memos-compatibility.md?raw";
+import enPlugins from "../../../../docs/en/plugins.md?raw";
 import enUpdate from "../../../../docs/en/update.md?raw";
 import maintenance from "../../../../docs/maintenance.md?raw";
 import memosCompatibility from "../../../../docs/memos-compatibility.md?raw";
 import memosEcosystem from "../../../../docs/memos-ecosystem.md?raw";
 import plugins from "../../../../docs/plugins.md?raw";
-import enPlugins from "../../../../docs/en/plugins.md?raw";
 import productRequirements from "../../../../docs/product-requirements.md?raw";
 import release from "../../../../docs/release.md?raw";
 import semanticSearch from "../../../../docs/semantic-search.md?raw";
@@ -242,7 +242,8 @@ const DESCRIPTIONS_ZH: Record<string, string> = {
   maintenance: "运维手册：备份、灾备演练、迁移、回滚。",
   "memos-compatibility": "/api/v1 子集与四类 memo 事件的 webhook outbox 边界。",
   "memos-ecosystem": "已验证的 Memos 第三方客户端与配置示例。",
-  plugins: "分享卡片插件：商店安装、自行上传、管理员挑选排序；作者用 plugin:check / plugin:new 开发。",
+  plugins:
+    "分享卡片插件：商店安装、自行上传、管理员挑选排序；作者用 plugin:check / plugin:new 开发。",
   "product-requirements": "对标 flomo 的需求池与依赖关系，决策输入而非承诺。",
   release: "发版流程：tag、CHANGELOG、migration notes、升级说明。",
   "semantic-search":
