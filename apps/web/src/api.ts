@@ -12,6 +12,7 @@ export * from "./api/data-tasks";
 export * from "./api/memories";
 export * from "./api/memos";
 export * from "./api/notifications";
+export * from "./api/plugins";
 export * from "./api/projects";
 export * from "./api/push";
 export * from "./api/releases";

@@ -10,6 +10,7 @@ import {
   type LucideIcon,
   MicIcon,
   PaintbrushIcon,
+  PuzzleIcon,
   ShieldCheckIcon,
   UserRoundIcon,
   UsersIcon,
@@ -23,6 +24,7 @@ import {
   deleteAccount,
   deletePersonalAccessToken,
   getAdminBranding,
+  getAdminPluginSettings,
   getAppInfo,
   getCurrentFlareMoUser,
   getVectorUsage,
@@ -47,6 +49,7 @@ import { TokensPanel } from "./account/tokens-panel";
 import { TransferPanel } from "./account/transfer-panel";
 import { UsagePanel } from "./account/usage-panel";
 import { AdminPanel, BrandingCard } from "./admin-page";
+import { PluginsCard } from "./admin/plugins-card";
 
 const VoicePanel = lazy(() =>
   import("./account/voice-panel").then((module) => ({
@@ -64,7 +67,8 @@ type SettingsSection =
   | "usage"
   | "transfer"
   | "team"
-  | "branding";
+  | "branding"
+  | "plugins";
 
 type NavItem = {
   id: SettingsSection;
@@ -418,6 +422,10 @@ export function AccountSettingsDialog({
       queryFn: getAdminBranding,
     });
     void queryClient.prefetchQuery({
+      queryKey: ["admin-plugins"],
+      queryFn: getAdminPluginSettings,
+    });
+    void queryClient.prefetchQuery({
       queryKey: ["admin-users"],
       queryFn: listAdminUsers,
     });
@@ -487,6 +495,11 @@ export function AccountSettingsDialog({
                     icon: PaintbrushIcon,
                     id: "branding" as const,
                     label: t("auth.tab.branding"),
+                  },
+                  {
+                    icon: PuzzleIcon,
+                    id: "plugins" as const,
+                    label: t("auth.tab.plugins"),
                   },
                 ]
               : []),
@@ -590,6 +603,7 @@ export function AccountSettingsDialog({
     ),
     team: isTeamAdmin ? <AdminPanel /> : null,
     branding: isInstanceOwner ? <BrandingCard /> : null,
+    plugins: isInstanceOwner ? <PluginsCard /> : null,
   };
 
   return (

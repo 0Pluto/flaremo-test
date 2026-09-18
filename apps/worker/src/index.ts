@@ -64,6 +64,7 @@ import { isLegacyWireRequest, memosCurrentApi } from "./routes/memos-current";
 import { memosFileApi } from "./routes/memos-file-api";
 import { memosSocialApi } from "./routes/memos-social-api";
 import { memosSseApi } from "./routes/memos-sse";
+import { pluginsApi } from "./routes/plugins-api";
 import { projectsApi } from "./routes/projects-api";
 import { publicApi } from "./routes/public-api";
 import { registerSharePage } from "./routes/share-page";
@@ -220,6 +221,7 @@ export function createFlareMoApp(
     return getFlareMoRuntime(c.env).auth.handler(c.req.raw);
   });
   app.route("/api/app/branding", brandingApi);
+  app.route("/api/app/plugins", pluginsApi);
   app.route("/api/app/voice-settings", voiceSettingsApi);
   app.route("/api/app/capture", captureApi);
   app.route("/api/app/account", accountApi);

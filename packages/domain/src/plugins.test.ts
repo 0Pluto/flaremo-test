@@ -1,0 +1,139 @@
+import { applyFlaremoMigrations, authUsers, createDb } from "@flaremo/db";
+import { Miniflare } from "miniflare";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { completeOwnerBootstrap } from "./auth";
+import { ValidationError } from "./errors";
+import {
+  DEFAULT_PLUGIN_SETTINGS,
+  getPluginSettings,
+  normalizePluginSettings,
+  PLUGIN_LIST_LIMIT,
+  setPluginSettings,
+} from "./plugins";
+
+describe("plugin settings normalization", () => {
+  it("falls back to defaults for missing or malformed rows", () => {
+    expect(normalizePluginSettings(null)).toEqual(DEFAULT_PLUGIN_SETTINGS);
+    expect(normalizePluginSettings("nope" as never)).toEqual(
+      DEFAULT_PLUGIN_SETTINGS,
+    );
+    expect(
+      normalizePluginSettings({ enabledPlugins: 42 } as never),
+    ).toEqual(DEFAULT_PLUGIN_SETTINGS);
+    expect(
+      normalizePluginSettings({ cards: { order: ["Bad_ID!"] } } as never),
+    ).toEqual(DEFAULT_PLUGIN_SETTINGS);
+  });
+
+  it("dedupes ids and drops non-primitive option values", () => {
+    const normalized = normalizePluginSettings({
+      enabledPlugins: ["a", "a", "b"],
+      disabledPlugins: [],
+      cards: {
+        order: ["plain", "plain"],
+        hidden: [],
+        default: "plain",
+        options: {
+          plain: { showStats: true, label: "x", nested: { no: true } },
+        },
+      },
+    } as never);
+    expect(normalized.enabledPlugins).toEqual(["a", "b"]);
+    expect(normalized.cards.order).toEqual(["plain"]);
+    expect(normalized.cards.options).toEqual({
+      plain: { showStats: true, label: "x" },
+    });
+  });
+});
+
+describe("plugin settings persistence", () => {
+  let mf: Miniflare;
+  let db: ReturnType<typeof createDb>;
+
+  beforeEach(async () => {
+    mf = new Miniflare({
+      script: "export default { fetch() { return new Response('ok') } }",
+      modules: true,
+      compatibilityDate: "2026-07-10",
+      compatibilityFlags: ["nodejs_compat"],
+      d1Databases: { DB: "flaremo-plugins-test" },
+    });
+    const database = await mf.getD1Database("DB");
+    db = createDb(database);
+    await applyFlaremoMigrations(database);
+    const now = new Date();
+    await db.insert(authUsers).values({
+      id: "auth/owner",
+      email: "owner@example.com",
+      name: "Owner",
+      emailVerified: true,
+      image: null,
+      username: "owner",
+      displayUsername: "Owner",
+      createdAt: now,
+      updatedAt: now,
+    });
+    await completeOwnerBootstrap(db, {
+      authUserId: "auth/owner",
+      singleUser: { email: "owner@example.com", name: "Owner" },
+    });
+  });
+
+  afterEach(async () => {
+    await mf.dispose();
+  });
+
+  it("defaults to an empty configuration on a fresh instance", async () => {
+    expect(await getPluginSettings(db)).toEqual(DEFAULT_PLUGIN_SETTINGS);
+  });
+
+  it("round-trips a full configuration", async () => {
+    const saved = await setPluginSettings(db, {
+      enabledPlugins: ["cosy-pack"],
+      disabledPlugins: ["sandbox-demo"],
+      cards: {
+        order: ["ticket", "plain"],
+        hidden: ["daily"],
+        default: "ticket",
+        options: { ticket: { showStats: false } },
+      },
+    });
+    expect(saved.cards.order).toEqual(["ticket", "plain"]);
+    expect(await getPluginSettings(db)).toEqual(saved);
+  });
+
+  it("preserves omitted fields when patching", async () => {
+    await setPluginSettings(db, {
+      disabledPlugins: ["sandbox-demo"],
+      cards: { order: ["ticket"], hidden: [], default: "ticket", options: {} },
+    });
+    const patched = await setPluginSettings(db, { cards: { hidden: ["daily"] } });
+    expect(patched.disabledPlugins).toEqual(["sandbox-demo"]);
+    expect(patched.cards.order).toEqual(["ticket"]);
+    expect(patched.cards.hidden).toEqual(["daily"]);
+    expect(patched.cards.default).toBe("ticket");
+  });
+
+  it("rejects oversized or malformed lists", async () => {
+    await expect(
+      setPluginSettings(db, {
+        enabledPlugins: Array.from(
+          { length: PLUGIN_LIST_LIMIT + 1 },
+          (_, index) => `plugin-${index}`,
+        ),
+      }),
+    ).rejects.toBeInstanceOf(ValidationError);
+    await expect(
+      setPluginSettings(db, { enabledPlugins: ["NOT VALID"] }),
+    ).rejects.toBeInstanceOf(ValidationError);
+    await expect(
+      setPluginSettings(db, { cards: { default: "Bad_ID" } }),
+    ).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it("clears the default with null", async () => {
+    await setPluginSettings(db, { cards: { default: "ticket" } });
+    const cleared = await setPluginSettings(db, { cards: { default: null } });
+    expect(cleared.cards.default).toBeNull();
+  });
+});

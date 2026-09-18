@@ -9,7 +9,7 @@ import { DownloadIcon, Loader2Icon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { Memo } from "@/api";
-import { getMemoStats } from "@/api";
+import { getMemoStats, getPublicPluginSettings } from "@/api";
 import { useBranding } from "@/branding";
 import { ShareCardDocumentView } from "@/components/share-card-document";
 import {
@@ -105,6 +105,56 @@ export function bundledCards(): BundledShareCard[] {
   });
 }
 
+export type CardVisibilityInput = {
+  enabledPlugins: string[];
+  disabledPlugins: string[];
+  cards: { order: string[]; hidden: string[] };
+};
+
+/**
+ * The picker = (bundled registry ∩ instance configuration): a plugin is
+ * visible when its default says so, unless the instance explicitly enabled
+ * (e.g. a community plugin) or disabled it; hidden cards drop out; the
+ * configured order wins for the ids it names and everything else keeps
+ * registry order. An empty result falls back to the registry defaults so the
+ * dialog can never render without a card.
+ */
+export function visibleCards(
+  config: CardVisibilityInput | null,
+): BundledShareCard[] {
+  const fallback = bundledCards();
+  if (!config) return fallback;
+  const enabled = new Set(config.enabledPlugins);
+  const disabled = new Set(config.disabledPlugins);
+  const hidden = new Set(config.cards.hidden);
+  const registryOrder = new Map(
+    fallback.map((card, index) => [card.id, index] as const),
+  );
+  const visible = listBundledPluginsSorted().flatMap((plugin) => {
+    const defaultEnabled =
+      plugin.manifest.defaultEnabled ?? plugin.tier === "official";
+    const pluginVisible = enabled.has(plugin.manifest.id)
+      ? true
+      : disabled.has(plugin.manifest.id)
+        ? false
+        : defaultEnabled;
+    return pluginVisible ? plugin.cards : [];
+  });
+  const filtered = visible.filter((card) => !hidden.has(card.id));
+  if (filtered.length === 0) return fallback;
+  const orderIndex = new Map(
+    config.cards.order.map((id, index) => [id, index] as const),
+  );
+  return [...filtered].sort((a, b) => {
+    const aOrder = orderIndex.get(a.id);
+    const bOrder = orderIndex.get(b.id);
+    if (aOrder !== undefined && bOrder !== undefined) return aOrder - bOrder;
+    if (aOrder !== undefined) return -1;
+    if (bOrder !== undefined) return 1;
+    return (registryOrder.get(a.id) ?? 0) - (registryOrder.get(b.id) ?? 0);
+  });
+}
+
 export function ShareImageDialog({
   memo,
   open,
@@ -113,8 +163,7 @@ export function ShareImageDialog({
   const { locale, t } = useI18n();
   const branding = useBranding();
   const dark = useDarkMode();
-  const cards = useMemo(() => bundledCards(), []);
-  const [templateId, setTemplateId] = useState(() => cards[0]?.id ?? "");
+  const [templateId, setTemplateId] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
   const sandboxRef = useRef<ShareCardSandboxHandle>(null);
@@ -127,11 +176,32 @@ export function ShareImageDialog({
     enabled: open,
     staleTime: 60_000,
   });
+  // Instance plugin configuration drives the picker; the dialog renders the
+  // registry defaults immediately and swaps to the configured set when the
+  // public endpoint responds, so opening the dialog never blocks on a fetch.
+  const pluginsQuery = useQuery({
+    queryKey: ["plugin-settings"],
+    queryFn: getPublicPluginSettings,
+    enabled: open,
+    staleTime: 5 * 60_000,
+  });
+  const cards = useMemo(
+    () => visibleCards(pluginsQuery.data ?? null),
+    [pluginsQuery.data],
+  );
 
   // The active card can disappear when the template list changes (plugin
-  // disabled); fall back to the first available card.
+  // disabled or hidden); fall back to the instance default, then the first.
+  const configuredDefault = pluginsQuery.data?.cards.default ?? null;
+  const defaultCard =
+    (configuredDefault &&
+      cards.find((candidate) => candidate.id === configuredDefault)?.id) ||
+    cards[0]?.id ||
+    null;
   const card =
-    cards.find((candidate) => candidate.id === templateId) ?? cards[0];
+    (templateId && cards.find((candidate) => candidate.id === templateId)) ||
+    cards.find((candidate) => candidate.id === defaultCard) ||
+    cards[0];
 
   const date = formatMemoTime(memo.display_time, locale);
   const day = useMemo(() => {
@@ -168,8 +238,12 @@ export function ShareImageDialog({
   );
 
   const optionValues = useMemo(
-    () => resolveOptionValues(card?.options, undefined),
-    [card?.options],
+    () =>
+      resolveOptionValues(
+        card?.options,
+        card ? pluginsQuery.data?.cards.options?.[card.id] : undefined,
+      ),
+    [card, pluginsQuery.data],
   );
 
   const exportImage = async () => {

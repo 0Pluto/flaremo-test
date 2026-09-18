@@ -18,6 +18,7 @@ export * from "./memos-social";
 export * from "./memos-sse";
 export * from "./memos-user";
 export * from "./memos-webhooks";
+export * from "./plugins";
 export * from "./projects";
 export * from "./push";
 export * from "./quotas";

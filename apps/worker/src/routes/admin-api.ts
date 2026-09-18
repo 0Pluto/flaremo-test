@@ -23,6 +23,7 @@ import {
   getBranding,
   getFlaremoUserById,
   getMemberRemovalJob,
+  getPluginSettings,
   getUserRegistrationAllowed,
   getViewerTeamMembership,
   isInstanceOwner,
@@ -32,10 +33,12 @@ import {
   listFlaremoUsers,
   listMemberRemovalJobs,
   NotFoundError,
+  PLUGIN_LIST_LIMIT,
   type ResolvedBranding,
   rebuildEmbeddingIndexes,
   setBrandingAccent,
   setBrandingProductName,
+  setPluginSettings,
   setUserRegistrationAllowed,
   updateMemberRemovalJob,
   updateTeamMemberRole,
@@ -259,6 +262,47 @@ adminApi.delete("/branding/marks/:variant", async (c) => {
     return jsonError(c, error);
   }
 });
+
+const pluginIdSchema = z.string().trim().regex(/^[a-z0-9][a-z0-9-]{0,63}$/);
+const pluginIdListSchema = z.array(pluginIdSchema).max(PLUGIN_LIST_LIMIT);
+const cardOptionsSchema = z.record(
+  pluginIdSchema,
+  z.record(pluginIdSchema, z.union([z.string(), z.number(), z.boolean()])),
+);
+const updatePluginsSchema = z.object({
+  enabledPlugins: pluginIdListSchema.optional(),
+  disabledPlugins: pluginIdListSchema.optional(),
+  cards: z
+    .object({
+      order: pluginIdListSchema.optional(),
+      hidden: pluginIdListSchema.optional(),
+      default: pluginIdSchema.nullable().optional(),
+      options: cardOptionsSchema.optional(),
+    })
+    .optional(),
+});
+
+adminApi.get("/plugins", async (c) => {
+  try {
+    const { db } = await ownerContext(c);
+    return c.json(await getPluginSettings(db));
+  } catch (error) {
+    return jsonError(c, error);
+  }
+});
+
+adminApi.put(
+  "/plugins",
+  zValidator("json", updatePluginsSchema),
+  async (c) => {
+    try {
+      const { db } = await ownerContext(c);
+      return c.json(await setPluginSettings(db, c.req.valid("json")));
+    } catch (error) {
+      return jsonError(c, error);
+    }
+  },
+);
 
 adminApi.get("/users", async (c) => {
   try {
