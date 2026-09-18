@@ -65,7 +65,7 @@ describe("visibleCardViews defaults", () => {
       settings({ disabledPlugins: ["flaremo-cards"] }),
     ).map((card) => card.id);
     expect(ids).not.toContain("plain");
-    expect(ids).toContain("kosx-editorial") === false;
+    expect(ids).not.toContain("kosx-editorial");
   });
 
   it("installed packages stay off until enabled, even from the official directory", () => {

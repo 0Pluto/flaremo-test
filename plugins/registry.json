@@ -1,7 +1,7 @@
 {
   "specVersion": 1,
   "name": "FlareMo 官方目录",
-  "updatedAt": "2026-09-18T07:57:41.543Z",
+  "updatedAt": "2026-09-18T08:07:06.369Z",
   "plugins": [
     {
       "id": "flaremo-cards",
@@ -158,6 +158,58 @@
         "url": "sandbox-demo/sandbox-demo-1.0.0.zip",
         "sha256": "7bc14fe9ae78c16f838ede0e43f8a64520be47ace81e2656091ac68eb75f46aa",
         "size": 2516
+      }
+    },
+    {
+      "id": "kosx-pack",
+      "version": "1.0.0",
+      "tier": "community",
+      "name": {
+        "zh-CN": "KOSX 卡片",
+        "en-US": "KOSX cards",
+        "ja": "KOSX カード",
+        "ko": "KOSX 카드",
+        "ru": "Карточки KOSX",
+        "fr": "Cartes KOSX",
+        "es": "Tarjetas KOSX",
+        "ar": "بطاقات KOSX"
+      },
+      "description": {
+        "zh-CN": "KOSX 风格的编辑体卡片：粗黑标题、信号橙点缀，源自社区贡献。",
+        "en-US": "A stark editorial card with KOSX signal-orange accents; from a community contribution."
+      },
+      "author": {
+        "name": "Kimberlying"
+      },
+      "license": "AGPL-3.0-only",
+      "defaultEnabled": false,
+      "preview": null,
+      "contributes": {
+        "shareCardTemplates": [
+          {
+            "id": "kosx-editorial",
+            "kind": "document",
+            "name": {
+              "zh-CN": "KOSX",
+              "en-US": "KOSX",
+              "ja": "KOSX",
+              "ko": "KOSX",
+              "ru": "KOSX",
+              "fr": "KOSX",
+              "es": "KOSX",
+              "ar": "KOSX"
+            },
+            "size": {
+              "width": 340,
+              "height": 420
+            }
+          }
+        ]
+      },
+      "artifact": {
+        "url": "kosx-pack/kosx-pack-1.0.0.zip",
+        "sha256": "2987a85646552ec0bd10f8cf1783faee0443f48d3882f5b1d458b46ebb5cf21e",
+        "size": 1605
       }
     }
   ]
