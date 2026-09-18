@@ -6,6 +6,7 @@ import {
   BellRingIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  FileUpIcon,
   GaugeIcon,
   KeyRoundIcon,
   LogOutIcon,
@@ -73,9 +74,16 @@ const VoicePanel = lazy(() =>
   })),
 );
 
+const UploadsPanel = lazy(() =>
+  import("./account/uploads-panel").then((module) => ({
+    default: module.UploadsPanel,
+  })),
+);
+
 type SettingsSection =
   | "profile"
   | "appearance"
+  | "uploads"
   | "security"
   | "tokens"
   | "push"
@@ -475,6 +483,12 @@ export function AccountSettingsDialog({
           label: t("settings.nav.appearance"),
         },
         {
+          icon: FileUpIcon,
+          iconBg: "bg-muted text-muted-foreground",
+          id: "uploads",
+          label: t("settings.nav.uploads"),
+        },
+        {
           icon: BellRingIcon,
           iconBg: "bg-muted text-muted-foreground",
           id: "push",
@@ -571,6 +585,7 @@ export function AccountSettingsDialog({
       />
     ),
     appearance: <AppearancePanel t={t} />,
+    uploads: <UploadsPanel />,
     security: (
       <SecurityPanel
         emailProviderDisabled={appInfoQuery.data?.email_provider === "none"}
