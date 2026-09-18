@@ -386,8 +386,8 @@
 
 /* Liquid Glass baseline material (docs/liquid-glass-design.md): one recipe for
    every engine — backdrop blur + saturate under a specular gradient rim.
-   Unlayered on purpose: the material must out-rank any bg-*/ring-*/shadow-*
-   utilities on the same element. A glass surface must be positioned
+   Unlayered on purpose: the material must out-rank the background, ring and
+   shadow utilities on the same element. A glass surface must be positioned
    (fixed/sticky/relative) so the rim pseudo-element anchors to it. */
 .glass {
   background: var(--glass-tint);
