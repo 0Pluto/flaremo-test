@@ -688,6 +688,12 @@ export const attachments = sqliteTable(
     memoId: text("memo_id").references(() => memos.id, {
       onDelete: "set null",
     }),
+    // Article-bound uploads (article editor). Same lifecycle rule as memoId:
+    // an attachment bound to neither is an orphan the cron GC sweeps after
+    // the grace period.
+    articleId: text("article_id").references(() => articles.id, {
+      onDelete: "set null",
+    }),
     r2Key: text("r2_key").notNull(),
     filename: text("filename").notNull(),
     contentType: text("content_type"),
@@ -712,6 +718,7 @@ export const attachments = sqliteTable(
   (table) => [
     index("attachments_user_created_idx").on(table.userId, table.createdAt),
     index("attachments_memo_idx").on(table.memoId),
+    index("attachments_article_idx").on(table.articleId),
     uniqueIndex("attachments_user_client_id_idx").on(
       table.userId,
       table.clientId,
@@ -725,7 +732,67 @@ export const attachments = sqliteTable(
     // orphaned unbound attachments); keep the sweep off a full table scan.
     index("attachments_cleanup_idx")
       .on(table.createdAt)
-      .where(sql`(state = 'deleting' or memo_id is null)`),
+      .where(
+        sql`(state = 'deleting' or (memo_id is null and article_id is null))`,
+      ),
+  ],
+);
+
+/**
+ * Articles: long-form Markdown pieces written for public publishing. Unlike
+ * memos (stateless, timestamp-boned), an article carries its own lifecycle
+ * (draft → published) and a stable, enumerable public URL. Publishing is
+ * deliberately the opposite contract of memo shares: a published slug is
+ * enumerable (sitemap/RSS) while share tokens are unenumerable by design.
+ * See docs/article-publishing-design.md.
+ */
+export const articles = sqliteTable(
+  "articles",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // Reserved for team-space integration (P2); first release is personal.
+    teamId: text("team_id").references(() => authOrganizations.id, {
+      onDelete: "restrict",
+    }),
+    // Stable public URL identity. Editable while a draft, frozen once
+    // published — a canonical change is an SEO incident.
+    slug: text("slug").notNull(),
+    title: text("title").notNull(),
+    // SEO description; SSR falls back to the article's plain text when null.
+    description: text("description"),
+    content: text("content").notNull(),
+    status: text("status", { enum: ["draft", "published"] })
+      .notNull()
+      .default("draft"),
+    // og:image; SSR falls back to the first body image when null.
+    coverAttachmentId: text("cover_attachment_id"),
+    // Author-declared content language; SSR falls back to the instance
+    // locale when null.
+    lang: text("lang"),
+    // Set on first publish and kept across unpublish/republish cycles.
+    publishedAt: text("published_at"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+    deletedAt: text("deleted_at"),
+  },
+  (table) => [
+    uniqueIndex("articles_slug_idx").on(table.slug),
+    index("articles_user_status_updated_idx").on(
+      table.userId,
+      table.status,
+      table.updatedAt,
+    ),
+    index("articles_team_status_idx").on(table.teamId, table.status),
+    // Sitemap / RSS ordering.
+    index("articles_published_idx").on(table.publishedAt),
+    // Recycle-bin TTL sweep (mirrors memos_recycle_sweep_idx); a published
+    // article may also be soft-deleted, so the predicate keys on deleted_at.
+    index("articles_recycle_sweep_idx")
+      .on(table.deletedAt)
+      .where(sql`deleted_at is not null`),
   ],
 );
 
@@ -1260,6 +1327,8 @@ export type MemosNotificationRow = typeof memosNotifications.$inferSelect;
 export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
 export type AttachmentRow = typeof attachments.$inferSelect;
 export type ShareRow = typeof shares.$inferSelect;
+export type ArticleRow = typeof articles.$inferSelect;
+export type NewArticleRow = typeof articles.$inferInsert;
 export type DataTaskRow = typeof dataTasks.$inferSelect;
 export type NewDataTaskRow = typeof dataTasks.$inferInsert;
 export type MemberRemovalJobRow = typeof memberRemovalJobs.$inferSelect;

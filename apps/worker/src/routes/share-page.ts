@@ -1,8 +1,15 @@
 import { createDb } from "@flaremo/db";
 import { getBranding, getPublicShareByToken } from "@flaremo/domain";
 import type { Context, Hono } from "hono";
-import { Marked, type Tokens } from "marked";
+import { SitemapIndexStream, streamToPromise } from "sitemap";
 import type { HonoBindings } from "../context";
+import {
+  attachmentImageDimensions,
+  contentToPlainText,
+  createSanitizedMarked,
+  escapeHtml,
+  truncate,
+} from "./markdown-render";
 
 /**
  * Public memo share pages (`/share/:token`) as standalone lightweight HTML
@@ -14,15 +21,14 @@ import type { HonoBindings } from "../context";
  *
  * - full SEO meta: unique title/description, canonical, Open Graph + Twitter
  *   card (image dimensions/alt from attachment payloads), JSON-LD, og:locale
- * - real rendered markdown (marked with GFM — mirrors the web app's
- *   react-markdown + remark-gfm pipeline), raw HTML dropped and unsafe link
- *   destinations neutralized to match react-markdown's behavior
+ * - real rendered markdown (the shared sanitized marked pipeline, which
+ *   mirrors the web app's react-markdown + remark-gfm behavior)
  * - body images resolved anonymously via `?share_token=` (the same contract
  *   the SPA share page uses) with intrinsic width/height to avoid CLS
  * - dead shares (revoked / expired / unknown tokens) return a tiny noindex
  *   page with status 404 instead of a soft-404 200
- * - `/sitemap.xml` cleanly 404s: share tokens are unenumerable by design, so
- *   no sitemap is generated (the SPA fallback previously faked a 200)
+ * - `/sitemap.xml` serves a sitemapindex pointing at the enumerable public
+ *   surface (articles); share tokens stay unenumerable by design
  */
 
 const DESCRIPTION_MAX_CHARS = 160;
@@ -31,44 +37,6 @@ const JSONLD_TEXT_MAX_CHARS = 20_000;
 const SHARE_HTML_CACHE_CONTROL = "public, max-age=60, must-revalidate";
 
 type SharePageEnv = Context<HonoBindings>["env"];
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-/**
- * Flatten a memo's markdown-ish content into plain text for description /
- * structured data. Enough to strip syntax noise from headings, emphasis,
- * links, and code; not a full renderer.
- */
-function contentToPlainText(content: string): string {
-  return content
-    .replace(/```[\s\S]*?```/g, " ")
-    .replace(/`([^`]*)`/g, "$1")
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
-    .replace(/^#{1,6}\s+/gm, "")
-    .replace(/^\s*>+\s?/gm, "")
-    .replace(/^\s*[-*+]\s+/gm, "")
-    .replace(/^\s*\d+\.\s+/gm, "")
-    .replace(/(\*\*|__)(.*?)\1/g, "$2")
-    .replace(/(\*|_)(.*?)\1/g, "$2")
-    .replace(/~~(.*?)~~/g, "$1")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\|/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function truncate(text: string, maxChars: number): string {
-  if (text.length <= maxChars) return text;
-  return `${text.slice(0, maxChars - 1).trimEnd()}…`;
-}
 
 function publicOrigin(env: SharePageEnv, request: Request): string {
   const configured = env.FLAREMO_PUBLIC_URL?.trim();
@@ -105,22 +73,6 @@ export function extractReferencedAttachmentIds(content: string): Set<string> {
   return ids;
 }
 
-function attachmentImageDimensions(
-  payload: Record<string, unknown> | null,
-): { width: number; height: number } | undefined {
-  const width = payload?.width;
-  const height = payload?.height;
-  if (
-    typeof width !== "number" ||
-    typeof height !== "number" ||
-    width <= 0 ||
-    height <= 0
-  ) {
-    return undefined;
-  }
-  return { width, height };
-}
-
 /** Mirrors the web helper: only markdown link destinations, fences skipped. */
 export function injectShareTokenIntoFileUrls(
   content: string,
@@ -144,61 +96,24 @@ export function injectShareTokenIntoFileUrls(
     .join("\n");
 }
 
-function isSafeUrl(url: string): boolean {
-  return /^(https?:\/\/|mailto:|\/|#)/i.test(url);
-}
-
 // ---------------------------------------------------------------------------
-// Markdown rendering (marked). Raw HTML blocks/inline are dropped like
-// react-markdown does; javascript:/data: destinations are neutralized.
+// Markdown rendering (shared sanitized pipeline in markdown-render.ts).
 // ---------------------------------------------------------------------------
 
-type ShareMarkedOptions = {
-  dimensionsByAttachmentId: Map<string, { width: number; height: number }>;
-};
-
-function createShareMarked(options: Partial<ShareMarkedOptions> = {}) {
-  const { dimensionsByAttachmentId } = options;
-  const marked = new Marked({ gfm: true });
-  marked.use({
-    async: false,
-    walkTokens(token) {
-      if (
-        (token.type === "link" || token.type === "image") &&
-        !isSafeUrl(token.href)
-      ) {
-        token.href = "#blocked";
-      }
-    },
-    renderer: {
-      html() {
-        return "";
-      },
-      image(token: Tokens.Image) {
-        const alt = escapeHtml(token.text ?? "");
-        const src = escapeHtml(token.href);
-        const attachmentId =
-          /\/file\/attachments\/([A-Za-z0-9][A-Za-z0-9._-]*)/.exec(
-            token.href,
-          )?.[1];
-        const dimensions = attachmentId
-          ? dimensionsByAttachmentId?.get(attachmentId)
-          : undefined;
-        const sizeAttributes = dimensions
-          ? ` width="${dimensions.width}" height="${dimensions.height}"`
-          : ' loading="lazy" decoding="async"';
-        return `<img src="${src}" alt="${alt}"${sizeAttributes} />`;
-      },
-    },
-  });
-  return marked;
+function createShareMarked(
+  dimensionsByAttachmentId: Map<string, { width: number; height: number }>,
+) {
+  return createSanitizedMarked({ dimensionsByAttachmentId });
 }
 
 function renderMarkdown(input: {
   content: string;
   dimensionsByAttachmentId: Map<string, { width: number; height: number }>;
 }): string {
-  return createShareMarked(input).parse(input.content, { async: false });
+  return createShareMarked(input.dimensionsByAttachmentId).parse(
+    input.content,
+    { async: false },
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -277,7 +192,9 @@ function buildHeadTags(input: ShareMetaInput): string {
 
   const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
-    "@type": "SocialMediaPosting",
+    // BlogPosting: the page presents the memo as a publishable document; the
+    // SocialMediaPosting type undersold long-form content to search engines.
+    "@type": "BlogPosting",
     headline,
     datePublished: data.memo.createdAt,
     dateModified: data.memo.updatedAt,
@@ -448,9 +365,23 @@ const SHARE_RESPONSE_INIT = {
 } as const;
 
 export function registerSharePage(app: Hono<HonoBindings>): void {
-  // No sitemap is generated — share tokens are unenumerable by design. Serve
-  // a clean 404 instead of the SPA fallback's fake-200 HTML shell.
-  app.get("/sitemap.xml", (c) => c.text("Not Found", 404));
+  // The only enumerable public surface is published articles, so the
+  // sitemap index points there. Share tokens stay unenumerable by design —
+  // generating a share sitemap would leak the very links the token model
+  // keeps out of search.
+  app.get("/sitemap.xml", async (c) => {
+    const origin = publicOrigin(c.env, c.req.raw);
+    const stream = new SitemapIndexStream();
+    stream.write({ url: `${origin}/sitemap-articles.xml` });
+    stream.end();
+    const xml = await streamToPromise(stream);
+    return new Response(xml.toString(), {
+      headers: {
+        "content-type": "application/xml; charset=utf-8",
+        "cache-control": "public, max-age=3600, must-revalidate",
+      },
+    });
+  });
 
   app.get("/share/:token", async (c) => {
     const db = createDb(c.env.DB);

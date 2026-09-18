@@ -21,13 +21,16 @@ import {
   hardDeleteExpiredProjects,
   hardDeleteExpiredTasks,
   listAttachmentCleanupCandidates,
+  listExpiredTrashedArticles,
   listExpiredTrashedMemos,
   listQueuedMemberRemovalJobs,
   MEMOS_SSE_RETENTION_MS,
+  markArticleAttachmentsDeleting,
   type PlanLimits,
   type PushKeys,
   parseUserPlanLimits,
   pruneMemosSseEvents,
+  purgeArticleRow,
   pushNotificationToUser,
   requeueStaleMemberRemovalJobs,
   SELF_HOST_UNLIMITED,
@@ -55,6 +58,8 @@ import { betterAuthRateLimitBucket, rateLimitGuard } from "./rate-limit";
 import { accountApi } from "./routes/account-api";
 import { adminApi } from "./routes/admin-api";
 import { appApi } from "./routes/app-api";
+import { registerArticlePage } from "./routes/article-page";
+import { articlesApi } from "./routes/articles-api";
 import { authApi } from "./routes/auth-api";
 import { brandingApi } from "./routes/branding-api";
 import { captureApi } from "./routes/capture-api";
@@ -256,10 +261,12 @@ export function createFlareMoApp(
   app.route("/api/app/admin", adminApi);
   app.route("/api/app/memory", memoryApi);
   app.route("/api/app/projects", projectsApi);
+  app.route("/api/app/articles", articlesApi);
   app.route("/api/app/tasks", tasksApi);
   app.route("/api/app", appApi);
   app.route("/api/public", publicApi);
   registerSharePage(app);
+  registerArticlePage(app);
   app.get("/favicon.ico", async (c) => {
     // Only browsers without a <link rel="icon"> hit this; redirect to the
     // custom favicon when one is configured, else to the bundled asset.
@@ -467,6 +474,26 @@ export async function runScheduledMaintenance(
       const owner = await getFlaremoUserById(db, userId);
       if (!owner) continue;
       await hardDeleteMemoWithAttachments(env, db, owner, memoId);
+      trashPurgeCount += 1;
+    }
+    // Articles: soft-deleted articles past the retention window hard-delete
+    // with their attachment binaries (same R2 sweep contract as memos).
+    const expiredArticles = await listExpiredTrashedArticles(db, trashCutoff);
+    for (const { id: articleId, userId } of expiredArticles) {
+      const owner = await getFlaremoUserById(db, userId);
+      if (!owner) continue;
+      const articleAttachments = await markArticleAttachmentsDeleting(
+        db,
+        owner,
+        articleId,
+      );
+      const objectKeys = articleAttachments.map(
+        (attachment) => attachment.r2Key,
+      );
+      if (objectKeys.length > 0) {
+        await env.ATTACHMENTS.delete(objectKeys);
+      }
+      await purgeArticleRow(db, articleId);
       trashPurgeCount += 1;
     }
     // Projects first: the FK cascade removes their binned tasks and trails

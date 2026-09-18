@@ -177,7 +177,7 @@ describe("Share page (standalone SEO HTML)", () => {
     expect(html).toContain(
       '<meta name="twitter:card" content="summary_large_image" />',
     );
-    expect(html).toContain('"@type":"SocialMediaPosting"');
+    expect(html).toContain('"@type":"BlogPosting"');
     expect(html).toContain('"author":{"@type":"Person","name":"Owner"}');
     expect(html).toContain('"datePublished":"2026-09-01T00:00:00.000Z"');
   });
@@ -191,12 +191,16 @@ describe("Share page (standalone SEO HTML)", () => {
     expect(html).not.toContain("data-flaremo-share-article");
   });
 
-  it("sitemap.xml is a clean 404 (P0-3)", async () => {
+  it("sitemap.xml is a sitemapindex pointing at the article sitemap", async () => {
     const response = await app.fetch(
       new Request("https://flaremo.example/sitemap.xml"),
       env,
     );
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("application/xml");
+    const xml = await response.text();
+    expect(xml).toContain("https://flaremo.example/sitemap-articles.xml</loc>");
+    expect(xml).not.toContain("/share/");
   });
 
   it("registers the route on any createFlareMoApp instance", async () => {

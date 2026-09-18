@@ -29,12 +29,18 @@ export const SPA_EXACT_ROUTES: ReadonlySet<string> = new Set([
   "/projects",
   "/calendar",
   "/capture",
+  "/articles",
   "/review/daily",
   "/review/walk",
 ]);
 
 /** Frontend path prefixes with dynamic segments (200 shell). */
-export const SPA_PREFIX_ROUTES: readonly string[] = ["/memo/"];
+export const SPA_PREFIX_ROUTES: readonly string[] = [
+  "/memo/",
+  // Article editor deep links; the public /article/:slug face is
+  // worker-owned SSR and lives outside this table.
+  "/articles/",
+];
 
 /** Worker-owned paths that never reach the SPA shell. */
 export const WORKER_OWNED_PREFIXES: readonly string[] = ["/share/"];

@@ -436,6 +436,24 @@
     @apply mr-2 align-middle accent-brand-500;
   }
 
+  /* Shiki dual themes on article surfaces: colors arrive as CSS variables
+     (defaultColor: false), resolved per color-scheme at display time. */
+  .memo-markdown pre.shiki {
+    @apply bg-[var(--shiki-light-bg)];
+  }
+
+  .memo-markdown pre.shiki span {
+    color: var(--shiki-light);
+  }
+
+  .dark .memo-markdown pre.shiki {
+    @apply bg-[var(--shiki-dark-bg)];
+  }
+
+  .dark .memo-markdown pre.shiki span {
+    color: var(--shiki-dark);
+  }
+
   /* Transcript reading: an attachment image is constrained so a large scan
      cannot break the column, and heading anchors clear the sticky player. */
   .memo-markdown img {
@@ -447,6 +465,42 @@
      anchors, image frames). The box grows with content up to a cap. */
   .composer-editor-content {
     @apply min-h-32 max-h-80 overflow-y-auto px-4 pt-4 pb-2 text-[15px] leading-7 outline-none;
+  }
+
+  /* Article editor body: same typography as the reading surface, but
+     unclipped — a long article grows the page instead of scrolling inside
+     a fixed box. */
+  .article-editor-content {
+    @apply min-h-[55vh] px-1 pt-2 pb-2 text-[15px] leading-7 outline-none;
+  }
+
+  .article-editor-content p {
+    @apply my-0 min-h-7;
+  }
+
+  .article-editor-content p + p {
+    @apply mt-3;
+  }
+
+  .article-editor-content h1 {
+    @apply mt-4 text-2xl font-semibold tracking-tight;
+  }
+
+  .article-editor-content h2 {
+    @apply mt-4 text-xl font-semibold tracking-tight;
+  }
+
+  .article-editor-content h3 {
+    @apply mt-3 text-lg font-semibold;
+  }
+
+  .article-editor-content table {
+    @apply my-3 w-full border-collapse text-sm;
+  }
+
+  .article-editor-content th,
+  .article-editor-content td {
+    @apply border px-3 py-2 text-left;
   }
 
   /* flomo-style idle composer: an unfocused empty box shrinks to one quiet
