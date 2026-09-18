@@ -42,7 +42,11 @@ describe("isUnsafeCSS", () => {
     expect(isUnsafeCSS("url(https://evil.example/x.png)")).toBe(true);
     expect(isUnsafeCSS("expression(alert(1))")).toBe(true);
     expect(isUnsafeCSS("javascript:alert(1)")).toBe(true);
-    expect(isUnsafeCSS("repeating-linear-gradient(90deg, #000 0 2px, transparent 2px 5px)")).toBe(false);
+    expect(
+      isUnsafeCSS(
+        "repeating-linear-gradient(90deg, #000 0 2px, transparent 2px 5px)",
+      ),
+    ).toBe(false);
   });
 });
 
@@ -67,7 +71,9 @@ describe("resolveColor", () => {
 
 describe("applyBindings", () => {
   it("substitutes data, brand, and option bindings", () => {
-    expect(applyBindings("由 {brand.product} 记录", context)).toBe("由 KOSX 记录");
+    expect(applyBindings("由 {brand.product} 记录", context)).toBe(
+      "由 KOSX 记录",
+    );
     expect(applyBindings("{body} · {stats}", context)).toBe(
       "hello · 12 条记录 · 3 天",
     );
@@ -83,8 +89,18 @@ describe("applyBindings", () => {
 
 describe("resolveOptionValues", () => {
   const specs: ShareCardOptionSpec[] = [
-    { key: "accent", type: "color", label: { en: "Accent" }, default: "#111111" },
-    { key: "showStats", type: "boolean", label: { en: "Stats" }, default: true },
+    {
+      key: "accent",
+      type: "color",
+      label: { en: "Accent" },
+      default: "#111111",
+    },
+    {
+      key: "showStats",
+      type: "boolean",
+      label: { en: "Stats" },
+      default: true,
+    },
     {
       key: "title",
       type: "text",

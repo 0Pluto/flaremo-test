@@ -10,7 +10,7 @@
     "build": "tsc -b",
     "check": "tsc -b --pretty false",
     "typecheck": "tsc -b --pretty false",
-    "test": "vitest run --config ../../vitest.config.ts --passWithNoTests"
+    "test": "vitest run --config ../vitest.config.ts --passWithNoTests"
   },
   "devDependencies": {
     "typescript": "^5.9.3",

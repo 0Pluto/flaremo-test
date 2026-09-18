@@ -29,7 +29,10 @@
             "type": "text",
             "text": "{date}",
             "style": {
-              "font": { "size": 14, "color": { "light": "#737373", "dark": "#a3a3a3" } }
+              "font": {
+                "size": 14,
+                "color": { "light": "#737373", "dark": "#a3a3a3" }
+              }
             }
           },
           {
@@ -107,7 +110,10 @@
             "type": "text",
             "text": "{stats}",
             "style": {
-              "font": { "size": 12, "color": { "light": "#a3a3a3", "dark": "#737373" } }
+              "font": {
+                "size": 12,
+                "color": { "light": "#a3a3a3", "dark": "#737373" }
+              }
             }
           },
           {

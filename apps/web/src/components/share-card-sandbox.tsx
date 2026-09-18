@@ -1,11 +1,11 @@
 import {
   forwardRef,
+  type Ref,
   useEffect,
   useImperativeHandle,
   useMemo,
   useRef,
   useState,
-  type Ref,
 } from "react";
 
 /**
@@ -133,7 +133,10 @@ export function buildSandboxSrcdoc(html: string): string {
     return html.replace(/<head[^>]*>/i, (match) => `${match}${injection}`);
   }
   if (/<html[^>]*>/i.test(html)) {
-    return html.replace(/<html[^>]*>/i, (match) => `${match}<head>${injection}</head>`);
+    return html.replace(
+      /<html[^>]*>/i,
+      (match) => `${match}<head>${injection}</head>`,
+    );
   }
   return `<head>${injection}</head>${html}`;
 }
@@ -145,7 +148,11 @@ export type SandboxPayload = {
     day: string;
     stats: string;
     locale: string;
-    brand: { product: string; markLight: string | null; markDark: string | null };
+    brand: {
+      product: string;
+      markLight: string | null;
+      markDark: string | null;
+    };
   };
   options: Record<string, string | number | boolean>;
   mode: "light" | "dark";
@@ -164,149 +171,154 @@ type Props = {
   onError?: (message: string) => void;
 };
 
-export const ShareCardSandboxHost = forwardRef<
-  ShareCardSandboxHandle,
-  Props
->(function ShareCardSandboxHost(
-  { html, width, height, payload, onReadyChange, onError },
-  ref: Ref<ShareCardSandboxHandle>,
-) {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const readyRef = useRef(false);
-  const exportResolver = useRef<
-    ((value: { ok: boolean; png?: string; error?: string }) => void) | null
-  >(null);
-  const requestIdRef = useRef(0);
-  const [ready, setReady] = useState(false);
-  const srcdoc = useMemo(() => buildSandboxSrcdoc(html), [html]);
+export const ShareCardSandboxHost = forwardRef<ShareCardSandboxHandle, Props>(
+  function ShareCardSandboxHost(
+    { html, width, height, payload, onReadyChange, onError },
+    ref: Ref<ShareCardSandboxHandle>,
+  ) {
+    const iframeRef = useRef<HTMLIFrameElement>(null);
+    const readyRef = useRef(false);
+    const exportResolver = useRef<
+      ((value: { ok: boolean; png?: string; error?: string }) => void) | null
+    >(null);
+    const requestIdRef = useRef(0);
+    const [ready, setReady] = useState(false);
+    const srcdoc = useMemo(() => buildSandboxSrcdoc(html), [html]);
 
-  // Keep the latest callbacks without re-running the message-listener effect
-  // (which would reset the ready latch and restart the init loop).
-  const onErrorRef = useRef(onError);
-  const onReadyChangeRef = useRef(onReadyChange);
-  useEffect(() => {
-    onErrorRef.current = onError;
-    onReadyChangeRef.current = onReadyChange;
-  });
+    // Keep the latest callbacks without re-running the message-listener effect
+    // (which would reset the ready latch and restart the init loop).
+    const onErrorRef = useRef(onError);
+    const onReadyChangeRef = useRef(onReadyChange);
+    useEffect(() => {
+      onErrorRef.current = onError;
+      onReadyChangeRef.current = onReadyChange;
+    });
 
-  useEffect(() => {
-    readyRef.current = false;
-    setReady(false);
-    const frame = iframeRef.current;
-    if (!frame) return undefined;
-    const timeout = window.setTimeout(() => {
-      if (!readyRef.current) {
-        onErrorRef.current?.("Plugin did not finish loading in time.");
-      }
-    }, READY_TIMEOUT_MS);
-
-    const handleMessage = (event: MessageEvent) => {
-      // Opaque-origin frames report origin "null"; identity check is the source.
-      if (event.source !== frame.contentWindow) return;
-      const message = event.data as {
-        __flaremo?: number;
-        type?: string;
-        png?: string;
-        requestId?: number;
-        message?: string;
-      } | null;
-      if (!message || message.__flaremo !== 1) return;
-      if (message.type === "ready" && !readyRef.current) {
-        readyRef.current = true;
-        window.clearTimeout(timeout);
-        setReady(true);
-        onReadyChangeRef.current?.(true);
-      }
-      if (message.type === "exported" || message.type === "export-error") {
-        const resolve = exportResolver.current;
-        exportResolver.current = null;
-        if (message.type === "exported") {
-          const png = message.png ?? "";
-          if (!png || png.length > MAX_EXPORT_CHARS) {
-            resolve?.({ ok: false, error: "Export result is missing or too large." });
-          } else {
-            resolve?.({ ok: true, png });
-          }
-        } else {
-          resolve?.({ ok: false, error: message.message ?? "Plugin export failed." });
+    useEffect(() => {
+      readyRef.current = false;
+      setReady(false);
+      const frame = iframeRef.current;
+      if (!frame) return undefined;
+      const timeout = window.setTimeout(() => {
+        if (!readyRef.current) {
+          onErrorRef.current?.("Plugin did not finish loading in time.");
         }
-      }
-      if (message.type === "error") {
-        onErrorRef.current?.(message.message ?? "Plugin error.");
-      }
-    };
-    window.addEventListener("message", handleMessage);
-    return () => {
-      window.clearTimeout(timeout);
-      window.removeEventListener("message", handleMessage);
-      exportResolver.current = null;
-    };
-  }, []);
+      }, READY_TIMEOUT_MS);
 
-  // The initial payload must wait for the frame; updates can go straight out.
-  // Re-post init until the plugin reports ready: srcdoc parsing is async and a
-  // single post can race the bridge script.
-  useEffect(() => {
-    const frame = iframeRef.current;
-    if (!frame) return undefined;
-    const send = (type: "init" | "update") => {
-      frame.contentWindow?.postMessage({ __flaremo: 1, type, payload }, "*");
-    };
-    send(ready ? "update" : "init");
-    if (ready) return undefined;
-    const interval = window.setInterval(() => {
-      if (readyRef.current) {
-        window.clearInterval(interval);
-        return;
-      }
-      send("init");
-    }, 500);
-    const stop = window.setTimeout(
-      () => window.clearInterval(interval),
-      READY_TIMEOUT_MS,
-    );
-    return () => {
-      window.clearInterval(interval);
-      window.clearTimeout(stop);
-    };
-  }, [payload, ready]);
-
-  useImperativeHandle(
-    ref,
-    () => ({
-      exportPng: () =>
-        new Promise<string | null>((resolve) => {
-          const frame = iframeRef.current;
-          if (!frame?.contentWindow || !readyRef.current) {
-            resolve(null);
-            return;
+      const handleMessage = (event: MessageEvent) => {
+        // Opaque-origin frames report origin "null"; identity check is the source.
+        if (event.source !== frame.contentWindow) return;
+        const message = event.data as {
+          __flaremo?: number;
+          type?: string;
+          png?: string;
+          requestId?: number;
+          message?: string;
+        } | null;
+        if (!message || message.__flaremo !== 1) return;
+        if (message.type === "ready" && !readyRef.current) {
+          readyRef.current = true;
+          window.clearTimeout(timeout);
+          setReady(true);
+          onReadyChangeRef.current?.(true);
+        }
+        if (message.type === "exported" || message.type === "export-error") {
+          const resolve = exportResolver.current;
+          exportResolver.current = null;
+          if (message.type === "exported") {
+            const png = message.png ?? "";
+            if (!png || png.length > MAX_EXPORT_CHARS) {
+              resolve?.({
+                ok: false,
+                error: "Export result is missing or too large.",
+              });
+            } else {
+              resolve?.({ ok: true, png });
+            }
+          } else {
+            resolve?.({
+              ok: false,
+              error: message.message ?? "Plugin export failed.",
+            });
           }
-          const requestId = ++requestIdRef.current;
-          const timeout = window.setTimeout(() => {
-            exportResolver.current = null;
-            resolve(null);
-          }, EXPORT_TIMEOUT_MS);
-          exportResolver.current = (result) => {
-            window.clearTimeout(timeout);
-            resolve(result.ok ? (result.png ?? null) : null);
-          };
-          frame.contentWindow.postMessage(
-            { __flaremo: 1, type: "export", requestId, scale: 2 },
-            "*",
-          );
-        }),
-    }),
-    [],
-  );
+        }
+        if (message.type === "error") {
+          onErrorRef.current?.(message.message ?? "Plugin error.");
+        }
+      };
+      window.addEventListener("message", handleMessage);
+      return () => {
+        window.clearTimeout(timeout);
+        window.removeEventListener("message", handleMessage);
+        exportResolver.current = null;
+      };
+    }, []);
 
-  return (
-    <iframe
-      className="block border-0"
-      ref={iframeRef}
-      sandbox="allow-scripts"
-      srcDoc={srcdoc}
-      style={{ width, height }}
-      title="Share card plugin"
-    />
-  );
-});
+    // The initial payload must wait for the frame; updates can go straight out.
+    // Re-post init until the plugin reports ready: srcdoc parsing is async and a
+    // single post can race the bridge script.
+    useEffect(() => {
+      const frame = iframeRef.current;
+      if (!frame) return undefined;
+      const send = (type: "init" | "update") => {
+        frame.contentWindow?.postMessage({ __flaremo: 1, type, payload }, "*");
+      };
+      send(ready ? "update" : "init");
+      if (ready) return undefined;
+      const interval = window.setInterval(() => {
+        if (readyRef.current) {
+          window.clearInterval(interval);
+          return;
+        }
+        send("init");
+      }, 500);
+      const stop = window.setTimeout(
+        () => window.clearInterval(interval),
+        READY_TIMEOUT_MS,
+      );
+      return () => {
+        window.clearInterval(interval);
+        window.clearTimeout(stop);
+      };
+    }, [payload, ready]);
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        exportPng: () =>
+          new Promise<string | null>((resolve) => {
+            const frame = iframeRef.current;
+            if (!frame?.contentWindow || !readyRef.current) {
+              resolve(null);
+              return;
+            }
+            const requestId = ++requestIdRef.current;
+            const timeout = window.setTimeout(() => {
+              exportResolver.current = null;
+              resolve(null);
+            }, EXPORT_TIMEOUT_MS);
+            exportResolver.current = (result) => {
+              window.clearTimeout(timeout);
+              resolve(result.ok ? (result.png ?? null) : null);
+            };
+            frame.contentWindow.postMessage(
+              { __flaremo: 1, type: "export", requestId, scale: 2 },
+              "*",
+            );
+          }),
+      }),
+      [],
+    );
+
+    return (
+      <iframe
+        className="block border-0"
+        ref={iframeRef}
+        sandbox="allow-scripts"
+        srcDoc={srcdoc}
+        style={{ width, height }}
+        title="Share card plugin"
+      />
+    );
+  },
+);

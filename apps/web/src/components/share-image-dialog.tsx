@@ -1,9 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
 import {
   type BundledShareCard,
   listBundledPluginsSorted,
   resolveOptionValues,
 } from "@flaremo/plugins";
+import { useQuery } from "@tanstack/react-query";
 import { toPng } from "html-to-image";
 import { DownloadIcon, Loader2Icon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -13,8 +13,8 @@ import { getMemoStats } from "@/api";
 import { useBranding } from "@/branding";
 import { ShareCardDocumentView } from "@/components/share-card-document";
 import {
-  ShareCardSandboxHost,
   type ShareCardSandboxHandle,
+  ShareCardSandboxHost,
 } from "@/components/share-card-sandbox";
 import { Button } from "@/components/ui/button";
 import {
@@ -89,9 +89,8 @@ function resolveCardLabel(
   locale: string,
   t: (key: TranslationKey) => string,
 ): string {
-  const localized = card.name[locale] ??
-    card.name["en-US"] ??
-    Object.values(card.name)[0];
+  const localized =
+    card.name[locale] ?? card.name["en-US"] ?? Object.values(card.name)[0];
   if (localized) return localized;
   const legacyKey = LEGACY_TEMPLATE_LABEL_KEYS[card.id];
   return legacyKey ? t(legacyKey) : card.id;
@@ -131,7 +130,8 @@ export function ShareImageDialog({
 
   // The active card can disappear when the template list changes (plugin
   // disabled); fall back to the first available card.
-  const card = cards.find((candidate) => candidate.id === templateId) ?? cards[0];
+  const card =
+    cards.find((candidate) => candidate.id === templateId) ?? cards[0];
 
   const date = formatMemoTime(memo.display_time, locale);
   const day = useMemo(() => {
@@ -178,7 +178,7 @@ export function ShareImageDialog({
     try {
       let dataUrl: string | null = null;
       if (card.payload.kind === "sandbox") {
-        dataUrl = await sandboxRef.current?.exportPng() ?? null;
+        dataUrl = (await sandboxRef.current?.exportPng()) ?? null;
         if (!dataUrl) toast.error(t("share.exportFailed"));
       } else {
         const node = previewRef.current;

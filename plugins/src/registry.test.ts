@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  DEFAULT_SHARE_CARD_SIZE,
-  listBundledPlugins,
-  listBundledPluginsSorted,
-} from "./registry";
+import { listBundledPlugins, listBundledPluginsSorted } from "./registry";
+import { DEFAULT_SHARE_CARD_SIZE } from "./spec";
 
 describe("bundled plugin registry", () => {
   it("discovers the bundled official plugins", () => {

@@ -7,9 +7,9 @@ import {
   resolveBackgroundCSS,
   resolveColor,
   resolveLocalizedText,
+  SHARE_CARD_SVG_TAGS,
   type ShareCardDocument,
   type ShareCardRenderContext,
-  SHARE_CARD_SVG_TAGS,
   type SvgNode,
 } from "@flaremo/plugins";
 import type { CSSProperties, ElementType, ReactNode } from "react";
@@ -92,11 +92,14 @@ function styleToCSS(
     css.borderWidth = style.borderWidth;
     css.borderStyle = borderStyle;
   }
-  if (borderColor && (style.borderWidth !== undefined ||
-    style.borderTopWidth !== undefined ||
-    style.borderBottomWidth !== undefined ||
-    style.borderLeftWidth !== undefined ||
-    style.borderRightWidth !== undefined)) {
+  if (
+    borderColor &&
+    (style.borderWidth !== undefined ||
+      style.borderTopWidth !== undefined ||
+      style.borderBottomWidth !== undefined ||
+      style.borderLeftWidth !== undefined ||
+      style.borderRightWidth !== undefined)
+  ) {
     css.borderColor = borderColor;
   }
   if (style.borderTopWidth !== undefined) {
@@ -155,7 +158,8 @@ function styleToCSS(
     if (font.size !== undefined) css.fontSize = font.size;
     if (font.weight !== undefined) css.fontWeight = font.weight;
     if (font.lineHeight !== undefined) css.lineHeight = font.lineHeight;
-    if (font.letterSpacing !== undefined) css.letterSpacing = font.letterSpacing;
+    if (font.letterSpacing !== undefined)
+      css.letterSpacing = font.letterSpacing;
     if (font.align) css.textAlign = TEXT_ALIGN[font.align];
     if (font.uppercase) css.textTransform = "uppercase";
     const fontColor = resolveColor(font.color, mode);
@@ -183,7 +187,10 @@ function renderSvgNode(
     const lower = name.toLowerCase();
     if (lower.startsWith("on") || lower === "style") continue;
     if (lower === "href" || lower === "xlink:href") {
-      if (typeof raw === "string" && (raw.startsWith("#") || raw.startsWith("data:image/"))) {
+      if (
+        typeof raw === "string" &&
+        (raw.startsWith("#") || raw.startsWith("data:image/"))
+      ) {
         attrs[name] = raw;
       }
       continue;
@@ -193,7 +200,8 @@ function renderSvgNode(
       continue;
     }
     if (typeof raw === "string") {
-      if (isUnsafeCSS(raw) && !/^url\(#[a-zA-Z0-9_-]+\)$/.test(raw.trim())) continue;
+      if (isUnsafeCSS(raw) && !/^url\(#[a-zA-Z0-9_-]+\)$/.test(raw.trim()))
+        continue;
       attrs[name] = raw;
       continue;
     }
@@ -299,7 +307,8 @@ function renderNode(
             height: 0,
             borderTopWidth: 1,
             borderTopStyle: "solid",
-            borderColor: resolveColor(node.style?.color, mode) ?? "currentColor",
+            borderColor:
+              resolveColor(node.style?.color, mode) ?? "currentColor",
             opacity: node.style?.opacity ?? 0.4,
             ...css,
           }}
@@ -307,7 +316,13 @@ function renderNode(
       );
     }
     case "spacer":
-      return <div aria-hidden="true" key={key} style={styleToCSS(node.style, mode)} />;
+      return (
+        <div
+          aria-hidden="true"
+          key={key}
+          style={styleToCSS(node.style, mode)}
+        />
+      );
     default:
       return null;
   }

@@ -92,7 +92,12 @@ export type DocumentNode =
   | { type: "row" | "column"; children?: DocumentNode[]; style?: DocumentStyle }
   | { type: "text"; text: LocalizedText | string; style?: DocumentStyle }
   | { type: "image"; src: string; alt?: string; style?: DocumentStyle }
-  | { type: "svg"; viewBox: string; children?: SvgNode[]; style?: DocumentStyle }
+  | {
+      type: "svg";
+      viewBox: string;
+      children?: SvgNode[];
+      style?: DocumentStyle;
+    }
   | { type: "divider"; style?: DocumentStyle }
   | { type: "spacer"; style?: DocumentStyle };
 
@@ -193,12 +198,19 @@ export function resolveColor(
   mode: DocumentMode,
 ): string | undefined {
   if (color === undefined) return undefined;
-  const raw = typeof color === "string" ? color : mode === "dark" ? color.dark : color.light;
+  const raw =
+    typeof color === "string"
+      ? color
+      : mode === "dark"
+        ? color.dark
+        : color.light;
   const trimmed = raw.trim();
   if (!trimmed || isUnsafeCSS(trimmed)) return undefined;
   if (trimmed.startsWith("brand.")) {
     const step = trimmed.slice("brand.".length);
-    if (BRAND_COLOR_STEPS.includes(step as (typeof BRAND_COLOR_STEPS)[number])) {
+    if (
+      BRAND_COLOR_STEPS.includes(step as (typeof BRAND_COLOR_STEPS)[number])
+    ) {
       return step === "coral" ? "var(--brand-coral)" : `var(--brand-${step})`;
     }
     return undefined;

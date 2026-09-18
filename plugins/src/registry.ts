@@ -15,15 +15,18 @@ import {
   PLUGIN_SPEC_VERSION,
   type PluginManifest,
   type PluginTier,
-  type ShareCardContribution,
   SHARE_CARD_SIZE_LIMITS,
+  type ShareCardContribution,
   type ShareCardOptionSpec,
 } from "./spec";
 
-const manifestModules = import.meta.glob("../{official,community}/*/plugin.json", {
-  eager: true,
-  import: "default",
-}) as Record<string, unknown>;
+const manifestModules = import.meta.glob(
+  "../{official,community}/*/plugin.json",
+  {
+    eager: true,
+    import: "default",
+  },
+) as Record<string, unknown>;
 
 const documentModules = import.meta.glob(
   "../{official,community}/*/cards/**/*.json",
@@ -61,8 +64,14 @@ function validateOptions(
   const seen = new Set<string>();
   const specs: ShareCardOptionSpec[] = [];
   for (const raw of options) {
-    if (!isPlainObject(raw) || typeof raw.key !== "string" || !isLocalizedText(raw.label)) {
-      problems.push(`${source}: each option needs a string key and a localized label`);
+    if (
+      !isPlainObject(raw) ||
+      typeof raw.key !== "string" ||
+      !isLocalizedText(raw.label)
+    ) {
+      problems.push(
+        `${source}: each option needs a string key and a localized label`,
+      );
       continue;
     }
     if (seen.has(raw.key)) {
@@ -91,7 +100,9 @@ function validateOptions(
       type !== "color" &&
       type !== "number"
     ) {
-      problems.push(`${source}: option "${raw.key}" has unknown type "${String(type)}"`);
+      problems.push(
+        `${source}: option "${raw.key}" has unknown type "${String(type)}"`,
+      );
       continue;
     }
     specs.push(raw as ShareCardOptionSpec);
@@ -105,13 +116,18 @@ function validateContribution(
 ): { contribution: ShareCardContribution; problems: string[] } {
   const problems: string[] = [];
   if (!isPlainObject(raw)) {
-    return { contribution: {} as ShareCardContribution, problems: [`${source}: contribution must be an object`] };
+    return {
+      contribution: {} as ShareCardContribution,
+      problems: [`${source}: contribution must be an object`],
+    };
   }
   if (typeof raw.id !== "string" || !PLUGIN_ID_PATTERN.test(raw.id)) {
     problems.push(`contribution id "${String(raw.id)}" must be kebab-case`);
   }
   if (raw.kind !== "document" && raw.kind !== "sandbox") {
-    problems.push(`contribution "${String(raw.id)}" kind must be document or sandbox`);
+    problems.push(
+      `contribution "${String(raw.id)}" kind must be document or sandbox`,
+    );
   }
   if (!isLocalizedText(raw.name)) {
     problems.push(`contribution "${String(raw.id)}" needs a localized name`);
@@ -127,19 +143,29 @@ function validateContribution(
       size.height < SHARE_CARD_SIZE_LIMITS.min ||
       size.height > SHARE_CARD_SIZE_LIMITS.max
     ) {
-      problems.push(`contribution "${String(raw.id)}" size must be within ${SHARE_CARD_SIZE_LIMITS.min}–${SHARE_CARD_SIZE_LIMITS.max}px`);
+      problems.push(
+        `contribution "${String(raw.id)}" size must be within ${SHARE_CARD_SIZE_LIMITS.min}–${SHARE_CARD_SIZE_LIMITS.max}px`,
+      );
     }
   }
-  const options = validateOptions(raw.options, `contribution "${String(raw.id)}"`, problems);
+  const options = validateOptions(
+    raw.options,
+    `contribution "${String(raw.id)}"`,
+    problems,
+  );
   const contribution: ShareCardContribution = {
     id: typeof raw.id === "string" ? raw.id : "",
     kind: raw.kind === "sandbox" ? "sandbox" : "document",
     name: isLocalizedText(raw.name) ? raw.name : {},
-    size: isPlainObject(raw.size) && typeof raw.size.width === "number" && typeof raw.size.height === "number"
-      ? { width: raw.size.width, height: raw.size.height }
-      : DEFAULT_SHARE_CARD_SIZE,
+    size:
+      isPlainObject(raw.size) &&
+      typeof raw.size.width === "number" &&
+      typeof raw.size.height === "number"
+        ? { width: raw.size.width, height: raw.size.height }
+        : DEFAULT_SHARE_CARD_SIZE,
   };
-  if (isLocalizedText(raw.description)) contribution.description = raw.description;
+  if (isLocalizedText(raw.description))
+    contribution.description = raw.description;
   if (typeof raw.preview === "string") contribution.preview = raw.preview;
   if (options) contribution.options = options;
   if (typeof raw.document === "string") contribution.document = raw.document;
@@ -213,7 +239,9 @@ export function listBundledPlugins(): BundledPlugin[] {
       };
       if (contribution.kind === "document") {
         if (!contribution.document) {
-          throw new Error(`${key}: card "${contribution.id}" needs a document path`);
+          throw new Error(
+            `${key}: card "${contribution.id}" needs a document path`,
+          );
         }
         const document = documentModules[folder + contribution.document];
         if (!document) {
@@ -234,7 +262,9 @@ export function listBundledPlugins(): BundledPlugin[] {
         });
       } else {
         if (!contribution.entry) {
-          throw new Error(`${key}: card "${contribution.id}" needs an entry path`);
+          throw new Error(
+            `${key}: card "${contribution.id}" needs an entry path`,
+          );
         }
         const html = sandboxModules[folder + contribution.entry];
         if (typeof html !== "string") {
