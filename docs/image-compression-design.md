@@ -112,3 +112,9 @@ file → 设置关闭？──是───────────────�
 
 1. **默认值**：默认开（两个开关均默认开，localStorage 可关）。
 2. **v2 Safari wasm 兜底**：暂不排期；v1 Safari 检测到不支持编码即原图直传。
+3. **`toBlob` 超时兜底（审计补充）**：`canvas.toBlob` 在极端情况下（画布被污染、上下文丢失）可能永不回调，await 会卡死整个上传——加 10s 计时器，超时按编码失败处理、原图直传。
+4. **对象 URL 生命周期（审计补充）**：`<img>` 的 blob URL 只在 drawImage 之后的收尾处 revoke，不再在 decode 完就 revoke——后者在内存紧张时会抽走解码数据、让 drawImage 画成空白。
+
+## 10. 审计修正（2026-09-19，实现后复核）
+
+提交 `30eb21c` 后逐行审计，发现并修掉三处：`toBlob` 无超时（可卡死上传）、原图对象 URL 过早 revoke（潜在空白图）、音频侧缺回放/内存门禁与文案不准确（详见 `docs/audio-compression-research.md` §6）。图片侧的 skip 规则、2560px 长边、q0.82、`<img>` 优先解码（EXIF）经复核无需改动。另在播放器修掉一处与本功能相关的显示 bug：Ogg 流时长未知时 `duration` 为 `Infinity`，`formatClock` 会渲染成 `Infinity:NaN:NaN`（`reading-audio-provider.tsx` 现按 0 处理）。测试从 17 例增至 24 例。

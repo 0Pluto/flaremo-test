@@ -1070,7 +1070,7 @@ const messages = {
     "تحويل الصور إلى WebP قبل الرفع. أوقفه لرفع الملف الأصلي كما هو.",
   "uploads.audioCompression": "ضغط الصوت",
   "uploads.audioCompressionDescription":
-    "تحويل الصوت غير المضغوط (WAV وFLAC…) إلى Opus قبل الرفع. أوقفه للاحتفاظ بالصيغة الأصلية.",
+    "تحويل الصوت عديم الفقد (WAV وFLAC…) إلى Opus (بفقد) قبل الرفع. أوقفه للاحتفاظ بالصيغة الأصلية.",
   "theme.title": "وضع المظهر",
   "theme.description": "اختر سمة الواجهة المفضلة لديك لـ FlareMo",
   "theme.system": "النظام",

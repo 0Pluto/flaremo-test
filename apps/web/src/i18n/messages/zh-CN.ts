@@ -1021,7 +1021,7 @@ const messages = {
     "上传前把图片转为 WebP；关闭后保留原图上传。",
   "uploads.audioCompression": "音频压缩",
   "uploads.audioCompressionDescription":
-    "WAV、FLAC 等未压缩音频上传前转为 Opus；关闭后保留原格式。",
+    "WAV、FLAC 等无损音频上传前转为 Opus（有损压缩）；关闭后保留原格式。",
   "theme.title": "外观模式",
   "theme.description": "选择 FlareMo 的界面显示风格",
   "theme.system": "跟随系统",

@@ -1104,7 +1104,7 @@ const messages = {
     "アップロード前に画像を WebP に変換します。オフにすると元ファイルのままアップロードされます。",
   "uploads.audioCompression": "音声を圧縮",
   "uploads.audioCompressionDescription":
-    "WAV・FLAC などの未圧縮音声をアップロード前に Opus に変換します。オフにすると元形式のままアップロードされます。",
+    "WAV・FLAC などのロスレス音声をアップロード前に Opus（非可逆）に変換します。オフにすると元形式のままアップロードされます。",
   "theme.title": "外観モード",
   "theme.description": "FlareMoの表示テーマを選択します",
   "theme.system": "システム",

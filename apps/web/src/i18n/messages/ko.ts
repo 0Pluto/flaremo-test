@@ -1094,7 +1094,7 @@ const messages = {
     "업로드 전에 이미지를 WebP로 변환합니다. 끄면 원본 그대로 업로드됩니다.",
   "uploads.audioCompression": "오디오 압축",
   "uploads.audioCompressionDescription":
-    "WAV, FLAC 등 비압축 오디오를 업로드 전에 Opus로 변환합니다. 끄면 원본 형식 그대로 업로드됩니다.",
+    "WAV, FLAC 등 무손실 오디오를 업로드 전에 Opus(손실)로 변환합니다. 끄면 원본 형식 그대로 업로드됩니다.",
   "theme.title": "화면 모드",
   "theme.description": "FlareMo 인터페이스 테마를 선택하세요",
   "theme.system": "시스템 기본값",

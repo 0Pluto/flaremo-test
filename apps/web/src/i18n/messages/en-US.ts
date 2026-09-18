@@ -1090,7 +1090,7 @@ const messages = {
     "Convert images to WebP before upload. Turn off to upload the original file as-is.",
   "uploads.audioCompression": "Compress audio",
   "uploads.audioCompressionDescription":
-    "Transcode uncompressed audio (WAV, FLAC…) to Opus before upload. Turn off to keep the original format.",
+    "Transcode lossless audio (WAV, FLAC…) to lossy Opus before upload. Turn off to keep the original format.",
   "theme.title": "Appearance",
   "theme.description": "Choose your preferred interface theme for FlareMo",
   "theme.system": "System",

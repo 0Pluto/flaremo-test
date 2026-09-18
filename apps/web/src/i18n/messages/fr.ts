@@ -1125,7 +1125,7 @@ const messages = {
     "Convertit les images en WebP avant l'import. Désactivez pour conserver les fichiers d'origine.",
   "uploads.audioCompression": "Compresser l'audio",
   "uploads.audioCompressionDescription":
-    "Convertit l'audio non compressé (WAV, FLAC…) en Opus avant l'import. Désactivez pour conserver le format d'origine.",
+    "Convertit l'audio sans perte (WAV, FLAC…) en Opus (avec perte) avant l'import. Désactivez pour conserver le format d'origine.",
   "theme.title": "Mode d'apparence",
   "theme.description": "Choisissez le thème d'interface de FlareMo",
   "theme.system": "Système",

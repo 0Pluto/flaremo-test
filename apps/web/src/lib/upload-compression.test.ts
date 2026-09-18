@@ -443,9 +443,8 @@ describe("compressAudio", () => {
   }
 
   it("transcodes wav to a .ogg File, one encode call per second of audio", async () => {
-    // Two seconds of decoded audio → two chunks, then flush. The
-    // decode-ability probe contributes one extra flush (its EOS page) and one
-    // extra free, but never calls encode.
+    // Two seconds of decoded audio → two chunks, then flush. The decode-ability
+    // probe adds one encode (its 20 ms silence frame), one flush and one free.
     stubDecode({ numberOfChannels: 2, length: 96_000 });
     const result = await compressAudio(
       new File([wavBytes({ samples: 400_000 })], "clip.wav", {
@@ -455,7 +454,7 @@ describe("compressAudio", () => {
     expect(result).not.toBeNull();
     expect(result?.name).toBe("clip.ogg");
     expect(result?.type).toBe("audio/ogg");
-    expect(opusMock.state.encodeCalls).toBe(2);
+    expect(opusMock.state.encodeCalls).toBe(3);
     expect(opusMock.state.flushCalls).toBe(2);
     expect(opusMock.state.freeCalls).toBe(2);
     expect(opusMock.state.options).toMatchObject({
@@ -496,9 +495,14 @@ describe("compressAudio", () => {
       ),
     ).toBeNull();
     // The probe's own decode is the only one attempted — the source is never
-    // decoded, encoded, or hashed into the memory budget.
+    // decoded. (The probe does encode its 20 ms silence frame.)
     expect(rates).toEqual([48_000]);
-    expect(opusMock.state.encodeCalls).toBe(0);
+    expect(opusMock.state.options).toMatchObject({
+      sampleRate: 48_000,
+      channels: 1,
+      bitrate: 32,
+      application: "voip",
+    });
   });
 
   it("skips the transcode when the decoded PCM would blow the memory budget", async () => {
@@ -523,7 +527,6 @@ describe("compressAudio", () => {
     expect(await compressAudio(file)).toBeNull();
     // Only the probe decoded; the source never reached decodeAudioData.
     expect(rates).toEqual([48_000]);
-    expect(opusMock.state.encodeCalls).toBe(0);
   });
 
   it("still transcodes when the header cannot be parsed", async () => {
@@ -559,7 +562,27 @@ describe("compressAudio", () => {
       ),
     ).toBeNull();
     expect(calls).toBe(1);
-    expect(opusMock.state.encodeCalls).toBe(0);
+    // The probe encodes one silence frame before its decode fails; the source
+    // file itself is never encoded.
+    expect(opusMock.state.options).toMatchObject({
+      sampleRate: 48_000,
+      channels: 1,
+      bitrate: 32,
+      application: "voip",
+    });
+  });
+
+  it("keeps the original file when the source decodes to no samples", async () => {
+    // A headers-only Opus stream is unplayable (verified against Chromium), so
+    // an empty decode must not be uploaded as if it were a real transcode.
+    stubDecode({ numberOfChannels: 1, length: 0 });
+    expect(
+      await compressAudio(
+        new File([wavBytes({ channels: 1 })], "empty.wav", {
+          type: "audio/wav",
+        }),
+      ),
+    ).toBeNull();
   });
 
   it("returns null when the transcode would not shrink the file", async () => {
