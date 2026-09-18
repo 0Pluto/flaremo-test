@@ -8,7 +8,7 @@ import {
   parseMemoSearchQuery,
   type UpdateMemoInput,
 } from "@flaremo/contracts";
-import type { FlareMoDb, MemoPayload, MemoRow, UserRow } from "@flaremo/db";
+import type { FlareMoDb, MemoPayload, MemoRow } from "@flaremo/db";
 import { attachments, memoRevisions, memos, memoTags } from "@flaremo/db";
 import { and, asc, desc, eq, gt, gte, inArray, lt, or, sql } from "drizzle-orm";
 import { insertEmbeddingTask } from "./embedding-outbox";

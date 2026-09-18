@@ -1,4 +1,4 @@
-import type { MemoRow, UserRow } from "@flaremo/db";
+import type { MemoRow } from "@flaremo/db";
 import { describe, expect, it } from "vitest";
 import {
   canDeleteMemo,
