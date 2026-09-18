@@ -1,7 +1,7 @@
 {
   "specVersion": 1,
   "name": "FlareMo 官方目录",
-  "updatedAt": "2026-09-18T07:46:56.169Z",
+  "updatedAt": "2026-09-18T07:53:52.129Z",
   "plugins": [
     {
       "id": "flaremo-cards",
@@ -41,6 +41,10 @@
               "fr": "Blanc",
               "es": "Sencillo",
               "ar": "أبيض"
+            },
+            "size": {
+              "width": 340,
+              "height": 420
             }
           },
           {
@@ -55,6 +59,10 @@
               "fr": "Citation du jour",
               "es": "Diario",
               "ar": "يومية"
+            },
+            "size": {
+              "width": 340,
+              "height": 420
             }
           },
           {
@@ -69,14 +77,18 @@
               "fr": "Ticket",
               "es": "Billete",
               "ar": "تذكرة"
+            },
+            "size": {
+              "width": 340,
+              "height": 420
             }
           }
         ]
       },
       "artifact": {
         "url": "flaremo-cards/flaremo-cards-1.0.0.zip",
-        "sha256": "fb39c6be9fbed2c40b6b0509bfccbc1aefff89ca9fd13511795d86320705b305",
-        "size": 3212
+        "sha256": "8616d7ee8d0d0f508826e7ebb9ae55cfe6e2598fd9cc0aff509efa97192640d2",
+        "size": 3324
       }
     },
     {
@@ -118,6 +130,10 @@
               "es": "Matasellos",
               "ar": "ختم بريدي"
             },
+            "size": {
+              "width": 340,
+              "height": 420
+            },
             "options": [
               {
                 "key": "accent",
@@ -140,8 +156,8 @@
       },
       "artifact": {
         "url": "sandbox-demo/sandbox-demo-1.0.0.zip",
-        "sha256": "80adce5d9a1ddc6a2612135c1fed7b972314e64f433405aa91f9bcecfcfb7117",
-        "size": 2464
+        "sha256": "5755cb3b3aeb2fd80e0e474f164648ed3f9880d65b6dd7d91525fbb39b648558",
+        "size": 2516
       }
     }
   ]

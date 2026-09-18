@@ -115,11 +115,12 @@ async function buildTier(
       );
     }
 
-    // The zip keeps the standard `<id>/…` layout the installer expects.
+    // The zip keeps the standard `<id>/…` layout the installer expects
+    // (top-level folder named after the plugin, plugin.json at its root).
     const zipEntries: Record<string, Uint8Array> = {};
     const prefix = `${tier}/${folder}/`;
     for (const [name, data] of Object.entries(files)) {
-      zipEntries[name.slice(prefix.length)] = data;
+      zipEntries[`${manifest.id}/${name.slice(prefix.length)}`] = data;
     }
     const zipped = zipPluginFiles(zipEntries);
     const artifactName = `${manifest.id}-${manifest.version}.zip`;
