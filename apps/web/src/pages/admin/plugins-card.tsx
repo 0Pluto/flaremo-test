@@ -289,7 +289,7 @@ export function PluginsCard() {
 
         <div className="flex flex-col gap-3">
           <p className="text-sm font-medium">{t("admin.plugins.cards")}</p>
-          {orderedEntries.map((entry, index, all) => {
+          {orderedEntries.map((entry, _index, all) => {
             const { card, pluginId } = entry;
             const plugin = plugins.find(
               (candidate) => candidate.manifest.id === pluginId,

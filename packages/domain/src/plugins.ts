@@ -23,6 +23,8 @@ export const PLUGINS_SETTING_KEY = "flaremo.instance.PLUGINS";
 export const PLUGIN_LIST_LIMIT = 50;
 export const PLUGIN_OPTIONS_MAX_BYTES = 8 * 1024;
 const ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}$/;
+/** Option keys are plain JSON keys (camelCase is the convention), not ids. */
+const OPTION_KEY_PATTERN = /^[a-zA-Z][a-zA-Z0-9_]{0,63}$/;
 
 export type ShareCardSettings = {
   /** Partial order over card ids; unlisted cards keep their registry order. */
@@ -98,7 +100,7 @@ function normalizeCardOptions(
     }
     const entry: Record<string, string | number | boolean> = {};
     for (const [key, optionValue] of Object.entries(raw)) {
-      if (!ID_PATTERN.test(key)) continue;
+      if (!OPTION_KEY_PATTERN.test(key)) continue;
       const type = typeof optionValue;
       if (type !== "string" && type !== "number" && type !== "boolean") {
         throw new ValidationError("Option values must be primitives.");

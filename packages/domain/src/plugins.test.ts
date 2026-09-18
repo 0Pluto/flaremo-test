@@ -33,9 +33,7 @@ describe("plugin settings normalization", () => {
         order: ["plain", "plain"],
         hidden: [],
         default: "plain",
-        options: {
-          plain: { showStats: true, label: "x", nested: { no: true } },
-        },
+        options: { plain: { showStats: true, label: "x" } },
       },
     } as never);
     expect(normalized.enabledPlugins).toEqual(["a", "b"]);
@@ -43,6 +41,17 @@ describe("plugin settings normalization", () => {
     expect(normalized.cards.options).toEqual({
       plain: { showStats: true, label: "x" },
     });
+  });
+
+  it("resets a corrupted row to defaults instead of failing the read", () => {
+    // A nested option value is not a primitive: the read path treats the
+    // whole row as corrupt and serves defaults, so a hand-edited settings
+    // row can never take the instance down.
+    const normalized = normalizePluginSettings({
+      enabledPlugins: ["cosy-pack"],
+      cards: { options: { plain: { nested: { no: true } } } },
+    } as never);
+    expect(normalized).toEqual(DEFAULT_PLUGIN_SETTINGS);
   });
 });
 
@@ -128,6 +137,15 @@ describe("plugin settings persistence", () => {
     ).rejects.toBeInstanceOf(ValidationError);
     await expect(
       setPluginSettings(db, { cards: { default: "Bad_ID" } }),
+    ).rejects.toBeInstanceOf(ValidationError);
+    await expect(
+      setPluginSettings(db, {
+        cards: {
+          options: {
+            plain: { nested: { no: true } as never },
+          },
+        },
+      }),
     ).rejects.toBeInstanceOf(ValidationError);
   });
 

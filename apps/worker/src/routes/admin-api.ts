@@ -265,9 +265,10 @@ adminApi.delete("/branding/marks/:variant", async (c) => {
 
 const pluginIdSchema = z.string().trim().regex(/^[a-z0-9][a-z0-9-]{0,63}$/);
 const pluginIdListSchema = z.array(pluginIdSchema).max(PLUGIN_LIST_LIMIT);
+const optionKeySchema = z.string().trim().regex(/^[a-zA-Z][a-zA-Z0-9_]{0,63}$/);
 const cardOptionsSchema = z.record(
   pluginIdSchema,
-  z.record(pluginIdSchema, z.union([z.string(), z.number(), z.boolean()])),
+  z.record(optionKeySchema, z.union([z.string(), z.number(), z.boolean()])),
 );
 const updatePluginsSchema = z.object({
   enabledPlugins: pluginIdListSchema.optional(),
