@@ -103,7 +103,10 @@
                         "tag": "feDisplacementMap",
                         "attrs": { "in": "SourceGraphic", "scale": 12 }
                       },
-                      { "tag": "feGaussianBlur", "attrs": { "stdDeviation": 0.7 } }
+                      {
+                        "tag": "feGaussianBlur",
+                        "attrs": { "stdDeviation": 0.7 }
+                      }
                     ]
                   }
                 ]

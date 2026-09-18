@@ -131,6 +131,12 @@ function styleToCSS(
     css.paddingTop = style.paddingY;
     css.paddingBottom = style.paddingY;
   }
+  // Per-side values win over the shorthand/axis forms, matching CSS order.
+  if (style.paddingTop !== undefined) css.paddingTop = style.paddingTop;
+  if (style.paddingBottom !== undefined)
+    css.paddingBottom = style.paddingBottom;
+  if (style.paddingLeft !== undefined) css.paddingLeft = style.paddingLeft;
+  if (style.paddingRight !== undefined) css.paddingRight = style.paddingRight;
   if (style.marginTop !== undefined) css.marginTop = style.marginTop;
   if (style.marginRight !== undefined) css.marginRight = style.marginRight;
   if (style.marginBottom !== undefined) css.marginBottom = style.marginBottom;

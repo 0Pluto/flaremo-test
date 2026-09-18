@@ -1,4 +1,4 @@
-import { unzipSync, zipSync, type Zippable } from "fflate";
+import { unzipSync, type Zippable, zipSync } from "fflate";
 import { checkPluginFiles } from "./check";
 import { PLUGIN_PACKAGE_LIMITS, type PluginManifest } from "./spec";
 
@@ -112,7 +112,11 @@ export function extractPluginPackage(bytes: Uint8Array): ExtractedPackage {
 
   const names = Object.keys(raw);
   if (names.length === 0) {
-    return { files: {}, rootFolder: null, problems: ["package contains no files"] };
+    return {
+      files: {},
+      rootFolder: null,
+      problems: ["package contains no files"],
+    };
   }
   for (const name of names) {
     const problem = assertSafePath(name);
@@ -161,9 +165,13 @@ export function readPluginPackage(bytes: Uint8Array): PluginPackage {
   const errors = result.issues.filter((issue) => issue.severity === "error");
   if (!result.manifest || errors.length > 0) {
     const details = errors
-      .map((issue) => `${issue.where ? `${issue.where} · ` : ""}${issue.message}`)
+      .map(
+        (issue) => `${issue.where ? `${issue.where} · ` : ""}${issue.message}`,
+      )
       .join("; ");
-    throw new Error(`package failed validation: ${details || "invalid manifest"}`);
+    throw new Error(
+      `package failed validation: ${details || "invalid manifest"}`,
+    );
   }
   return { manifest: result.manifest, files: extracted.files };
 }

@@ -81,6 +81,10 @@ const STYLE_KEYS = new Set([
   "padding",
   "paddingX",
   "paddingY",
+  "paddingTop",
+  "paddingBottom",
+  "paddingLeft",
+  "paddingRight",
   "color",
   "marginTop",
   "marginRight",
@@ -245,7 +249,9 @@ function checkColorValue(
   if (APP_COLOR_TOKENS.has(trimmed)) return;
   if (trimmed.startsWith("brand.")) {
     const step = trimmed.slice("brand.".length);
-    if (!BRAND_COLOR_STEPS.includes(step as (typeof BRAND_COLOR_STEPS)[number])) {
+    if (
+      !BRAND_COLOR_STEPS.includes(step as (typeof BRAND_COLOR_STEPS)[number])
+    ) {
       checker.error(
         "color/unknown-token",
         `${where}: unknown brand step "${trimmed}" (expected brand.${BRAND_COLOR_STEPS.join(" / brand.")})`,
@@ -314,11 +320,7 @@ function checkLocalizedText(
   );
 }
 
-function checkStyle(
-  checker: Checker,
-  style: unknown,
-  where: string,
-): void {
+function checkStyle(checker: Checker, style: unknown, where: string): void {
   if (style === undefined) return;
   if (!isPlainObject(style)) {
     checker.error("style/invalid", `${where}: style must be an object`);
@@ -386,10 +388,7 @@ function checkStyle(
       }
       const family = font.family;
       if (family !== undefined) {
-        if (
-          typeof family !== "string" ||
-          !BUILT_IN_FONT_FAMILIES.has(family)
-        ) {
+        if (typeof family !== "string" || !BUILT_IN_FONT_FAMILIES.has(family)) {
           checker.warn(
             "font/unsupported",
             `${where}.font.family: "${String(family)}" is not a built-in family (${[...BUILT_IN_FONT_FAMILIES].join("/")}); packaged fonts are not supported yet, the card will fall back`,
@@ -410,7 +409,10 @@ function checkSvgNode(
   depth: number,
 ): void {
   if (depth > MAX_NODE_DEPTH) {
-    checker.error("document/too-deep", `${where}: nesting exceeds ${MAX_NODE_DEPTH} levels`);
+    checker.error(
+      "document/too-deep",
+      `${where}: nesting exceeds ${MAX_NODE_DEPTH} levels`,
+    );
     return;
   }
   if (!isPlainObject(node)) {
@@ -469,7 +471,10 @@ function checkSvgNode(
           continue;
         }
         if (lower === "fill" || lower === "stroke" || lower === "color") {
-          if (typeof value === "string" && SVG_FILTER_REF_PATTERN.test(value.trim())) {
+          if (
+            typeof value === "string" &&
+            SVG_FILTER_REF_PATTERN.test(value.trim())
+          ) {
             continue; // gradient/filter paint references
           }
           if (
@@ -499,9 +504,9 @@ function checkSvgNode(
       checker.error("svg/invalid", `${where}.children: must be an array`);
       return;
     }
-    node.children.forEach((child, index) =>
-      checkSvgNode(checker, child, `${where}.children[${index}]`, depth + 1),
-    );
+    for (const [index, child] of node.children.entries()) {
+      checkSvgNode(checker, child, `${where}.children[${index}]`, depth + 1);
+    }
   }
 }
 
@@ -513,7 +518,10 @@ function checkNode(
   depth: number,
 ): void {
   if (depth > MAX_NODE_DEPTH) {
-    checker.error("document/too-deep", `${where}: nesting exceeds ${MAX_NODE_DEPTH} levels`);
+    checker.error(
+      "document/too-deep",
+      `${where}: nesting exceeds ${MAX_NODE_DEPTH} levels`,
+    );
     return;
   }
   if (!isPlainObject(node)) {
@@ -534,12 +542,23 @@ function checkNode(
     case "row":
     case "column": {
       if (node.children !== undefined && !Array.isArray(node.children)) {
-        checker.error("document/invalid", `${where}.children: must be an array`);
+        checker.error(
+          "document/invalid",
+          `${where}.children: must be an array`,
+        );
         break;
       }
-      (node.children as unknown[] | undefined)?.forEach((child, index) =>
-        checkNode(checker, child, `${where}.children[${index}]`, optionKeys, depth + 1),
-      );
+      for (const [index, child] of (
+        node.children as unknown[] | undefined
+      )?.entries() ?? []) {
+        checkNode(
+          checker,
+          child,
+          `${where}.children[${index}]`,
+          optionKeys,
+          depth + 1,
+        );
+      }
       break;
     }
     case "text": {
@@ -582,9 +601,11 @@ function checkNode(
           `${where}.viewBox: is required (e.g. "0 0 340 210")`,
         );
       }
-      (node.children as SvgNode[] | undefined)?.forEach((child, index) =>
-        checkSvgNode(checker, child, `${where}.children[${index}]`, depth + 1),
-      );
+      for (const [index, child] of (
+        node.children as SvgNode[] | undefined
+      )?.entries() ?? []) {
+        checkSvgNode(checker, child, `${where}.children[${index}]`, depth + 1);
+      }
       break;
     }
     default:
@@ -592,7 +613,11 @@ function checkNode(
   }
 }
 
-function checkPreview(checker: Checker, bytes: Uint8Array, where: string): void {
+function checkPreview(
+  checker: Checker,
+  bytes: Uint8Array,
+  where: string,
+): void {
   if (bytes.byteLength > PLUGIN_PACKAGE_LIMITS.maxPreviewBytes) {
     checker.error(
       "preview/too-large",
@@ -609,8 +634,10 @@ function checkPreview(checker: Checker, bytes: Uint8Array, where: string): void 
     checker.error("preview/not-png", `${where}: preview must be a PNG file`);
     return;
   }
-  const width = (bytes[16]! << 24) | (bytes[17]! << 16) | (bytes[18]! << 8) | bytes[19]!;
-  const height = (bytes[20]! << 24) | (bytes[21]! << 16) | (bytes[22]! << 8) | bytes[23]!;
+  // PNG stores dimensions big-endian at a fixed offset (IHDR width/height).
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const width = view.getUint32(16);
+  const height = view.getUint32(20);
   if (width < 200 || height < 200) {
     checker.warn(
       "preview/small",
@@ -622,7 +649,8 @@ function checkPreview(checker: Checker, bytes: Uint8Array, where: string): void 
 /** Dangerous attribute names whose values must stay inside the package. */
 const RESOURCE_ATTR_PATTERN =
   /\b(src|href|srcset|poster|data|action|formaction|background)\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/gi;
-const TAG_PATTERN = /<(script|link|iframe|object|embed|img|source|video|audio)\b[^>]*>/gi;
+const TAG_PATTERN =
+  /<(script|link|iframe|object|embed|img|source|video|audio)\b[^>]*>/gi;
 const CSS_URL_PATTERN = /url\(\s*(['"]?)([^'")]+)\1\s*\)/gi;
 
 function checkSandbox(
@@ -634,7 +662,11 @@ function checkSandbox(
   const pushReference = (raw: string, where: string): void => {
     const value = raw.trim();
     if (!value) return;
-    if (value.startsWith("data:") || value.startsWith("blob:") || value.startsWith("#")) {
+    if (
+      value.startsWith("data:") ||
+      value.startsWith("blob:") ||
+      value.startsWith("#")
+    ) {
       return;
     }
     if (/^https?:|^\/\//i.test(value)) {
@@ -800,7 +832,10 @@ function checkCard(
       return;
     }
     if (!isPlainObject(parsed)) {
-      checker.error("card/invalid", `${documentPath}: document must be an object`);
+      checker.error(
+        "card/invalid",
+        `${documentPath}: document must be an object`,
+      );
       return;
     }
     if (parsed.specVersion !== SHARE_CARD_SPEC_VERSION) {
@@ -836,7 +871,10 @@ export function checkPluginFiles(input: PluginCheckInput): PluginCheckResult {
 
   const manifestBytes = files["plugin.json"];
   if (!manifestBytes) {
-    checker.error("manifest/missing", "plugin.json is missing at the package root");
+    checker.error(
+      "manifest/missing",
+      "plugin.json is missing at the package root",
+    );
     return {
       pluginId: null,
       version: null,
@@ -914,10 +952,12 @@ export function checkPluginFiles(input: PluginCheckInput): PluginCheckResult {
     }
   }
 
-  const rawCards = isPlainObject(raw) && isPlainObject(raw.contributes) &&
+  const rawCards =
+    isPlainObject(raw) &&
+    isPlainObject(raw.contributes) &&
     Array.isArray(raw.contributes.shareCardTemplates)
-    ? (raw.contributes.shareCardTemplates as unknown[])
-    : [];
+      ? (raw.contributes.shareCardTemplates as unknown[])
+      : [];
   (manifest.contributes.shareCardTemplates ?? []).forEach((card, index) => {
     checkCard(checker, card, rawCards[index], files);
   });

@@ -42,7 +42,12 @@ const validDocument = {
   specVersion: 1,
   root: {
     type: "column",
-    style: { height: "100%", padding: 24, background: "#ffffff", color: "#111111" },
+    style: {
+      height: "100%",
+      padding: 24,
+      background: "#ffffff",
+      color: "#111111",
+    },
     children: [
       {
         type: "text",
@@ -121,7 +126,11 @@ describe("checkPluginFiles — document cards", () => {
             type: "column",
             style: { color: "brand.999" },
             children: [
-              { type: "text", text: "x", style: { background: "url(https://x)" } },
+              {
+                type: "text",
+                text: "x",
+                style: { background: "url(https://x)" },
+              },
             ],
           },
         }),
@@ -148,9 +157,8 @@ describe("checkPluginFiles — document cards", () => {
 
   it("accepts a declared option binding", () => {
     const manifest = baseManifest();
-    (
-      manifest.contributes as { shareCardTemplates: Record<string, unknown>[] }
-    ).shareCardTemplates[0]!.options = [
+    (manifest.contributes as { shareCardTemplates: Record<string, unknown>[] })
+      .shareCardTemplates[0]!.options = [
       {
         key: "accent",
         type: "color",
@@ -305,9 +313,7 @@ describe("checkPluginFiles — package-level rules", () => {
       }),
       rootFolder: "other-folder",
     });
-    expect(errors.map((issue) => issue.code)).toContain(
-      "manifest/id-mismatch",
-    );
+    expect(errors.map((issue) => issue.code)).toContain("manifest/id-mismatch");
   });
 
   it("requires an author for community packages", () => {

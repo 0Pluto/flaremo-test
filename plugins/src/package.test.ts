@@ -32,11 +32,25 @@ function zip(files: Record<string, string>): Uint8Array {
   return zipSync(entries);
 }
 
+const validDocument = {
+  specVersion: 1,
+  root: {
+    type: "column",
+    style: {
+      height: "100%",
+      padding: 24,
+      background: "#ffffff",
+      color: "#111111",
+    },
+    children: [{ type: "text", text: "{body}", style: { flex: 1 } }],
+  },
+};
+
 describe("readPluginPackage", () => {
   it("reads a well-formed package and strips the folder prefix", () => {
     const bytes = zip({
       "demo-pack/plugin.json": JSON.stringify(manifest()),
-      "demo-pack/cards/demo.json": JSON.stringify({ specVersion: 1, root: {} }),
+      "demo-pack/cards/demo.json": JSON.stringify(validDocument),
     });
     const pkg = readPluginPackage(bytes);
     expect(pkg.manifest.id).toBe("demo-pack");
@@ -104,7 +118,9 @@ describe("zipPluginFiles", () => {
   it("is reproducible: identical content zips to identical bytes", async () => {
     const files = {
       "demo-pack/plugin.json": encoder.encode(JSON.stringify(manifest())),
-      "demo-pack/cards/demo.json": encoder.encode("{}"),
+      "demo-pack/cards/demo.json": encoder.encode(
+        JSON.stringify(validDocument),
+      ),
     };
     const first = zipPluginFiles(files);
     await new Promise((resolve) => setTimeout(resolve, 1100));
@@ -115,7 +131,9 @@ describe("zipPluginFiles", () => {
   it("round-trips through readPluginPackage", () => {
     const zipped = zipPluginFiles({
       "demo-pack/plugin.json": encoder.encode(JSON.stringify(manifest())),
-      "demo-pack/cards/demo.json": encoder.encode("{}"),
+      "demo-pack/cards/demo.json": encoder.encode(
+        JSON.stringify(validDocument),
+      ),
     });
     const pkg = readPluginPackage(zipped);
     expect(pkg.manifest.id).toBe("demo-pack");

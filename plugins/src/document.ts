@@ -56,6 +56,10 @@ export type DocumentStyle = {
   padding?: number;
   paddingX?: number;
   paddingY?: number;
+  paddingTop?: number;
+  paddingBottom?: number;
+  paddingLeft?: number;
+  paddingRight?: number;
   /** Sets the CSS `color` property (text color / `currentColor` source). */
   color?: DocumentColor;
   marginTop?: number;
