@@ -924,11 +924,14 @@ const messages = {
   "admin.plugins.uploadFailed": "Не удалось установить пакет.",
   "admin.plugins.refresh": "Обновить каталоги",
   "admin.plugins.store": "Магазин плагинов",
-  "admin.plugins.storeDescription": "Просматривайте каталоги и устанавливайте плагины; установленные плагины выключены, пока вы их не включите.",
+  "admin.plugins.storeDescription":
+    "Просматривайте каталоги и устанавливайте плагины; установленные плагины выключены, пока вы их не включите.",
   "admin.plugins.storeEmpty": "В каталогах пока нет плагинов.",
-  "admin.plugins.storeUnavailable": "Каталоги сейчас недоступны, попробуйте позже.",
+  "admin.plugins.storeUnavailable":
+    "Каталоги сейчас недоступны, попробуйте позже.",
   "share.loadingTemplate": "Загрузка шаблона…",
-  "share.templateUnavailable": "Не удалось загрузить шаблон — попробуйте другой.",
+  "share.templateUnavailable":
+    "Не удалось загрузить шаблон — попробуйте другой.",
   "pwa.updateNow": "Обновить сейчас",
   "pwa.updateLater": "Позже",
 } as const satisfies Record<TranslationKey, string>;

@@ -120,9 +120,7 @@ export function visibleCardViews(
   const disabled = new Set(settings.disabledPlugins);
   const hidden = new Set(settings.cards.hidden);
   const defaultEnabled = (card: ShareCardView) =>
-    card.source === "bundled" || card.pluginTier === "official"
-      ? true
-      : false;
+    card.source === "bundled" || card.pluginTier === "official" ? true : false;
   const registryOrder = new Map(all.map((card, index) => [card.id, index]));
   const visible = all.filter((card) => {
     const pluginVisible = enabled.has(card.pluginId)

@@ -895,7 +895,8 @@ const messages = {
   "admin.plugins.uploadFailed": "تعذّر تثبيت الحزمة.",
   "admin.plugins.refresh": "تحديث الأدلة",
   "admin.plugins.store": "متجر الإضافات",
-  "admin.plugins.storeDescription": "تصفّح الأدلة وثبّت حزم الإضافات؛ تبقى الإضافة مثبّتة ومعطّلة حتى تفعّلها.",
+  "admin.plugins.storeDescription":
+    "تصفّح الأدلة وثبّت حزم الإضافات؛ تبقى الإضافة مثبّتة ومعطّلة حتى تفعّلها.",
   "admin.plugins.storeEmpty": "لا توجد إضافات قابلة للتثبيت بعد.",
   "admin.plugins.storeUnavailable": "الأدلة غير متاحة الآن، حاول لاحقًا.",
   "share.loadingTemplate": "جارٍ تحميل القالب…",

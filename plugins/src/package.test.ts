@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import { zipSync } from "fflate";
+import { describe, expect, it } from "vitest";
 import { readPluginPackage, sha256Hex } from "./package";
 
 const encoder = new TextEncoder();
@@ -12,7 +12,12 @@ function manifest(overrides: Record<string, unknown> = {}) {
     name: { "zh-CN": "示例", "en-US": "Demo" },
     contributes: {
       shareCardTemplates: [
-        { id: "demo", kind: "document", name: { en: "Demo" }, document: "cards/demo.json" },
+        {
+          id: "demo",
+          kind: "document",
+          name: { en: "Demo" },
+          document: "cards/demo.json",
+        },
       ],
     },
     ...overrides,

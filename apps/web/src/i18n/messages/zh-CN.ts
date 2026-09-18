@@ -848,7 +848,8 @@ const messages = {
   "admin.plugins.uploadFailed": "包安装失败。",
   "admin.plugins.refresh": "刷新目录",
   "admin.plugins.store": "插件商店",
-  "admin.plugins.storeDescription": "浏览目录并安装插件包；安装的插件默认关闭，启用后才对用户可见。",
+  "admin.plugins.storeDescription":
+    "浏览目录并安装插件包；安装的插件默认关闭，启用后才对用户可见。",
   "admin.plugins.storeEmpty": "目录里还没有可安装的插件。",
   "admin.plugins.storeUnavailable": "目录暂时不可用，稍后再试。",
   "share.loadingTemplate": "正在加载模板…",

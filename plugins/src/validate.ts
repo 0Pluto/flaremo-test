@@ -5,9 +5,9 @@ import {
   PLUGIN_SPEC_VERSION,
   type PluginAuthor,
   type PluginManifest,
+  SHARE_CARD_SIZE_LIMITS,
   type ShareCardContribution,
   type ShareCardOptionSpec,
-  SHARE_CARD_SIZE_LIMITS,
 } from "./spec";
 
 /**
@@ -95,13 +95,18 @@ function validateOptions(
       type !== "color" &&
       type !== "number"
     ) {
-      problems.push(`option "${option.key}" has unknown type "${String(type)}"`);
+      problems.push(
+        `option "${option.key}" has unknown type "${String(type)}"`,
+      );
       continue;
     }
     if (option.default !== undefined) {
       const valueType = typeof option.default;
       if (
-        type === "boolean" ? valueType !== "boolean" : valueType !== "string" && !(type === "number" && valueType === "number")
+        type === "boolean"
+          ? valueType !== "boolean"
+          : valueType !== "string" &&
+            !(type === "number" && valueType === "number")
       ) {
         // Numbers accept numbers; text/color/enum accept strings.
         problems.push(`option "${option.key}" default type does not match`);

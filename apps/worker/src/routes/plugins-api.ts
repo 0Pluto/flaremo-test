@@ -84,7 +84,9 @@ pluginsApi.get("/assets/:id/:version/*", async (c) => {
     if (!installed) {
       return c.json({ error: { message: "Not found" } }, 404);
     }
-    const object = await c.env.ATTACHMENTS.get(`plugins/${id}/${version}/${path}`);
+    const object = await c.env.ATTACHMENTS.get(
+      `plugins/${id}/${version}/${path}`,
+    );
     if (!object) {
       return c.json({ error: { message: "Not found" } }, 404);
     }

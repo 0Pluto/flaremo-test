@@ -137,7 +137,10 @@ export function PluginsCard() {
 
   const saveMutation = useMutation({
     mutationFn: (
-      next: Pick<PluginSettings, "enabledPlugins" | "disabledPlugins" | "cards">,
+      next: Pick<
+        PluginSettings,
+        "enabledPlugins" | "disabledPlugins" | "cards"
+      >,
     ) =>
       updateAdminPluginSettings({
         enabledPlugins: next.enabledPlugins,
@@ -640,7 +643,10 @@ export function PluginsCard() {
               onClick={() => uploadInputRef.current?.click()}
             >
               {uploadMutation.isPending ? (
-                <Loader2Icon className="animate-spin" data-icon="inline-start" />
+                <Loader2Icon
+                  className="animate-spin"
+                  data-icon="inline-start"
+                />
               ) : (
                 <FileUpIcon data-icon="inline-start" />
               )}

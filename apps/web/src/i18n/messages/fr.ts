@@ -941,11 +941,14 @@ const messages = {
   "admin.plugins.uploadFailed": "Échec de l'installation du paquet.",
   "admin.plugins.refresh": "Actualiser les dépôts",
   "admin.plugins.store": "Boutique d'extensions",
-  "admin.plugins.storeDescription": "Parcourez les dépôts et installez des extensions ; une extension installée reste désactivée jusqu'à activation.",
+  "admin.plugins.storeDescription":
+    "Parcourez les dépôts et installez des extensions ; une extension installée reste désactivée jusqu'à activation.",
   "admin.plugins.storeEmpty": "Aucune extension installable pour le moment.",
-  "admin.plugins.storeUnavailable": "Dépôts indisponibles, réessayez plus tard.",
+  "admin.plugins.storeUnavailable":
+    "Dépôts indisponibles, réessayez plus tard.",
   "share.loadingTemplate": "Chargement du modèle…",
-  "share.templateUnavailable": "Échec du chargement de ce modèle — essayez-en un autre.",
+  "share.templateUnavailable":
+    "Échec du chargement de ce modèle — essayez-en un autre.",
   "pwa.updateNow": "Mettre à jour maintenant",
   "pwa.updateLater": "Plus tard",
 } as const satisfies Record<TranslationKey, string>;

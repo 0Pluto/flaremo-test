@@ -133,8 +133,7 @@ export function readPluginPackage(bytes: Uint8Array): PluginPackage {
   for (const [index, card] of (
     manifest.contributes.shareCardTemplates ?? []
   ).entries()) {
-    const reference =
-      card.kind === "document" ? card.document : card.entry;
+    const reference = card.kind === "document" ? card.document : card.entry;
     if (!reference || !files[reference]) {
       throw new Error(
         `plugin.json references a missing file for card #${index + 1} ("${card.id}")`,
@@ -149,9 +148,7 @@ export function readPluginPackage(bytes: Uint8Array): PluginPackage {
 }
 
 /** Zip a plugin folder's files (keys must already carry the `<id>/` prefix). */
-export function zipPluginFiles(
-  files: Record<string, Uint8Array>,
-): Uint8Array {
+export function zipPluginFiles(files: Record<string, Uint8Array>): Uint8Array {
   return zipSync(files, { level: 6 });
 }
 

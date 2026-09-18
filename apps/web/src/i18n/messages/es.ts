@@ -932,9 +932,11 @@ const messages = {
   "admin.plugins.uploadFailed": "No se pudo instalar el paquete.",
   "admin.plugins.refresh": "Actualizar directorios",
   "admin.plugins.store": "Tienda de complementos",
-  "admin.plugins.storeDescription": "Explora los directorios e instala paquetes; los complementos instalados quedan desactivados hasta que los actives.",
+  "admin.plugins.storeDescription":
+    "Explora los directorios e instala paquetes; los complementos instalados quedan desactivados hasta que los actives.",
   "admin.plugins.storeEmpty": "Todavía no hay complementos instalables.",
-  "admin.plugins.storeUnavailable": "Directorios no disponibles; inténtalo más tarde.",
+  "admin.plugins.storeUnavailable":
+    "Directorios no disponibles; inténtalo más tarde.",
   "share.loadingTemplate": "Cargando plantilla…",
   "share.templateUnavailable": "No se pudo cargar esta plantilla; prueba otra.",
   "pwa.updateNow": "Actualizar ahora",

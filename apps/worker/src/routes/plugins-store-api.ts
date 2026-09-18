@@ -1,21 +1,22 @@
 import {
+  ForbiddenError,
   getPluginSettings,
   type InstalledPluginRecord,
   type PluginSettings,
   pluginAssetPrefix,
   setPluginSettings,
+  ValidationError,
 } from "@flaremo/domain";
-import { Hono } from "hono";
-import { z } from "zod";
-import { zValidator } from "@hono/zod-validator";
 import {
   PLUGIN_PACKAGE_LIMITS,
   readPluginPackage,
   sha256Hex,
 } from "@flaremo/plugins/package";
+import { zValidator } from "@hono/zod-validator";
+import { Hono } from "hono";
+import { z } from "zod";
 import { getBrowserRequestContext, type HonoBindings } from "../context";
 import { jsonError } from "../http";
-import { ForbiddenError, ValidationError } from "@flaremo/domain";
 
 /**
  * Owner-only plugin store: browse directory sources, install/uninstall
@@ -38,7 +39,10 @@ export const DEFAULT_PLUGIN_SOURCE = {
 } as const;
 
 const registryEntrySchema = z.object({
-  id: z.string().trim().regex(/^[a-z0-9][a-z0-9-]{0,63}$/),
+  id: z
+    .string()
+    .trim()
+    .regex(/^[a-z0-9][a-z0-9-]{0,63}$/),
   version: z.string().trim().min(1).max(64),
   tier: z.enum(["official", "community"]),
   name: z.record(z.string(), z.string()),
@@ -55,7 +59,10 @@ const registryEntrySchema = z.object({
   preview: z.string().nullable().optional(),
   artifact: z.object({
     url: z.string().trim().min(1),
-    sha256: z.string().trim().regex(/^[0-9a-f]{64}$/),
+    sha256: z
+      .string()
+      .trim()
+      .regex(/^[0-9a-f]{64}$/),
     size: z.number().int().nonnegative(),
   }),
 });
@@ -89,9 +96,11 @@ type DirectoryResult = {
   error?: string;
 };
 
-async function fetchDirectory(
-  source: { id: string; name: string; url: string },
-): Promise<DirectoryResult> {
+async function fetchDirectory(source: {
+  id: string;
+  name: string;
+  url: string;
+}): Promise<DirectoryResult> {
   try {
     const response = await fetch(source.url, {
       headers: { accept: "application/json" },
@@ -116,7 +125,12 @@ async function fetchDirectory(
     }
     return { source, entries: parsed.data.plugins, previews };
   } catch {
-    return { source, entries: [], previews: {}, error: "directory unreachable" };
+    return {
+      source,
+      entries: [],
+      previews: {},
+      error: "directory unreachable",
+    };
   }
 }
 
@@ -159,7 +173,10 @@ pluginsStoreApi.put(
       sources: z
         .array(
           z.object({
-            id: z.string().trim().regex(/^[a-z0-9][a-z0-9-]{0,63}$/),
+            id: z
+              .string()
+              .trim()
+              .regex(/^[a-z0-9][a-z0-9-]{0,63}$/),
             name: z.string().trim().min(1).max(80),
             url: z.string().trim().url().startsWith("https://"),
           }),
@@ -216,7 +233,10 @@ pluginsStoreApi.post(
   zValidator(
     "json",
     z.object({
-      id: z.string().trim().regex(/^[a-z0-9][a-z0-9-]{0,63}$/),
+      id: z
+        .string()
+        .trim()
+        .regex(/^[a-z0-9][a-z0-9-]{0,63}$/),
       sourceId: z.string().trim().min(1).max(64).optional(),
     }),
   ),
@@ -255,12 +275,7 @@ pluginsStoreApi.post(
           "Package checksum does not match the directory entry.",
         );
       }
-      const { installed } = await installPackage(
-        c.env,
-        db,
-        bytes,
-        source.id,
-      );
+      const { installed } = await installPackage(c.env, db, bytes, source.id);
       return c.json({ installed });
     } catch (error) {
       return jsonError(c, error);

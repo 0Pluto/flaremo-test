@@ -916,11 +916,14 @@ const messages = {
   "admin.plugins.uploadFailed": "패키지 설치에 실패했습니다.",
   "admin.plugins.refresh": "디렉터리 새로 고침",
   "admin.plugins.store": "플러그인 스토어",
-  "admin.plugins.storeDescription": "디렉터리에서 플러그인을 설치하세요. 설치한 플러그인은 끈 상태이며, 켜야 사용자에게 보입니다.",
+  "admin.plugins.storeDescription":
+    "디렉터리에서 플러그인을 설치하세요. 설치한 플러그인은 끈 상태이며, 켜야 사용자에게 보입니다.",
   "admin.plugins.storeEmpty": "설치할 플러그인이 아직 없습니다.",
-  "admin.plugins.storeUnavailable": "디렉터리를 사용할 수 없습니다. 나중에 다시 시도하세요.",
+  "admin.plugins.storeUnavailable":
+    "디렉터리를 사용할 수 없습니다. 나중에 다시 시도하세요.",
   "share.loadingTemplate": "템플릿 불러오는 중…",
-  "share.templateUnavailable": "이 템플릿을 불러오지 못했어요. 다른 것을 시도해 보세요.",
+  "share.templateUnavailable":
+    "이 템플릿을 불러오지 못했어요. 다른 것을 시도해 보세요.",
   "pwa.updateNow": "지금 업데이트",
   "pwa.updateLater": "나중에",
 } as const satisfies Record<TranslationKey, string>;

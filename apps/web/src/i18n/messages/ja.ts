@@ -925,11 +925,14 @@ const messages = {
   "admin.plugins.uploadFailed": "パッケージのインストールに失敗しました。",
   "admin.plugins.refresh": "ディレクトリを更新",
   "admin.plugins.store": "プラグインストア",
-  "admin.plugins.storeDescription": "ディレクトリからプラグインをインストールできます。インストール直後はオフで、有効にするまでユーザーには見えません。",
+  "admin.plugins.storeDescription":
+    "ディレクトリからプラグインをインストールできます。インストール直後はオフで、有効にするまでユーザーには見えません。",
   "admin.plugins.storeEmpty": "インストール可能なプラグインがまだありません。",
-  "admin.plugins.storeUnavailable": "ディレクトリを利用できません。後でもう一度お試しください。",
+  "admin.plugins.storeUnavailable":
+    "ディレクトリを利用できません。後でもう一度お試しください。",
   "share.loadingTemplate": "テンプレートを読み込み中…",
-  "share.templateUnavailable": "このテンプレートの読み込みに失敗しました。別のものをお試しください。",
+  "share.templateUnavailable":
+    "このテンプレートの読み込みに失敗しました。別のものをお試しください。",
   "pwa.updateNow": "今すぐ更新",
   "pwa.updateLater": "後で",
 } as const satisfies Record<TranslationKey, string>;

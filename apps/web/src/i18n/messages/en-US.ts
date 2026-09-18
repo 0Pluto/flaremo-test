@@ -909,11 +909,14 @@ const messages = {
   "admin.plugins.uploadFailed": "Failed to install the package.",
   "admin.plugins.refresh": "Refresh directories",
   "admin.plugins.store": "Plugin store",
-  "admin.plugins.storeDescription": "Browse directories and install plugin packages; installed plugins stay off until you enable them.",
+  "admin.plugins.storeDescription":
+    "Browse directories and install plugin packages; installed plugins stay off until you enable them.",
   "admin.plugins.storeEmpty": "No installable plugins in the directories yet.",
-  "admin.plugins.storeUnavailable": "Directories are unavailable right now, try again later.",
+  "admin.plugins.storeUnavailable":
+    "Directories are unavailable right now, try again later.",
   "share.loadingTemplate": "Loading template…",
-  "share.templateUnavailable": "This template failed to load — try another one.",
+  "share.templateUnavailable":
+    "This template failed to load — try another one.",
   "pwa.updateNow": "Update now",
   "pwa.updateLater": "Later",
 } as const;
