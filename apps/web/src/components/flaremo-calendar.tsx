@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { memo, useMemo, useState } from "react";
 import type { Task } from "@/api";
@@ -294,7 +295,13 @@ export const FlareMoMiniCalendar = memo(function FlareMoMiniCalendar({
   return (
     <div className={cn("text-xs", className)} data-testid="mini-calendar">
       <div className="mb-1.5 flex items-center justify-between px-0.5 font-medium">
-        <span>{monthTitle}</span>
+        <Link
+          to="/calendar"
+          search={{ date: undefined }}
+          className="hover:text-primary transition-colors cursor-pointer"
+        >
+          <span>{monthTitle}</span>
+        </Link>
         <Button
           aria-label={t("calendar.today")}
           size="xs"

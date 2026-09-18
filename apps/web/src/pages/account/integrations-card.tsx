@@ -138,7 +138,6 @@ export function EmailSettingsCard() {
       >
         <SettingsRow
           icon={MailIcon}
-          iconColor="bg-blue-500"
           label={t("admin.integrations.emailTitle")}
           description={
             config?.configured
@@ -449,7 +448,6 @@ export function OauthSettingsCard() {
       >
         <SettingsRow
           icon={ShieldCheckIcon}
-          iconColor="bg-rose-500"
           label="Google"
           description={
             isGoogleActive
@@ -468,7 +466,6 @@ export function OauthSettingsCard() {
         />
         <SettingsRow
           icon={ShieldCheckIcon}
-          iconColor="bg-zinc-800 dark:bg-zinc-700"
           label="GitHub"
           description={
             isGithubActive

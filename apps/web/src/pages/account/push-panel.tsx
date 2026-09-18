@@ -96,7 +96,6 @@ export function PushPanel() {
       >
         <SettingsRow
           icon={BellRingIcon}
-          iconColor="bg-purple-500"
           label={t("push.title")}
           description={
             !configured

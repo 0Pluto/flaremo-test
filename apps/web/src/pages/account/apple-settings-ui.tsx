@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 export function SettingsIconBadge({
   icon: Icon,
   className,
-  color = "bg-primary text-primary-foreground",
+  color = "bg-muted text-muted-foreground",
 }: {
   icon: LucideIcon;
   className?: string;
@@ -14,7 +14,7 @@ export function SettingsIconBadge({
   return (
     <div
       className={cn(
-        "flex size-7 shrink-0 items-center justify-center rounded-lg text-white shadow-2xs",
+        "flex size-7 shrink-0 items-center justify-center rounded-lg border border-border/40 shadow-2xs transition-colors",
         color,
         className,
       )}
@@ -69,7 +69,7 @@ export type SettingsRowProps = ComponentPropsWithoutRef<"div"> & {
 
 export function SettingsRow({
   icon: Icon,
-  iconColor = "bg-blue-500",
+  iconColor = "bg-muted text-muted-foreground",
   label,
   description,
   value,

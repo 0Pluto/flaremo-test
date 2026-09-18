@@ -39,7 +39,6 @@ export function InstallAppCard() {
         >
           <SettingsRow
             icon={CheckCircleIcon}
-            iconColor="bg-emerald-500"
             label={t("pwa.installedTitle")}
             value={t("settings.status.configured")}
           />
@@ -56,11 +55,7 @@ export function InstallAppCard() {
           title={t("settings.nav.install")}
           footer={t("pwa.offlineDescription")}
         >
-          <SettingsRow
-            icon={WifiOffIcon}
-            iconColor="bg-slate-500"
-            label={t("pwa.offlineTitle")}
-          />
+          <SettingsRow icon={WifiOffIcon} label={t("pwa.offlineTitle")} />
         </SettingsSectionGroup>
       </div>
     );
@@ -76,7 +71,6 @@ export function InstallAppCard() {
       >
         <SettingsRow
           icon={AppWindowIcon}
-          iconColor="bg-blue-500"
           label={t("pwa.installTitle")}
           action={
             <div className="flex items-center gap-2">

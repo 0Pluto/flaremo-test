@@ -326,7 +326,10 @@ export const MemoCard = memo(function MemoCard({
         <div className="flex shrink-0 items-center gap-1">
           {memo.source === "voice" && <VoiceBadge memo={memo} />}
           {memo.visibility !== "private" && (
-            <VisibilityBadge visibility={memo.visibility} />
+            <VisibilityBadge
+              visibility={memo.visibility}
+              onPublicClick={copyShareLink}
+            />
           )}
           {(canManage || canGovern) && (
             <DropdownMenu>
@@ -644,13 +647,19 @@ function VoiceBadge({ memo }: { memo: Memo }) {
  * metadata you consult occasionally, not a label worth a permanent word.
  * Private notes (the common case) render nothing at all.
  */
-function VisibilityBadge({ visibility }: { visibility: MemoVisibility }) {
+function VisibilityBadge({
+  visibility,
+  onPublicClick,
+}: {
+  visibility: MemoVisibility;
+  onPublicClick?: () => void;
+}) {
   const { t } = useI18n();
   const icon =
     visibility === "public" ? (
       <Globe2Icon />
     ) : visibility === "protected" ? (
-      <ShieldIcon />
+      <UsersIcon />
     ) : (
       <LockIcon />
     );
@@ -660,6 +669,24 @@ function VisibilityBadge({ visibility }: { visibility: MemoVisibility }) {
       : visibility === "protected"
         ? t("visibility.protected")
         : t("visibility.private");
+
+  if (visibility === "public" && onPublicClick) {
+    return (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onPublicClick();
+        }}
+        aria-label={label}
+        className="flex size-5 items-center justify-center rounded text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+        title={t("share.copyLink")}
+      >
+        {icon}
+      </button>
+    );
+  }
+
   return (
     <span
       aria-label={label}

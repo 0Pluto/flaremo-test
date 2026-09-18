@@ -120,7 +120,6 @@ export function SecurityPanel({
       >
         <SettingsRow
           icon={ShieldCheckIcon}
-          iconColor="bg-emerald-500"
           label={t("auth.emailTitle")}
           value={currentEmail || "—"}
           chevron
@@ -128,7 +127,6 @@ export function SecurityPanel({
         />
         <SettingsRow
           icon={ShieldCheckIcon}
-          iconColor="bg-emerald-500"
           label={t("auth.passwordTitle")}
           value="••••••••"
           chevron

@@ -12,6 +12,7 @@ import {
   MenuIcon,
   PanelLeftCloseIcon,
   PanelLeftOpenIcon,
+  SearchIcon,
   SparklesIcon,
   UploadIcon,
   XIcon,
@@ -48,6 +49,10 @@ import { LocaleSwitcher } from "@/components/locale-switcher";
 import { MemoList } from "@/components/memo-list";
 import { PwaUpdatePrompt } from "@/components/pwa-update-prompt";
 import { ScopeSwitcher } from "@/components/scope-switcher";
+import {
+  SpotlightSearch,
+  SpotlightSearchTrigger,
+} from "@/components/spotlight-search";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -188,12 +193,12 @@ export function FlareMoApp() {
   const [timeZone] = useState(
     () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
   );
-  const desktopSearchRef = useRef<HTMLInputElement>(null);
   const mobileSearchRef = useRef<HTMLInputElement>(null);
   const [isTimelineScrolled, setIsTimelineScrolled] = useState(false);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [shortcutsOpen, setShowShortcutsOpen] = useState(false);
   const [accountSettingsOpen, setAccountSettingsOpen] = useState(false);
+  const [spotlightOpen, setSpotlightOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try {
       return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1";
@@ -277,10 +282,6 @@ export function FlareMoApp() {
   }, [keywordSearch, taskSearchQuery.data, searchQuery]);
 
   useEffect(() => {
-    const focusSearch = () => {
-      const desktop = window.matchMedia("(min-width: 768px)").matches;
-      (desktop ? desktopSearchRef : mobileSearchRef).current?.focus();
-    };
     const handleKeyDown = (event: KeyboardEvent) => {
       const target = event.target;
       const editable =
@@ -296,12 +297,12 @@ export function FlareMoApp() {
         event.key.toLocaleLowerCase() === "k"
       ) {
         event.preventDefault();
-        focusSearch();
+        setSpotlightOpen(true);
         return;
       }
       if (event.key === "/" && !editable && !modalOpen) {
         event.preventDefault();
-        focusSearch();
+        setSpotlightOpen(true);
         return;
       }
       // "c" jumps straight into the composer for quick capture.
@@ -612,7 +613,12 @@ export function FlareMoApp() {
                 : "border-transparent",
             )}
           >
-            <div className="flex h-14 items-center gap-2 px-5 lg:px-3">
+            <div
+              className={cn(
+                "flex h-14 items-center gap-2 px-5 lg:px-3",
+                sidebarCollapsed && "mx-auto w-full max-w-[640px]",
+              )}
+            >
               {sidebarCollapsed && (
                 <Button
                   aria-label={t("sidebar.expand")}
@@ -664,16 +670,23 @@ export function FlareMoApp() {
                   onViewChange={setView}
                 />
               </div>
-              <WorkspaceSearch
-                className="hidden w-[280px] min-w-0 shrink md:block"
-                inputRef={desktopSearchRef}
-                onToggleSemantic={semanticEnabled ? toggleSemantic : undefined}
-                query={dayFilter ? "" : query}
-                semanticMode={semanticMode}
-                semanticPending={vectorUsageQuery.isPending}
-                onQueryChange={setQuery}
-                isPending={isUpdating}
-              />
+              <div className="flex items-center gap-1.5 shrink-0">
+                <SpotlightSearchTrigger
+                  className="hidden md:flex"
+                  onClick={() => setSpotlightOpen(true)}
+                  activeQuery={dayFilter ? "" : query}
+                  onClear={() => setQuery("")}
+                />
+                <Button
+                  aria-label={t("common.search")}
+                  className="md:hidden"
+                  size="icon-sm"
+                  variant="ghost"
+                  onClick={() => setSpotlightOpen(true)}
+                >
+                  <SearchIcon />
+                </Button>
+              </div>
             </div>
           </header>
           <main
@@ -931,6 +944,19 @@ export function FlareMoApp() {
           />
         )}
       </Suspense>
+      <SpotlightSearch
+        open={spotlightOpen}
+        onOpenChange={setSpotlightOpen}
+        query={dayFilter ? "" : query}
+        onQueryChange={setQuery}
+        onNewMemo={focusComposerInput}
+        tasks={taskSearchQuery.data?.tasks ?? []}
+        memos={displayedMemos}
+        semanticMode={semanticMode}
+        onToggleSemantic={semanticEnabled ? toggleSemantic : undefined}
+        semanticPending={vectorUsageQuery.isPending}
+        isSearching={isUpdating}
+      />
       <Dialog open={shortcutsOpen} onOpenChange={setShowShortcutsOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

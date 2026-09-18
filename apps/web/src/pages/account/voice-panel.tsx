@@ -218,7 +218,6 @@ export function VoicePanel() {
       >
         <SettingsRow
           icon={MicIcon}
-          iconColor="bg-indigo-500"
           label={t("voiceSettings.enabled")}
           action={
             <Switch

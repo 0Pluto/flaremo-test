@@ -59,7 +59,6 @@ function VectorUsageContent({
     <div className="flex flex-col divide-y divide-border/40">
       <SettingsRow
         icon={GaugeIcon}
-        iconColor="bg-teal-500"
         label={t("usage.model")}
         value={report.model}
       />

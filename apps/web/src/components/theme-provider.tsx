@@ -1,7 +1,7 @@
 import * as React from "react";
 
-type Theme = "dark" | "light" | "system";
-type ResolvedTheme = "dark" | "light";
+export type Theme = "dark" | "light" | "system";
+export type ResolvedTheme = "dark" | "light";
 
 type ThemeProviderProps = {
   children: React.ReactNode;
@@ -10,7 +10,7 @@ type ThemeProviderProps = {
   disableTransitionOnChange?: boolean;
 };
 
-type ThemeProviderState = {
+export type ThemeProviderState = {
   theme: Theme;
   setTheme: (theme: Theme) => void;
 };
@@ -21,6 +21,14 @@ const THEME_VALUES: Theme[] = ["dark", "light", "system"];
 const ThemeProviderContext = React.createContext<
   ThemeProviderState | undefined
 >(undefined);
+
+export function useTheme(): ThemeProviderState {
+  const context = React.useContext(ThemeProviderContext);
+  if (context === undefined) {
+    throw new Error("useTheme must be used within a ThemeProvider");
+  }
+  return context;
+}
 
 function isTheme(value: string | null): value is Theme {
   if (value === null) {

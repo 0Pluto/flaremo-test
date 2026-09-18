@@ -2,10 +2,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
   BellIcon,
+  CheckIcon,
   ChevronDownIcon,
   LogOutIcon,
+  MonitorIcon,
+  MoonIcon,
   RefreshCwIcon,
   SettingsIcon,
+  SunIcon,
 } from "lucide-react";
 import { useState } from "react";
 import type { CurrentFlareMoUser } from "@/api";
@@ -14,6 +18,7 @@ import {
   NotificationList,
   useNotifications,
 } from "@/components/notification-bell";
+import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -27,6 +32,9 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -46,6 +54,7 @@ export function UserMenu({
   onOpenSettings: () => void;
 }) {
   const { t } = useI18n();
+  const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [updateOpen, setUpdateOpen] = useState(false);
@@ -111,6 +120,44 @@ export function UserMenu({
             <SettingsIcon />
             {t("auth.accountTitle")}
           </DropdownMenuItem>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              {theme === "light" ? (
+                <SunIcon />
+              ) : theme === "dark" ? (
+                <MoonIcon />
+              ) : (
+                <MonitorIcon />
+              )}
+              <span className="min-w-0 flex-1 truncate">
+                {t("theme.title")}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {theme === "light"
+                  ? t("theme.light")
+                  : theme === "dark"
+                    ? t("theme.dark")
+                    : t("theme.system")}
+              </span>
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuItem onClick={() => setTheme("system")}>
+                <MonitorIcon />
+                <span className="flex-1">{t("theme.system")}</span>
+                {theme === "system" && <CheckIcon className="ml-auto" />}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme("light")}>
+                <SunIcon />
+                <span className="flex-1">{t("theme.light")}</span>
+                {theme === "light" && <CheckIcon className="ml-auto" />}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme("dark")}>
+                <MoonIcon />
+                <span className="flex-1">{t("theme.dark")}</span>
+                {theme === "dark" && <CheckIcon className="ml-auto" />}
+              </DropdownMenuItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
           <DropdownMenuItem onClick={() => setNotificationsOpen(true)}>
             <BellIcon />
             <span className="min-w-0 flex-1 truncate">

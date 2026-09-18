@@ -4,8 +4,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { completeOwnerBootstrap } from "./auth";
 import {
   BRANDING_ACCENT_PRESETS,
-  DEFAULT_BRANDING_ACCENT,
   clearBrandingFavicon,
+  DEFAULT_BRANDING_ACCENT,
   getBranding,
   normalizeBrandingAccent,
   setBrandingAccent,

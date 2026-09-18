@@ -14,6 +14,7 @@ import {
   PaintbrushIcon,
   PuzzleIcon,
   ShieldCheckIcon,
+  SunMoonIcon,
   UserRoundIcon,
   UsersIcon,
   WebhookIcon,
@@ -46,6 +47,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/i18n";
 import { errorMessage } from "@/lib/error";
 import { cn } from "@/lib/utils";
+import { AppearancePanel } from "./account/appearance-panel";
 import {
   SettingsIconBadge,
   SettingsRow,
@@ -73,6 +75,7 @@ const VoicePanel = lazy(() =>
 
 type SettingsSection =
   | "profile"
+  | "appearance"
   | "security"
   | "tokens"
   | "push"
@@ -444,19 +447,19 @@ export function AccountSettingsDialog({
       items: [
         {
           icon: UserRoundIcon,
-          iconBg: "bg-blue-500",
+          iconBg: "bg-muted text-muted-foreground",
           id: "profile",
           label: t("settings.nav.profile"),
         },
         {
           icon: ShieldCheckIcon,
-          iconBg: "bg-emerald-500",
+          iconBg: "bg-muted text-muted-foreground",
           id: "security",
           label: t("settings.nav.security"),
         },
         {
           icon: KeyRoundIcon,
-          iconBg: "bg-amber-500",
+          iconBg: "bg-muted text-muted-foreground",
           id: "tokens",
           label: t("settings.nav.tokens"),
         },
@@ -466,14 +469,20 @@ export function AccountSettingsDialog({
       titleKey: "settings.group.preferences",
       items: [
         {
+          icon: SunMoonIcon,
+          iconBg: "bg-muted text-muted-foreground",
+          id: "appearance",
+          label: t("settings.nav.appearance"),
+        },
+        {
           icon: BellRingIcon,
-          iconBg: "bg-purple-500",
+          iconBg: "bg-muted text-muted-foreground",
           id: "push",
           label: t("settings.nav.push"),
         },
         {
           icon: AppWindowMacIcon,
-          iconBg: "bg-slate-500 dark:bg-slate-600",
+          iconBg: "bg-muted text-muted-foreground",
           id: "install",
           label: t("settings.nav.install"),
         },
@@ -481,7 +490,7 @@ export function AccountSettingsDialog({
           ? [
               {
                 icon: MicIcon,
-                iconBg: "bg-indigo-500",
+                iconBg: "bg-muted text-muted-foreground",
                 id: "voice" as const,
                 label: t("settings.nav.voice"),
               },
@@ -489,13 +498,13 @@ export function AccountSettingsDialog({
           : []),
         {
           icon: GaugeIcon,
-          iconBg: "bg-teal-500",
+          iconBg: "bg-muted text-muted-foreground",
           id: "usage",
           label: t("auth.tab.usage"),
         },
         {
           icon: ArrowDownUpIcon,
-          iconBg: "bg-sky-500",
+          iconBg: "bg-muted text-muted-foreground",
           id: "transfer",
           label: t("settings.nav.transfer"),
         },
@@ -508,7 +517,7 @@ export function AccountSettingsDialog({
             items: [
               {
                 icon: UsersIcon,
-                iconBg: "bg-violet-600",
+                iconBg: "bg-muted text-muted-foreground",
                 id: "team" as const,
                 label: t("auth.tab.admin"),
               },
@@ -516,19 +525,19 @@ export function AccountSettingsDialog({
                 ? [
                     {
                       icon: PaintbrushIcon,
-                      iconBg: "bg-pink-500",
+                      iconBg: "bg-muted text-muted-foreground",
                       id: "branding" as const,
                       label: t("auth.tab.branding"),
                     },
                     {
                       icon: PuzzleIcon,
-                      iconBg: "bg-fuchsia-500",
+                      iconBg: "bg-muted text-muted-foreground",
                       id: "plugins" as const,
                       label: t("auth.tab.plugins"),
                     },
                     {
                       icon: WebhookIcon,
-                      iconBg: "bg-orange-500",
+                      iconBg: "bg-muted text-muted-foreground",
                       id: "integrations" as const,
                       label: t("settings.nav.integrations"),
                     },
@@ -561,6 +570,7 @@ export function AccountSettingsDialog({
         onSubmit={handleUsernameSubmit}
       />
     ),
+    appearance: <AppearancePanel t={t} />,
     security: (
       <SecurityPanel
         emailProviderDisabled={appInfoQuery.data?.email_provider === "none"}
@@ -868,7 +878,7 @@ export function AccountSettingsDialog({
                         icon={item.icon}
                         color={
                           active
-                            ? "bg-white/20 text-primary-foreground"
+                            ? "bg-white/20 text-primary-foreground border-transparent"
                             : item.iconBg
                         }
                         className="size-5.5 rounded-md text-xs"

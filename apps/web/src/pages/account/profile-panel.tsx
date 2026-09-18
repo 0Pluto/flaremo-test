@@ -65,7 +65,7 @@ export function ProfilePanel({
       >
         <SettingsRow
           icon={UserRoundIcon}
-          iconColor="bg-blue-500"
+          iconColor="bg-muted text-muted-foreground"
           label={t("auth.usernameHandle")}
           value={currentUsername || "—"}
           chevron
