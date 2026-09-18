@@ -876,7 +876,8 @@ const messages = {
   "pwa.updateDescription": "Reload to use the latest version.",
   "auth.tab.plugins": "Plugins",
   "admin.plugins.title": "Plugins",
-  "admin.plugins.description": "Manage plugin contributions such as share cards: enable, reorder, set the default, tune options. Community plugins stay off until enabled here.",
+  "admin.plugins.description":
+    "Manage plugin contributions such as share cards: enable, reorder, set the default, tune options. Community plugins stay off until enabled here.",
   "admin.plugins.plugins": "Installed plugins",
   "admin.plugins.cards": "Share cards",
   "admin.plugins.tierOfficial": "Official",

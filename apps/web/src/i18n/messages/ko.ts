@@ -883,7 +883,8 @@ const messages = {
   "pwa.updateDescription": "새로 고치면 최신 버전을 사용할 수 있습니다.",
   "auth.tab.plugins": "플러그인",
   "admin.plugins.title": "플러그인",
-  "admin.plugins.description": "공유 카드 등 플러그인 기능을 관리합니다: 활성화, 순서 변경, 기본값 설정, 옵션 조정. 커뮤니티 플러그인은 여기서 켜기 전까지 꺼져 있습니다.",
+  "admin.plugins.description":
+    "공유 카드 등 플러그인 기능을 관리합니다: 활성화, 순서 변경, 기본값 설정, 옵션 조정. 커뮤니티 플러그인은 여기서 켜기 전까지 꺼져 있습니다.",
   "admin.plugins.plugins": "설치된 플러그인",
   "admin.plugins.cards": "공유 카드",
   "admin.plugins.tierOfficial": "공식",

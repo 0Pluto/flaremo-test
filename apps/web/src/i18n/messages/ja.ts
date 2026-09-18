@@ -892,7 +892,8 @@ const messages = {
   "pwa.updateDescription": "再読み込みすると最新版を利用できます。",
   "auth.tab.plugins": "プラグイン",
   "admin.plugins.title": "プラグイン",
-  "admin.plugins.description": "共有カードなどのプラグイン機能を管理します：有効化、並べ替え、デフォルト設定、オプション調整。コミュニティ製プラグインはここで有効にするまでオフです。",
+  "admin.plugins.description":
+    "共有カードなどのプラグイン機能を管理します：有効化、並べ替え、デフォルト設定、オプション調整。コミュニティ製プラグインはここで有効にするまでオフです。",
   "admin.plugins.plugins": "インストール済みプラグイン",
   "admin.plugins.cards": "共有カード",
   "admin.plugins.tierOfficial": "公式",

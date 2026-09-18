@@ -899,7 +899,8 @@ const messages = {
   "pwa.updateDescription": "Recarga la página para usar la última versión.",
   "auth.tab.plugins": "Complementos",
   "admin.plugins.title": "Complementos",
-  "admin.plugins.description": "Gestiona las contribuciones de los complementos (tarjetas para compartir): activar, ordenar, tarjeta predeterminada, opciones. Los complementos de la comunidad siguen desactivados hasta activarlos aquí.",
+  "admin.plugins.description":
+    "Gestiona las contribuciones de los complementos (tarjetas para compartir): activar, ordenar, tarjeta predeterminada, opciones. Los complementos de la comunidad siguen desactivados hasta activarlos aquí.",
   "admin.plugins.plugins": "Complementos instalados",
   "admin.plugins.cards": "Tarjetas para compartir",
   "admin.plugins.tierOfficial": "Oficial",

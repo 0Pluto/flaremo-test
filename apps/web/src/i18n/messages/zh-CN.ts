@@ -815,7 +815,8 @@ const messages = {
   "pwa.updateDescription": "刷新后即可使用最新版本。",
   "auth.tab.plugins": "插件",
   "admin.plugins.title": "插件",
-  "admin.plugins.description": "管理分享卡片等插件贡献：启用、排序、设默认、调选项。社区插件默认关闭，启用后本实例的用户即可看到。",
+  "admin.plugins.description":
+    "管理分享卡片等插件贡献：启用、排序、设默认、调选项。社区插件默认关闭，启用后本实例的用户即可看到。",
   "admin.plugins.plugins": "已安装插件",
   "admin.plugins.cards": "分享卡片",
   "admin.plugins.tierOfficial": "官方",

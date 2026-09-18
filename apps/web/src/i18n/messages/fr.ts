@@ -908,7 +908,8 @@ const messages = {
     "Rechargez la page pour utiliser la dernière version.",
   "auth.tab.plugins": "Extensions",
   "admin.plugins.title": "Extensions",
-  "admin.plugins.description": "Gérez les contributions des extensions (cartes de partage) : activation, ordre, carte par défaut, options. Les extensions communautaires restent désactivées jusqu'à activation ici.",
+  "admin.plugins.description":
+    "Gérez les contributions des extensions (cartes de partage) : activation, ordre, carte par défaut, options. Les extensions communautaires restent désactivées jusqu'à activation ici.",
   "admin.plugins.plugins": "Extensions installées",
   "admin.plugins.cards": "Cartes de partage",
   "admin.plugins.tierOfficial": "Officiel",

@@ -48,8 +48,8 @@ import { MIN_PASSWORD_LENGTH, SecurityPanel } from "./account/security-panel";
 import { TokensPanel } from "./account/tokens-panel";
 import { TransferPanel } from "./account/transfer-panel";
 import { UsagePanel } from "./account/usage-panel";
-import { AdminPanel, BrandingCard } from "./admin-page";
 import { PluginsCard } from "./admin/plugins-card";
+import { AdminPanel, BrandingCard } from "./admin-page";
 
 const VoicePanel = lazy(() =>
   import("./account/voice-panel").then((module) => ({
