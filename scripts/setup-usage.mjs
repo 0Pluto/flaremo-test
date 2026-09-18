@@ -125,6 +125,18 @@ async function main() {
 
   // 3. Token.
   let token = process.env.FLAREMO_CF_ANALYTICS_TOKEN?.trim() ?? "";
+  const needsTokenInput = !(tokenConfigured && !reset && !token) && !token;
+  if (needsTokenInput && !process.stdin.isTTY) {
+    throw new Error(
+      "Token input needs a terminal, or set FLAREMO_CF_ANALYTICS_TOKEN for non-interactive runs.",
+    );
+  }
+  if (accounts.length > 1 && !process.stdin.isTTY && !needsTokenInput) {
+    // Account selection below also needs a TTY; fail before mutating secrets.
+    throw new Error(
+      "Multiple Cloudflare accounts are visible; run this script in a terminal to pick one.",
+    );
+  }
   if (tokenConfigured && !reset && !token) {
     console.log(
       `${SECRET_NAMES.token} is already set; keeping it (use --reset to replace).`,
