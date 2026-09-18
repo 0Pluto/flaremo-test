@@ -1,7 +1,7 @@
 {
   "specVersion": 1,
   "name": "FlareMo 官方目录",
-  "updatedAt": "2026-09-18T07:53:52.129Z",
+  "updatedAt": "2026-09-18T07:57:41.543Z",
   "plugins": [
     {
       "id": "flaremo-cards",
@@ -87,7 +87,7 @@
       },
       "artifact": {
         "url": "flaremo-cards/flaremo-cards-1.0.0.zip",
-        "sha256": "8616d7ee8d0d0f508826e7ebb9ae55cfe6e2598fd9cc0aff509efa97192640d2",
+        "sha256": "f270564534cd608c19683f381bfe281926d8bc97d8beff68f495ac2655846ac1",
         "size": 3324
       }
     },
@@ -156,7 +156,7 @@
       },
       "artifact": {
         "url": "sandbox-demo/sandbox-demo-1.0.0.zip",
-        "sha256": "5755cb3b3aeb2fd80e0e474f164648ed3f9880d65b6dd7d91525fbb39b648558",
+        "sha256": "7bc14fe9ae78c16f838ede0e43f8a64520be47ace81e2656091ac68eb75f46aa",
         "size": 2516
       }
     }

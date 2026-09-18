@@ -1,4 +1,4 @@
-import { unzipSync, zipSync } from "fflate";
+import { unzipSync, zipSync, type Zippable } from "fflate";
 import type { PluginManifest } from "./spec";
 import { validatePluginManifest } from "./validate";
 
@@ -148,8 +148,20 @@ export function readPluginPackage(bytes: Uint8Array): PluginPackage {
 }
 
 /** Zip a plugin folder's files (keys must already carry the `<id>/` prefix). */
+/** ZIP's minimum representable date; anything earlier gets clamped anyway. */
+const ZIP_EPOCH = new Date("1980-01-01T00:00:00Z");
+
+/**
+ * Zip a plugin folder's files (keys must already carry the `<id>/` prefix).
+ * Every entry gets a fixed mtime so rebuilding identical content yields a
+ * byte-identical archive — the registry's sha256 must not drift per build.
+ */
 export function zipPluginFiles(files: Record<string, Uint8Array>): Uint8Array {
-  return zipSync(files, { level: 6 });
+  const entries: Zippable = {};
+  for (const [name, data] of Object.entries(files)) {
+    entries[name] = [data, { mtime: ZIP_EPOCH }];
+  }
+  return zipSync(entries, { level: 6 });
 }
 
 export async function sha256Hex(bytes: Uint8Array): Promise<string> {

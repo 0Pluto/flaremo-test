@@ -1,6 +1,6 @@
 import { zipSync } from "fflate";
 import { describe, expect, it } from "vitest";
-import { readPluginPackage, sha256Hex } from "./package";
+import { readPluginPackage, sha256Hex, zipPluginFiles } from "./package";
 
 const encoder = new TextEncoder();
 
@@ -97,5 +97,27 @@ describe("sha256Hex", () => {
     expect(await sha256Hex(encoder.encode("abc"))).toBe(
       "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
     );
+  });
+});
+
+describe("zipPluginFiles", () => {
+  it("is reproducible: identical content zips to identical bytes", async () => {
+    const files = {
+      "demo-pack/plugin.json": encoder.encode(JSON.stringify(manifest())),
+      "demo-pack/cards/demo.json": encoder.encode("{}"),
+    };
+    const first = zipPluginFiles(files);
+    await new Promise((resolve) => setTimeout(resolve, 1100));
+    const second = zipPluginFiles(files);
+    expect(await sha256Hex(first)).toBe(await sha256Hex(second));
+  });
+
+  it("round-trips through readPluginPackage", () => {
+    const zipped = zipPluginFiles({
+      "demo-pack/plugin.json": encoder.encode(JSON.stringify(manifest())),
+      "demo-pack/cards/demo.json": encoder.encode("{}"),
+    });
+    const pkg = readPluginPackage(zipped);
+    expect(pkg.manifest.id).toBe("demo-pack");
   });
 });
