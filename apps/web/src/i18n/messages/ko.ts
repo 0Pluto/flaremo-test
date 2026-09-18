@@ -91,8 +91,10 @@ const messages = {
   "space.all": "전체",
   "space.personal": "개인 스페이스",
   "space.team": "팀 스페이스",
-  "space.readonlyNotice": "이 공간은 읽기 전용입니다. 열람은 가능하지만 게시할 수 없습니다.",
-  "space.expiredNotice": "리더 기간이 만료되었습니다. 갱신하면 팀 스페이스에 다시 접근할 수 있습니다.",
+  "space.readonlyNotice":
+    "이 공간은 읽기 전용입니다. 열람은 가능하지만 게시할 수 없습니다.",
+  "space.expiredNotice":
+    "리더 기간이 만료되었습니다. 갱신하면 팀 스페이스에 다시 접근할 수 있습니다.",
   "nav.dailyReview": "그날의 기억",
   "nav.randomWalk": "기억의 산책",
   "nav.memory": "메모리",

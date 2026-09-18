@@ -47,9 +47,7 @@ describe("visibleCardViews defaults", () => {
 
   it("null settings fall back to bundled official cards only", () => {
     const ids = visibleCardViews(null).map((card) => card.id);
-    expect(ids).toEqual(
-      expect.arrayContaining(["plain", "daily", "ticket"]),
-    );
+    expect(ids).toEqual(expect.arrayContaining(["plain", "daily", "ticket"]));
     expect(ids).not.toContain("kosx-editorial");
   });
 
@@ -98,7 +96,12 @@ describe("visibleCardViews defaults", () => {
   it("hidden cards drop out and configured order wins", () => {
     const visible = visibleCardViews(
       settings({
-        cards: { order: ["ticket", "plain"], hidden: ["daily"], default: null, options: {} },
+        cards: {
+          order: ["ticket", "plain"],
+          hidden: ["daily"],
+          default: null,
+          options: {},
+        },
       }),
     );
     const ids = visible.map((card) => card.id);

@@ -89,8 +89,10 @@ const messages = {
   "space.all": "All",
   "space.personal": "Personal Space",
   "space.team": "Team Space",
-  "space.readonlyNotice": "This space is read-only — you are a reader and can browse but not publish.",
-  "space.expiredNotice": "Your reader access has expired. The team space is unavailable until it is renewed.",
+  "space.readonlyNotice":
+    "This space is read-only — you are a reader and can browse but not publish.",
+  "space.expiredNotice":
+    "Your reader access has expired. The team space is unavailable until it is renewed.",
   "nav.dailyReview": "On this day",
   "nav.randomWalk": "Wander",
   "nav.memory": "Memory",

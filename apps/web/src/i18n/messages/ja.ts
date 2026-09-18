@@ -89,8 +89,10 @@ const messages = {
   "space.all": "すべて",
   "space.personal": "個人スペース",
   "space.team": "チームスペース",
-  "space.readonlyNotice": "このスペースは閲覧専用です。閲覧はできますが投稿はできません。",
-  "space.expiredNotice": "リーダー期間が終了しました。更新するとチームスペースに再度アクセスできます。",
+  "space.readonlyNotice":
+    "このスペースは閲覧専用です。閲覧はできますが投稿はできません。",
+  "space.expiredNotice":
+    "リーダー期間が終了しました。更新するとチームスペースに再度アクセスできます。",
   "nav.dailyReview": "あの日の記録",
   "nav.randomWalk": "記憶の旅",
   "nav.memory": "メモリー",

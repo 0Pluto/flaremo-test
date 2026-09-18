@@ -375,8 +375,7 @@ export function FlareMoApp() {
   // Readers (time-boxed read-only seats) browse the team space but never
   // publish into it; their composer target stays personal everywhere.
   const isReader = currentUserQuery.data?.role === "reader";
-  const canPublishTeam =
-    Boolean(currentUserQuery.data?.team) && !isReader;
+  const canPublishTeam = Boolean(currentUserQuery.data?.team) && !isReader;
   const teamExpired = Boolean(currentUserQuery.data?.team_expired);
   // "On this day" teaser for the timeline top: notes from past years dated
   // today. The query shares the daily-review page's cache entry, so landing

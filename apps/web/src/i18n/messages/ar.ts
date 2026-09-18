@@ -89,8 +89,10 @@ const messages = {
   "space.all": "الكل",
   "space.personal": "المساحة الشخصية",
   "space.team": "مساحة الفريق",
-  "space.readonlyNotice": "هذه المساحة للقراءة فقط — أنت قارئ ويمكنك التصفح دون النشر.",
-  "space.expiredNotice": "انتهت صلاحية قارئك. مساحة الفريق غير متاحة حتى التجديد.",
+  "space.readonlyNotice":
+    "هذه المساحة للقراءة فقط — أنت قارئ ويمكنك التصفح دون النشر.",
+  "space.expiredNotice":
+    "انتهت صلاحية قارئك. مساحة الفريق غير متاحة حتى التجديد.",
   "nav.dailyReview": "في مثل هذا اليوم",
   "nav.randomWalk": "تجوال في الذاكرة",
   "nav.memory": "الذاكرة",

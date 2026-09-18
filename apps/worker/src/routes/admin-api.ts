@@ -276,9 +276,15 @@ adminApi.delete("/branding/marks/:variant", async (c) => {
   }
 });
 
-const pluginIdSchema = z.string().trim().regex(/^[a-z0-9][a-z0-9-]{0,63}$/);
+const pluginIdSchema = z
+  .string()
+  .trim()
+  .regex(/^[a-z0-9][a-z0-9-]{0,63}$/);
 const pluginIdListSchema = z.array(pluginIdSchema).max(PLUGIN_LIST_LIMIT);
-const optionKeySchema = z.string().trim().regex(/^[a-zA-Z][a-zA-Z0-9_]{0,63}$/);
+const optionKeySchema = z
+  .string()
+  .trim()
+  .regex(/^[a-zA-Z][a-zA-Z0-9_]{0,63}$/);
 const cardOptionsSchema = z.record(
   pluginIdSchema,
   z.record(optionKeySchema, z.union([z.string(), z.number(), z.boolean()])),
@@ -305,18 +311,14 @@ adminApi.get("/plugins", async (c) => {
   }
 });
 
-adminApi.put(
-  "/plugins",
-  zValidator("json", updatePluginsSchema),
-  async (c) => {
-    try {
-      const { db } = await ownerContext(c);
-      return c.json(await setPluginSettings(db, c.req.valid("json")));
-    } catch (error) {
-      return jsonError(c, error);
-    }
-  },
-);
+adminApi.put("/plugins", zValidator("json", updatePluginsSchema), async (c) => {
+  try {
+    const { db } = await ownerContext(c);
+    return c.json(await setPluginSettings(db, c.req.valid("json")));
+  } catch (error) {
+    return jsonError(c, error);
+  }
+});
 
 adminApi.get("/users", async (c) => {
   try {
@@ -418,7 +420,8 @@ adminApi.patch(
       // manage members but never change roles (peer-protection rule). The
       // owner-target guard comes first so a non-owner administrator sees the
       // same owner-immutability error the domain enforces.
-      const targetRole = (await teamMembershipInfo(context.db, id))?.role ?? null;
+      const targetRole =
+        (await teamMembershipInfo(context.db, id))?.role ?? null;
       if (targetRole === "owner") {
         throw new ForbiddenError("The owner role cannot be changed.");
       }
@@ -471,7 +474,8 @@ adminApi.put(
       // Peer protection: reader is a downgrade — it can be granted to plain
       // members or to users outside the team, never to administrators or the
       // owner (whose role is immutable anyway).
-      const targetRole = (await teamMembershipInfo(context.db, id))?.role ?? null;
+      const targetRole =
+        (await teamMembershipInfo(context.db, id))?.role ?? null;
       if (targetRole === "owner" || targetRole === "admin") {
         throw new ForbiddenError(
           "Administrators and the owner cannot become readers.",

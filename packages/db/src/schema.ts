@@ -227,7 +227,9 @@ export const authMembers = sqliteTable(
     // them). expiresAt only carries meaning for readers; an expired reader is
     // treated as a non-member at membership resolution (fail-closed), so no
     // cron sweep is needed to cut off access.
-    role: text("role", { enum: ["owner", "admin", "member", "reader"] }).notNull(),
+    role: text("role", {
+      enum: ["owner", "admin", "member", "reader"],
+    }).notNull(),
     expiresAt: authTimestamp("expires_at"),
     createdAt: authTimestamp("created_at").notNull(),
   },

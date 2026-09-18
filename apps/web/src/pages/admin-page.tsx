@@ -208,7 +208,9 @@ export function AdminPanel() {
     try {
       await setReaderMutation.mutateAsync({
         id: user.id,
-        expiresAt: new Date(readerExpiryBase(user) + days * 86_400_000).toISOString(),
+        expiresAt: new Date(
+          readerExpiryBase(user) + days * 86_400_000,
+        ).toISOString(),
       });
     } catch (error) {
       toast.error(errorMessage(error, t("admin.readerSetFailed")));
@@ -357,7 +359,9 @@ export function AdminPanel() {
                                 user.role === null) && (
                                 <>
                                   <DropdownMenuItem
-                                    onClick={() => void handleSetReader(user, 30)}
+                                    onClick={() =>
+                                      void handleSetReader(user, 30)
+                                    }
                                   >
                                     <EyeIcon />
                                     {user.role === "reader"

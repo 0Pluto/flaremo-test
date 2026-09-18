@@ -85,7 +85,8 @@ const messages = {
   "space.personal": "个人空间",
   "space.team": "团队空间",
   "space.readonlyNotice": "此空间为只读——你是读者，可以浏览但不能发布。",
-  "space.expiredNotice": "你的读者有效期已过，团队空间暂时无法访问，续期后自动恢复。",
+  "space.expiredNotice":
+    "你的读者有效期已过，团队空间暂时无法访问，续期后自动恢复。",
   "nav.dailyReview": "往年今日",
   "nav.randomWalk": "记忆漫游",
   "nav.memory": "记忆",

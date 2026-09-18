@@ -93,8 +93,10 @@ const messages = {
   "space.all": "Todo",
   "space.personal": "Espacio personal",
   "space.team": "Espacio de equipo",
-  "space.readonlyNotice": "Este espacio es de solo lectura: eres lector y puedes navegar, no publicar.",
-  "space.expiredNotice": "Tu acceso de lector ha caducado. El espacio de equipo no estará disponible hasta que lo renueves.",
+  "space.readonlyNotice":
+    "Este espacio es de solo lectura: eres lector y puedes navegar, no publicar.",
+  "space.expiredNotice":
+    "Tu acceso de lector ha caducado. El espacio de equipo no estará disponible hasta que lo renueves.",
   "nav.dailyReview": "Un día como hoy",
   "nav.randomWalk": "Paseo por la memoria",
   "nav.memory": "Memoria",

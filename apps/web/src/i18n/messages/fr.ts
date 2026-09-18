@@ -91,8 +91,10 @@ const messages = {
   "space.all": "Tout",
   "space.personal": "Espace personnel",
   "space.team": "Espace d'équipe",
-  "space.readonlyNotice": "Cet espace est en lecture seule — vous êtes lecteur : consultation sans publication.",
-  "space.expiredNotice": "Votre accès lecteur a expiré. L'espace d'équipe redeviendra accessible après renouvellement.",
+  "space.readonlyNotice":
+    "Cet espace est en lecture seule — vous êtes lecteur : consultation sans publication.",
+  "space.expiredNotice":
+    "Votre accès lecteur a expiré. L'espace d'équipe redeviendra accessible après renouvellement.",
   "nav.dailyReview": "Ce jour-là",
   "nav.randomWalk": "Balade",
   "nav.memory": "Mémoire",

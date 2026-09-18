@@ -55,10 +55,7 @@ export async function updateAdminUserRole(
 }
 
 /** Grant or renew the read-only reader seat. Pass an absolute expiry or null for a seat without one. */
-export async function setAdminUserReader(
-  id: string,
-  expiresAt: string | null,
-) {
+export async function setAdminUserReader(id: string, expiresAt: string | null) {
   return apiRequest<AdminUser>(
     `/api/app/admin/users/${encodeURIComponent(id)}/reader`,
     {
