@@ -419,9 +419,10 @@
   pointer-events: none;
 }
 
-/* sonner injects its [data-sonner-toast] rules at runtime, after this sheet;
-   the attribute+class combo out-ranks them so the material still lands. */
-[data-sonner-toast].glass {
+/* sonner injects its styles at runtime, AFTER this sheet, at 0-2-0
+   specificity ([data-sonner-toast][data-styled=true]); the glass override
+   must out-rank that or the material never lands on toasts. */
+[data-sonner-toast][data-styled=true].glass {
   background: var(--glass-tint);
   -webkit-backdrop-filter: blur(var(--glass-blur))
     saturate(var(--glass-saturate));
@@ -432,7 +433,7 @@
    <html data-glass="off"> — both fall back to the solid card surface. */
 @media (prefers-reduced-transparency: reduce) {
   .glass,
-  [data-sonner-toast].glass {
+  [data-sonner-toast][data-styled=true].glass {
     background: var(--card);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
@@ -444,7 +445,7 @@
 }
 
 :root[data-glass="off"] .glass,
-:root[data-glass="off"] [data-sonner-toast].glass {
+:root[data-glass="off"] [data-sonner-toast][data-styled=true].glass {
   background: var(--card);
   -webkit-backdrop-filter: none;
   backdrop-filter: none;

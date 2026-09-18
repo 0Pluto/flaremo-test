@@ -40,4 +40,15 @@ describe("glass material", () => {
     expect(css).toMatch(/:root\[data-glass="off"\] \.glass/);
     expect(css).toMatch(/:root\[data-glass="off"\] \.glass::after/);
   });
+
+  it("out-ranks sonner's runtime-injected toast styling", () => {
+    // sonner injects [data-sonner-toast][data-styled=true] { background: … }
+    // after this sheet at the same specificity as a bare attribute+class
+    // combo — the glass override must carry the [data-styled=true] key or it
+    // silently loses the cascade and toasts render solid.
+    expect(css).toMatch(/\[data-sonner-toast\]\[data-styled=true\]\.glass/);
+    expect(
+      css.match(/\[data-sonner-toast\]\[data-styled=true\]\.glass/g),
+    ).toHaveLength(3); // boost + reduced-transparency + kill switch
+  });
 });
