@@ -20,12 +20,24 @@ import {
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/i18n";
+import { stripResourceName } from "@/lib/utils";
 
 /**
  * Article list: drafts and published pieces with one-tap entry back into the
  * editor. Creating an article immediately allocates its draft row, so the
  * editor can bind inline uploads from the first keystroke.
  */
+/**
+ * Editor URLs carry the bare uuid (`/articles/<uuid>/edit`), matching the
+ * `/memo/<uuid>` convention. The namespaced form (`articles/<uuid>`) would
+ * percent-encode its slash into the path; browsers normalize `%2F` back to a
+ * real slash on a cold load, growing an extra path segment and breaking the
+ * route match. The API resolves bare ids either way.
+ */
+function editorId(articleId: string): string {
+  return stripResourceName(articleId, "articles");
+}
+
 export function ArticlesPage() {
   const { t } = useI18n();
   const navigate = useNavigate();
@@ -43,7 +55,7 @@ export function ArticlesPage() {
       void queryClient.invalidateQueries({ queryKey: ["articles"] });
       navigate({
         to: "/articles/$articleId/edit",
-        params: { articleId: article.id },
+        params: { articleId: editorId(article.id) },
       });
     },
     onError: () => toast.error(t("article.createFailed")),
@@ -119,7 +131,7 @@ export function ArticlesPage() {
                       onClick={() =>
                         navigate({
                           to: "/articles/$articleId/edit",
-                          params: { articleId: article.id },
+                          params: { articleId: editorId(article.id) },
                         })
                       }
                       type="button"

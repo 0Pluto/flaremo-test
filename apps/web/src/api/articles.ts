@@ -1,3 +1,4 @@
+import { stripResourceName } from "@/lib/utils";
 import { apiRequest } from "./client";
 import type {
   Article,
@@ -7,6 +8,15 @@ import type {
 } from "./types";
 
 // --- Articles ---------------------------------------------------------------
+
+/**
+ * Requests carry the bare uuid: the namespaced form's slash would land in the
+ * URL as `%2F` and browsers/routers have divergent normalization behavior for
+ * it. The server resolves bare ids to the namespaced form itself.
+ */
+function articleApiId(id: string): string {
+  return encodeURIComponent(stripResourceName(id, "articles"));
+}
 
 export async function listArticles(
   params: { status?: Article["status"]; include_deleted?: boolean } = {},
@@ -29,41 +39,43 @@ export async function createArticle(input: CreateArticleRequest) {
 
 export async function getArticle(id: string) {
   return apiRequest<{ article: Article }>(
-    `/api/app/articles/${encodeURIComponent(id)}`,
+    `/api/app/articles/${articleApiId(id)}`,
   );
 }
 
 export async function updateArticle(id: string, input: UpdateArticleRequest) {
   return apiRequest<{ article: Article }>(
-    `/api/app/articles/${encodeURIComponent(id)}`,
+    `/api/app/articles/${articleApiId(id)}`,
     { method: "PATCH", body: JSON.stringify(input) },
   );
 }
 
 export async function publishArticle(id: string, slug?: string) {
   return apiRequest<{ article: Article }>(
-    `/api/app/articles/${encodeURIComponent(id)}/publish`,
+    `/api/app/articles/${articleApiId(id)}/publish`,
     { method: "POST", body: JSON.stringify(slug ? { slug } : {}) },
   );
 }
 
 export async function unpublishArticle(id: string) {
   return apiRequest<{ article: Article }>(
-    `/api/app/articles/${encodeURIComponent(id)}/unpublish`,
+    `/api/app/articles/${articleApiId(id)}/unpublish`,
     { method: "POST" },
   );
 }
 
 export async function deleteArticle(id: string) {
   return apiRequest<{ article: Article }>(
-    `/api/app/articles/${encodeURIComponent(id)}`,
-    { method: "DELETE" },
+    `/api/app/articles/${articleApiId(id)}`,
+    {
+      method: "DELETE",
+    },
   );
 }
 
 export async function restoreArticle(id: string) {
   return apiRequest<{ article: Article }>(
-    `/api/app/articles/${encodeURIComponent(id)}/restore`,
+    `/api/app/articles/${articleApiId(id)}/restore`,
     { method: "POST" },
   );
 }
