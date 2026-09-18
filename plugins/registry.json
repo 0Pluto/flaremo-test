@@ -1,7 +1,7 @@
 {
   "specVersion": 1,
   "name": "FlareMo 官方目录",
-  "updatedAt": "2026-09-18T08:21:34.009Z",
+  "updatedAt": "2026-09-18T08:46:47.615Z",
   "plugins": [
     {
       "id": "flaremo-cards",
@@ -105,8 +105,8 @@
       },
       "artifact": {
         "url": "flaremo-cards/flaremo-cards-1.1.0.zip",
-        "sha256": "ad3e589ae40f5c2f8b728314121f97b7a084ff20fc2e485488e3479e27e07a81",
-        "size": 5098
+        "sha256": "dbddde856d0103b1bba60d845cc99ee4d219696392db4c5b471313aaa6e6b75b",
+        "size": 5096
       }
     },
     {
