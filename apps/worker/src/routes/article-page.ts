@@ -101,12 +101,11 @@ export function rewriteArticleFileUrls(
         if (!id) return match;
         // The replacement drops the original filename (and its query) from
         // the match, so a surviving query must be re-attached with `?` — the
-        // separator the match consumed — not `&`. `preview=1` keeps image
-        // (and other inline-safe) responses inline, matching the gallery
-        // section's contract; non-inline types still download.
+        // separator the match consumed. (The old `&` form produced URLs like
+        // `/blob&w=320`, which no longer match this route at all.)
         const query = match.includes("?")
-          ? `?${match.split("?").slice(1).join("?")}&preview=1`
-          : "?preview=1";
+          ? `?${match.split("?").slice(1).join("?")}`
+          : "";
         return `](${base}/api/public/articles/${encodeURIComponent(slug)}/attachments/${id}/blob${query}`;
       });
     })
