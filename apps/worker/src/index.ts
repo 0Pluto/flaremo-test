@@ -69,6 +69,7 @@ import { publicApi } from "./routes/public-api";
 import { registerSharePage } from "./routes/share-page";
 import { tasksApi } from "./routes/tasks-api";
 import { voiceSettingsApi } from "./routes/voice-settings-api";
+import { isKnownFrontendPath } from "./spa-routes";
 
 /**
  * Kernel assembly entry. Every call returns a fresh Hono instance so hosts
@@ -273,6 +274,24 @@ export function createFlareMoApp(
           status: response.status,
           statusText: response.statusText,
           headers,
+        });
+      }
+      // Status semantics for SPA deep links: known frontend routes keep the
+      // 200 shell, unknown paths return 404 (same shell) so crawlers do not
+      // index soft-404s. The SPA renders its not-found UI either way. The
+      // rewrite only touches HTML responses — exact asset files (robots.txt,
+      // sw.js, brand marks, …) are exact ASSETS matches and keep their own
+      // status and content type.
+      const contentType = response.headers.get("content-type") ?? "";
+      if (
+        !isKnownFrontendPath(c.req.path) &&
+        response.status === 200 &&
+        contentType.startsWith("text/html")
+      ) {
+        return new Response(response.body, {
+          status: 404,
+          statusText: "Not Found",
+          headers: response.headers,
         });
       }
       return response;

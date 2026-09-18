@@ -300,6 +300,9 @@ importers:
       hono:
         specifier: ^4.13.5
         version: 4.13.7
+      marked:
+        specifier: ^17.0.6
+        version: 17.0.6
       zod:
         specifier: ^4.1.12
         version: 4.5.4

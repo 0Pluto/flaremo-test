@@ -1,6 +1,6 @@
 # 分享页 SEO 最佳实践方案
 
-> 适用范围：公开分享链接 `/share/:token`。状态：**方案待实施**（现状审计基于 2026-09-18 线上实测，commit `9261be6` 已落地第一层）。
+> 适用范围：公开分享链接 `/share/:token`。状态：**P0 + P1（策略 B）已实施并上线**（2026-09-18 实测，wrangler 配置 `run_worker_first: true`；后续见 §4 可选增强）。
 >
 > 目标读者：在 FlareMo 上继续开发的 agent / 开发者。每一条结论都有线上实测或单测支撑，不是拍脑袋。
 
@@ -17,7 +17,7 @@
 | worker 注入路由 | `GET /share/:token` 服务端改写 SPA 壳 | `apps/worker/src/routes/share-page.ts` |
 | 注入内容 | title / description（去 markdown 噪音，80/160 字截断）、OG 全套、Twitter Card、JSON-LD（SocialMediaPosting）、SSR 正文段落、`robots: index, follow` | 同上 |
 | 死分享处理 | 撤销 / 过期 / 不存在的 token → 注入 `noindex, nofollow`（仍是 200，见 Gap 2） | 同上 |
-| wrangler 配置 | `/share/*` 加入 `run_worker_first`——否则静态资源路由直接用 SPA 兜底返回空壳，worker 代码根本不执行 | `wrangler.jsonc`（gitignore 的本地配置，**新机器克隆后必须手动补这行**） |
+| wrangler 配置 | `run_worker_first: true`——worker 先于静态资源路由处理**所有**请求。此前的坑（两段式）：先是不放行 `/share/*` 导致 SPA 兜底直接返回空壳、worker 不执行；后是只放行部分路径导致 `/sitemap.xml` 与未知路径同样绕过 worker。改为布尔 true 后状态码语义全部收敛到 worker（精确资源文件在 notFound 里经 ASSETS 精确匹配返回，状态与 content-type 不变） | `wrangler.jsonc`（gitignore 的本地配置，**新机器克隆后必须带上这行**） |
 | robots.txt | 真实静态文件（`Disallow /api/ /file/ /mcp /memory/mcp /memos.api.v1`） | `apps/web/public/robots.txt` |
 | canonical origin | og:url/og:image 以 `FLAREMO_PUBLIC_URL` 为准，请求 origin 兜底 | `share-page.ts` `publicOrigin()` |
 | 测试 | `apps/worker/src/share-page.test.ts`（4 例，Miniflare + 真 D1） | |
@@ -41,16 +41,16 @@
 - 死链接有 noindex，不至直接入索引
 - 响应 `cache-control: public, max-age=60, must-revalidate`（分享可被撤销，短 TTL 合理）
 
-### 2.2 未达标 ❌（按影响排序）
+### 2.2 未达标 ❌（按影响排序）——均已修复，见 §4
 
-| # | 缺口 | 实测证据 | 影响 |
-|---|---|---|---|
-| 1 | 无 `<link rel="canonical">` | `curl` 页面无该标签 | 搜索引擎靠 canonical 消除重复 URL（含尾参变体）；缺失会被自行猜测 canonical 或重复收录 |
-| 2 | 死链接返回 **200** 而非 404 | 不存在 token 与任意不存在路径均 200 | Google 定义的 soft-404：浪费抓取预算，死链接仍可能以 200+noindex 进入索引流程 |
-| 3 | `/sitemap.xml` 返回 HTML 200 | content-type `text/html`，内容是首页壳 | 爬虫请求 sitemap 拿到 HTML 会直接报解析错误 |
-| 4 | SSR 正文是原始 markdown | `**分享**` 等字面符号残留在 HTML | Googlebot 执行 JS 不受影响；非 Google 爬虫 / 社交抓取拿到半渲染文本 |
-| 5 | 页面过重 + 布局跳动风险 | 渲染一条笔记需加载整个 React 应用（index 364KB + vendor 合计 gzip 400KB+）；React 挂载时替换 SSR 节点 | CLS 是 Core Web Vitals 排名因子；分享页的理想形态是几十 KB 的独立轻量 HTML |
-| 6 | og:image 无尺寸声明、无 alt；无 og:locale | — | Telegram / iMessage 等客户端可能因缺尺寸不出预览图；多语言实例下 lang 硬编码 zh-CN |
+| # | 缺口 | 实测证据（审计时） | 影响 | 状态 |
+|---|---|---|---|---|
+| 1 | 无 `<link rel="canonical">` | `curl` 页面无该标签 | 搜索引擎靠 canonical 消除重复 URL（含尾参变体）；缺失会被自行猜测 canonical 或重复收录 | ✅ 已修（P0-1） |
+| 2 | 死链接返回 **200** 而非 404 | 不存在 token 与任意不存在路径均 200 | Google 定义的 soft-404：浪费抓取预算，死链接仍可能以 200+noindex 进入索引流程 | ✅ 已修（P0-2 + P0-5） |
+| 3 | `/sitemap.xml` 返回 HTML 200 | content-type `text/html`，内容是首页壳 | 爬虫请求 sitemap 拿到 HTML 会直接报解析错误 | ✅ 已修（P0-3） |
+| 4 | SSR 正文是原始 markdown | `**分享**` 等字面符号残留在 HTML | Googlebot 执行 JS 不受影响；非 Google 爬虫 / 社交抓取拿到半渲染文本 | ✅ 已修（P1-B，marked 服务端渲染） |
+| 5 | 页面过重 + 布局跳动风险 | 渲染一条笔记需加载整个 React 应用（index 364KB + vendor 合计 gzip 400KB+）；React 挂载时替换 SSR 节点 | CLS 是 Core Web Vitals 排名因子；分享页的理想形态是几十 KB 的独立轻量 HTML | ✅ 已修（P1-B 独立页，实测约 6KB / 零 JS） |
+| 6 | og:image 无尺寸声明、无 alt；无 og:locale | — | Telegram / iMessage 等客户端可能因缺尺寸不出预览图；多语言实例下 lang 硬编码 zh-CN | ✅ 已修（P0-4） |
 
 ---
 
