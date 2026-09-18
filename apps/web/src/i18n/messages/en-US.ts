@@ -5,12 +5,12 @@
 import type { TranslationKey } from "../key";
 
 const messages = {
-
   "nav.articles": "Articles",
   "article.newAction": "New article",
   "article.createFailed": "Failed to create the article",
   "article.emptyTitle": "No articles yet",
-  "article.emptyDescription": "Grow a long-form piece out of your notes: write something you can publish.",
+  "article.emptyDescription":
+    "Grow a long-form piece out of your notes: write something you can publish.",
   "article.untitled": "Untitled",
   "article.draftBadge": "Draft",
   "article.publishedBadge": "Published",
@@ -33,20 +33,24 @@ const messages = {
   "article.contentPlaceholder": "Start writing…",
   "article.imageUploadFailed": "Image upload failed",
   "article.publishTitle": "Publish article",
-  "article.publishDescription": "Once published, anyone with the link can read this article and search engines may index it.",
+  "article.publishDescription":
+    "Once published, anyone with the link can read this article and search engines may index it.",
   "article.publishAction": "Publish",
   "article.publishSuccess": "Article published.",
   "article.publishFailed": "Publish failed; please retry.",
   "article.unpublishTitle": "Unpublish article",
-  "article.unpublishDescription": "Unpublishing takes the public link down immediately; search engines get a 404 on the next crawl.",
+  "article.unpublishDescription":
+    "Unpublishing takes the public link down immediately; search engines get a 404 on the next crawl.",
   "article.unpublishAction": "Unpublish",
   "article.unpublishSuccess": "Article unpublished.",
   "article.slugLabel": "Custom slug (optional)",
   "article.slugPlaceholder": "Leave empty to auto-generate",
-  "article.slugHint": "The URL freezes on publish; renaming the article does not change it.",
+  "article.slugHint":
+    "The URL freezes on publish; renaming the article does not change it.",
   "article.descriptionLabel": "SEO description (optional)",
   "article.descriptionPlaceholder": "Leave empty to use the opening text",
-  "article.descriptionHint": "Shown in search results and social cards; under 160 characters works best.",
+  "article.descriptionHint":
+    "Shown in search results and social cards; under 160 characters works best.",
   "article.toolH2": "Heading 2",
   "article.toolH3": "Heading 3",
   "article.toolBold": "Bold",
@@ -624,6 +628,17 @@ const messages = {
   "usage.planMembers": "Members",
   "usage.disclaimer":
     "Self-measured estimate, not Cloudflare's official bill; final billing is per the Cloudflare Dashboard.",
+  "usage.cfTitle": "Cloudflare resource usage",
+  "usage.cfPeriod": "Period",
+  "usage.cfWorkerRequests": "Requests this month",
+  "usage.cfD1Storage": "D1 storage",
+  "usage.cfD1Rows": "Rows read / written this month",
+  "usage.cfR2Storage": "R2 storage",
+  "usage.cfR2Objects": "R2 objects",
+  "usage.cfR2Ops": "Class A / B ops this month",
+  "usage.cfPartial": "Some data unavailable",
+  "usage.cfDisclaimer":
+    "Figures come from Cloudflare Analytics directly; R2 storage lags by about 24 hours. Final billing is governed by the Cloudflare Dashboard.",
   "auth.unnamedToken": "Unnamed token",
   "auth.active": "Active",
   "auth.revoked": "Revoked",

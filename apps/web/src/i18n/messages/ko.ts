@@ -5,12 +5,12 @@
 import type { TranslationKey } from "../key";
 
 const messages = {
-
   "nav.articles": "아티클",
   "article.newAction": "새 아티클",
   "article.createFailed": "아티클 생성 실패",
   "article.emptyTitle": "아직 아티클이 없습니다",
-  "article.emptyDescription": "기록에서 긴 글을 키워 보세요. 공개할 수 있는 글을 쓸 수 있습니다.",
+  "article.emptyDescription":
+    "기록에서 긴 글을 키워 보세요. 공개할 수 있는 글을 쓸 수 있습니다.",
   "article.untitled": "제목 없음",
   "article.draftBadge": "초안",
   "article.publishedBadge": "게시됨",
@@ -33,12 +33,14 @@ const messages = {
   "article.contentPlaceholder": "본문을 쓰기 시작하세요…",
   "article.imageUploadFailed": "이미지 업로드 실패",
   "article.publishTitle": "아티클 게시",
-  "article.publishDescription": "게시하면 링크를 아는 누구나 이 아티클을 읽을 수 있고 검색 엔진에 등록될 수 있습니다.",
+  "article.publishDescription":
+    "게시하면 링크를 아는 누구나 이 아티클을 읽을 수 있고 검색 엔진에 등록될 수 있습니다.",
   "article.publishAction": "게시",
   "article.publishSuccess": "아티클을 게시했습니다.",
   "article.publishFailed": "게시 실패, 다시 시도하세요.",
   "article.unpublishTitle": "아티클 게시 취소",
-  "article.unpublishDescription": "게시를 취소하면 공개 링크가 즉시 내려가고 다음 크롤링 때 검색 엔진에 404가 반환됩니다.",
+  "article.unpublishDescription":
+    "게시를 취소하면 공개 링크가 즉시 내려가고 다음 크롤링 때 검색 엔진에 404가 반환됩니다.",
   "article.unpublishAction": "게시 취소",
   "article.unpublishSuccess": "아티클 게시를 취소했습니다.",
   "article.slugLabel": "사용자 지정 슬러그(선택)",
@@ -46,7 +48,8 @@ const messages = {
   "article.slugHint": "게시 후 URL은 고정되며 제목을 바꿔도 변하지 않습니다.",
   "article.descriptionLabel": "SEO 설명(선택)",
   "article.descriptionPlaceholder": "비우면 본문 시작 부분 사용",
-  "article.descriptionHint": "검색 결과와 소셜 카드에 표시됩니다. 160자 이내가 가장 좋습니다.",
+  "article.descriptionHint":
+    "검색 결과와 소셜 카드에 표시됩니다. 160자 이내가 가장 좋습니다.",
   "article.toolH2": "제목 2",
   "article.toolH3": "제목 3",
   "article.toolBold": "굵게",
@@ -624,6 +627,17 @@ const messages = {
   "usage.planMembers": "멤버 수",
   "usage.disclaimer":
     "위 수치는 자체 측정 추정치이며 Cloudflare 공식 청구서가 아닙니다. 최종 요금은 Cloudflare Dashboard 기준입니다.",
+  "usage.cfTitle": "Cloudflare 리소스 사용량",
+  "usage.cfPeriod": "집계 기간",
+  "usage.cfWorkerRequests": "이번 달 요청 수",
+  "usage.cfD1Storage": "D1 스토리지",
+  "usage.cfD1Rows": "이번 달 읽기 / 쓰기 행 수",
+  "usage.cfR2Storage": "R2 스토리지",
+  "usage.cfR2Objects": "R2 오브젝트 수",
+  "usage.cfR2Ops": "이번 달 Class A / B 작업",
+  "usage.cfPartial": "일부 데이터를 가져올 수 없습니다",
+  "usage.cfDisclaimer":
+    "수치는 Cloudflare Analytics 공식 기준이며, R2 스토리지는 약 24시간 지연됩니다. 최종 과금은 Cloudflare Dashboard 기준입니다.",
   "auth.unnamedToken": "이름 없는 토큰",
   "auth.active": "활성",
   "auth.revoked": "철회됨",

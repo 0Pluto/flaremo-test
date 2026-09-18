@@ -4,12 +4,12 @@
 import type { TranslationKey } from "../key";
 
 const messages = {
-
   "nav.articles": "Статьи",
   "article.newAction": "Новая статья",
   "article.createFailed": "Не удалось создать статью",
   "article.emptyTitle": "Статей пока нет",
-  "article.emptyDescription": "Вырастите длинный текст из записей: напишите то, что можно опубликовать.",
+  "article.emptyDescription":
+    "Вырастите длинный текст из записей: напишите то, что можно опубликовать.",
   "article.untitled": "Без названия",
   "article.draftBadge": "Черновик",
   "article.publishedBadge": "Опубликовано",
@@ -20,7 +20,8 @@ const messages = {
   "article.deleteConfirm": "Удалить эту статью?",
   "article.restored": "Статья восстановлена.",
   "article.loadFailed": "Не удалось загрузить статью.",
-  "article.autosaveFailed": "Автосохранение не удалось; скоро повторим попытку.",
+  "article.autosaveFailed":
+    "Автосохранение не удалось; скоро повторим попытку.",
   "article.saving": "Сохранение…",
   "article.unsaved": "Не сохранено",
   "article.saved": "Сохранено",
@@ -32,20 +33,24 @@ const messages = {
   "article.contentPlaceholder": "Начните писать…",
   "article.imageUploadFailed": "Не удалось загрузить изображение",
   "article.publishTitle": "Опубликовать статью",
-  "article.publishDescription": "После публикации статью сможет прочесть любой, у кого есть ссылка; поисковые системы смогут её индексировать.",
+  "article.publishDescription":
+    "После публикации статью сможет прочесть любой, у кого есть ссылка; поисковые системы смогут её индексировать.",
   "article.publishAction": "Опубликовать",
   "article.publishSuccess": "Статья опубликована.",
   "article.publishFailed": "Не удалось опубликовать; попробуйте снова.",
   "article.unpublishTitle": "Отменить публикацию",
-  "article.unpublishDescription": "После снятия с публикации ссылка перестаёт работать сразу; при следующем обходе поисковики получат 404.",
+  "article.unpublishDescription":
+    "После снятия с публикации ссылка перестаёт работать сразу; при следующем обходе поисковики получат 404.",
   "article.unpublishAction": "Снять с публикации",
   "article.unpublishSuccess": "Публикация отменена.",
   "article.slugLabel": "Свой slug (необязательно)",
   "article.slugPlaceholder": "Оставьте пустым для автогенерации",
-  "article.slugHint": "URL фиксируется при публикации; переименование её не меняет.",
+  "article.slugHint":
+    "URL фиксируется при публикации; переименование её не меняет.",
   "article.descriptionLabel": "SEO-описание (необязательно)",
   "article.descriptionPlaceholder": "Пусто: используется начало текста",
-  "article.descriptionHint": "Показывается в результатах поиска и соцкартах; лучше до 160 символов.",
+  "article.descriptionHint":
+    "Показывается в результатах поиска и соцкартах; лучше до 160 символов.",
   "article.toolH2": "Заголовок 2",
   "article.toolH3": "Заголовок 3",
   "article.toolBold": "Полужирный",
@@ -630,6 +635,17 @@ const messages = {
   "usage.planMembers": "Участники",
   "usage.disclaimer":
     "Это самооценка, а не официальный счёт Cloudflare; итоговый биллинг смотрите в Cloudflare Dashboard.",
+  "usage.cfTitle": "Использование ресурсов Cloudflare",
+  "usage.cfPeriod": "Период",
+  "usage.cfWorkerRequests": "Запросы за месяц",
+  "usage.cfD1Storage": "Хранилище D1",
+  "usage.cfD1Rows": "Строк прочитано / записано за месяц",
+  "usage.cfR2Storage": "Хранилище R2",
+  "usage.cfR2Objects": "Объектов в R2",
+  "usage.cfR2Ops": "Операции Class A / B за месяц",
+  "usage.cfPartial": "Часть данных недоступна",
+  "usage.cfDisclaimer":
+    "Данные берутся напрямую из Cloudflare Analytics; хранилище R2 отстаёт примерно на 24 часа. Итоговый биллинг определяет Cloudflare Dashboard.",
   "auth.unnamedToken": "Токен без названия",
   "auth.active": "Активен",
   "auth.revoked": "Отозван",

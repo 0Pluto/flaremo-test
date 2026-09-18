@@ -5,12 +5,12 @@
 import type { TranslationKey } from "../key";
 
 const messages = {
-
   "nav.articles": "Artículos",
   "article.newAction": "Nuevo artículo",
   "article.createFailed": "Error al crear el artículo",
   "article.emptyTitle": "Aún no hay artículos",
-  "article.emptyDescription": "Haz crecer un texto largo desde tus notas: escribe algo que puedas publicar.",
+  "article.emptyDescription":
+    "Haz crecer un texto largo desde tus notas: escribe algo que puedas publicar.",
   "article.untitled": "Sin título",
   "article.draftBadge": "Borrador",
   "article.publishedBadge": "Publicado",
@@ -33,20 +33,24 @@ const messages = {
   "article.contentPlaceholder": "Empieza a escribir…",
   "article.imageUploadFailed": "Error al subir la imagen",
   "article.publishTitle": "Publicar artículo",
-  "article.publishDescription": "Una vez publicado, cualquier persona con el enlace podrá leer este artículo y los buscadores podrán indexarlo.",
+  "article.publishDescription":
+    "Una vez publicado, cualquier persona con el enlace podrá leer este artículo y los buscadores podrán indexarlo.",
   "article.publishAction": "Publicar",
   "article.publishSuccess": "Artículo publicado.",
   "article.publishFailed": "Error al publicar; inténtalo de nuevo.",
   "article.unpublishTitle": "Despublicar artículo",
-  "article.unpublishDescription": "Al despublicar, el enlace público deja de funcionar de inmediato; los buscadores verán un 404 en el próximo rastreo.",
+  "article.unpublishDescription":
+    "Al despublicar, el enlace público deja de funcionar de inmediato; los buscadores verán un 404 en el próximo rastreo.",
   "article.unpublishAction": "Despublicar",
   "article.unpublishSuccess": "Artículo despublicado.",
   "article.slugLabel": "Enlace personalizado (opcional)",
   "article.slugPlaceholder": "Dejar vacío para generar",
-  "article.slugHint": "La URL se congela al publicar; renombrar el artículo no la cambia.",
+  "article.slugHint":
+    "La URL se congela al publicar; renombrar el artículo no la cambia.",
   "article.descriptionLabel": "Descripción SEO (opcional)",
   "article.descriptionPlaceholder": "Vacío: usa el inicio del texto",
-  "article.descriptionHint": "Se muestra en resultados de búsqueda y tarjetas sociales; menos de 160 caracteres es lo ideal.",
+  "article.descriptionHint":
+    "Se muestra en resultados de búsqueda y tarjetas sociales; menos de 160 caracteres es lo ideal.",
   "article.toolH2": "Encabezado 2",
   "article.toolH3": "Encabezado 3",
   "article.toolBold": "Negrita",
@@ -636,6 +640,17 @@ const messages = {
   "usage.planMembers": "Miembros",
   "usage.disclaimer":
     "Estimación medida por ti, no la factura oficial de Cloudflare; la facturación final la rige el Cloudflare Dashboard.",
+  "usage.cfTitle": "Uso de recursos de Cloudflare",
+  "usage.cfPeriod": "Período",
+  "usage.cfWorkerRequests": "Solicitudes de este mes",
+  "usage.cfD1Storage": "Almacenamiento D1",
+  "usage.cfD1Rows": "Filas leídas / escritas este mes",
+  "usage.cfR2Storage": "Almacenamiento R2",
+  "usage.cfR2Objects": "Objetos en R2",
+  "usage.cfR2Ops": "Operaciones Class A / B este mes",
+  "usage.cfPartial": "Algunos datos no están disponibles",
+  "usage.cfDisclaimer":
+    "Las cifras provienen directamente de Cloudflare Analytics; el almacenamiento de R2 se retrasa unas 24 horas. La facturación final la rige el Cloudflare Dashboard.",
   "auth.unnamedToken": "Token sin nombre",
   "auth.active": "Activo",
   "auth.revoked": "Revocado",

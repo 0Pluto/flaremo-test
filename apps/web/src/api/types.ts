@@ -1,7 +1,10 @@
 import type {
   AppNotificationDto,
+  ArticleDto,
+  ArticleSummaryDto,
   AttachmentDto,
   CalendarView,
+  CreateArticleInput,
   CreateMemoInput,
   CreateMemoryInput,
   CreateProjectInput,
@@ -22,6 +25,7 @@ import type {
   TaskDto,
   TaskPriority,
   TaskStatus,
+  UpdateArticleInput,
   UpdateMemoInput,
   UpdateMemoryInput,
   UpdateProjectInput,
@@ -47,6 +51,27 @@ export type {
   VectorUsageReport,
 };
 
+// Deployment-specific: Cloudflare account analytics reported by the worker
+// (see apps/worker/src/cf-analytics.ts). Owner-only, hidden until
+// `pnpm setup:usage` writes the analytics secrets.
+export type CloudflareUsageReport = {
+  available: boolean;
+  window: { since: string; until: string };
+  errors: string[];
+  workers: { requests: number; subrequests: number; errors: number } | null;
+  d1: {
+    storageBytes: number | null;
+    rowsRead: number;
+    rowsWritten: number;
+  } | null;
+  r2: {
+    storageBytes: number | null;
+    objectCount: number | null;
+    classAOps: number;
+    classBOps: number;
+  } | null;
+};
+
 export type CreateMemoRequest = CreateMemoInput;
 export type UpdateMemoRequest = UpdateMemoInput;
 export type CreateMemoryRequest = CreateMemoryInput;
@@ -54,6 +79,10 @@ export type UpdateMemoryRequest = UpdateMemoryInput;
 
 export type Project = ProjectDto;
 export type Task = TaskDto;
+export type Article = ArticleDto;
+export type ArticleSummary = ArticleSummaryDto;
+export type CreateArticleRequest = CreateArticleInput;
+export type UpdateArticleRequest = UpdateArticleInput;
 export type Calendar = CalendarView;
 export type CreateProjectRequest = CreateProjectInput;
 export type UpdateProjectRequest = UpdateProjectInput;

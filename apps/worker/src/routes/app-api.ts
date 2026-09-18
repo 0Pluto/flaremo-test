@@ -28,6 +28,7 @@ import {
   deletePushSubscription,
   deleteTag,
   estimateTokenCount,
+  ForbiddenError,
   getBranding,
   getCalendarView,
   getFlaremoUserNames,
@@ -67,6 +68,7 @@ import {
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
+import { fetchCloudflareUsage, resolveAnalyticsConfig } from "../cf-analytics";
 import { getRequestContext, type HonoBindings } from "../context";
 import {
   createEmbeddingProvider,
@@ -406,6 +408,20 @@ appApi.get("/usage/vector", async (c) => {
       userLimits,
     });
     return c.json({ ...report, plan });
+  } catch (error) {
+    return jsonError(c, error);
+  }
+});
+
+appApi.get("/usage/cloudflare", async (c) => {
+  try {
+    const { user } = await getRequestContext(c);
+    if (!isInstanceOwner(user))
+      throw new ForbiddenError("Owner access is required.");
+    const config = resolveAnalyticsConfig(c.env);
+    if (!config) return c.json({ available: false });
+    const report = await fetchCloudflareUsage(c.env);
+    return c.json({ available: true, ...report });
   } catch (error) {
     return jsonError(c, error);
   }

@@ -95,4 +95,14 @@ export type FlareMoEnv = Env & {
   // hard-deleted (with their R2 attachments) by the daily sweep. Unset = 30;
   // 0 disables the purge entirely.
   FLAREMO_TRASH_RETENTION_DAYS?: string;
+  // Optional Cloudflare account analytics for the owner usage panel (see
+  // src/cf-analytics.ts). Written by `pnpm setup:usage`; token needs only the
+  // "Account Analytics: Read" permission. Queries are filtered down to this
+  // deployment's own resources, so a shared account stays accurate. Unset
+  // token/account hides the panel section entirely.
+  FLAREMO_CF_ANALYTICS_TOKEN?: string;
+  FLAREMO_CF_ACCOUNT_ID?: string;
+  FLAREMO_CF_WORKER_NAME?: string;
+  FLAREMO_CF_D1_ID?: string;
+  FLAREMO_CF_R2_BUCKET?: string;
 };

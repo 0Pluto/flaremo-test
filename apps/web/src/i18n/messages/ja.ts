@@ -4,12 +4,12 @@
 import type { TranslationKey } from "../key";
 
 const messages = {
-
   "nav.articles": "記事",
   "article.newAction": "記事を書く",
   "article.createFailed": "記事の作成に失敗しました",
   "article.emptyTitle": "まだ記事がありません",
-  "article.emptyDescription": "記録から長文を育てましょう。公開できる文章を書けます。",
+  "article.emptyDescription":
+    "記録から長文を育てましょう。公開できる文章を書けます。",
   "article.untitled": "無題",
   "article.draftBadge": "下書き",
   "article.publishedBadge": "公開済み",
@@ -32,12 +32,14 @@ const messages = {
   "article.contentPlaceholder": "本文を書き始める…",
   "article.imageUploadFailed": "画像のアップロードに失敗しました",
   "article.publishTitle": "記事を公開",
-  "article.publishDescription": "公開すると、リンクを知る誰もがこの記事を読め、検索エンジンに登録されることがあります。",
+  "article.publishDescription":
+    "公開すると、リンクを知る誰もがこの記事を読め、検索エンジンに登録されることがあります。",
   "article.publishAction": "公開",
   "article.publishSuccess": "記事を公開しました。",
   "article.publishFailed": "公開に失敗しました。再試行してください。",
   "article.unpublishTitle": "記事を非公開にする",
-  "article.unpublishDescription": "非公開にすると公開リンクは即座に無効になり、次のクロールで検索エンジンに 404 が返ります。",
+  "article.unpublishDescription":
+    "非公開にすると公開リンクは即座に無効になり、次のクロールで検索エンジンに 404 が返ります。",
   "article.unpublishAction": "非公開にする",
   "article.unpublishSuccess": "記事を非公開にしました。",
   "article.slugLabel": "カスタムスラッグ（任意）",
@@ -45,7 +47,8 @@ const messages = {
   "article.slugHint": "公開後に URL は固定され、タイトル変更でも変わりません。",
   "article.descriptionLabel": "SEO 説明（任意）",
   "article.descriptionPlaceholder": "空欄なら本文の冒頭を使用",
-  "article.descriptionHint": "検索結果やソーシャルカードに表示されます。160 字以内が効果的です。",
+  "article.descriptionHint":
+    "検索結果やソーシャルカードに表示されます。160 字以内が効果的です。",
   "article.toolH2": "見出し 2",
   "article.toolH3": "見出し 3",
   "article.toolBold": "太字",
@@ -628,6 +631,17 @@ const messages = {
   "usage.planMembers": "メンバー数",
   "usage.disclaimer":
     "これは自己測定の推定値であり Cloudflare の公式請求ではありません。最終的な課金は Cloudflare Dashboard をご確認ください。",
+  "usage.cfTitle": "Cloudflare リソース使用量",
+  "usage.cfPeriod": "集計期間",
+  "usage.cfWorkerRequests": "今月のリクエスト数",
+  "usage.cfD1Storage": "D1 ストレージ",
+  "usage.cfD1Rows": "今月の読み / 書き行数",
+  "usage.cfR2Storage": "R2 ストレージ",
+  "usage.cfR2Objects": "R2 オブジェクト数",
+  "usage.cfR2Ops": "今月の Class A / B 操作",
+  "usage.cfPartial": "一部のデータを取得できませんでした",
+  "usage.cfDisclaimer":
+    "数値は Cloudflare Analytics の公式値です。R2 ストレージは約 24 時間の遅延があります。最終的な請求は Cloudflare Dashboard を基準としてください。",
   "auth.unnamedToken": "名前のないトークン",
   "auth.active": "有効",
   "auth.revoked": "失効済み",

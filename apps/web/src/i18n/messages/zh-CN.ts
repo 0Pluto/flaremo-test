@@ -3,12 +3,12 @@
 // translated (and PR'd) independently.
 
 const messages = {
-
   "nav.articles": "文章",
   "article.newAction": "写文章",
   "article.createFailed": "创建文章失败",
   "article.emptyTitle": "还没有文章",
-  "article.emptyDescription": "把长文从记录里长出来：写一篇可以公开发表的文章。",
+  "article.emptyDescription":
+    "把长文从记录里长出来：写一篇可以公开发表的文章。",
   "article.untitled": "无标题",
   "article.draftBadge": "草稿",
   "article.publishedBadge": "已发布",
@@ -31,12 +31,14 @@ const messages = {
   "article.contentPlaceholder": "开始写正文…",
   "article.imageUploadFailed": "图片上传失败",
   "article.publishTitle": "发布文章",
-  "article.publishDescription": "发布后，任何人都可以通过链接访问这篇文章，搜索引擎可以收录它。",
+  "article.publishDescription":
+    "发布后，任何人都可以通过链接访问这篇文章，搜索引擎可以收录它。",
   "article.publishAction": "发布",
   "article.publishSuccess": "文章已发布。",
   "article.publishFailed": "发布失败，请重试。",
   "article.unpublishTitle": "下线文章",
-  "article.unpublishDescription": "下线后公开链接立即失效，搜索引擎会在下次抓取时收到 404。",
+  "article.unpublishDescription":
+    "下线后公开链接立即失效，搜索引擎会在下次抓取时收到 404。",
   "article.unpublishAction": "下线",
   "article.unpublishSuccess": "文章已下线。",
   "article.slugLabel": "自定义链接（可选）",
@@ -578,6 +580,17 @@ const messages = {
   "usage.planMembers": "成员数",
   "usage.disclaimer":
     "以上为自测估算，非 Cloudflare 官方账单；最终计费以 Cloudflare Dashboard 为准。",
+  "usage.cfTitle": "Cloudflare 资源用量",
+  "usage.cfPeriod": "统计周期",
+  "usage.cfWorkerRequests": "本月请求数",
+  "usage.cfD1Storage": "D1 存储",
+  "usage.cfD1Rows": "本月读 / 写行数",
+  "usage.cfR2Storage": "R2 存储",
+  "usage.cfR2Objects": "R2 对象数",
+  "usage.cfR2Ops": "本月 Class A / B 操作",
+  "usage.cfPartial": "部分数据不可用",
+  "usage.cfDisclaimer":
+    "数据来自 Cloudflare Analytics 官方口径；R2 存储约有 24 小时延迟，最终计费以 Cloudflare Dashboard 为准。",
   "auth.unnamedToken": "未命名令牌",
   "auth.active": "有效",
   "auth.revoked": "已撤销",

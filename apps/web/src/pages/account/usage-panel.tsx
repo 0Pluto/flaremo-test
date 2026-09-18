@@ -1,6 +1,6 @@
 import type { UseQueryResult } from "@tanstack/react-query";
-import { GaugeIcon, InfoIcon } from "lucide-react";
-import type { VectorUsageReport } from "@/api";
+import { ActivityIcon, CloudIcon, GaugeIcon, InfoIcon } from "lucide-react";
+import type { CloudflareUsageReport, VectorUsageReport } from "@/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { TranslationKey } from "@/i18n";
 import { formatBytes } from "@/lib/utils";
@@ -9,9 +9,14 @@ import { SettingsRow, SettingsSectionGroup } from "./apple-settings-ui";
 type UsagePanelProps = {
   t: (key: TranslationKey) => string;
   vectorUsageQuery: UseQueryResult<VectorUsageReport, Error>;
+  cfUsageQuery: UseQueryResult<CloudflareUsageReport, Error>;
 };
 
-export function UsagePanel({ t, vectorUsageQuery }: UsagePanelProps) {
+export function UsagePanel({
+  t,
+  vectorUsageQuery,
+  cfUsageQuery,
+}: UsagePanelProps) {
   return (
     <div className="flex flex-col gap-5">
       <SettingsSectionGroup
@@ -35,6 +40,25 @@ export function UsagePanel({ t, vectorUsageQuery }: UsagePanelProps) {
           <VectorUsageContent report={vectorUsageQuery.data} t={t} />
         )}
       </SettingsSectionGroup>
+      {cfUsageQuery.data?.available &&
+      (cfUsageQuery.data.workers ||
+        cfUsageQuery.data.d1 ||
+        cfUsageQuery.data.r2) ? (
+        <SettingsSectionGroup
+          title={t("usage.cfTitle")}
+          footer={
+            <span className="flex items-start gap-1.5 pt-1 text-xs text-muted-foreground">
+              <InfoIcon
+                aria-hidden="true"
+                className="mt-0.5 size-3.5 shrink-0"
+              />
+              <span>{t("usage.cfDisclaimer")}</span>
+            </span>
+          }
+        >
+          <CloudflareUsageContent report={cfUsageQuery.data} t={t} />
+        </SettingsSectionGroup>
+      ) : null}
     </div>
   );
 }
@@ -80,6 +104,77 @@ function VectorUsageContent({
         />
         {report.plan && <PlanQuotaBars plan={report.plan} t={t} />}
       </div>
+    </div>
+  );
+}
+
+function CloudflareUsageContent({
+  report,
+  t,
+}: {
+  report: CloudflareUsageReport;
+  t: (key: TranslationKey) => string;
+}) {
+  const locale = (value: number) => value.toLocaleString();
+  return (
+    <div className="flex flex-col divide-y divide-border/40">
+      <SettingsRow
+        icon={ActivityIcon}
+        label={t("usage.cfPeriod")}
+        value={`${report.window.since.slice(0, 10)} ~ ${report.window.until.slice(0, 10)} (UTC)`}
+      />
+      {report.workers && (
+        <SettingsRow
+          label={t("usage.cfWorkerRequests")}
+          value={report.workers.requests.toLocaleString()}
+        />
+      )}
+      {report.d1 && (
+        <>
+          <SettingsRow
+            icon={CloudIcon}
+            label={t("usage.cfD1Storage")}
+            value={
+              report.d1.storageBytes !== null
+                ? formatBytes(report.d1.storageBytes)
+                : "—"
+            }
+          />
+          <SettingsRow
+            label={t("usage.cfD1Rows")}
+            value={`${report.d1.rowsRead.toLocaleString()} / ${report.d1.rowsWritten.toLocaleString()}`}
+          />
+        </>
+      )}
+      {report.r2 && (
+        <>
+          <SettingsRow
+            label={t("usage.cfR2Storage")}
+            value={
+              report.r2.storageBytes !== null
+                ? formatBytes(report.r2.storageBytes)
+                : "—"
+            }
+          />
+          <SettingsRow
+            label={t("usage.cfR2Objects")}
+            value={
+              report.r2.objectCount !== null
+                ? report.r2.objectCount.toLocaleString()
+                : "—"
+            }
+          />
+          <SettingsRow
+            label={t("usage.cfR2Ops")}
+            value={`${locale(report.r2.classAOps)} / ${locale(report.r2.classBOps)}`}
+          />
+        </>
+      )}
+      {report.errors.length > 0 && (
+        <div className="p-4 text-xs text-muted-foreground">
+          {t("usage.cfPartial")} ({report.errors.join("; ")})
+        </div>
+      )}
     </div>
   );
 }

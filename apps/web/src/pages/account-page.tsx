@@ -32,6 +32,7 @@ import {
   getAdminBranding,
   getAdminPluginSettings,
   getAppInfo,
+  getCloudflareUsage,
   getCurrentFlareMoUser,
   getVectorUsage,
   getVoiceSettings,
@@ -205,6 +206,16 @@ export function AccountSettingsDialog({
     retry: false,
     enabled: open,
     refetchInterval: 120_000,
+  });
+
+  const cfUsageQuery = useQuery({
+    queryKey: ["cloudflare-usage"],
+    queryFn: getCloudflareUsage,
+    retry: false,
+    enabled: open,
+    // The worker caches analytics for an hour; polling harder is waste.
+    staleTime: 10 * 60 * 1000,
+    refetchInterval: 10 * 60 * 1000,
   });
 
   const dataTasksQuery = useQuery({
@@ -653,7 +664,13 @@ export function AccountSettingsDialog({
         <VoicePanel key={session.data?.user.id} />
       </Suspense>
     ) : null,
-    usage: <UsagePanel t={t} vectorUsageQuery={vectorUsageQuery} />,
+    usage: (
+      <UsagePanel
+        t={t}
+        vectorUsageQuery={vectorUsageQuery}
+        cfUsageQuery={cfUsageQuery}
+      />
+    ),
     transfer: (
       <TransferPanel
         dataTasksQuery={dataTasksQuery}

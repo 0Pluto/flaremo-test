@@ -4,7 +4,6 @@
 import type { TranslationKey } from "../key";
 
 const messages = {
-
   "nav.articles": "مقالات",
   "article.newAction": "مقال جديد",
   "article.createFailed": "فشل إنشاء المقال",
@@ -32,12 +31,14 @@ const messages = {
   "article.contentPlaceholder": "ابدأ الكتابة…",
   "article.imageUploadFailed": "فشل تحميل الصورة",
   "article.publishTitle": "نشر المقال",
-  "article.publishDescription": "بعد النشر، يمكن لأي شخص لديه الرابط قراءة هذا المقال وقد تُفهرسه محركات البحث.",
+  "article.publishDescription":
+    "بعد النشر، يمكن لأي شخص لديه الرابط قراءة هذا المقال وقد تُفهرسه محركات البحث.",
   "article.publishAction": "نشر",
   "article.publishSuccess": "تم نشر المقال.",
   "article.publishFailed": "فشل النشر؛ أعد المحاولة.",
   "article.unpublishTitle": "إلغاء نشر المقال",
-  "article.unpublishDescription": "إلغاء النشر يعطّل الرابط العام فوراً؛ سترى محركات البحث خطأ 404 في الزحف التالي.",
+  "article.unpublishDescription":
+    "إلغاء النشر يعطّل الرابط العام فوراً؛ سترى محركات البحث خطأ 404 في الزحف التالي.",
   "article.unpublishAction": "إلغاء النشر",
   "article.unpublishSuccess": "تم إلغاء نشر المقال.",
   "article.slugLabel": "معرف مخصص (اختياري)",
@@ -45,7 +46,8 @@ const messages = {
   "article.slugHint": "يتم تثبيت الرابط عند النشر؛ إعادة التسمية لا تغيّره.",
   "article.descriptionLabel": "وصف SEO (اختياري)",
   "article.descriptionPlaceholder": "اتركه فارغاً لاستخدام بداية النص",
-  "article.descriptionHint": "يظهر في نتائج البحث والبطاقات الاجتماعية؛ أقل من 160 حرفاً هو الأفضل.",
+  "article.descriptionHint":
+    "يظهر في نتائج البحث والبطاقات الاجتماعية؛ أقل من 160 حرفاً هو الأفضل.",
   "article.toolH2": "عنوان 2",
   "article.toolH3": "عنوان 3",
   "article.toolBold": "عريض",
@@ -617,6 +619,17 @@ const messages = {
   "usage.planMembers": "الأعضاء",
   "usage.disclaimer":
     "تقدير قياس ذاتي وليس فاتورة Cloudflare الرسمية؛ الفوترة النهائية وفق لوحة Cloudflare.",
+  "usage.cfTitle": "استخدام موارد Cloudflare",
+  "usage.cfPeriod": "فترة الإحصاء",
+  "usage.cfWorkerRequests": "الطلبات هذا الشهر",
+  "usage.cfD1Storage": "تخزين D1",
+  "usage.cfD1Rows": "الصفوف المقروءة / المكتوبة هذا الشهر",
+  "usage.cfR2Storage": "تخزين R2",
+  "usage.cfR2Objects": "عدد كائنات R2",
+  "usage.cfR2Ops": "عمليات Class A / B هذا الشهر",
+  "usage.cfPartial": "بعض البيانات غير متوفرة",
+  "usage.cfDisclaimer":
+    "الأرقام مأخوذة مباشرة من Cloudflare Analytics؛ تخزين R2 يتأخر نحو 24 ساعة، والفوترة النهائية وفق لوحة تحكم Cloudflare.",
   "auth.unnamedToken": "رمز بلا اسم",
   "auth.active": "فعّال",
   "auth.revoked": "ملغى",

@@ -38,6 +38,8 @@
     "provision:test": "node --test ./scripts/provision-cloudflare.test.mjs",
     "secrets:sync": "node ./scripts/sync-worker-secrets.mjs",
     "secrets:test": "node --test ./scripts/sync-worker-secrets.test.mjs",
+    "setup:usage": "node ./scripts/setup-usage.mjs",
+    "setup:usage:test": "node --test ./scripts/setup-usage.test.mjs",
     "smoke:check": "node ./scripts/smoke-check.mjs",
     "smoke:test": "node --test ./scripts/smoke-check.test.mjs",
     "write-wrangler-config:test": "node --test ./scripts/write-wrangler-config.test.mjs",

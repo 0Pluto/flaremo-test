@@ -4,12 +4,12 @@
 import type { TranslationKey } from "../key";
 
 const messages = {
-
   "nav.articles": "Articles",
   "article.newAction": "Nouvel article",
   "article.createFailed": "Échec de la création de l'article",
   "article.emptyTitle": "Aucun article pour l'instant",
-  "article.emptyDescription": "Faites grandir un texte long depuis vos notes : écrivez ce que vous pourrez publier.",
+  "article.emptyDescription":
+    "Faites grandir un texte long depuis vos notes : écrivez ce que vous pourrez publier.",
   "article.untitled": "Sans titre",
   "article.draftBadge": "Brouillon",
   "article.publishedBadge": "Publié",
@@ -20,7 +20,8 @@ const messages = {
   "article.deleteConfirm": "Supprimer cet article ?",
   "article.restored": "Article restauré.",
   "article.loadFailed": "Impossible de charger l'article.",
-  "article.autosaveFailed": "Échec de la sauvegarde auto ; nouvelle tentative bientôt.",
+  "article.autosaveFailed":
+    "Échec de la sauvegarde auto ; nouvelle tentative bientôt.",
   "article.saving": "Enregistrement…",
   "article.unsaved": "Non enregistré",
   "article.saved": "Enregistré",
@@ -32,20 +33,24 @@ const messages = {
   "article.contentPlaceholder": "Commencez à écrire…",
   "article.imageUploadFailed": "Échec de l'envoi de l'image",
   "article.publishTitle": "Publier l'article",
-  "article.publishDescription": "Une fois publié, toute personne disposant du lien pourra lire cet article et les moteurs de recherche pourront l'indexer.",
+  "article.publishDescription":
+    "Une fois publié, toute personne disposant du lien pourra lire cet article et les moteurs de recherche pourront l'indexer.",
   "article.publishAction": "Publier",
   "article.publishSuccess": "Article publié.",
   "article.publishFailed": "Échec de la publication ; réessayez.",
   "article.unpublishTitle": "Dépublier l'article",
-  "article.unpublishDescription": "La dépublication désactive immédiatement le lien public ; les moteurs de recherche recevront une erreur 404 lors du prochain passage.",
+  "article.unpublishDescription":
+    "La dépublication désactive immédiatement le lien public ; les moteurs de recherche recevront une erreur 404 lors du prochain passage.",
   "article.unpublishAction": "Dépublier",
   "article.unpublishSuccess": "Article dépublié.",
   "article.slugLabel": "Lien personnalisé (optionnel)",
   "article.slugPlaceholder": "Laisser vide pour générer",
-  "article.slugHint": "L'URL est figée à la publication ; renommer l'article ne la change pas.",
+  "article.slugHint":
+    "L'URL est figée à la publication ; renommer l'article ne la change pas.",
   "article.descriptionLabel": "Description SEO (optionnelle)",
   "article.descriptionPlaceholder": "Vide : utilise le début du texte",
-  "article.descriptionHint": "Affichée dans les résultats de recherche et les cartes sociales ; sous 160 caractères, c'est idéal.",
+  "article.descriptionHint":
+    "Affichée dans les résultats de recherche et les cartes sociales ; sous 160 caractères, c'est idéal.",
   "article.toolH2": "Titre 2",
   "article.toolH3": "Titre 3",
   "article.toolBold": "Gras",
@@ -642,6 +647,17 @@ const messages = {
   "usage.planMembers": "Membres",
   "usage.disclaimer":
     "Estimation mesurée par vos soins, et non la facture officielle de Cloudflare ; la facturation finale relève du Cloudflare Dashboard.",
+  "usage.cfTitle": "Utilisation des ressources Cloudflare",
+  "usage.cfPeriod": "Période",
+  "usage.cfWorkerRequests": "Requêtes du mois",
+  "usage.cfD1Storage": "Stockage D1",
+  "usage.cfD1Rows": "Lignes lues / écrites ce mois-ci",
+  "usage.cfR2Storage": "Stockage R2",
+  "usage.cfR2Objects": "Objets R2",
+  "usage.cfR2Ops": "Opérations Class A / B ce mois-ci",
+  "usage.cfPartial": "Certaines données sont indisponibles",
+  "usage.cfDisclaimer":
+    "Les chiffres proviennent directement de Cloudflare Analytics ; le stockage R2 accuse un retard d environ 24 heures. La facturation finale fait foi sur le Cloudflare Dashboard.",
   "auth.unnamedToken": "Jeton sans nom",
   "auth.active": "Actif",
   "auth.revoked": "Révoqué",
