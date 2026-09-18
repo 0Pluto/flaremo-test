@@ -19,6 +19,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { checkPluginFiles } from "../plugins/src/check";
 import { zipPluginFiles } from "../plugins/src/package";
 import { PLUGIN_SPEC_VERSION } from "../plugins/src/spec";
 import { validatePluginManifest } from "../plugins/src/validate";
@@ -112,6 +113,27 @@ async function buildTier(
     if (manifest.id !== folder) {
       throw new Error(
         `plugins/${tier}/${folder}: id "${manifest.id}" must match the folder name`,
+      );
+    }
+
+    // The store build enforces the same rules as `pnpm plugin:check` and the
+    // instance install path, so a published artifact is always installable.
+    const check = checkPluginFiles({
+      files: Object.fromEntries(
+        Object.entries(files).map(([name, data]) => [
+          name.slice(`${tier}/${folder}/`.length),
+          data,
+        ]),
+      ),
+      rootFolder: folder,
+      tier,
+    });
+    const errors = check.issues.filter((issue) => issue.severity === "error");
+    if (errors.length > 0) {
+      throw new Error(
+        `plugins/${tier}/${folder} failed validation:\n${errors
+          .map((issue) => `  - ${issue.where ? `${issue.where}: ` : ""}${issue.message}`)
+          .join("\n")}`,
       );
     }
 

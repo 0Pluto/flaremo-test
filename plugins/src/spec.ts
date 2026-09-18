@@ -112,6 +112,21 @@ export type PluginManifest = {
 
 export const PLUGIN_ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
+/**
+ * Hard limits of the package format. Enforced by the extractor (zips) and the
+ * checker (folders and zip contents alike) so authors see the same numbers
+ * locally that instances enforce on install.
+ */
+export const PLUGIN_PACKAGE_LIMITS = {
+  maxZipBytes: 4 * 1024 * 1024,
+  maxFiles: 64,
+  maxFileBytes: 4 * 1024 * 1024,
+  maxTotalBytes: 8 * 1024 * 1024,
+  maxPreviewBytes: 512 * 1024,
+  maxFonts: 2,
+  maxFontBytes: 400 * 1024,
+} as const;
+
 /** A contribution plus the plugin identity it came from. */
 export type BundledContribution = ShareCardContribution & {
   pluginId: string;

@@ -43,6 +43,8 @@
     "write-wrangler-config:test": "node --test ./scripts/write-wrangler-config.test.mjs",
     "screenshots": "node ./scripts/capture-screenshots.mjs",
     "plugins:build": "tsx ./scripts/plugins-build.ts",
+    "plugin:check": "tsx ./scripts/plugin-check.ts",
+    "plugin:new": "tsx ./scripts/plugin-new.ts",
     "db:generate": "drizzle-kit generate",
     "migrate:local": "wrangler d1 migrations apply DB --local --config ./wrangler.jsonc",
     "migrate:remote": "wrangler d1 migrations apply DB --remote --config ./wrangler.jsonc",
