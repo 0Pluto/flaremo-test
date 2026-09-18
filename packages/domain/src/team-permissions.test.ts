@@ -119,15 +119,17 @@ describe("team memo permissions", () => {
     expect(canEditMemo(reader, memo("protected"))).toBe(false);
     expect(canGovernMemo(reader, memo("protected"))).toBe(false);
     expect(canDeleteMemo(reader, memo("protected"))).toBe(false);
-    // Personal notes stay fully theirs.
-    expect(canEditMemo(reader, memo("private"))).toBe(true);
+    // Authorship is unaffected: a reader's own personal notes stay theirs.
+    expect(canEditMemo(user("users/a", "reader"), memo("private"))).toBe(true);
   });
 
-  it("keeps publishing open for every non-reader role", () => {
+  it("keeps publishing open for every non-reader member", () => {
     for (const actor of [author, member, admin, owner]) {
       expect(canPublishTeamMemo(actor)).toBe(true);
     }
-    expect(canPublishTeamMemo(userOutsideTeam("users/out"))).toBe(false);
+    // The predicate is role-level only; a non-member's team publish attempt
+    // still fails in resolveMemoTeamId because no membership resolves a team.
+    expect(canPublishTeamMemo(userOutsideTeam("users/out"))).toBe(true);
   });
 
   it("rejects removed members", () => {
