@@ -9,7 +9,8 @@ import {
   DownloadIcon,
   ListTodoIcon,
   MenuIcon,
-  SettingsIcon,
+  PanelLeftCloseIcon,
+  PanelLeftOpenIcon,
   SparklesIcon,
   UploadIcon,
   XIcon,
@@ -44,7 +45,6 @@ import { FlareMoExplorer } from "@/components/flaremo-explorer";
 import { InfoTip } from "@/components/info-tip";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { MemoList } from "@/components/memo-list";
-import { NotificationBell } from "@/components/notification-bell";
 import { PwaUpdatePrompt } from "@/components/pwa-update-prompt";
 import { ScopeSwitcher } from "@/components/scope-switcher";
 import { Button } from "@/components/ui/button";
@@ -62,7 +62,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { UpdateStatus } from "@/components/update-status";
+import { UserMenu } from "@/components/user-menu";
 import { WorkspaceComposer } from "@/components/workspace-composer";
 import { WorkspaceSearch } from "@/components/workspace-search";
 import { useDataTransfer } from "@/hooks/use-data-transfer";
@@ -89,6 +89,8 @@ import { AppRoutes } from "@/router-tree";
 import { indexRoute, registerWorkspaceComponent } from "@/routes/index-route";
 
 const PAGE_SIZE = 30;
+// Persisted so a collapsed desktop sidebar stays collapsed across reloads.
+const SIDEBAR_COLLAPSED_KEY = "flaremo.sidebar.collapsed";
 const EMPTY_STATS: MemoStatsResponse = {
   counts: { normal: 0, archived: 0, trashed: 0, total: 0 },
   active_days: 0,
@@ -191,6 +193,24 @@ export function FlareMoApp() {
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [shortcutsOpen, setShowShortcutsOpen] = useState(false);
   const [accountSettingsOpen, setAccountSettingsOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const toggleSidebarCollapsed = useCallback(() => {
+    setSidebarCollapsed((collapsed) => {
+      const next = !collapsed;
+      try {
+        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? "1" : "0");
+      } catch {
+        // Persistence is best-effort; the in-memory choice still applies.
+      }
+      return next;
+    });
+  }, []);
   const searchQuery = query.trim();
   const isSearching = Boolean(searchQuery);
   const [semanticMode, setSemanticMode] = useState(false);
@@ -465,26 +485,36 @@ export function FlareMoApp() {
     : memosQuery.isFetching && !memosQuery.isFetchingNextPage;
   const hasFilters = Boolean(query.trim() || activeTag || untagged);
 
-  const renderExplorer = (importInputId: string, onNavigate?: () => void) => (
+  const renderExplorer = (
+    importInputId: string,
+    {
+      onNavigate,
+      showCollapse = false,
+    }: { onNavigate?: () => void; showCollapse?: boolean } = {},
+  ) => (
     <FlareMoExplorer
       activeTag={activeTag}
+      header={
+        <UserMenu
+          onOpenSettings={() => {
+            onNavigate?.();
+            setAccountSettingsOpen(true);
+          }}
+          user={currentUserQuery.data}
+        />
+      }
       headerAction={
-        <div className="mr-8 flex items-center gap-1 lg:mr-0">
-          <NotificationBell />
-          <UpdateStatus />
+        showCollapse ? (
           <Button
-            onClick={() => {
-              onNavigate?.();
-              setAccountSettingsOpen(true);
-            }}
-            title={t("auth.accountTitle")}
-            aria-label={t("auth.accountTitle")}
+            aria-label={t("sidebar.collapse")}
             size="icon-sm"
+            title={t("sidebar.collapse")}
             variant="ghost"
+            onClick={toggleSidebarCollapsed}
           >
-            <SettingsIcon />
+            <PanelLeftCloseIcon />
           </Button>
-        </div>
+        ) : undefined
       }
       footer={
         <div className="flex items-center gap-1 text-muted-foreground">
@@ -557,8 +587,15 @@ export function FlareMoApp() {
   return (
     <div className="h-svh overflow-hidden bg-background">
       <div className="mx-auto flex h-full w-full max-w-[950px]">
-        <div className="no-scrollbar hidden h-full w-[312px] shrink-0 overflow-y-auto border-r bg-background lg:block">
-          {renderExplorer("flaremo-import-file-desktop")}
+        <div
+          className={cn(
+            "no-scrollbar h-full w-[312px] shrink-0 overflow-y-auto border-r bg-background",
+            sidebarCollapsed ? "hidden" : "hidden lg:block",
+          )}
+        >
+          {renderExplorer("flaremo-import-file-desktop", {
+            showCollapse: true,
+          })}
         </div>
         <div className="flex h-full min-w-0 flex-1 flex-col">
           <header
@@ -570,6 +607,18 @@ export function FlareMoApp() {
             )}
           >
             <div className="flex h-14 items-center gap-2 px-5 lg:px-3">
+              {sidebarCollapsed && (
+                <Button
+                  aria-label={t("sidebar.expand")}
+                  className="hidden lg:inline-flex"
+                  size="icon-sm"
+                  title={t("sidebar.expand")}
+                  variant="ghost"
+                  onClick={toggleSidebarCollapsed}
+                >
+                  <PanelLeftOpenIcon />
+                </Button>
+              )}
               <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
                 <SheetTrigger
                   render={
@@ -594,9 +643,9 @@ export function FlareMoApp() {
                     className="no-scrollbar h-full overflow-y-auto overscroll-contain"
                     data-testid="mobile-sidebar-scroll"
                   >
-                    {renderExplorer("flaremo-import-file-mobile", () =>
-                      setMobileSheetOpen(false),
-                    )}
+                    {renderExplorer("flaremo-import-file-mobile", {
+                      onNavigate: () => setMobileSheetOpen(false),
+                    })}
                   </div>
                 </SheetContent>
               </Sheet>
