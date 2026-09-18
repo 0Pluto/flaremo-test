@@ -1,11 +1,11 @@
 {
   "specVersion": 1,
   "name": "FlareMo 官方目录",
-  "updatedAt": "2026-09-18T08:07:06.369Z",
+  "updatedAt": "2026-09-18T08:21:34.009Z",
   "plugins": [
     {
       "id": "flaremo-cards",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "tier": "official",
       "name": {
         "zh-CN": "基础卡片",
@@ -18,8 +18,8 @@
         "ar": "البطاقات الأساسية"
       },
       "description": {
-        "zh-CN": "素白、日签、票根——三张随 FlareMo 内置的基础卡。",
-        "en-US": "Plain, daily, and ticket — the three cards bundled with FlareMo."
+        "zh-CN": "素白、日签、票根、明信片——四张随 FlareMo 内置的基础卡。",
+        "en-US": "Plain, daily, ticket, and postcard — the four cards bundled with FlareMo."
       },
       "author": {
         "name": "FlareMo"
@@ -82,13 +82,31 @@
               "width": 340,
               "height": 420
             }
+          },
+          {
+            "id": "postcard",
+            "kind": "document",
+            "name": {
+              "zh-CN": "明信片",
+              "en-US": "Postcard",
+              "ja": "ポストカード",
+              "ko": "엽서",
+              "ru": "Открытка",
+              "fr": "Carte postale",
+              "es": "Postal",
+              "ar": "بطاقة بريدية"
+            },
+            "size": {
+              "width": 340,
+              "height": 420
+            }
           }
         ]
       },
       "artifact": {
-        "url": "flaremo-cards/flaremo-cards-1.0.0.zip",
-        "sha256": "f270564534cd608c19683f381bfe281926d8bc97d8beff68f495ac2655846ac1",
-        "size": 3324
+        "url": "flaremo-cards/flaremo-cards-1.1.0.zip",
+        "sha256": "ad3e589ae40f5c2f8b728314121f97b7a084ff20fc2e485488e3479e27e07a81",
+        "size": 5098
       }
     },
     {
