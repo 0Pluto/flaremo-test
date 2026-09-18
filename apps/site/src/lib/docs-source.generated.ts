@@ -16,6 +16,7 @@ import enAgentDeploy from "../../../../docs/en/agent-deploy.md?raw";
 import enDeploy from "../../../../docs/en/deploy.md?raw";
 import enMemosCompatibility from "../../../../docs/en/memos-compatibility.md?raw";
 import enPlugins from "../../../../docs/en/plugins.md?raw";
+import enTeamMode from "../../../../docs/en/team-mode.md?raw";
 import enUpdate from "../../../../docs/en/update.md?raw";
 import maintenance from "../../../../docs/maintenance.md?raw";
 import memosCompatibility from "../../../../docs/memos-compatibility.md?raw";
@@ -27,7 +28,6 @@ import semanticSearch from "../../../../docs/semantic-search.md?raw";
 import teamMode from "../../../../docs/team-mode.md?raw";
 import techStack from "../../../../docs/tech-stack.md?raw";
 import update from "../../../../docs/update.md?raw";
-import enTeamMode from "../../../../docs/en/team-mode.md?raw";
 
 export type DocLocale = "zh-CN" | "en-US";
 

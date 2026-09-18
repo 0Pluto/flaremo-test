@@ -1,11 +1,11 @@
 {
   "specVersion": 1,
   "name": "FlareMo 官方目录",
-  "updatedAt": "2026-09-18T09:20:31.769Z",
+  "updatedAt": "2026-09-18T13:33:52.160Z",
   "plugins": [
     {
       "id": "flaremo-cards",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "tier": "official",
       "name": {
         "zh-CN": "基础卡片",
@@ -18,8 +18,8 @@
         "ar": "البطاقات الأساسية"
       },
       "description": {
-        "zh-CN": "素白、日签、票根、明信片——四张随 FlareMo 内置的基础卡。",
-        "en-US": "Plain, daily, ticket, and postcard — the four cards bundled with FlareMo."
+        "zh-CN": "素白、日签、票根、明信片、语录、思考笺、素墨、暮火——精心打磨的内置卡片。",
+        "en-US": "Plain, daily, ticket, postcard, quote, mono, zen, and ember — crafted cards bundled with FlareMo."
       },
       "author": {
         "name": "FlareMo"
@@ -104,13 +104,85 @@
               "height": 420
             },
             "preview": "flaremo-cards/postcard.png"
+          },
+          {
+            "id": "quote",
+            "kind": "document",
+            "name": {
+              "zh-CN": "语录",
+              "en-US": "Quote",
+              "ja": "語録",
+              "ko": "어록",
+              "ru": "Цитата",
+              "fr": "Citation",
+              "es": "Cita",
+              "ar": "اقتباس"
+            },
+            "size": {
+              "width": 340,
+              "height": 420
+            }
+          },
+          {
+            "id": "mono",
+            "kind": "document",
+            "name": {
+              "zh-CN": "思考笺",
+              "en-US": "Mono",
+              "ja": "思考箋",
+              "ko": "생각 노트",
+              "ru": "Заметка Mono",
+              "fr": "Feuille Mono",
+              "es": "Nota Mono",
+              "ar": "مذكرة مونو"
+            },
+            "size": {
+              "width": 340,
+              "height": 420
+            }
+          },
+          {
+            "id": "zen",
+            "kind": "document",
+            "name": {
+              "zh-CN": "素墨",
+              "en-US": "Zen",
+              "ja": "素墨",
+              "ko": "소묵",
+              "ru": "Дзен",
+              "fr": "Zen",
+              "es": "Zen",
+              "ar": "زن"
+            },
+            "size": {
+              "width": 340,
+              "height": 420
+            }
+          },
+          {
+            "id": "ember",
+            "kind": "document",
+            "name": {
+              "zh-CN": "暮火",
+              "en-US": "Ember",
+              "ja": "残火",
+              "ko": "잔불",
+              "ru": "Уголек",
+              "fr": "Braise",
+              "es": "Ascuas",
+              "ar": "جمرة"
+            },
+            "size": {
+              "width": 340,
+              "height": 420
+            }
           }
         ]
       },
       "artifact": {
-        "url": "flaremo-cards/flaremo-cards-1.1.0.zip",
-        "sha256": "fc3ef490c0c6708be727b66d173f9bb2fad5401a51e115a36f9dcf1ba3230e1e",
-        "size": 197001
+        "url": "flaremo-cards/flaremo-cards-1.2.0.zip",
+        "sha256": "ec6bc7c2904f4c7ead2e661e88ad51973b2aabb4ef42fa3f03e74d0cd63079e3",
+        "size": 198849
       }
     },
     {
@@ -232,8 +304,8 @@
       },
       "artifact": {
         "url": "kosx-pack/kosx-pack-1.0.0.zip",
-        "sha256": "0babfcef0ff6ce269d13240dd90bef1e9b389f28a2f146ef31f14e81073b1bf4",
-        "size": 100233
+        "sha256": "72d1a0dfc153a493061ef6ec2b4d6d2a707f7617d69b2084ac185c1623f79ff5",
+        "size": 100082
       }
     }
   ]
