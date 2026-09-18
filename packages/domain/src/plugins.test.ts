@@ -17,9 +17,9 @@ describe("plugin settings normalization", () => {
     expect(normalizePluginSettings("nope" as never)).toEqual(
       DEFAULT_PLUGIN_SETTINGS,
     );
-    expect(
-      normalizePluginSettings({ enabledPlugins: 42 } as never),
-    ).toEqual(DEFAULT_PLUGIN_SETTINGS);
+    expect(normalizePluginSettings({ enabledPlugins: 42 } as never)).toEqual(
+      DEFAULT_PLUGIN_SETTINGS,
+    );
     expect(
       normalizePluginSettings({ cards: { order: ["Bad_ID!"] } } as never),
     ).toEqual(DEFAULT_PLUGIN_SETTINGS);
@@ -116,7 +116,9 @@ describe("plugin settings persistence", () => {
       disabledPlugins: ["sandbox-demo"],
       cards: { order: ["ticket"], hidden: [], default: "ticket", options: {} },
     });
-    const patched = await setPluginSettings(db, { cards: { hidden: ["daily"] } });
+    const patched = await setPluginSettings(db, {
+      cards: { hidden: ["daily"] },
+    });
     expect(patched.disabledPlugins).toEqual(["sandbox-demo"]);
     expect(patched.cards.order).toEqual(["ticket"]);
     expect(patched.cards.hidden).toEqual(["daily"]);

@@ -60,7 +60,12 @@ function pluginLabel(
 }
 
 function cardLabel(card: BundledShareCard, locale: string): string {
-  return card.name[locale] ?? card.name["en-US"] ?? Object.values(card.name)[0] ?? card.id;
+  return (
+    card.name[locale] ??
+    card.name["en-US"] ??
+    Object.values(card.name)[0] ??
+    card.id
+  );
 }
 
 export function PluginsCard() {
@@ -210,7 +215,11 @@ export function PluginsCard() {
     });
   };
 
-  const setOption = (cardId: string, key: string, value: ShareCardOptionValue) => {
+  const setOption = (
+    cardId: string,
+    key: string,
+    value: ShareCardOptionValue,
+  ) => {
     const cardOptions = { ...(draft.cards.options[cardId] ?? {}) };
     cardOptions[key] = value;
     persist({
