@@ -7,6 +7,7 @@ import {
   ChevronRightIcon,
   CircleIcon,
   DownloadIcon,
+  EyeIcon,
   ListTodoIcon,
   MenuIcon,
   PanelLeftCloseIcon,
@@ -371,6 +372,12 @@ export function FlareMoApp() {
     staleTime: 30_000,
     retry: false,
   });
+  // Readers (time-boxed read-only seats) browse the team space but never
+  // publish into it; their composer target stays personal everywhere.
+  const isReader = currentUserQuery.data?.role === "reader";
+  const canPublishTeam =
+    Boolean(currentUserQuery.data?.team) && !isReader;
+  const teamExpired = Boolean(currentUserQuery.data?.team_expired);
   // "On this day" teaser for the timeline top: notes from past years dated
   // today. The query shares the daily-review page's cache entry, so landing
   // on the banner costs nothing extra.
@@ -690,11 +697,23 @@ export function FlareMoApp() {
               isPending={isUpdating}
             />
             <div className="flex flex-col gap-3">
+              {teamExpired && (
+                <div className="flex items-center gap-2 rounded-lg border border-dashed border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground motion-safe:animate-rise">
+                  <EyeIcon aria-hidden="true" className="size-3.5 shrink-0" />
+                  {t("space.expiredNotice")}
+                </div>
+              )}
+              {isReader && space === "team" && (
+                <div className="flex items-center gap-2 rounded-lg border border-dashed border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground motion-safe:animate-rise">
+                  <EyeIcon aria-hidden="true" className="size-3.5 shrink-0" />
+                  {t("space.readonlyNotice")}
+                </div>
+              )}
               <WorkspaceComposer
-                visible={view === "all"}
+                visible={view === "all" && !(isReader && space === "team")}
                 composeRequested={composeRequested}
                 space={space}
-                hasTeam={Boolean(currentUserQuery.data?.team)}
+                hasTeam={canPublishTeam}
                 tags={stats.tags}
                 captureAvailable={Boolean(captureStatusQuery.data?.available)}
               />

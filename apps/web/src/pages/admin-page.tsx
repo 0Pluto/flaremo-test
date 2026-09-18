@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  EyeIcon,
+  EyeOffIcon,
   ImageUpIcon,
   KeyRoundIcon,
   Loader2Icon,
@@ -23,6 +25,8 @@ import {
   getCurrentFlareMoUser,
   listAdminUsers,
   requestAdminPasswordReset,
+  revokeAdminUserReader,
+  setAdminUserReader,
   updateAdminBrandingAccent,
   updateAdminBrandingProductName,
   updateAdminUserRole,
@@ -122,6 +126,25 @@ export function AdminPanel() {
       });
     },
   });
+  const setReaderMutation = useMutation({
+    mutationFn: ({ id, expiresAt }: { id: string; expiresAt: string | null }) =>
+      setAdminUserReader(id, expiresAt),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["current-flaremo-user"],
+      });
+    },
+  });
+  const revokeReaderMutation = useMutation({
+    mutationFn: (id: string) => revokeAdminUserReader(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["current-flaremo-user"],
+      });
+    },
+  });
 
   const handleCreateUser = async () => {
     setCreateError(null);
@@ -169,6 +192,34 @@ export function AdminPanel() {
       });
     } catch (error) {
       toast.error(errorMessage(error, t("admin.roleUpdateFailed")));
+    }
+  };
+
+  // Renewal extends from max(now, current expiry) so topping up an active
+  // seat never discards the days already paid for.
+  const readerExpiryBase = (user: AdminUser): number => {
+    const current = user.reader_expires_at
+      ? new Date(user.reader_expires_at).getTime()
+      : Number.NaN;
+    return Number.isNaN(current) ? Date.now() : Math.max(Date.now(), current);
+  };
+
+  const handleSetReader = async (user: AdminUser, days: number) => {
+    try {
+      await setReaderMutation.mutateAsync({
+        id: user.id,
+        expiresAt: new Date(readerExpiryBase(user) + days * 86_400_000).toISOString(),
+      });
+    } catch (error) {
+      toast.error(errorMessage(error, t("admin.readerSetFailed")));
+    }
+  };
+
+  const handleRevokeReader = async (user: AdminUser) => {
+    try {
+      await revokeReaderMutation.mutateAsync(user.id);
+    } catch (error) {
+      toast.error(errorMessage(error, t("admin.readerRevokeFailed")));
     }
   };
 
@@ -260,9 +311,18 @@ export function AdminPanel() {
                                 ? t("admin.role.owner")
                                 : user.role === "admin"
                                   ? t("admin.role.admin")
-                                  : t("admin.role.member")}
+                                  : user.role === "reader"
+                                    ? t("admin.role.reader")
+                                    : t("admin.role.member")}
                             </Badge>
                           </div>
+                          {user.role === "reader" && user.reader_expires_at && (
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              {t("admin.readerExpiry", {
+                                date: formatDate(user.reader_expires_at),
+                              })}
+                            </p>
+                          )}
                           <p className="mt-1 truncate text-xs text-muted-foreground">
                             {user.email}
                           </p>
@@ -290,6 +350,38 @@ export function AdminPanel() {
                                   {user.role === "admin"
                                     ? t("admin.makeMember")
                                     : t("admin.makeAdmin")}
+                                </DropdownMenuItem>
+                              )}
+                              {(user.role === "member" ||
+                                user.role === "reader" ||
+                                user.role === null) && (
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={() => void handleSetReader(user, 30)}
+                                  >
+                                    <EyeIcon />
+                                    {user.role === "reader"
+                                      ? t("admin.renewReader30")
+                                      : t("admin.makeReader30")}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      void handleSetReader(user, 365)
+                                    }
+                                  >
+                                    <EyeIcon />
+                                    {user.role === "reader"
+                                      ? t("admin.renewReader365")
+                                      : t("admin.makeReader365")}
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                              {user.role === "reader" && (
+                                <DropdownMenuItem
+                                  onClick={() => void handleRevokeReader(user)}
+                                >
+                                  <EyeOffIcon />
+                                  {t("admin.revokeReader")}
                                 </DropdownMenuItem>
                               )}
                               {(isTeamOwner || user.role === "member") && (
@@ -572,6 +664,17 @@ function AccentPicker({
       })}
     </fieldset>
   );
+}
+
+function formatDate(iso: string): string {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime())
+    ? iso
+    : date.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
 }
 
 function filterMembers(users: AdminUser[], search: string): AdminUser[] {

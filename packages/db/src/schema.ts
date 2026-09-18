@@ -222,7 +222,13 @@ export const authMembers = sqliteTable(
     userId: text("user_id")
       .notNull()
       .references(() => authUsers.id, { onDelete: "cascade" }),
-    role: text("role", { enum: ["owner", "admin", "member"] }).notNull(),
+    // "reader" is a read-only, optionally time-boxed seat: readers browse the
+    // team space but can never publish into it (resolveMemoTeamId denies
+    // them). expiresAt only carries meaning for readers; an expired reader is
+    // treated as a non-member at membership resolution (fail-closed), so no
+    // cron sweep is needed to cut off access.
+    role: text("role", { enum: ["owner", "admin", "member", "reader"] }).notNull(),
+    expiresAt: authTimestamp("expires_at"),
     createdAt: authTimestamp("created_at").notNull(),
   },
   (table) => [

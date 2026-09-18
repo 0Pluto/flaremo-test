@@ -30,6 +30,7 @@ import {
   assertCanDeleteMemo,
   assertCanEditMemo,
   assertCanGovernMemo,
+  canPublishTeamMemo,
   canReadMemo,
   isActiveTeamMember,
   memoReadScope,
@@ -93,13 +94,18 @@ export function assertMemoContentSize(content: string) {
 /**
  * Resolve the owning team for a memo from its visibility. Personal memos
  * ("private") carry no team; team/public memos are published into the
- * viewer's team, which requires an actual team membership.
+ * viewer's team, which requires an actual team membership. Readers are the
+ * read-only seat: every publishing path (create, republish, and PAT/API
+ * writes) funnels through here, so this single denial closes them all.
  */
 export function resolveMemoTeamId(
   viewer: TeamViewer,
   visibility: MemoRow["visibility"],
 ): string | null {
   if (visibility === "private") return null;
+  if (!canPublishTeamMemo(viewer)) {
+    throw new ForbiddenError("Read-only members cannot publish team memos.");
+  }
   const teamId = viewer.teamOrganizationId ?? null;
   if (!teamId) {
     throw new ValidationError(

@@ -55,6 +55,10 @@ const teamRoles = {
     member: ["invite", "remove", "reset-password"],
   }),
   member: teamAccessControl.newRole({ memo: [], member: [] }),
+  // Read-only, optionally time-boxed seat. Zero statements — Better Auth's
+  // organization endpoints fail closed for it, and FlareMo's publishing
+  // denial lives in resolveMemoTeamId (domain).
+  reader: teamAccessControl.newRole({ memo: [], member: [] }),
 };
 
 export class AuthConfigurationError extends Error {

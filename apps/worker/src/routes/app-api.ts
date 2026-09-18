@@ -31,6 +31,7 @@ import {
   getBranding,
   getCalendarView,
   getFlaremoUserNames,
+  getMembershipState,
   getMemoById,
   getMemoStats,
   getRandomMemo,
@@ -112,8 +113,16 @@ appApi.get("/me", async (c) => {
       email: resolvedAuthUser?.email ?? user.email,
       username: resolvedAuthUser?.username ?? user.id.replace(/^users\//, ""),
       // Drives the workspace sidebar: the team space entry renders only when
-      // the viewer holds a membership, labelled with the organization name.
+      // the viewer holds an unexpired membership, labelled with the
+      // organization name. team_expired distinguishes "membership lapsed"
+      // (reader seat past its expiry) from "never joined" so the UI can show
+      // a renewal notice instead of silently hiding the space.
       team: await getViewerTeamInfo(db, authUserId),
+      team_expired: await (async () => {
+        const state = await getMembershipState(db, authUserId);
+        if (!state || state.role !== "reader" || !state.expiresAt) return false;
+        return state.expiresAt.getTime() <= Date.now();
+      })(),
     });
   } catch (error) {
     return jsonError(c, error);

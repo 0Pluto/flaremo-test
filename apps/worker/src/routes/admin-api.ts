@@ -23,9 +23,10 @@ import {
   getBranding,
   getFlaremoUserById,
   getMemberRemovalJob,
+  getMembershipState,
   getPluginSettings,
   getUserRegistrationAllowed,
-  getViewerTeamMembership,
+  grantTeamReader,
   isInstanceOwner,
   isTeamAdmin,
   isTeamOwner,
@@ -36,6 +37,7 @@ import {
   PLUGIN_LIST_LIMIT,
   type ResolvedBranding,
   rebuildEmbeddingIndexes,
+  revokeTeamReader,
   setBrandingAccent,
   setBrandingProductName,
   setPluginSettings,
@@ -88,16 +90,27 @@ async function ownerContext(c: Parameters<typeof getBrowserRequestContext>[0]) {
 }
 
 /**
- * Resolve a member's team role through their Better Auth identity. Removed
- * members have no membership row and surface with a null role.
+ * Resolve a member's team membership (role + reader expiry) through their
+ * Better Auth identity. Removed members have no membership row and surface
+ * with null.
  */
-async function teamMemberRole(
+async function teamMembershipInfo(
   db: FlareMoDb,
   flaremoUserId: string,
-): Promise<"owner" | "admin" | "member" | null> {
+): Promise<{
+  role: "owner" | "admin" | "member" | "reader";
+  expiresAt: Date | null;
+} | null> {
   const authUserId = await getAuthUserIdByFlaremoUserId(db, flaremoUserId);
   if (!authUserId) return null;
-  return (await getViewerTeamMembership(db, authUserId))?.role ?? null;
+  const state = await getMembershipState(db, authUserId);
+  if (!state) return null;
+  return { role: state.role, expiresAt: state.expiresAt };
+}
+
+/** Serialize reader expiry as an ISO string for the admin user DTO. */
+function readerExpiresAt(expiresAt: Date | null): string | null {
+  return expiresAt ? expiresAt.toISOString() : null;
 }
 
 // Kept as a compatibility endpoint for existing deployments and clients. The
@@ -315,13 +328,17 @@ adminApi.get("/users", async (c) => {
         const authUser = authUserId
           ? await getAuthUserById(db, authUserId)
           : null;
+        const membership = authUserId
+          ? await teamMembershipInfo(db, member.id)
+          : null;
         return {
           id: member.id,
           email: authUser?.email ?? member.email,
           name: member.name,
           username: authUser?.username ?? member.id.replace(/^users\//, ""),
-          role: authUserId
-            ? ((await getViewerTeamMembership(db, authUserId))?.role ?? null)
+          role: membership?.role ?? null,
+          reader_expires_at: membership
+            ? readerExpiresAt(membership.expiresAt)
             : null,
           status: member.status,
           created_at: member.createdAt,
@@ -401,7 +418,7 @@ adminApi.patch(
       // manage members but never change roles (peer-protection rule). The
       // owner-target guard comes first so a non-owner administrator sees the
       // same owner-immutability error the domain enforces.
-      const targetRole = await teamMemberRole(context.db, id);
+      const targetRole = (await teamMembershipInfo(context.db, id))?.role ?? null;
       if (targetRole === "owner") {
         throw new ForbiddenError("The owner role cannot be changed.");
       }
@@ -433,6 +450,96 @@ adminApi.patch(
   },
 );
 
+const setReaderSchema = z.object({
+  // Absolute expiry timestamp (ISO-8601); null = a reader seat without an
+  // expiry. Renewal arithmetic (extend from max(now, current expiry)) is the
+  // admin UI's job — this endpoint stores the computed date.
+  expires_at: z.string().min(1).nullable(),
+});
+
+adminApi.put(
+  "/users/:id/reader",
+  zValidator("json", setReaderSchema),
+  async (c) => {
+    try {
+      const context = await teamAdminContext(c);
+      const id = c.req.param("id");
+      const authUserId = await getAuthUserIdByFlaremoUserId(context.db, id);
+      if (!authUserId) {
+        throw new NotFoundError("Active member not found");
+      }
+      // Peer protection: reader is a downgrade — it can be granted to plain
+      // members or to users outside the team, never to administrators or the
+      // owner (whose role is immutable anyway).
+      const targetRole = (await teamMembershipInfo(context.db, id))?.role ?? null;
+      if (targetRole === "owner" || targetRole === "admin") {
+        throw new ForbiddenError(
+          "Administrators and the owner cannot become readers.",
+        );
+      }
+      const rawExpiresAt = c.req.valid("json").expires_at;
+      let expiresAt: Date | null = null;
+      if (rawExpiresAt) {
+        expiresAt = new Date(rawExpiresAt);
+        if (Number.isNaN(expiresAt.getTime())) {
+          throw new ValidationError("expires_at must be a valid date.");
+        }
+      }
+      await grantTeamReader(context.db, { authUserId, expiresAt });
+      const member = await getFlaremoUserById(context.db, id);
+      if (!member) {
+        throw new NotFoundError("Active member not found");
+      }
+      const authUser = await getAuthUserById(context.db, authUserId);
+      return c.json({
+        id: member.id,
+        email: authUser?.email ?? member.email,
+        name: member.name,
+        username: authUser?.username ?? member.id.replace(/^users\//, ""),
+        role: "reader" as const,
+        reader_expires_at: readerExpiresAt(expiresAt),
+        status: member.status,
+        created_at: member.createdAt,
+      });
+    } catch (error) {
+      return jsonError(c, error);
+    }
+  },
+);
+
+adminApi.delete("/users/:id/reader", async (c) => {
+  try {
+    const context = await teamAdminContext(c);
+    const id = c.req.param("id");
+    const authUserId = await getAuthUserIdByFlaremoUserId(context.db, id);
+    if (!authUserId) {
+      throw new NotFoundError("Active member not found");
+    }
+    const membership = await teamMembershipInfo(context.db, id);
+    if (!membership || membership.role !== "reader") {
+      throw new NotFoundError("Reader seat not found");
+    }
+    await revokeTeamReader(context.db, authUserId);
+    const member = await getFlaremoUserById(context.db, id);
+    if (!member) {
+      throw new NotFoundError("Active member not found");
+    }
+    const authUser = await getAuthUserById(context.db, authUserId);
+    return c.json({
+      id: member.id,
+      email: authUser?.email ?? member.email,
+      name: member.name,
+      username: authUser?.username ?? member.id.replace(/^users\//, ""),
+      role: null,
+      reader_expires_at: null,
+      status: member.status,
+      created_at: member.createdAt,
+    });
+  } catch (error) {
+    return jsonError(c, error);
+  }
+});
+
 adminApi.delete("/users/:id", async (c) => {
   let jobId: string | undefined;
   try {
@@ -445,7 +552,7 @@ adminApi.delete("/users/:id", async (c) => {
       throw new NotFoundError("Member not found");
     }
     // Peer protection: only the team owner removes administrators.
-    const targetRole = await teamMemberRole(context.db, id);
+    const targetRole = (await teamMembershipInfo(context.db, id))?.role ?? null;
     if (targetRole === "admin" && !isTeamOwner(context.user)) {
       throw new ForbiddenError(
         "Only the team owner can remove an administrator.",
@@ -581,7 +688,7 @@ adminApi.post("/users/:id/reset-password", async (c) => {
         "The owner password cannot be reset through the admin API.",
       );
     }
-    const targetRole = await teamMemberRole(context.db, id);
+    const targetRole = (await teamMembershipInfo(context.db, id))?.role ?? null;
     if (targetRole === "admin" && !isTeamOwner(context.user)) {
       throw new ForbiddenError(
         "Only the owner can reset another administrator's password.",

@@ -124,15 +124,17 @@ export type RegistrationStatus = {
 
 export type CurrentFlareMoUser = {
   id: string;
-  role: "owner" | "admin" | "member" | null;
+  role: "owner" | "admin" | "member" | "reader" | null;
   is_instance_owner: boolean;
   can_manage_voice_service: boolean;
   status: "active" | "removed";
   name: string;
   email: string;
   username: string;
-  /** Present when the viewer holds a team membership; drives the space UI. */
+  /** Present when the viewer holds an unexpired team membership; drives the space UI. */
   team: { id: string; name: string } | null;
+  /** True when a reader seat exists but has lapsed: the team space is hidden and a renewal notice shows instead. */
+  team_expired?: boolean;
 };
 
 /** Workspace partition of the memo corpus (see docs/team-space-ux.md). */
@@ -143,7 +145,9 @@ export type AdminUser = {
   email: string;
   name: string;
   username: string;
-  role: "owner" | "admin" | "member" | null;
+  role: "owner" | "admin" | "member" | "reader" | null;
+  /** Absolute expiry of the reader seat (ISO string), null when not a reader or the seat has no expiry. */
+  reader_expires_at: string | null;
   status: "active" | "removed";
   created_at: string;
 };
