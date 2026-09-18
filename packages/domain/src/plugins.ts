@@ -123,10 +123,43 @@ function readStored(value: unknown): StoredPluginSettings | null {
 }
 
 /**
- * An id can never be both enabled and disabled: an explicit enable is the
- * stronger signal (it is the only way a community plugin becomes visible), so
- * the disabled entry is dropped. Handles rows written before this rule.
+ * An id can never be both enabled and disabled. The rules:
+ * - A patch replaces the lists it names; unnamed lists keep their old values.
+ * - An explicitly patched `disabledPlugins` has the final say: its ids are
+ *   removed from the enabled list (a later disable always sticks, even if the
+ *   id was explicitly enabled before).
+ * - An enabled-only patch clears its ids from the current disabled list.
+ * - Both lists in one contradictory request resolve to disabled winning (it
+ *   names the safer state).
+ * Legacy rows written before this rule keep enable-wins on read, since an
+ * explicit enable is the only way a community plugin becomes visible.
  */
+function applyListPatch(
+  patch: PluginSettingsPatch,
+  current: PluginSettings,
+): { enabledPlugins: string[]; disabledPlugins: string[] } {
+  const enabledPlugins =
+    patch.enabledPlugins !== undefined
+      ? normalizeIdList(patch.enabledPlugins, "enabledPlugins")
+      : [...current.enabledPlugins];
+  let disabledPlugins =
+    patch.disabledPlugins !== undefined
+      ? normalizeIdList(patch.disabledPlugins, "disabledPlugins")
+      : [...current.disabledPlugins];
+  if (patch.disabledPlugins !== undefined) {
+    const disabled = new Set(disabledPlugins);
+    return {
+      enabledPlugins: enabledPlugins.filter((id) => !disabled.has(id)),
+      disabledPlugins,
+    };
+  }
+  if (patch.enabledPlugins !== undefined) {
+    const enabled = new Set(enabledPlugins);
+    disabledPlugins = disabledPlugins.filter((id) => !enabled.has(id));
+  }
+  return { enabledPlugins, disabledPlugins };
+}
+
 function withoutOverlap(
   enabledPlugins: string[],
   disabledPlugins: string[],
@@ -202,14 +235,7 @@ export async function setPluginSettings(
   const owner = await getFlaremoUserById(db, OWNER_FLAREMO_USER_ID);
   if (!owner) throw new NotFoundError("Owner not found");
   const current = await getPluginSettings(db);
-  const lists = withoutOverlap(
-    patch.enabledPlugins !== undefined
-      ? normalizeIdList(patch.enabledPlugins, "enabledPlugins")
-      : current.enabledPlugins,
-    patch.disabledPlugins !== undefined
-      ? normalizeIdList(patch.disabledPlugins, "disabledPlugins")
-      : current.disabledPlugins,
-  );
+  const lists = applyListPatch(patch, current);
   const next: PluginSettings = {
     enabledPlugins: lists.enabledPlugins,
     disabledPlugins: lists.disabledPlugins,

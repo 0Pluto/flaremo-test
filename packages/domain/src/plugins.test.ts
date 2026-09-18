@@ -158,16 +158,28 @@ describe("plugin settings persistence", () => {
   });
 
   it("never stores an id as both enabled and disabled", async () => {
-    // An explicit enable is the stronger signal; the direct-API path can send
-    // contradictory lists, and the row must not keep the conflict.
+    // The explicitly named list decides; within a single contradictory
+    // request the disabled list wins (it names the safer state).
     const saved = await setPluginSettings(db, {
       enabledPlugins: ["sandbox-demo"],
       disabledPlugins: ["sandbox-demo", "other-plugin"],
     });
-    expect(saved.enabledPlugins).toEqual(["sandbox-demo"]);
-    expect(saved.disabledPlugins).toEqual(["other-plugin"]);
-    // Pre-existing contradictory rows are cleaned on read too.
+    expect(saved.enabledPlugins).toEqual([]);
+    expect(saved.disabledPlugins).toEqual(["sandbox-demo", "other-plugin"]);
     const reread = await getPluginSettings(db);
-    expect(reread.disabledPlugins).toEqual(["other-plugin"]);
+    expect(reread.enabledPlugins).toEqual([]);
+    expect(reread.disabledPlugins).toEqual(["sandbox-demo", "other-plugin"]);
+  });
+
+  it("a later disable sticks even after an explicit enable", async () => {
+    const enabled = await setPluginSettings(db, {
+      enabledPlugins: ["sandbox-demo"],
+    });
+    expect(enabled.enabledPlugins).toEqual(["sandbox-demo"]);
+    const disabled = await setPluginSettings(db, {
+      disabledPlugins: ["sandbox-demo"],
+    });
+    expect(disabled.enabledPlugins).toEqual([]);
+    expect(disabled.disabledPlugins).toEqual(["sandbox-demo"]);
   });
 });
