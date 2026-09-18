@@ -17,7 +17,9 @@ import { toast } from "sonner";
 import {
   type AdminBranding,
   type AdminUser,
+  type BrandingAssetKind,
   type BrandingMarkVariant,
+  clearAdminBrandingFavicon,
   clearAdminBrandingMark,
   createAdminUser,
   deleteAdminUser,
@@ -30,6 +32,7 @@ import {
   updateAdminBrandingAccent,
   updateAdminBrandingProductName,
   updateAdminUserRole,
+  uploadAdminBrandingFavicon,
   uploadAdminBrandingMark,
 } from "@/api";
 import {
@@ -583,6 +586,8 @@ export function AdminPanel() {
 }
 
 const ACCEPTED_MARK_TYPES = "image/png,image/webp,image/svg+xml";
+const ACCEPTED_FAVICON_TYPES =
+  "image/png,image/webp,image/svg+xml,image/x-icon,image/vnd.microsoft.icon";
 const MEMBER_PAGE_SIZE = 20;
 
 /** Swatch dots are fixed hex so the palette reads the same in any theme. */
@@ -798,6 +803,7 @@ export function BrandingCard() {
   const [productName, setProductName] = useState("");
   const lightInputRef = useRef<HTMLInputElement>(null);
   const darkInputRef = useRef<HTMLInputElement>(null);
+  const faviconInputRef = useRef<HTMLInputElement>(null);
 
   const brandingQuery = useQuery({
     queryKey: ["admin-branding"],
@@ -862,6 +868,16 @@ export function BrandingCard() {
       toast.error(errorMessage(error, t("admin.branding.failed"))),
   });
 
+  const uploadFaviconMutation = useMutation({
+    mutationFn: (file: File) => uploadAdminBrandingFavicon(file),
+    onSuccess: () => {
+      toast.success(t("admin.branding.faviconUploaded"));
+      void queryClient.invalidateQueries({ queryKey: ["admin-branding"] });
+    },
+    onError: (error) =>
+      toast.error(errorMessage(error, t("admin.branding.failed"))),
+  });
+
   const clearMarkMutation = useMutation({
     mutationFn: (variant: BrandingMarkVariant) =>
       clearAdminBrandingMark(variant),
@@ -873,19 +889,32 @@ export function BrandingCard() {
       toast.error(errorMessage(error, t("admin.branding.failed"))),
   });
 
+  const clearFaviconMutation = useMutation({
+    mutationFn: () => clearAdminBrandingFavicon(),
+    onSuccess: () => {
+      toast.success(t("admin.branding.faviconRemoved"));
+      void queryClient.invalidateQueries({ queryKey: ["admin-branding"] });
+    },
+    onError: (error) =>
+      toast.error(errorMessage(error, t("admin.branding.failed"))),
+  });
+
   const handleFileChange = (
-    variant: BrandingMarkVariant,
+    kind: BrandingAssetKind,
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (file) {
-      void uploadMarkMutation.mutateAsync({ variant, file });
+    if (!file) return;
+    if (kind === "favicon") {
+      void uploadFaviconMutation.mutateAsync(file);
+    } else {
+      void uploadMarkMutation.mutateAsync({ variant: kind, file });
     }
   };
 
   const renderMarkRow = (
-    variant: BrandingMarkVariant,
+    kind: BrandingAssetKind,
     label: string,
     url: string | null,
     inputRef: React.RefObject<HTMLInputElement | null>,
@@ -902,14 +931,20 @@ export function BrandingCard() {
         <p className="text-sm font-medium">{label}</p>
         <div className="mt-1 flex gap-2">
           <input
-            accept={ACCEPTED_MARK_TYPES}
+            accept={
+              kind === "favicon" ? ACCEPTED_FAVICON_TYPES : ACCEPTED_MARK_TYPES
+            }
             className="hidden"
             ref={inputRef}
             type="file"
-            onChange={(event) => handleFileChange(variant, event)}
+            onChange={(event) => handleFileChange(kind, event)}
           />
           <Button
-            disabled={uploadMarkMutation.isPending}
+            disabled={
+              kind === "favicon"
+                ? uploadFaviconMutation.isPending
+                : uploadMarkMutation.isPending
+            }
             size="sm"
             type="button"
             variant="outline"
@@ -919,11 +954,19 @@ export function BrandingCard() {
           </Button>
           {url && (
             <Button
-              disabled={clearMarkMutation.isPending}
+              disabled={
+                kind === "favicon"
+                  ? clearFaviconMutation.isPending
+                  : clearMarkMutation.isPending
+              }
               size="sm"
               type="button"
               variant="ghost"
-              onClick={() => void clearMarkMutation.mutateAsync(variant)}
+              onClick={() =>
+                kind === "favicon"
+                  ? void clearFaviconMutation.mutateAsync()
+                  : void clearMarkMutation.mutateAsync(kind)
+              }
             >
               <Trash2Icon data-icon="inline-start" />
               {t("admin.branding.remove")}
@@ -1069,6 +1112,12 @@ export function BrandingCard() {
               t("admin.branding.markDark"),
               brandingQuery.data?.mark_dark_url ?? null,
               darkInputRef,
+            )}
+            {renderMarkRow(
+              "favicon",
+              t("admin.branding.favicon"),
+              brandingQuery.data?.favicon_url ?? null,
+              faviconInputRef,
             )}
           </div>
         </DialogContent>

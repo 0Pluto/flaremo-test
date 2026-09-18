@@ -15,6 +15,7 @@ import {
   failMemberRemovalJob,
   finalizeAttachmentCleanupForIds,
   finalizeFlaremoMemberRemoval,
+  getBranding,
   getFlaremoUserById,
   getQueuedMemberRemovalJobsByIds,
   hardDeleteExpiredProjects,
@@ -40,6 +41,7 @@ import { cleanupFlaremoArtifacts } from "./artifact-cleanup";
 import { getTrustedOrigins } from "./auth";
 import {
   assertTrustedCookieMutation,
+  getFlareMoAuthHandler,
   getFlareMoRuntime,
   getRequestContext,
   type HonoBindings,
@@ -47,6 +49,7 @@ import {
 import { createEmbeddingProvider, createVectorIndex } from "./embedding";
 import type { FlareMoEnv } from "./env";
 import { jsonError } from "./http";
+import { resolveOauthIntegration } from "./integrations/config";
 import { hardDeleteMemoWithAttachments } from "./memo-hard-delete";
 import { betterAuthRateLimitBucket, rateLimitGuard } from "./rate-limit";
 import { accountApi } from "./routes/account-api";
@@ -55,6 +58,7 @@ import { appApi } from "./routes/app-api";
 import { authApi } from "./routes/auth-api";
 import { brandingApi } from "./routes/branding-api";
 import { captureApi } from "./routes/capture-api";
+import { emailSettingsApi } from "./routes/email-settings-api";
 import { mcpApi, mcpStreamableApi } from "./routes/mcp";
 import { memoryApi } from "./routes/memory-api";
 import { memoryMcpApi } from "./routes/memory-mcp";
@@ -64,6 +68,7 @@ import { isLegacyWireRequest, memosCurrentApi } from "./routes/memos-current";
 import { memosFileApi } from "./routes/memos-file-api";
 import { memosSocialApi } from "./routes/memos-social-api";
 import { memosSseApi } from "./routes/memos-sse";
+import { oauthSettingsApi } from "./routes/oauth-settings-api";
 import { pluginsApi } from "./routes/plugins-api";
 import { pluginsStoreApi } from "./routes/plugins-store-api";
 import { projectsApi } from "./routes/projects-api";
@@ -219,16 +224,35 @@ export function createFlareMoApp(
       const throttled = await rateLimitGuard(c, bucket);
       if (throttled) return throttled;
     }
-    return getFlareMoRuntime(c.env).auth.handler(c.req.raw);
+    // OAuth-aware: returns the runtime default auth unless the instance has
+    // social providers configured, in which case a rebuilt instance carries
+    // the provider credentials (cached by revision).
+    const auth = await getFlareMoAuthHandler(c.env);
+    return auth.handler(c.req.raw);
+  });
+  // Anonymous surface for the login page: which social providers the
+  // instance has enabled (ids only — no client IDs, no secrets).
+  app.get("/api/app/auth-providers", async (c) => {
+    // Direct resolve (no TTL cache): the login page must reflect an owner's
+    // fresh provider config on the next reload.
+    const { db } = getFlareMoRuntime(c.env);
+    const oauth = await resolveOauthIntegration(c.env, db);
+    return c.json(
+      { google: Boolean(oauth.google), github: Boolean(oauth.github) },
+      200,
+      { "Cache-Control": "no-store" },
+    );
   });
   app.route("/api/app/branding", brandingApi);
   app.route("/api/app/plugins", pluginsApi);
   app.route("/api/app/voice-settings", voiceSettingsApi);
   app.route("/api/app/capture", captureApi);
   app.route("/api/app/account", accountApi);
-  // Registered before adminApi so the store's own routes win; paths
+  // Registered before adminApi so these owner settings routes win; paths
   // adminApi owns (/plugins GET/PUT) still fall through to it.
   app.route("/api/app/admin/plugins", pluginsStoreApi);
+  app.route("/api/app/admin/email-settings", emailSettingsApi);
+  app.route("/api/app/admin/oauth-settings", oauthSettingsApi);
   app.route("/api/app/admin", adminApi);
   app.route("/api/app/memory", memoryApi);
   app.route("/api/app/projects", projectsApi);
@@ -236,6 +260,22 @@ export function createFlareMoApp(
   app.route("/api/app", appApi);
   app.route("/api/public", publicApi);
   registerSharePage(app);
+  app.get("/favicon.ico", async (c) => {
+    // Only browsers without a <link rel="icon"> hit this; redirect to the
+    // custom favicon when one is configured, else to the bundled asset.
+    try {
+      const branding = await getBranding(createDb(c.env.DB));
+      if (branding.favicon) {
+        return c.redirect(
+          `/api/app/branding/favicon?v=${encodeURIComponent(branding.favicon.updated_at)}`,
+          302,
+        );
+      }
+    } catch {
+      // Fall through to the bundled asset.
+    }
+    return c.redirect("/brand/flaremo-mark-light-300.png", 302);
+  });
   app.route("/file", memosFileApi);
   app.route("/mcp", mcpStreamableApi);
   app.route("/memory/mcp", memoryMcpApi);

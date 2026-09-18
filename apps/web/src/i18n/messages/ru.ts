@@ -468,6 +468,7 @@ const messages = {
   "settings.nav.push": "Push-уведомления",
   "settings.nav.install": "Установка приложения",
   "settings.nav.voice": "Голосовой сервис",
+  "settings.nav.integrations": "Интеграции",
   "settings.nav.transfer": "Импорт и экспорт",
   "admin.memberActions": "Действия с участником",
   "admin.memberSearchPlaceholder":
@@ -679,6 +680,9 @@ const messages = {
   "admin.branding.markLight": "Логотип (светлая тема)",
   "admin.branding.markDark":
     "Логотип (тёмная тема, необязательно; иначе используется светлый)",
+  "admin.branding.favicon": "Значок сайта (favicon)",
+  "admin.branding.faviconUploaded": "Значок сайта обновлён.",
+  "admin.branding.faviconRemoved": "Значок сайта удалён.",
   "admin.branding.upload": "Загрузить PNG / WebP / SVG",
   "admin.branding.replace": "Заменить",
   "admin.branding.remove": "Убрать",
@@ -904,6 +908,53 @@ const messages = {
   "pwa.updateDescription":
     "Обновите страницу, чтобы использовать последнюю версию.",
   "auth.tab.plugins": "Плагины",
+  "auth.continueWithGoogle": "Продолжить с Google",
+  "auth.continueWithGithub": "Продолжить с GitHub",
+  "auth.socialSignInHint": "или продолжить через",
+  "admin.integrations.emailTitle": "Почтовый сервис",
+  "admin.integrations.emailDescription":
+    "Канал отправки транзакционных писем (подтверждение, сброс пароля). Поддерживается Resend по HTTP API (без SMTP); полностью заданные переменные окружения (FLAREMO_EMAIL_PROVIDER) имеют приоритет.",
+  "admin.integrations.emailEnvManaged":
+    "Управляется переменными окружения, здесь недоступно для правки.",
+  "admin.integrations.emailConfigured":
+    "Почта настроена ({provider}). Секреты в базе шифруются.",
+  "admin.integrations.emailUnconfigured":
+    "Почтовый провайдер не настроен: подтверждение и сброс пароля недоступны.",
+  "admin.integrations.emailCloudflareNote":
+    "Отправка идёт через binding EMAIL Cloudflare (окружение); правка здесь недоступна.",
+  "admin.integrations.emailFrom":
+    "Адрес отправителя (например no-reply@example.com)",
+  "admin.integrations.emailFromName": "Имя отправителя (необязательно)",
+  "admin.integrations.emailApiKey": "API-ключ Resend",
+  "admin.integrations.enabled": "Включено",
+  "admin.integrations.save": "Сохранить",
+  "admin.integrations.saved": "Настройки интеграций сохранены.",
+  "admin.integrations.testEmail": "Отправить тестовое письмо",
+  "admin.integrations.testSuccess":
+    "Тестовое письмо отправлено — проверьте почту.",
+  "admin.integrations.delete": "Удалить конфигурацию",
+  "admin.integrations.deleted": "Конфигурация интеграций удалена.",
+  "admin.integrations.emailConfirmDelete":
+    "Будет удалена сохранённая почтовая конфигурация (включая API-ключ). Переменные окружения не затрагиваются.",
+  "admin.integrations.emailError":
+    "Не удалось сохранить почтовую конфигурацию.",
+  "admin.integrations.oauthTitle": "Социальный вход",
+  "admin.integrations.oauthDescription":
+    "После настройки на странице входа появятся кнопки; верифицированный адрес Google/GitHub автоматически объединяется с аккаунтом той же почты. Зарегистрируйте callback URL в настройках OAuth-приложения провайдера.",
+  "admin.integrations.oauthEnvManaged":
+    "Управляется переменными окружения (FLAREMO_OAUTH_*), правка здесь недоступна.",
+  "admin.integrations.oauthClientId": "Client ID",
+  "admin.integrations.oauthClientSecret": "Client Secret",
+  "admin.integrations.oauthCallbackPrefix": "Callback URL:",
+  "admin.integrations.providerActive": "Активен",
+  "admin.integrations.oauthConfirmDelete":
+    "Будет удалена сохранённая конфигурация; кнопки исчезнут со страницы входа.",
+  "admin.integrations.oauthError":
+    "Не удалось сохранить конфигурацию социального входа.",
+  "admin.integrations.plainStore":
+    "Ключ шифрования (FLAREMO_INTEGRATION_CONFIG_KEY) не задан — секреты хранятся открытым JSON (шифрование БД на диске продолжает работать).",
+  "admin.integrations.unreadable":
+    "Не удалось расшифровать сохранённые секреты (ключ отсутствует или изменён). Удалите их и настройте заново.",
   "admin.plugins.title": "Плагины",
   "admin.plugins.description":
     "Управление плагинами (например, карточками): включение, порядок, карточка по умолчанию, параметры. Плагины сообщества выключены, пока не включите их здесь.",

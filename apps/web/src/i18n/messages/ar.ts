@@ -458,6 +458,7 @@ const messages = {
   "settings.nav.push": "الإشعارات الفورية",
   "settings.nav.install": "تثبيت التطبيق",
   "settings.nav.voice": "خدمة الصوت",
+  "settings.nav.integrations": "التكاملات",
   "settings.nav.transfer": "الاستيراد والتصدير",
   "admin.memberActions": "إجراءات العضو",
   "admin.memberSearchPlaceholder": "ابحث بالاسم أو البريد أو اسم المستخدم",
@@ -656,6 +657,9 @@ const messages = {
   "admin.branding.markLight": "الشعار (الوضع الفاتح)",
   "admin.branding.markDark":
     "الشعار (الوضع الداكن، اختياري؛ وإلا يُستخدم شعار الوضع الفاتح)",
+  "admin.branding.favicon": "أيقونة الموقع (favicon)",
+  "admin.branding.faviconUploaded": "تم تحديث أيقونة الموقع.",
+  "admin.branding.faviconRemoved": "تمت إزالة أيقونة الموقع.",
   "admin.branding.upload": "ارفع PNG / WebP / SVG",
   "admin.branding.replace": "استبدال",
   "admin.branding.remove": "إزالة",
@@ -875,6 +879,50 @@ const messages = {
   "pwa.updateAvailable": "يتوفر إصدار جديد",
   "pwa.updateDescription": "أعد تحميل الصفحة لاستخدام أحدث إصدار.",
   "auth.tab.plugins": "الإضافات",
+  "auth.continueWithGoogle": "المتابعة عبر Google",
+  "auth.continueWithGithub": "المتابعة عبر GitHub",
+  "auth.socialSignInHint": "أو تابع باستخدام",
+  "admin.integrations.emailTitle": "خدمة البريد الإلكتروني",
+  "admin.integrations.emailDescription":
+    "تكوين قناة إرسال رسائل التحقق واستعادة كلمة المرور. يدعم Resend عبر HTTP API (بدون SMTP). تكوين متغيرات البيئة (FLAREMO_EMAIL_PROVIDER) مكتمل له الأولوية.",
+  "admin.integrations.emailEnvManaged":
+    "تُدار عبر متغيرات البيئة، لذا لا يمكن التعديل هنا.",
+  "admin.integrations.emailConfigured":
+    "خدمة البريد مُهيأة ({provider}). وتُشفَّر الأسرار المخزنة في قاعدة البيانات.",
+  "admin.integrations.emailUnconfigured":
+    "لم تُهيأ خدمة البريد: لن تتوفر رسائل التحقق واستعادة كلمة المرور.",
+  "admin.integrations.emailCloudflareNote":
+    "الإرسال حالياً عبر ربط Cloudflare EMAIL (بيئة)؛ لا يمكن التعديل هنا.",
+  "admin.integrations.emailFrom": "عنوان المرسل (مثل no-reply@example.com)",
+  "admin.integrations.emailFromName": "اسم المرسل (اختياري)",
+  "admin.integrations.emailApiKey": "مفتاح Resend API",
+  "admin.integrations.enabled": "مُمكّن",
+  "admin.integrations.save": "حفظ",
+  "admin.integrations.saved": "تم حفظ إعدادات التكامل.",
+  "admin.integrations.testEmail": "إرسال بريد تجريبي",
+  "admin.integrations.testSuccess":
+    "أُرسل البريد التجريبي — يُرجى التحقق من بريدك.",
+  "admin.integrations.delete": "حذف التهيئة",
+  "admin.integrations.deleted": "تمت إزالة إعدادات التكامل.",
+  "admin.integrations.emailConfirmDelete":
+    "سيتم حذف تهيئة البريد المحفوظة (بما فيها مفتاح API). تهيئة البيئة لا تتأثر.",
+  "admin.integrations.emailError": "فشل حفظ إعدادات البريد.",
+  "admin.integrations.oauthTitle": "تسجيل الدخول الاجتماعي",
+  "admin.integrations.oauthDescription":
+    "بعد التهيئة تظهر الأزرار في صفحة تسجيل الدخول، ويدمج المستخدم ذو البريد الإلكتروني الموثق تلقائياً مع الحساب بنفس العنوان. سجّل رابط رد الاتصال في إعدادات تطبيق OAuth لدى المزود.",
+  "admin.integrations.oauthEnvManaged":
+    "تُدار عبر متغيرات البيئة (FLAREMO_OAUTH_*)، لذا لا يمكن التعديل هنا.",
+  "admin.integrations.oauthClientId": "معرّف العميل",
+  "admin.integrations.oauthClientSecret": "سر العميل",
+  "admin.integrations.oauthCallbackPrefix": "رابط رد الاتصال:",
+  "admin.integrations.providerActive": "نشط",
+  "admin.integrations.oauthConfirmDelete":
+    "سيتم حذف إعدادات تسجيل الدخول الاجتماعي المحفوظة وتختفي الأزرار من صفحة الدخول.",
+  "admin.integrations.oauthError": "فشل حفظ إعدادات تسجيل الدخول الاجتماعي.",
+  "admin.integrations.plainStore":
+    "لم يُضبط مفتاح التشفير (FLAREMO_INTEGRATION_CONFIG_KEY)، ستُخزَّن الأسرار كنص JSON صريح (يظل تشفير قاعدة البيانات الثابت سارياً).",
+  "admin.integrations.unreadable":
+    "تعذَّر فك تشفير الأسرار المحفوظة (مفتاح مفقود أو متغير). احذفها وأعد التهيئة.",
   "admin.plugins.title": "الإضافات",
   "admin.plugins.description":
     "أدر مساهمات الإضافات مثل بطاقات المشاركة: التفعيل، الترتيب، البطاقة الافتراضية، الخيارات. تبقى إضافات المجتمع معطّلة حتى تفعّلها من هنا.",

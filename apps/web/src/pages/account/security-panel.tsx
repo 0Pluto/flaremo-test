@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import type { TranslationKey } from "@/i18n";
 
 export const MIN_PASSWORD_LENGTH = 8;
@@ -187,12 +188,11 @@ export function SecurityPanel({
               htmlFor="account-current-password"
             >
               {t("auth.currentPassword")}
-              <Input
+              <PasswordInput
                 autoComplete="current-password"
                 disabled={changePasswordIsPending}
                 id="account-current-password"
                 required
-                type="password"
                 value={currentPassword}
                 onChange={(event) => setCurrentPassword(event.target.value)}
               />
@@ -202,13 +202,12 @@ export function SecurityPanel({
               htmlFor="account-new-password"
             >
               {t("auth.newPassword")}
-              <Input
+              <PasswordInput
                 autoComplete="new-password"
                 disabled={changePasswordIsPending}
                 id="account-new-password"
                 minLength={MIN_PASSWORD_LENGTH}
                 required
-                type="password"
                 value={newPassword}
                 onChange={(event) => setNewPassword(event.target.value)}
               />
@@ -218,13 +217,12 @@ export function SecurityPanel({
               htmlFor="account-password-confirmation"
             >
               {t("auth.confirmPassword")}
-              <Input
+              <PasswordInput
                 autoComplete="new-password"
                 disabled={changePasswordIsPending}
                 id="account-password-confirmation"
                 minLength={MIN_PASSWORD_LENGTH}
                 required
-                type="password"
                 value={newPasswordConfirmation}
                 onChange={(event) =>
                   setNewPasswordConfirmation(event.target.value)
@@ -292,12 +290,11 @@ export function SecurityPanel({
               htmlFor="account-email-current-password"
             >
               {t("auth.currentPassword")}
-              <Input
+              <PasswordInput
                 autoComplete="current-password"
                 disabled={changeEmailIsPending}
                 id="account-email-current-password"
                 required
-                type="password"
                 value={emailCurrentPassword}
                 onChange={(event) =>
                   setEmailCurrentPassword(event.target.value)
@@ -352,12 +349,11 @@ export function SecurityPanel({
               htmlFor="account-delete-password"
             >
               {t("auth.deleteAccountPassword")}
-              <Input
+              <PasswordInput
                 autoComplete="current-password"
                 disabled={deleteAccountIsPending}
                 id="account-delete-password"
                 required
-                type="password"
                 value={deletePassword}
                 onChange={(event) => setDeletePassword(event.target.value)}
               />

@@ -464,6 +464,7 @@ const messages = {
   "settings.nav.push": "푸시 알림",
   "settings.nav.install": "앱 설치",
   "settings.nav.voice": "음성 서비스",
+  "settings.nav.integrations": "연동 서비스",
   "settings.nav.transfer": "가져오기·내보내기",
   "admin.memberActions": "멤버 작업",
   "admin.memberSearchPlaceholder": "이름, 이메일 또는 사용자 이름 검색",
@@ -674,6 +675,9 @@ const messages = {
   "admin.branding.productNamePlaceholder": "기본값: FlareMo",
   "admin.branding.markLight": "로고(라이트 모드)",
   "admin.branding.markDark": "로고(다크 모드, 선택; 없으면 라이트 로고 사용)",
+  "admin.branding.favicon": "사이트 아이콘(favicon)",
+  "admin.branding.faviconUploaded": "사이트 아이콘이 업데이트되었습니다.",
+  "admin.branding.faviconRemoved": "사이트 아이콘이 제거되었습니다.",
   "admin.branding.upload": "PNG / WebP / SVG 업로드",
   "admin.branding.replace": "교체",
   "admin.branding.remove": "제거",
@@ -896,6 +900,49 @@ const messages = {
   "pwa.updateAvailable": "새 버전을 사용할 수 있습니다",
   "pwa.updateDescription": "새로 고치면 최신 버전을 사용할 수 있습니다.",
   "auth.tab.plugins": "플러그인",
+  "auth.continueWithGoogle": "Google로 계속하기",
+  "auth.continueWithGithub": "GitHub로 계속하기",
+  "auth.socialSignInHint": "또는 아래 방법으로 계속",
+  "admin.integrations.emailTitle": "메일 서비스",
+  "admin.integrations.emailDescription":
+    "가입 인증·비밀번호 재설정 등 트랜잭션 메일 발송 경로를 설정합니다. Resend(HTTP API, SMTP 불필요)를 지원하며 환경 변수(FLAREMO_EMAIL_PROVIDER)가 완전히 설정되면 우선합니다.",
+  "admin.integrations.emailEnvManaged":
+    "환경 변수로 관리 중이므로 여기서는 편집할 수 없습니다.",
+  "admin.integrations.emailConfigured":
+    "메일 서비스가 구성됨({provider}). 데이터베이스에 저장된 시크릿은 암호화됩니다.",
+  "admin.integrations.emailUnconfigured":
+    "메일 프로바이더가 구성되지 않았습니다: 인증·비밀번호 재설정 메일을 사용할 수 없습니다.",
+  "admin.integrations.emailCloudflareNote":
+    "현재 Cloudflare EMAIL 바인딩(환경 변수)으로 발송 중이므로 여기서 편집할 수 없습니다.",
+  "admin.integrations.emailFrom": "발신 주소 (예: no-reply@example.com)",
+  "admin.integrations.emailFromName": "발신자 이름(선택)",
+  "admin.integrations.emailApiKey": "Resend API 키",
+  "admin.integrations.enabled": "사용",
+  "admin.integrations.save": "저장",
+  "admin.integrations.saved": "연동 설정이 저장되었습니다.",
+  "admin.integrations.testEmail": "테스트 메일 보내기",
+  "admin.integrations.testSuccess": "테스트 메일을 보냈습니다. 확인해 주세요.",
+  "admin.integrations.delete": "설정 삭제",
+  "admin.integrations.deleted": "연동 설정이 삭제되었습니다.",
+  "admin.integrations.emailConfirmDelete":
+    "저장된 메일 설정(API 키 포함)을 삭제합니다. 환경 변수 설정에는 영향이 없습니다.",
+  "admin.integrations.emailError": "메일 설정 저장에 실패했습니다.",
+  "admin.integrations.oauthTitle": "소셜 로그인",
+  "admin.integrations.oauthDescription":
+    "구성하면 로그인 페이지에 해당 버튼이 표시되고, 인증된 Google/GitHub 이메일과 같은 주소의 계정에 자동으로 병합됩니다. 콜백 URL을 각 플랫폼의 OAuth 앱 설정에 등록하세요.",
+  "admin.integrations.oauthEnvManaged":
+    "환경 변수(FLAREMO_OAUTH_*)로 관리 중이므로 여기서는 편집할 수 없습니다.",
+  "admin.integrations.oauthClientId": "클라이언트 ID",
+  "admin.integrations.oauthClientSecret": "클라이언트 시크릿",
+  "admin.integrations.oauthCallbackPrefix": "콜백 URL:",
+  "admin.integrations.providerActive": "활성",
+  "admin.integrations.oauthConfirmDelete":
+    "저장된 소셜 로그인 설정을 삭제하고 로그인 페이지에서 버튼을 제거합니다.",
+  "admin.integrations.oauthError": "소셜 로그인 설정 저장에 실패했습니다.",
+  "admin.integrations.plainStore":
+    "암호화 키(FLAREMO_INTEGRATION_CONFIG_KEY)가 없어 시크릿이 평문 JSON으로 저장됩니다(데이터베이스 정적 암호화는 여전히 적용).",
+  "admin.integrations.unreadable":
+    "저장된 시크릿을 복호화할 수 없습니다(암호화 키 불일치 또는 없음). 삭제 후 다시 구성하세요.",
   "admin.plugins.title": "플러그인",
   "admin.plugins.description":
     "공유 카드 등 플러그인 기능을 관리합니다: 활성화, 순서 변경, 기본값 설정, 옵션 조정. 커뮤니티 플러그인은 여기서 켜기 전까지 꺼져 있습니다.",

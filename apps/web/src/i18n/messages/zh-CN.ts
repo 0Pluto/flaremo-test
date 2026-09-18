@@ -423,6 +423,7 @@ const messages = {
   "settings.nav.push": "推送通知",
   "settings.nav.install": "应用安装",
   "settings.nav.voice": "语音服务",
+  "settings.nav.integrations": "集成服务",
   "settings.nav.transfer": "导入导出",
   "admin.memberActions": "成员操作",
   "admin.memberSearchPlaceholder": "搜索姓名、邮箱或用户名",
@@ -611,6 +612,9 @@ const messages = {
   "admin.branding.productNamePlaceholder": "默认 FlareMo",
   "admin.branding.markLight": "Logo（浅色模式）",
   "admin.branding.markDark": "Logo（深色模式，可选，未设置时复用浅色）",
+  "admin.branding.favicon": "站点图标（favicon）",
+  "admin.branding.faviconUploaded": "站点图标已更新。",
+  "admin.branding.faviconRemoved": "站点图标已移除。",
   "admin.branding.upload": "上传 PNG / WebP / SVG",
   "admin.branding.replace": "替换",
   "admin.branding.remove": "移除",
@@ -827,6 +831,49 @@ const messages = {
   "pwa.updateAvailable": "有新版本可用",
   "pwa.updateDescription": "刷新后即可使用最新版本。",
   "auth.tab.plugins": "插件",
+  "auth.continueWithGoogle": "使用 Google 继续",
+  "auth.continueWithGithub": "使用 GitHub 继续",
+  "auth.socialSignInHint": "或通过以下方式继续",
+  "admin.integrations.emailTitle": "邮件服务",
+  "admin.integrations.emailDescription":
+    "配置注册验证、找回密码等事务邮件的发信渠道。当前支持 Resend（通过其 HTTP API，无需 SMTP）。环境变量（FLAREMO_EMAIL_PROVIDER）配置完整时优先于此处保存的配置。",
+  "admin.integrations.emailEnvManaged":
+    "当前由环境变量管理，此处暂不可编辑。如需改用后台配置，请清空相关环境变量。",
+  "admin.integrations.emailConfigured":
+    "邮件服务已配置（{provider}）。保存在数据库中的配置会加密存储。",
+  "admin.integrations.emailUnconfigured":
+    "尚未配置邮件服务：注册验证、找回密码邮件将不可用。",
+  "admin.integrations.emailCloudflareNote":
+    "当前使用 Cloudflare Email 发信（环境变量 EMAIL binding），请在部署配置中修改，此处不可编辑。",
+  "admin.integrations.emailFrom": "发件地址（如 no-reply@example.com）",
+  "admin.integrations.emailFromName": "发件人名称（可选）",
+  "admin.integrations.emailApiKey": "Resend API Key",
+  "admin.integrations.enabled": "启用",
+  "admin.integrations.save": "保存",
+  "admin.integrations.saved": "集成配置已保存。",
+  "admin.integrations.testEmail": "发送测试邮件",
+  "admin.integrations.testSuccess": "测试邮件已发送，请查收。",
+  "admin.integrations.delete": "删除配置",
+  "admin.integrations.deleted": "集成配置已删除。",
+  "admin.integrations.emailConfirmDelete":
+    "将删除已保存的邮件配置（包括 API Key）。已配置的环境变量不受影响。",
+  "admin.integrations.emailError": "邮件配置保存失败。",
+  "admin.integrations.oauthTitle": "社交登录",
+  "admin.integrations.oauthDescription":
+    "配置后登录页会出现对应按钮；用户以已验证的 Google/GitHub 邮箱登录时自动并入同邮箱账号。回调地址需填入对应平台的 OAuth 应用设置。",
+  "admin.integrations.oauthEnvManaged":
+    "当前由环境变量（FLAREMO_OAUTH_*）管理，此处暂不可编辑。",
+  "admin.integrations.oauthClientId": "Client ID",
+  "admin.integrations.oauthClientSecret": "Client Secret",
+  "admin.integrations.oauthCallbackPrefix": "回调地址：",
+  "admin.integrations.providerActive": "已启用",
+  "admin.integrations.oauthConfirmDelete":
+    "将删除已保存的社交登录配置，登录页不再显示对应按钮。",
+  "admin.integrations.oauthError": "社交登录配置保存失败。",
+  "admin.integrations.plainStore":
+    "未设置加密密钥（FLAREMO_INTEGRATION_CONFIG_KEY），密钥将以明文存储在数据库中（数据库静态加密仍然生效）。",
+  "admin.integrations.unreadable":
+    "已保存的密钥无法解密（加密密钥不匹配或缺失），请删除后重新配置。",
   "admin.plugins.title": "插件",
   "admin.plugins.description":
     "管理分享卡片等插件贡献：启用、排序、设默认、调选项。社区插件默认关闭，启用后本实例的用户即可看到。",

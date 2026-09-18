@@ -39,10 +39,22 @@ export type FlareMoEnv = Env & {
   // src/rate-limit.ts). Unbound deployments skip throttling entirely.
   RATE_LIMITER?: RateLimiterBinding;
   // Transactional email for registration verification (see src/email.ts).
-  // `cloudflare` uses the EMAIL binding (Workers Paid); `none` skips
-  // verification entirely (self-host default).
+  // `cloudflare` uses the EMAIL binding (Workers Paid); `resend` uses the
+  // Resend HTTP API (needs RESEND_API_KEY); `none` skips verification entirely
+  // (self-host default). Owner-configured D1 settings take precedence over
+  // these env vars when both exist (see src/integrations/config.ts).
   FLAREMO_EMAIL_PROVIDER?: string;
   FLAREMO_EMAIL_FROM?: string;
+  RESEND_API_KEY?: string;
+  // Encryption key for owner-configured integration secrets (email, OAuth).
+  // Falls back to FLAREMO_VOICE_CONFIG_KEY when unset.
+  FLAREMO_INTEGRATION_CONFIG_KEY?: string;
+  // Env-based OAuth social providers (see src/auth.ts). Owner-configured D1
+  // settings take precedence; providers with both id and secret are enabled.
+  FLAREMO_OAUTH_GOOGLE_CLIENT_ID?: string;
+  FLAREMO_OAUTH_GOOGLE_CLIENT_SECRET?: string;
+  FLAREMO_OAUTH_GITHUB_CLIENT_ID?: string;
+  FLAREMO_OAUTH_GITHUB_CLIENT_SECRET?: string;
   // Registration captcha (pluggable provider; see src/captcha.ts). Site key
   // is a public var; secrets are Wrangler secrets. Provider `http` requires
   // FLAREMO_CAPTCHA_VERIFY_URL; `tencent` additionally requires the secret

@@ -475,6 +475,7 @@ const messages = {
   "settings.nav.push": "Notifications push",
   "settings.nav.install": "Installer l'app",
   "settings.nav.voice": "Service vocal",
+  "settings.nav.integrations": "Intégrations",
   "settings.nav.transfer": "Import et export",
   "admin.memberActions": "Actions sur le membre",
   "admin.memberSearchPlaceholder":
@@ -694,6 +695,9 @@ const messages = {
   "admin.branding.markLight": "Logo (mode clair)",
   "admin.branding.markDark":
     "Logo (mode sombre, facultatif ; sinon réutilise le logo clair)",
+  "admin.branding.favicon": "Icône du site (favicon)",
+  "admin.branding.faviconUploaded": "Icône du site mise à jour.",
+  "admin.branding.faviconRemoved": "Icône du site supprimée.",
   "admin.branding.upload": "Envoyer PNG / WebP / SVG",
   "admin.branding.replace": "Remplacer",
   "admin.branding.remove": "Retirer",
@@ -921,6 +925,53 @@ const messages = {
   "pwa.updateDescription":
     "Rechargez la page pour utiliser la dernière version.",
   "auth.tab.plugins": "Extensions",
+  "auth.continueWithGoogle": "Continuer avec Google",
+  "auth.continueWithGithub": "Continuer avec GitHub",
+  "auth.socialSignInHint": "ou continuer avec",
+  "admin.integrations.emailTitle": "Service e-mail",
+  "admin.integrations.emailDescription":
+    "Configure le canal d'envoi des e-mails transactionnels (vérification, réinitialisation). Resend via HTTP API est pris en charge (sans SMTP) ; les variables d'environnement (FLAREMO_EMAIL_PROVIDER) complètes ont priorité.",
+  "admin.integrations.emailEnvManaged":
+    "Géré par les variables d'environnement ; modification ici désactivée.",
+  "admin.integrations.emailConfigured":
+    "L'e-mail est configuré ({provider}). Les secrets stockés en base sont chiffrés.",
+  "admin.integrations.emailUnconfigured":
+    "Aucun fournisseur e-mail : vérification et réinitialisation indisponibles.",
+  "admin.integrations.emailCloudflareNote":
+    "Envoi actuellement via le binding EMAIL de Cloudflare (environnement) ; non modifiable ici.",
+  "admin.integrations.emailFrom":
+    "Adresse d'expédition (ex. no-reply@example.com)",
+  "admin.integrations.emailFromName": "Nom de l'expéditeur (facultatif)",
+  "admin.integrations.emailApiKey": "Clé API Resend",
+  "admin.integrations.enabled": "Activé",
+  "admin.integrations.save": "Enregistrer",
+  "admin.integrations.saved": "Réglages d'intégration enregistrés.",
+  "admin.integrations.testEmail": "Envoyer un e-mail de test",
+  "admin.integrations.testSuccess":
+    "E-mail de test envoyé — vérifiez votre boîte.",
+  "admin.integrations.delete": "Supprimer la configuration",
+  "admin.integrations.deleted": "Configuration d'intégration supprimée.",
+  "admin.integrations.emailConfirmDelete":
+    "Supprime la configuration e-mail enregistrée (clé API incluse). La configuration d'environnement n'est pas affectée.",
+  "admin.integrations.emailError":
+    "Échec de l'enregistrement de la configuration e-mail.",
+  "admin.integrations.oauthTitle": "Connexion sociale",
+  "admin.integrations.oauthDescription":
+    "Une fois configuré, les boutons apparaissent sur la page de connexion ; l'adresse Google/GitHub vérifiée est fusionnée automatiquement avec le compte du même e-mail. Enregistrez l'URL de rappel dans les réglages OAuth du fournisseur.",
+  "admin.integrations.oauthEnvManaged":
+    "Géré par les variables d'environnement (FLAREMO_OAUTH_*) ; non modifiable ici.",
+  "admin.integrations.oauthClientId": "ID client",
+  "admin.integrations.oauthClientSecret": "Secret client",
+  "admin.integrations.oauthCallbackPrefix": "URL de rappel :",
+  "admin.integrations.providerActive": "Actif",
+  "admin.integrations.oauthConfirmDelete":
+    "Supprime la configuration enregistrée ; les boutons disparaissent de la page de connexion.",
+  "admin.integrations.oauthError":
+    "Échec de l'enregistrement de la connexion sociale.",
+  "admin.integrations.plainStore":
+    "Aucune clé de chiffrement (FLAREMO_INTEGRATION_CONFIG_KEY) : les secrets sont stockés en JSON brut (le chiffrement au repos de la base s'applique toujours).",
+  "admin.integrations.unreadable":
+    "Impossible de déchiffrer les secrets enregistrés (clé absente ou modifiée). Supprimez-les et reconfigurez.",
   "admin.plugins.title": "Extensions",
   "admin.plugins.description":
     "Gérez les contributions des extensions (cartes de partage) : activation, ordre, carte par défaut, options. Les extensions communautaires restent désactivées jusqu'à activation ici.",

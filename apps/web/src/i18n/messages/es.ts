@@ -474,6 +474,7 @@ const messages = {
   "settings.nav.push": "Notificaciones push",
   "settings.nav.install": "Instalar la app",
   "settings.nav.voice": "Servicio de voz",
+  "settings.nav.integrations": "Integraciones",
   "settings.nav.transfer": "Importar y exportar",
   "admin.memberActions": "Acciones del miembro",
   "admin.memberSearchPlaceholder": "Buscar por nombre, correo o usuario",
@@ -686,6 +687,9 @@ const messages = {
   "admin.branding.markLight": "Logo (modo claro)",
   "admin.branding.markDark":
     "Logo (modo oscuro, opcional; si falta, se reutiliza el claro)",
+  "admin.branding.favicon": "Icono del sitio (favicon)",
+  "admin.branding.faviconUploaded": "Icono del sitio actualizado.",
+  "admin.branding.faviconRemoved": "Icono del sitio eliminado.",
   "admin.branding.upload": "Subir PNG / WebP / SVG",
   "admin.branding.replace": "Reemplazar",
   "admin.branding.remove": "Quitar",
@@ -912,6 +916,53 @@ const messages = {
   "pwa.updateAvailable": "Hay una versión nueva disponible",
   "pwa.updateDescription": "Recarga la página para usar la última versión.",
   "auth.tab.plugins": "Complementos",
+  "auth.continueWithGoogle": "Continuar con Google",
+  "auth.continueWithGithub": "Continuar con GitHub",
+  "auth.socialSignInHint": "o continuar con",
+  "admin.integrations.emailTitle": "Servicio de correo",
+  "admin.integrations.emailDescription":
+    "Configura el canal de envío del correo transaccional (verificación, restablecimiento). Resend se admite vía HTTP API (sin SMTP). Las variables de entorno (FLAREMO_EMAIL_PROVIDER) completas tienen prioridad.",
+  "admin.integrations.emailEnvManaged":
+    "Gestionado por variables de entorno; la edición aquí está deshabilitada.",
+  "admin.integrations.emailConfigured":
+    "El correo está configurado ({provider}). Los secretos en la base de datos van cifrados.",
+  "admin.integrations.emailUnconfigured":
+    "Sin proveedor de correo: la verificación y el restablecimiento no estarán disponibles.",
+  "admin.integrations.emailCloudflareNote":
+    "Actualmente se envía mediante el binding EMAIL de Cloudflare (entorno); no editable aquí.",
+  "admin.integrations.emailFrom":
+    "Dirección del remitente (p. ej. no-reply@example.com)",
+  "admin.integrations.emailFromName": "Nombre del remitente (opcional)",
+  "admin.integrations.emailApiKey": "Clave API de Resend",
+  "admin.integrations.enabled": "Habilitado",
+  "admin.integrations.save": "Guardar",
+  "admin.integrations.saved": "Configuración de integraciones guardada.",
+  "admin.integrations.testEmail": "Enviar correo de prueba",
+  "admin.integrations.testSuccess":
+    "Correo de prueba enviado — revisa tu bandeja.",
+  "admin.integrations.delete": "Eliminar configuración",
+  "admin.integrations.deleted": "Configuración de integraciones eliminada.",
+  "admin.integrations.emailConfirmDelete":
+    "Elimina la configuración de correo guardada (incluida la clave API). La configuración del entorno no se ve afectada.",
+  "admin.integrations.emailError":
+    "No se pudo guardar la configuración de correo.",
+  "admin.integrations.oauthTitle": "Inicio de sesión social",
+  "admin.integrations.oauthDescription":
+    "Al configurarlo, la página de inicio mostrará los botones; el correo de Google/GitHub verificado se fusiona automáticamente con la cuenta del mismo correo. Registra la URL de devolución de llamada en la app OAuth del proveedor.",
+  "admin.integrations.oauthEnvManaged":
+    "Gestionado por variables de entorno (FLAREMO_OAUTH_*); no editable aquí.",
+  "admin.integrations.oauthClientId": "ID de cliente",
+  "admin.integrations.oauthClientSecret": "Secreto de cliente",
+  "admin.integrations.oauthCallbackPrefix": "URL de devolución de llamada:",
+  "admin.integrations.providerActive": "Activo",
+  "admin.integrations.oauthConfirmDelete":
+    "Elimina la configuración guardada; los botones desaparecen de la página de inicio.",
+  "admin.integrations.oauthError":
+    "No se pudo guardar la configuración de inicio de sesión social.",
+  "admin.integrations.plainStore":
+    "Sin clave de cifrado (FLAREMO_INTEGRATION_CONFIG_KEY): los secretos se guardan en JSON plano (el cifrado en reposo de la base de datos sigue aplicando).",
+  "admin.integrations.unreadable":
+    "No se pudieron descifrar los secretos guardados (falta o cambió la clave). Elimínalos y reconfigura.",
   "admin.plugins.title": "Complementos",
   "admin.plugins.description":
     "Gestiona las contribuciones de los complementos (tarjetas para compartir): activar, ordenar, tarjeta predeterminada, opciones. Los complementos de la comunidad siguen desactivados hasta activarlos aquí.",

@@ -3,14 +3,17 @@ import {
   assertMemberQuota,
   BRANDING_ACCENT_HEX_PATTERN,
   BRANDING_ACCENT_PRESETS,
+  BRANDING_FAVICON_CONTENT_TYPES,
   BRANDING_MARK_CONTENT_TYPES,
   BRANDING_MARK_MAX_BYTES,
   BRANDING_PRODUCT_NAME_MAX_CHARS,
   type BrandingMark,
   beginFlaremoMemberRemoval,
+  brandingFaviconR2Key,
   brandingMarkR2Key,
   ConflictError,
   CUSTOM_BRANDING_ACCENT,
+  clearBrandingFavicon,
   clearBrandingMark,
   createFlaremoMemberWithLink,
   createMemberRemovalJob,
@@ -33,6 +36,7 @@ import {
   isTeamAdmin,
   isTeamOwner,
   isValidBrandingContentType,
+  isValidBrandingFaviconContentType,
   listFlaremoUsers,
   listMemberRemovalJobs,
   NotFoundError,
@@ -46,6 +50,7 @@ import {
   setUserRegistrationAllowed,
   updateMemberRemovalJob,
   updateTeamMemberRole,
+  upsertBrandingFavicon,
   upsertBrandingMark,
   ValidationError,
 } from "@flaremo/domain";
@@ -205,6 +210,10 @@ adminApi.get("/branding", async (c) => {
       accent_hex: branding.accentHex,
       mark_light_url: markUrl("light", branding.marks.light),
       mark_dark_url: markUrl("dark", branding.marks.dark),
+      favicon_url: branding.favicon
+        ? `/api/app/branding/favicon?v=${encodeURIComponent(branding.favicon.updated_at)}`
+        : null,
+      favicon_content_type: branding.favicon?.content_type ?? null,
     });
   } catch (error) {
     return jsonError(c, error);
@@ -293,6 +302,46 @@ adminApi.delete("/branding/marks/:variant", async (c) => {
       await c.env.ATTACHMENTS.delete(staleKey);
     }
     return c.json({ removed: true, variant: variant.data });
+  } catch (error) {
+    return jsonError(c, error);
+  }
+});
+
+// Favicon upload: same raw-body contract as the logo marks, with .ico added
+// to the accepted content types (BRANDING_FAVICON_CONTENT_TYPES).
+adminApi.put("/branding/favicon", async (c) => {
+  try {
+    const { db } = await ownerContext(c);
+    const contentType = c.req.header("content-type") ?? null;
+    if (!isValidBrandingFaviconContentType(contentType)) {
+      throw new ValidationError(
+        `Favicon must be one of: ${BRANDING_FAVICON_CONTENT_TYPES.join(", ")}.`,
+      );
+    }
+    const bytes = await c.req.arrayBuffer();
+    if (bytes.byteLength === 0 || bytes.byteLength > BRANDING_MARK_MAX_BYTES) {
+      throw new ValidationError(
+        `Favicon must be between 1 and ${BRANDING_MARK_MAX_BYTES} bytes.`,
+      );
+    }
+    await c.env.ATTACHMENTS.put(brandingFaviconR2Key(), bytes, {
+      httpMetadata: { contentType },
+    });
+    await upsertBrandingFavicon(db, contentType);
+    return c.json({ saved: true });
+  } catch (error) {
+    return jsonError(c, error);
+  }
+});
+
+adminApi.delete("/branding/favicon", async (c) => {
+  try {
+    const { db } = await ownerContext(c);
+    const staleKey = await clearBrandingFavicon(db);
+    if (staleKey) {
+      await c.env.ATTACHMENTS.delete(staleKey);
+    }
+    return c.json({ removed: true });
   } catch (error) {
     return jsonError(c, error);
   }

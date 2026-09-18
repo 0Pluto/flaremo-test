@@ -245,6 +245,8 @@ type ShareMetaInput = {
   origin: string;
   token: string;
   product: string;
+  faviconUrl: string | null;
+  faviconType: string | null;
   data: SharePageData;
 };
 
@@ -401,7 +403,11 @@ function renderShareDocument(input: ShareMetaInput): string {
     <meta name="theme-color" content="#faf9f7" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0d0c0b" media="(prefers-color-scheme: dark)" />
     ${buildHeadTags(input)}
-    <link rel="icon" href="/brand/flaremo-mark-light-300.png" type="image/png" />
+    <link
+      rel="icon"
+      href="${escapeHtml(input.faviconUrl ?? "/brand/flaremo-mark-light-300.png")}"
+      type="${escapeHtml(input.faviconType ?? "image/png")}"
+    />
     <style>${SHARE_PAGE_STYLES}</style>
   </head>
   <body>
@@ -455,6 +461,10 @@ export function registerSharePage(app: Hono<HonoBindings>): void {
         origin: publicOrigin(c.env, c.req.raw),
         token: c.req.param("token"),
         product: branding.product,
+        faviconUrl: branding.favicon
+          ? `/api/app/branding/favicon?v=${encodeURIComponent(branding.favicon.updated_at)}`
+          : null,
+        faviconType: branding.favicon?.content_type ?? null,
         data,
       };
       return new Response(renderShareDocument(input), {

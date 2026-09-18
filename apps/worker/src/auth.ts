@@ -225,11 +225,43 @@ export type FlareMoAuth = {
 export function createFlareMoAuth(
   env: FlareMoEnv,
   db: FlareMoDb = createDb(env.DB),
-  options: { allowBootstrapSignUp?: boolean } = {},
+  options: {
+    allowBootstrapSignUp?: boolean;
+    /**
+     * Social sign-in providers resolved per request by the auth handler
+     * route (admin-configured or env vars). Each entry needs both halves;
+     * Better Auth owns the /api/auth/callback/<provider> round trip and the
+     * auth_accounts rows.
+     */
+    socialProviders?: {
+      google?: { clientId: string; clientSecret: string };
+      github?: { clientId: string; clientSecret: string };
+    };
+    /**
+     * Blocks implicit account creation through social sign-in (existing
+     * accounts still link) — used when instance registration is closed so
+     * OAuth cannot bypass the registration toggle.
+     */
+    disableSocialImplicitSignUp?: boolean;
+  } = {},
 ): FlareMoAuth {
   const secret = getRequiredBetterAuthSecret(env);
   const publicUrl = getPublicUrl(env);
   const isSecureDeployment = new URL(publicUrl).protocol === "https:";
+
+  const socialProviders: Record<
+    string,
+    { clientId: string; clientSecret: string; disableImplicitSignUp: boolean }
+  > = {};
+  for (const [id, config] of Object.entries(options.socialProviders ?? {})) {
+    if (config) {
+      socialProviders[id] = {
+        ...config,
+        disableImplicitSignUp: Boolean(options.disableSocialImplicitSignUp),
+      };
+    }
+  }
+  const hasSocialProviders = Object.keys(socialProviders).length > 0;
 
   const auth = betterAuth({
     appName: "FlareMo",
@@ -251,6 +283,20 @@ export function createFlareMoAuth(
       // the operator cannot inspect in a browser.
       revokeSessionsOnPasswordReset: true,
     },
+    // Social sign-in merges into an existing account when the verified
+    // provider email matches (Google/GitHub verify addresses); nothing is
+    // merged across different email addresses.
+    ...(hasSocialProviders
+      ? {
+          account: {
+            accountLinking: {
+              enabled: true,
+              trustedProviders: ["google", "github"],
+            },
+          },
+        }
+      : {}),
+    ...(hasSocialProviders ? { socialProviders } : {}),
     // NOTE: Better Auth's `session.cookieCache` is deliberately NOT enabled.
     // It serves the session from a signed cookie without a DB check for up
     // to maxAge, but FlareMo's contract (enforced by auth.test.ts and

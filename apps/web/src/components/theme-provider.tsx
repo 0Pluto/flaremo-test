@@ -76,6 +76,32 @@ export function setFaviconAccent(accent: string) {
   );
 }
 
+/**
+ * Overrides the themed favicon with the instance's uploaded one. Both theme
+ * variants point at the same asset; clearing the value (null) restores the
+ * bundled paths so setFaviconAccent takes over again.
+ */
+export function setCustomFavicon(url: string | null) {
+  const favicon = document.querySelector<HTMLLinkElement>(
+    "[data-flaremo-favicon]",
+  );
+  if (!favicon) return;
+
+  if (url === null) {
+    favicon.dataset.lightHref =
+      faviconDefaultHrefs?.light ?? "/brand/flaremo-mark-light-300.png";
+    favicon.dataset.darkHref =
+      faviconDefaultHrefs?.dark ?? "/brand/flaremo-mark-dark-320.png";
+    applyFavicon(
+      document.documentElement.classList.contains("dark") ? "dark" : "light",
+    );
+    return;
+  }
+  favicon.dataset.lightHref = url;
+  favicon.dataset.darkHref = url;
+  favicon.href = url;
+}
+
 // Keep the browser chrome (Android address bar, iOS status bar) on the same
 // background the app actually renders, in both themes.
 const THEME_COLORS: Record<ResolvedTheme, string> = {

@@ -466,6 +466,7 @@ const messages = {
   "settings.nav.push": "プッシュ通知",
   "settings.nav.install": "アプリのインストール",
   "settings.nav.voice": "音声サービス",
+  "settings.nav.integrations": "連携サービス",
   "settings.nav.transfer": "インポート・エクスポート",
   "admin.memberActions": "メンバー操作",
   "admin.memberSearchPlaceholder": "名前・メール・ユーザー名で検索",
@@ -679,6 +680,9 @@ const messages = {
   "admin.branding.productNamePlaceholder": "既定：FlareMo",
   "admin.branding.markLight": "ロゴ（ライトモード）",
   "admin.branding.markDark": "ロゴ（ダークモード、省略時はライトを流用）",
+  "admin.branding.favicon": "サイトアイコン（favicon）",
+  "admin.branding.faviconUploaded": "サイトアイコンを更新しました。",
+  "admin.branding.faviconRemoved": "サイトアイコンを削除しました。",
   "admin.branding.upload": "PNG / WebP / SVG をアップロード",
   "admin.branding.replace": "置き換え",
   "admin.branding.remove": "削除",
@@ -905,6 +909,51 @@ const messages = {
   "pwa.updateAvailable": "新しいバージョンがあります",
   "pwa.updateDescription": "再読み込みすると最新版を利用できます。",
   "auth.tab.plugins": "プラグイン",
+  "auth.continueWithGoogle": "Google で続行",
+  "auth.continueWithGithub": "GitHub で続行",
+  "auth.socialSignInHint": "または以下で続行",
+  "admin.integrations.emailTitle": "メールサービス",
+  "admin.integrations.emailDescription":
+    "登録確認やパスワード再設定などのトランザクションメールの送信設定。Resend（HTTP API、SMTP 不要）に対応。環境変数（FLAREMO_EMAIL_PROVIDER）が完全に設定されている場合はそちらが優先されます。",
+  "admin.integrations.emailEnvManaged":
+    "環境変数で管理されているため、ここでは編集できません。",
+  "admin.integrations.emailConfigured":
+    "メールサービスは設定済み（{provider}）。データベース上のシークレットは暗号化されます。",
+  "admin.integrations.emailUnconfigured":
+    "メールプロバイダ未設定：確認メールとパスワード再設定メールは利用できません。",
+  "admin.integrations.emailCloudflareNote":
+    "現在 Cloudflare EMAIL バインディング（環境変数）で送信中のため、ここでは編集できません。",
+  "admin.integrations.emailFrom": "送信元アドレス（例: no-reply@example.com）",
+  "admin.integrations.emailFromName": "送信者名（省略可）",
+  "admin.integrations.emailApiKey": "Resend API キー",
+  "admin.integrations.enabled": "有効",
+  "admin.integrations.save": "保存",
+  "admin.integrations.saved": "連携設定を保存しました。",
+  "admin.integrations.testEmail": "テストメールを送信",
+  "admin.integrations.testSuccess":
+    "テストメールを送信しました。ご確認ください。",
+  "admin.integrations.delete": "設定を削除",
+  "admin.integrations.deleted": "連携設定を削除しました。",
+  "admin.integrations.emailConfirmDelete":
+    "保存済みのメール設定（API キー含む）を削除します。環境変数の設定には影響しません。",
+  "admin.integrations.emailError": "メール設定の保存に失敗しました。",
+  "admin.integrations.oauthTitle": "ソーシャルログイン",
+  "admin.integrations.oauthDescription":
+    "設定するとログインページに対応ボタンが表示され、確認済みの Google/GitHub メールアドレスと一致するアカウントへ自動的に紐付きます。コールバック URL を各プラットフォームの OAuth アプリ設定に登録してください。",
+  "admin.integrations.oauthEnvManaged":
+    "環境変数（FLAREMO_OAUTH_*）で管理されているため、ここでは編集できません。",
+  "admin.integrations.oauthClientId": "クライアント ID",
+  "admin.integrations.oauthClientSecret": "クライアントシークレット",
+  "admin.integrations.oauthCallbackPrefix": "コールバック URL：",
+  "admin.integrations.providerActive": "有効",
+  "admin.integrations.oauthConfirmDelete":
+    "保存済みのソーシャルログイン設定を削除し、ログインページからボタンを外します。",
+  "admin.integrations.oauthError":
+    "ソーシャルログイン設定の保存に失敗しました。",
+  "admin.integrations.plainStore":
+    "暗号化キー（FLAREMO_INTEGRATION_CONFIG_KEY）が未設定のため、シークレットは平文 JSON で保存されます（データベースの保存時暗号化は有効）。",
+  "admin.integrations.unreadable":
+    "保存済みのシークレットを復号できません（暗号化キーの不一致または欠如）。削除して再設定してください。",
   "admin.plugins.title": "プラグイン",
   "admin.plugins.description":
     "共有カードなどのプラグイン機能を管理します：有効化、並べ替え、デフォルト設定、オプション調整。コミュニティ製プラグインはここで有効にするまでオフです。",

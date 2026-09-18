@@ -463,6 +463,7 @@ const messages = {
   "settings.nav.push": "Push notifications",
   "settings.nav.install": "Install app",
   "settings.nav.voice": "Voice service",
+  "settings.nav.integrations": "Integrations",
   "settings.nav.transfer": "Import & export",
   "admin.memberActions": "Member actions",
   "admin.memberSearchPlaceholder": "Search name, email or username",
@@ -668,6 +669,9 @@ const messages = {
   "admin.branding.markLight": "Logo (light mode)",
   "admin.branding.markDark":
     "Logo (dark mode, optional; falls back to the light mark)",
+  "admin.branding.favicon": "Site icon (favicon)",
+  "admin.branding.faviconUploaded": "Site icon updated.",
+  "admin.branding.faviconRemoved": "Site icon removed.",
   "admin.branding.upload": "Upload PNG / WebP / SVG",
   "admin.branding.replace": "Replace",
   "admin.branding.remove": "Remove",
@@ -889,6 +893,51 @@ const messages = {
   "pwa.updateAvailable": "A new version is available",
   "pwa.updateDescription": "Reload to use the latest version.",
   "auth.tab.plugins": "Plugins",
+  "auth.continueWithGoogle": "Continue with Google",
+  "auth.continueWithGithub": "Continue with GitHub",
+  "auth.socialSignInHint": "or continue with",
+  "admin.integrations.emailTitle": "Email service",
+  "admin.integrations.emailDescription":
+    "Configure the sender for transactional email (verification, password reset). Resend is supported via its HTTP API — no SMTP needed. A fully configured environment (FLAREMO_EMAIL_PROVIDER) takes precedence over this setting.",
+  "admin.integrations.emailEnvManaged":
+    "Managed by environment variables; editing here is disabled. Clear the env config to manage it here instead.",
+  "admin.integrations.emailConfigured":
+    "Email is configured ({provider}). Database-stored secrets are encrypted.",
+  "admin.integrations.emailUnconfigured":
+    "No email provider configured: verification and password-reset email are unavailable.",
+  "admin.integrations.emailCloudflareNote":
+    "Currently sending through the Cloudflare EMAIL binding (environment); not editable here.",
+  "admin.integrations.emailFrom": "From address (e.g. no-reply@example.com)",
+  "admin.integrations.emailFromName": "Sender name (optional)",
+  "admin.integrations.emailApiKey": "Resend API key",
+  "admin.integrations.enabled": "Enabled",
+  "admin.integrations.save": "Save",
+  "admin.integrations.saved": "Integration settings saved.",
+  "admin.integrations.testEmail": "Send test email",
+  "admin.integrations.testSuccess":
+    "Test email sent — please check your inbox.",
+  "admin.integrations.delete": "Delete configuration",
+  "admin.integrations.deleted": "Integration configuration removed.",
+  "admin.integrations.emailConfirmDelete":
+    "Deletes the saved email configuration (including the API key). Environment configuration is unaffected.",
+  "admin.integrations.emailError": "Saving the email configuration failed.",
+  "admin.integrations.oauthTitle": "Social sign-in",
+  "admin.integrations.oauthDescription":
+    "Once configured, the login page shows the matching buttons; users signing in with a verified Google/GitHub email are merged into the account with the same address. Register the callback URL in the provider's OAuth app settings.",
+  "admin.integrations.oauthEnvManaged":
+    "Managed by environment variables (FLAREMO_OAUTH_*); editing here is disabled.",
+  "admin.integrations.oauthClientId": "Client ID",
+  "admin.integrations.oauthClientSecret": "Client secret",
+  "admin.integrations.oauthCallbackPrefix": "Callback URL:",
+  "admin.integrations.providerActive": "Active",
+  "admin.integrations.oauthConfirmDelete":
+    "Deletes the saved social sign-in configuration; the buttons disappear from the login page.",
+  "admin.integrations.oauthError":
+    "Saving the social sign-in configuration failed.",
+  "admin.integrations.plainStore":
+    "No encryption key set (FLAREMO_INTEGRATION_CONFIG_KEY): secrets are stored as plaintext JSON (the database's encryption at rest still applies).",
+  "admin.integrations.unreadable":
+    "Saved secrets cannot be decrypted (missing or changed encryption key). Delete them and reconfigure.",
   "admin.plugins.title": "Plugins",
   "admin.plugins.description":
     "Manage plugin contributions such as share cards: enable, reorder, set the default, tune options. Community plugins stay off until enabled here.",

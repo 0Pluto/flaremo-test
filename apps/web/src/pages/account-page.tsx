@@ -14,6 +14,7 @@ import {
   ShieldCheckIcon,
   UserRoundIcon,
   UsersIcon,
+  WebhookIcon,
 } from "lucide-react";
 import { lazy, type ReactNode, Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -42,6 +43,10 @@ import { useI18n } from "@/i18n";
 import { errorMessage } from "@/lib/error";
 import { cn } from "@/lib/utils";
 import { InstallAppCard } from "./account/install-app-card";
+import {
+  EmailSettingsCard,
+  OauthSettingsCard,
+} from "./account/integrations-card";
 import { ProfilePanel } from "./account/profile-panel";
 import { PushPanel } from "./account/push-panel";
 import { MIN_PASSWORD_LENGTH, SecurityPanel } from "./account/security-panel";
@@ -68,7 +73,8 @@ type SettingsSection =
   | "transfer"
   | "team"
   | "branding"
-  | "plugins";
+  | "plugins"
+  | "integrations";
 
 type NavItem = {
   id: SettingsSection;
@@ -501,6 +507,11 @@ export function AccountSettingsDialog({
                     id: "plugins" as const,
                     label: t("auth.tab.plugins"),
                   },
+                  {
+                    icon: WebhookIcon,
+                    id: "integrations" as const,
+                    label: t("settings.nav.integrations"),
+                  },
                 ]
               : []),
           ],
@@ -609,6 +620,12 @@ export function AccountSettingsDialog({
     team: isTeamAdmin ? <AdminPanel /> : null,
     branding: isInstanceOwner ? <BrandingCard /> : null,
     plugins: isInstanceOwner ? <PluginsCard /> : null,
+    integrations: isInstanceOwner ? (
+      <div className="flex flex-col gap-4">
+        <EmailSettingsCard />
+        <OauthSettingsCard />
+      </div>
+    ) : null,
   };
 
   return (
