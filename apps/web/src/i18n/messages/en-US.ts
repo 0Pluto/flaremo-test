@@ -471,6 +471,7 @@ const messages = {
   "auth.signOut": "Sign out",
   "auth.profileTitle": "Sign-in name",
   "auth.usernameHandle": "Username",
+  "account.readerUntil": "Reader valid until {date}",
   "auth.saveUsername": "Save username",
   "auth.saving": "Saving…",
   "auth.usernameUpdateFailed": "Could not update the username.",

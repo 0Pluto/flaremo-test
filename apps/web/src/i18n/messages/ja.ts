@@ -474,6 +474,7 @@ const messages = {
   "auth.signOut": "サインアウト",
   "auth.profileTitle": "サインイン名",
   "auth.usernameHandle": "ユーザー名",
+  "account.readerUntil": "リーダー有効期限: {date}",
   "auth.saveUsername": "ユーザー名を保存",
   "auth.saving": "保存中…",
   "auth.usernameUpdateFailed": "ユーザー名を更新できませんでした。",

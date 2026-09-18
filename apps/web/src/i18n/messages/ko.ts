@@ -472,6 +472,7 @@ const messages = {
   "auth.signOut": "로그아웃",
   "auth.profileTitle": "로그인 이름",
   "auth.usernameHandle": "사용자 이름",
+  "account.readerUntil": "리더 만료일: {date}",
   "auth.saveUsername": "사용자 이름 저장",
   "auth.saving": "저장 중…",
   "auth.usernameUpdateFailed": "사용자 이름을 업데이트할 수 없습니다.",

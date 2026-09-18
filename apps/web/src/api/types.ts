@@ -135,6 +135,8 @@ export type CurrentFlareMoUser = {
   team: { id: string; name: string } | null;
   /** True when a reader seat exists but has lapsed: the team space is hidden and a renewal notice shows instead. */
   team_expired?: boolean;
+  /** Absolute expiry of the viewer's own reader seat (ISO string); null = seat without expiry. Present for readers only. */
+  reader_expires_at?: string | null;
 };
 
 /** Workspace partition of the memo corpus (see docs/team-space-ux.md). */

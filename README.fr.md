@@ -82,6 +82,7 @@ La réponse est oui :
   - 👥 **Équipe** : Lecture partagée avec les membres actifs.
   - 🌐 **Public** : Partage public révocable avec contrôle d'expiration.
 - **Départ sécurisé** : Suppression physique et vérifiée des notes privées lors du retrait d'un membre.
+- **Sièges lecteurs** : Attribuez un siège en lecture seule à durée limitée — lecteurs invités, cohortes de cours, livraisons client. Expiration automatique (fail-closed à la résolution du jeton, sans cron). Gérez-les depuis la page membres, ou provisionnez par e-mail via `PUT /api/app/admin/team/reader` avec un jeton d'accès personnel (voir `docs/team-mode.md`).
 
 ### 6. Mode hors-ligne & Expérience PWA
 - **PWA installable** : Installez FlareMo sur bureau ou smartphone pour une sensation d'application native.

@@ -80,6 +80,7 @@ FlareMo answers a simpler question: **Can you get a 24/7 online, resilient, glob
   - 👥 **Team**: Shared read-only with active team members.
   - 🌐 **Public**: Anonymous read-only via time-limited share links.
 - **Safe offboarding**: Removing a member triggers reliable background cleanup that purges private data while preserving team and public notes.
+- **Reader seats**: Grant a time-boxed read-only seat — guest readers, course cohorts, client delivery. Seats lapse automatically at their expiry (fail-closed at credential resolution, no cron needed). Manage them from the members page, or provision by email through `PUT /api/app/admin/team/reader` with a Personal Access Token (see `docs/team-mode.md`).
 
 ### 6. Offline First & PWA Experience
 - **Installable PWA**: Install to macOS, Windows, iOS, or Android home screen with native feel.

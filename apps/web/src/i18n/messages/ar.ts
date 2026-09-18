@@ -466,6 +466,7 @@ const messages = {
   "auth.signOut": "تسجيل الخروج",
   "auth.profileTitle": "اسم الدخول",
   "auth.usernameHandle": "اسم المستخدم",
+  "account.readerUntil": "صلاحية القارئ حتى {date}",
   "auth.saveUsername": "حفظ اسم المستخدم",
   "auth.saving": "جارٍ الحفظ…",
   "auth.usernameUpdateFailed": "تعذر تحديث اسم المستخدم.",

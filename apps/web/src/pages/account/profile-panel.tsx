@@ -9,14 +9,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import type { TranslationKey } from "@/i18n";
+import type { TranslationKey, TranslationParams } from "@/i18n";
 
 type ProfilePanelProps = {
   currentUsername: string;
   error: string | null;
   isPending: boolean;
+  /** Absolute expiry of the viewer's reader seat (ISO string), or null when not a reader / no expiry. */
+  readerExpiry?: string | null;
   setUsername: (value: string) => void;
-  t: (key: TranslationKey) => string;
+  t: (key: TranslationKey, params?: TranslationParams) => string;
   username: string;
   onSubmit: () => Promise<void>;
 };
@@ -25,6 +27,7 @@ export function ProfilePanel({
   currentUsername,
   error,
   isPending,
+  readerExpiry,
   setUsername,
   t,
   username,
@@ -39,6 +42,16 @@ export function ProfilePanel({
     wasPending.current = isPending;
   }, [isPending, error]);
 
+  const expiryDate = readerExpiry ? new Date(readerExpiry) : null;
+  const expiryLabel =
+    expiryDate && !Number.isNaN(expiryDate.getTime())
+      ? expiryDate.toLocaleDateString(undefined, {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        })
+      : null;
+
   return (
     <Card>
       <CardHeader>
@@ -52,6 +65,11 @@ export function ProfilePanel({
           <p className="mt-0.5 text-xs text-muted-foreground">
             {t("auth.usernameHandle")}
           </p>
+          {expiryLabel && (
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {t("account.readerUntil", { date: expiryLabel })}
+            </p>
+          )}
         </div>
         <Button
           size="sm"

@@ -482,6 +482,7 @@ const messages = {
   "auth.signOut": "Cerrar sesión",
   "auth.profileTitle": "Nombre de acceso",
   "auth.usernameHandle": "Usuario",
+  "account.readerUntil": "Lector válido hasta {date}",
   "auth.saveUsername": "Guardar el usuario",
   "auth.saving": "Guardando…",
   "auth.usernameUpdateFailed": "No se pudo actualizar el usuario.",

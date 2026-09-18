@@ -484,6 +484,7 @@ const messages = {
   "auth.signOut": "Se déconnecter",
   "auth.profileTitle": "Nom de connexion",
   "auth.usernameHandle": "Nom d'utilisateur",
+  "account.readerUntil": "Lecteur valable jusqu'au {date}",
   "auth.saveUsername": "Enregistrer le nom d'utilisateur",
   "auth.saving": "Enregistrement…",
   "auth.usernameUpdateFailed":

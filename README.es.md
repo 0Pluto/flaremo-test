@@ -82,6 +82,7 @@ La respuesta es rotundamente sí:
   - 👥 **Equipo**: Lectura compartida con los miembros activos del equipo.
   - 🌐 **Público**: Enlaces públicos revocables con fecha de caducidad.
 - **Salida segura**: Al retirar a un miembro, sus datos privados se eliminan físicamente mientras que el contenido de equipo se preserva.
+- **Plazas de lector**: Concede un asiento de solo lectura con caducidad — lectores invitados, alumnos, entregas a clientes. Expira automáticamente (fail-closed al resolver la credencial, sin cron). Géstionalas desde la página de miembros o aprovisiónalas por email mediante `PUT /api/app/admin/team/reader` con un token de acceso personal (ver `docs/team-mode.md`).
 
 ### 6. Modo sin conexión y experiencia PWA
 - **PWA instalable**: Instala FlareMo en tu ordenador o móvil con tacto y velocidad de app nativa.

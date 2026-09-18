@@ -11,6 +11,7 @@ import {
   brandingMarkR2Key,
   CUSTOM_BRANDING_ACCENT,
   clearBrandingMark,
+  ConflictError,
   createFlaremoMemberWithLink,
   createMemberRemovalJob,
   DEFAULT_FLAREMO_PRODUCT_NAME,
@@ -22,6 +23,7 @@ import {
   getAuthUserIdByFlaremoUserId,
   getBranding,
   getFlaremoUserById,
+  getFlaremoUserByAuthUserId,
   getMemberRemovalJob,
   getMembershipState,
   getPluginSettings,
@@ -71,10 +73,25 @@ const updateUserRoleSchema = z.object({
   role: z.enum(["admin", "member"]),
 });
 
+/**
+ * Machine provisioning enters the admin surface through the same credential
+ * resolver the rest of the API uses: a `Bearer memos_pat_*` token resolves to
+ * its owner (with the team role), while browser requests keep the strict
+ * session-only path. The PAT therefore carries exactly its owner's powers —
+ * no more — and the per-endpoint role checks below stay in charge.
+ */
+async function adminCredentialContext(
+  c: Parameters<typeof getBrowserRequestContext>[0],
+) {
+  return c.req.raw.headers.has("authorization")
+    ? await getRequestContext(c)
+    : await getBrowserRequestContext(c);
+}
+
 async function teamAdminContext(
   c: Parameters<typeof getBrowserRequestContext>[0],
 ) {
-  const context = await getBrowserRequestContext(c);
+  const context = await adminCredentialContext(c);
   if (!isTeamAdmin(context.user)) {
     throw new ForbiddenError("Team administrator access is required.");
   }
@@ -82,7 +99,7 @@ async function teamAdminContext(
 }
 
 async function ownerContext(c: Parameters<typeof getBrowserRequestContext>[0]) {
-  const context = await getBrowserRequestContext(c);
+  const context = await adminCredentialContext(c);
   if (!isInstanceOwner(context.user)) {
     throw new ForbiddenError("Owner access is required.");
   }
@@ -353,43 +370,65 @@ adminApi.get("/users", async (c) => {
   }
 });
 
+/**
+ * Create a Better Auth identity, the domain user, the link, and the default
+ * team membership in one shot. Administrators never choose or receive a
+ * member password: the one-time reset token doubles as the activation
+ * credential. Shared by the manual add-member endpoint and the machine
+ * provisioning endpoint so both paths stay identical.
+ */
+async function createMemberAccount(
+  c: Parameters<typeof getBrowserRequestContext>[0],
+  context: Awaited<ReturnType<typeof teamAdminContext>>,
+  input: { email: string; name: string },
+): Promise<{
+  member: Awaited<ReturnType<typeof createFlaremoMemberWithLink>>;
+  authUserId: string;
+  username: string;
+  activationToken: string;
+}> {
+  const email = input.email;
+  const username = await deriveUniqueUsername(context.db, email);
+  // Check before Better Auth creates an identity so quota failures cannot
+  // leave an orphaned login account.
+  await assertMemberQuota(context.db, context.limits);
+  const auth = createFlareMoAuth(c.env, context.db, {
+    allowBootstrapSignUp: true,
+  });
+  const result = await auth.api.signUpEmail({
+    body: {
+      email,
+      name: input.name,
+      password: `${crypto.randomUUID()}-${crypto.randomUUID()}Aa1!`,
+      username,
+      displayUsername: input.name,
+    },
+  });
+  const member = await createFlaremoMemberWithLink(
+    context.db,
+    {
+      authUserId: result.user.id,
+      email,
+      name: input.name,
+    },
+    context.limits,
+  );
+  const activationToken = await auth.createPasswordResetToken(result.user.id);
+  return { member, authUserId: result.user.id, username, activationToken };
+}
+
 adminApi.post("/users", zValidator("json", createUserSchema), async (c) => {
   try {
     const context = await teamAdminContext(c);
     const input = c.req.valid("json");
-    const email = input.email;
-    const username = await deriveUniqueUsername(context.db, email);
-    // Check before Better Auth creates an identity so quota failures cannot
-    // leave an orphaned login account.
-    await assertMemberQuota(context.db, context.limits);
-    const auth = createFlareMoAuth(c.env, context.db, {
-      allowBootstrapSignUp: true,
+    const { member, username, activationToken } = await createMemberAccount(c, context, {
+      email: input.email,
+      name: input.name,
     });
-    const result = await auth.api.signUpEmail({
-      body: {
-        email,
-        name: input.name,
-        // Administrators never choose or receive a member password. The
-        // one-time reset token below is the activation credential.
-        password: `${crypto.randomUUID()}-${crypto.randomUUID()}Aa1!`,
-        username,
-        displayUsername: input.name,
-      },
-    });
-    const member = await createFlaremoMemberWithLink(
-      context.db,
-      {
-        authUserId: result.user.id,
-        email,
-        name: input.name,
-      },
-      context.limits,
-    );
-    const activationToken = await auth.createPasswordResetToken(result.user.id);
     return c.json(
       {
         id: member.id,
-        email,
+        email: input.email,
         name: member.name,
         username,
         role: "member" as const,
@@ -404,6 +443,130 @@ adminApi.post("/users", zValidator("json", createUserSchema), async (c) => {
     return jsonError(c, error);
   }
 });
+
+const provisionReaderSchema = z.object({
+  email: z.string().trim().email().max(320),
+  name: z.string().trim().min(1).max(80).optional(),
+  // Absolute expiry timestamp (ISO-8601); null = a reader seat without an
+  // expiry. Renewal arithmetic stays with the caller.
+  expires_at: z.string().min(1).nullable(),
+});
+
+/**
+ * Idempotent machine provisioning: grant (or renew) the reader seat by
+ * email. Unknown emails get a fresh account with an activation link, so one
+ * external call — a payment webhook, a script — opens a seat end to end.
+ * Account creation stays strictly additive; anything that would demote an
+ * administrator or the owner is rejected like the per-user endpoint.
+ */
+adminApi.put(
+  "/team/reader",
+  zValidator("json", provisionReaderSchema),
+  async (c) => {
+    try {
+      const context = await teamAdminContext(c);
+      const input = c.req.valid("json");
+      const email = input.email.toLowerCase();
+      let expiresAt: Date | null = null;
+      if (input.expires_at) {
+        expiresAt = new Date(input.expires_at);
+        if (Number.isNaN(expiresAt.getTime())) {
+          throw new ValidationError("expires_at must be a valid date.");
+        }
+      }
+
+      const { auth } = getFlareMoRuntime(c.env);
+      const existingAuthUser = await auth.findAuthUserByEmail(email);
+      const memberRow = existingAuthUser
+        ? await getFlaremoUserByAuthUserId(context.db, existingAuthUser.id)
+        : null;
+
+      if (existingAuthUser && !memberRow) {
+        // The auth identity exists without a domain user (or was removed):
+        // machine provisioning never resurrects removed accounts.
+        throw new ConflictError(
+          "No active FlareMo account matches this email.",
+        );
+      }
+      if (memberRow && memberRow.status !== "active") {
+        throw new ConflictError(
+          "No active FlareMo account matches this email.",
+        );
+      }
+
+      let created = false;
+      let memberId: string;
+      let memberName: string;
+      let username: string;
+      let activationToken: string | undefined;
+      let memberCreatedAt: string;
+      let memberStatus: string;
+
+      if (!memberRow) {
+        created = true;
+        const account = await createMemberAccount(c, context, {
+          email,
+          name: input.name ?? email.split("@")[0] ?? email,
+        });
+        memberId = account.member.id;
+        memberName = account.member.name;
+        username = account.username;
+        activationToken = account.activationToken;
+        memberCreatedAt = account.member.createdAt;
+        memberStatus = account.member.status;
+        await grantTeamReader(context.db, {
+          authUserId: account.authUserId,
+          expiresAt,
+        });
+      } else {
+        const membership = await teamMembershipInfo(context.db, memberRow.id);
+        if (membership?.role === "owner" || membership?.role === "admin") {
+          throw new ForbiddenError(
+            "Administrators and the owner cannot become readers.",
+          );
+        }
+        const authUserId = await getAuthUserIdByFlaremoUserId(
+          context.db,
+          memberRow.id,
+        );
+        if (!authUserId) {
+          throw new NotFoundError("Active member not found");
+        }
+        username = await getAuthUserById(context.db, authUserId).then(
+          (user) => user?.username ?? memberRow.id.replace(/^users\//, ""),
+        );
+        memberId = memberRow.id;
+        memberName = memberRow.name;
+        memberCreatedAt = memberRow.createdAt;
+        memberStatus = memberRow.status;
+        await grantTeamReader(context.db, { authUserId, expiresAt });
+      }
+
+      return c.json(
+        {
+          id: memberId,
+          email,
+          name: memberName,
+          username,
+          role: "reader" as const,
+          reader_expires_at: readerExpiresAt(expiresAt),
+          status: memberStatus,
+          created_at: memberCreatedAt,
+          created,
+          ...(created && activationToken
+            ? {
+                activation_path: `/reset?token=${encodeURIComponent(activationToken)}`,
+                activation_expires_in_seconds: 60 * 60,
+              }
+            : {}),
+        },
+        created ? 201 : 200,
+      );
+    } catch (error) {
+      return jsonError(c, error);
+    }
+  },
+);
 
 adminApi.patch(
   "/users/:id/role",

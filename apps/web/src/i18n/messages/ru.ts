@@ -477,6 +477,7 @@ const messages = {
   "auth.signOut": "Выйти",
   "auth.profileTitle": "Имя входа",
   "auth.usernameHandle": "Имя пользователя",
+  "account.readerUntil": "Читатель действителен до {date}",
   "auth.saveUsername": "Сохранить имя пользователя",
   "auth.saving": "Сохранение…",
   "auth.usernameUpdateFailed": "Не удалось обновить имя пользователя.",

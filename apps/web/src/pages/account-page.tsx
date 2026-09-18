@@ -517,6 +517,11 @@ export function AccountSettingsDialog({
         currentUsername={session.data?.user.username ?? ""}
         error={accountError}
         isPending={updateUsernameMutation.isPending}
+        readerExpiry={
+          meQuery.data?.role === "reader"
+            ? (meQuery.data.reader_expires_at ?? null)
+            : null
+        }
         setUsername={setUsername}
         t={t}
         username={username}

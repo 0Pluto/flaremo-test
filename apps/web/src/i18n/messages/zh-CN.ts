@@ -431,6 +431,7 @@ const messages = {
   "auth.signOut": "退出登录",
   "auth.profileTitle": "登录名",
   "auth.usernameHandle": "用户名",
+  "account.readerUntil": "读者有效期至 {date}",
   "auth.saveUsername": "保存用户名",
   "auth.saving": "正在保存…",
   "auth.usernameUpdateFailed": "无法更新用户名。",

@@ -36,7 +36,6 @@ import {
   getMemoStats,
   getRandomMemo,
   getSemanticSearchMemos,
-  getViewerTeamInfo,
   getWalkNextMemo,
   incrementUsageCounter,
   isInstanceOwner,
@@ -103,6 +102,17 @@ appApi.get("/me", async (c) => {
     // credentials fall back to the TTL-cached row read.
     const resolvedAuthUser =
       authUser ?? (await getAuthUserCached(db, authUserId));
+    // Drives the workspace sidebar: the team space entry renders only when
+    // the viewer holds an unexpired membership, labelled with the
+    // organization name. team_expired distinguishes "membership lapsed"
+    // (reader seat past its expiry) from "never joined" so the UI can show
+    // a renewal notice instead of silently hiding the space, and
+    // reader_expires_at lets the reader see their own seat's validity.
+    const state = await getMembershipState(db, authUserId);
+    const teamExpired =
+      state?.role === "reader" &&
+      state.expiresAt !== null &&
+      state.expiresAt.getTime() <= Date.now();
     return c.json({
       id: user.id,
       role: user.teamRole,
@@ -112,17 +122,18 @@ appApi.get("/me", async (c) => {
       name: user.name,
       email: resolvedAuthUser?.email ?? user.email,
       username: resolvedAuthUser?.username ?? user.id.replace(/^users\//, ""),
-      // Drives the workspace sidebar: the team space entry renders only when
-      // the viewer holds an unexpired membership, labelled with the
-      // organization name. team_expired distinguishes "membership lapsed"
-      // (reader seat past its expiry) from "never joined" so the UI can show
-      // a renewal notice instead of silently hiding the space.
-      team: await getViewerTeamInfo(db, authUserId),
-      team_expired: await (async () => {
-        const state = await getMembershipState(db, authUserId);
-        if (!state || state.role !== "reader" || !state.expiresAt) return false;
-        return state.expiresAt.getTime() <= Date.now();
-      })(),
+      team:
+        state && !teamExpired
+          ? { id: state.organizationId, name: state.organizationName }
+          : null,
+      team_expired: teamExpired,
+      ...(state?.role === "reader"
+        ? {
+            reader_expires_at: state.expiresAt
+              ? state.expiresAt.toISOString()
+              : null,
+          }
+        : {}),
     });
   } catch (error) {
     return jsonError(c, error);
