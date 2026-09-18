@@ -18,7 +18,10 @@
       "/mcp",
       "/memory/*",
       "/openapi.json",
-      "/memos.api.v1.*"
+      "/memos.api.v1.*",
+      "/share/*",
+      "/sitemap.xml",
+      "/favicon.ico"
     ]
   },
   "d1_databases": [
