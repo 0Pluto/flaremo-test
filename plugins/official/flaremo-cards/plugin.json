@@ -1,0 +1,71 @@
+{
+  "specVersion": 1,
+  "id": "flaremo-cards",
+  "version": "1.0.0",
+  "name": {
+    "zh-CN": "基础卡片",
+    "en-US": "Basic cards",
+    "ja": "ベーシックカード",
+    "ko": "기본 카드",
+    "ru": "Базовые карточки",
+    "fr": "Cartes de base",
+    "es": "Tarjetas básicas",
+    "ar": "البطاقات الأساسية"
+  },
+  "description": {
+    "zh-CN": "素白、日签、票根——三张随 FlareMo 内置的基础卡。",
+    "en-US": "Plain, daily, and ticket — the three cards bundled with FlareMo."
+  },
+  "author": { "name": "FlareMo" },
+  "license": "AGPL-3.0-only",
+  "defaultEnabled": true,
+  "contributes": {
+    "shareCardTemplates": [
+      {
+        "id": "plain",
+        "kind": "document",
+        "name": {
+          "zh-CN": "素白",
+          "en-US": "Plain",
+          "ja": "素白",
+          "ko": "소백",
+          "ru": "Простой",
+          "fr": "Blanc",
+          "es": "Sencillo",
+          "ar": "أبيض"
+        },
+        "document": "cards/plain.json"
+      },
+      {
+        "id": "daily",
+        "kind": "document",
+        "name": {
+          "zh-CN": "日签",
+          "en-US": "Daily",
+          "ja": "日签",
+          "ko": "데일리",
+          "ru": "Ежедневник",
+          "fr": "Citation du jour",
+          "es": "Diario",
+          "ar": "يومية"
+        },
+        "document": "cards/daily.json"
+      },
+      {
+        "id": "ticket",
+        "kind": "document",
+        "name": {
+          "zh-CN": "票根",
+          "en-US": "Ticket",
+          "ja": "票根",
+          "ko": "티켓",
+          "ru": "Билет",
+          "fr": "Ticket",
+          "es": "Billete",
+          "ar": "تذكرة"
+        },
+        "document": "cards/ticket.json"
+      }
+    ]
+  }
+}

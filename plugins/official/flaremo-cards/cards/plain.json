@@ -1,0 +1,99 @@
+{
+  "specVersion": 1,
+  "root": {
+    "type": "column",
+    "style": {
+      "height": "100%",
+      "padding": 28,
+      "background": { "light": "#ffffff", "dark": "#171717" },
+      "color": { "light": "#262626", "dark": "#f5f5f5" }
+    },
+    "children": [
+      {
+        "type": "row",
+        "style": {
+          "width": "100%",
+          "justify": "space-between",
+          "align": "center"
+        },
+        "children": [
+          {
+            "type": "text",
+            "text": "{date}",
+            "style": {
+              "font": { "size": 14, "color": { "light": "#a3a3a3", "dark": "#737373" } }
+            }
+          },
+          {
+            "type": "text",
+            "text": "{brand.product}",
+            "style": {
+              "font": {
+                "family": "heading",
+                "size": 14,
+                "weight": 600,
+                "color": "brand.500"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "text": "{body}",
+        "style": {
+          "flex": 1,
+          "marginTop": 28,
+          "clamp": 10,
+          "overflow": "hidden",
+          "font": { "size": 15, "lineHeight": 1.867 }
+        }
+      },
+      {
+        "type": "row",
+        "style": {
+          "width": "100%",
+          "justify": "space-between",
+          "align": "end",
+          "marginTop": 16
+        },
+        "children": [
+          {
+            "type": "text",
+            "text": "{stats}",
+            "style": {
+              "font": {
+                "size": 12,
+                "letterSpacing": 0.4,
+                "uppercase": true,
+                "color": { "light": "#a3a3a3", "dark": "#737373" }
+              }
+            }
+          },
+          {
+            "type": "svg",
+            "viewBox": "0 0 28 16",
+            "style": { "width": 28, "height": 16 },
+            "children": [
+              { "tag": "rect", "attrs": { "x": 0, "y": 0, "width": 4, "height": 4, "rx": 1, "fill": { "light": "#e5e5e5", "dark": "#404040" } } },
+              { "tag": "rect", "attrs": { "x": 6, "y": 0, "width": 4, "height": 4, "rx": 1, "fill": { "light": "#e5e5e5", "dark": "#404040" } } },
+              { "tag": "rect", "attrs": { "x": 12, "y": 0, "width": 4, "height": 4, "rx": 1, "fill": { "light": "#e5e5e5", "dark": "#404040" } } },
+              { "tag": "rect", "attrs": { "x": 18, "y": 0, "width": 4, "height": 4, "rx": 1, "fill": { "light": "#e5e5e5", "dark": "#404040" } } },
+              { "tag": "rect", "attrs": { "x": 24, "y": 0, "width": 4, "height": 4, "rx": 1, "fill": "brand.400", "opacity": 0.7 } },
+              { "tag": "rect", "attrs": { "x": 0, "y": 6, "width": 4, "height": 4, "rx": 1, "fill": { "light": "#e5e5e5", "dark": "#404040" } } },
+              { "tag": "rect", "attrs": { "x": 6, "y": 6, "width": 4, "height": 4, "rx": 1, "fill": { "light": "#e5e5e5", "dark": "#404040" } } },
+              { "tag": "rect", "attrs": { "x": 12, "y": 6, "width": 4, "height": 4, "rx": 1, "fill": "brand.400", "opacity": 0.7 } },
+              { "tag": "rect", "attrs": { "x": 18, "y": 6, "width": 4, "height": 4, "rx": 1, "fill": { "light": "#e5e5e5", "dark": "#404040" } } },
+              { "tag": "rect", "attrs": { "x": 24, "y": 6, "width": 4, "height": 4, "rx": 1, "fill": { "light": "#e5e5e5", "dark": "#404040" } } },
+              { "tag": "rect", "attrs": { "x": 0, "y": 12, "width": 4, "height": 4, "rx": 1, "fill": "brand.400", "opacity": 0.7 } },
+              { "tag": "rect", "attrs": { "x": 6, "y": 12, "width": 4, "height": 4, "rx": 1, "fill": "brand.400", "opacity": 0.7 } },
+              { "tag": "rect", "attrs": { "x": 12, "y": 12, "width": 4, "height": 4, "rx": 1, "fill": { "light": "#e5e5e5", "dark": "#404040" } } },
+              { "tag": "rect", "attrs": { "x": 18, "y": 12, "width": 4, "height": 4, "rx": 1, "fill": "brand.400", "opacity": 0.7 } },
+              { "tag": "rect", "attrs": { "x": 24, "y": 12, "width": 4, "height": 4, "rx": 1, "fill": { "light": "#e5e5e5", "dark": "#404040" } } }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
