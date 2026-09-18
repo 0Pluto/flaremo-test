@@ -29,7 +29,9 @@ export const articleSummaryDtoSchema = articleDtoSchema.omit({ content: true });
 // --- REST request schemas ---------------------------------------------------
 
 export const createArticleSchema = z.object({
-  title: z.string().trim().min(1).max(200).default(""),
+  // Drafts are created untitled (the list page's "new article" click posts an
+  // empty title); the publish gate enforces a non-empty title instead.
+  title: z.string().trim().max(200).default(""),
   description: z.string().trim().max(500).optional(),
   content: z
     .string()
@@ -40,7 +42,9 @@ export const createArticleSchema = z.object({
 
 export const updateArticleSchema = z
   .object({
-    title: z.string().trim().min(1).max(200).optional(),
+    // Empty titles are legal while drafting (autosave sends whatever the
+    // title field holds); publishing is what requires a real title.
+    title: z.string().trim().max(200).optional(),
     description: z.string().trim().max(500).nullable().optional(),
     content: z
       .string()
@@ -62,8 +66,9 @@ export const updateArticleSchema = z
 
 export const listArticlesQuerySchema = z.object({
   status: articleStatusSchema.optional(),
-  // Recycle bin: include soft-deleted articles.
-  include_deleted: z.coerce.boolean().default(false),
+  // Recycle bin: include soft-deleted articles. stringbool, not coerce —
+  // coerce.boolean() maps the string "false" to true.
+  include_deleted: z.stringbool().default(false),
 });
 
 // Slug may be omitted: the server generates one (title transliteration with

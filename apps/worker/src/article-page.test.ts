@@ -234,6 +234,10 @@ describe("Article page (standalone SEO HTML)", () => {
     // Full content: rendered HTML (h1 present), not a truncated excerpt.
     expect(xml).toContain("你好 FlareMo");
     expect(xml).toContain("Owner");
+    // Image sources must be absolute inside a feed document.
+    expect(xml).toContain(
+      "https://flaremo.example/api/public/articles/hello-flaremo-article/attachments/e2e-article-image/blob",
+    );
   });
 
   it("registers the route on any createFlareMoApp instance", async () => {
@@ -263,7 +267,7 @@ describe("Article file-URL rewriting (parity with share-page helpers)", () => {
       "/api/public/articles/my-slug/attachments/e2e-article-image/blob",
     );
     expect(rewritten).toContain(
-      "/api/public/articles/my-slug/attachments/e2e-article-image/blob&w=320)",
+      "/api/public/articles/my-slug/attachments/e2e-article-image/blob?w=320)",
     );
     expect(rewritten).toContain("/file/attachments/raw-id/photo.png");
     // Referenced-id extraction agrees with the web helper's contract.

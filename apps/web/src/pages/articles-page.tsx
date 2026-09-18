@@ -32,7 +32,9 @@ export function ArticlesPage() {
   const queryClient = useQueryClient();
   const articlesQuery = useQuery({
     queryKey: ["articles"],
-    queryFn: () => listArticles(),
+    // include_deleted feeds the recycle-bin affordances below (restore action
+    // + the "in recycle bin" label); without it those rows never arrive.
+    queryFn: () => listArticles({ include_deleted: true }),
   });
 
   const createMutation = useMutation({

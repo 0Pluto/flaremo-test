@@ -509,7 +509,7 @@ const articlesRoute = createRoute({
     warmQuery(
       context.queryClient.ensureQueryData({
         queryKey: ["articles"],
-        queryFn: () => listArticles(),
+        queryFn: () => listArticles({ include_deleted: true }),
       }),
     );
   },

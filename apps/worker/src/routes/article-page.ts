@@ -75,9 +75,16 @@ const ATTACHMENT_REF = /\/file\/attachments\/([A-Za-z0-9][A-Za-z0-9._-]*)/g;
 /**
  * Body attachment references point at the authenticated `/file/` surface;
  * the public page rewrites them to the article's anonymous blob contract
- * (fences skipped, same shape as the share page's token injection).
+ * (fences skipped, same shape as the share page's token injection). `origin`
+ * prefixes the URLs for syndication contexts (RSS readers cannot resolve
+ * relative image sources).
  */
-export function rewriteArticleFileUrls(content: string, slug: string): string {
+export function rewriteArticleFileUrls(
+  content: string,
+  slug: string,
+  origin?: string,
+): string {
+  const base = origin ? origin.replace(/\/+$/, "") : "";
   let inFence = false;
   return content
     .split("\n")
@@ -92,10 +99,15 @@ export function rewriteArticleFileUrls(content: string, slug: string): string {
           match,
         )?.[1];
         if (!id) return match;
+        // The replacement drops the original filename (and its query) from
+        // the match, so a surviving query must be re-attached with `?` — the
+        // separator the match consumed — not `&`. `preview=1` keeps image
+        // (and other inline-safe) responses inline, matching the gallery
+        // section's contract; non-inline types still download.
         const query = match.includes("?")
-          ? `&${match.split("?")[1] ?? ""}`
-          : "";
-        return `](/api/public/articles/${encodeURIComponent(slug)}/attachments/${id}/blob${query}`;
+          ? `?${match.split("?").slice(1).join("?")}&preview=1`
+          : "?preview=1";
+        return `](${base}/api/public/articles/${encodeURIComponent(slug)}/attachments/${id}/blob${query}`;
       });
     })
     .join("\n");
@@ -174,8 +186,11 @@ function metaTag(attr: string, attrValue: string, content: string): string {
 }
 
 export function ogLocale(lang: string | null): string {
-  if (!lang?.trim()) return "zh_CN";
-  return lang.trim().toLowerCase().replace(/-/g, "_");
+  const raw = lang?.trim().toLowerCase().replace(/-/g, "_") ?? "";
+  if (!raw) return "zh_CN";
+  // og:locale is language_TERRITORY ("zh_CN"), not the raw BCP-47 tag.
+  const [language, region] = raw.split("_");
+  return region ? `${language}_${region.toUpperCase()}` : (language ?? raw);
 }
 
 /** The cover attachment, or the first image bound to the article. */
@@ -471,7 +486,8 @@ export function registerArticlePage(app: Hono<HonoBindings>): void {
       .limit(2000);
     // The package throws EmptySitemap on a zero-entry stream; an instance
     // with no published articles must still answer a valid empty urlset.
-    let xml = '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>';
+    let xml =
+      '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>';
     if (rows.length > 0) {
       const stream = new SitemapStream({ hostname: `${origin}/` });
       for (const row of rows) {
@@ -532,7 +548,15 @@ export function registerArticlePage(app: Hono<HonoBindings>): void {
     });
     for (const { article, authorName } of rows) {
       const canonical = `${origin}/article/${encodeURIComponent(article.slug)}`;
-      const contentHtml = createSanitizedMarked({}).parse(article.content, {
+      // Same rewrite as the SSR page, but absolute: relative image URLs do
+      // not resolve inside feed readers. The highlighter is skipped here —
+      // feeds carry plain code blocks to stay cheap.
+      const feedContent = rewriteArticleFileUrls(
+        article.content,
+        article.slug,
+        origin,
+      );
+      const contentHtml = createSanitizedMarked({}).parse(feedContent, {
         async: false,
       });
       feed.addItem({

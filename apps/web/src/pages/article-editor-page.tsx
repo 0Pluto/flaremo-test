@@ -79,6 +79,8 @@ export function ArticleEditorPage({ articleId }: { articleId: string }) {
   useEffect(() => {
     if (!article || seededRef.current) return;
     seededRef.current = true;
+    titleRef.current = article.title;
+    contentRef.current = article.content;
     setTitle(article.title);
     setContent(article.content);
     setSavedArticle(article);
@@ -99,6 +101,13 @@ export function ArticleEditorPage({ articleId }: { articleId: string }) {
       setSaveState("dirty");
     },
   });
+  // useMutation returns a fresh object every render (the spread), so the save
+  // call goes through a ref: flushSave must keep a stable identity, or the
+  // unmount effect below would re-run — and flush — on every keystroke,
+  // defeating the debounce. mutateAsync itself is the observer's bound method
+  // and is stable.
+  const saveRef = useRef(saveMutation.mutateAsync);
+  saveRef.current = saveMutation.mutateAsync;
 
   const flushSave = useCallback(() => {
     if (saveTimerRef.current) {
@@ -114,8 +123,10 @@ export function ArticleEditorPage({ articleId }: { articleId: string }) {
       return;
     }
     setSaveState("saving");
-    void saveMutation.mutateAsync({ title: next.title, content: next.content });
-  }, [saveMutation]);
+    void saveRef
+      .current({ title: next.title, content: next.content })
+      .catch(() => undefined);
+  }, []);
 
   const scheduleSave = useCallback(() => {
     setSaveState("dirty");
@@ -212,6 +223,10 @@ export function ArticleEditorPage({ articleId }: { articleId: string }) {
           aria-label={t("article.titleLabel")}
           className="h-9 flex-1 border-0 bg-transparent px-2 text-lg font-semibold shadow-none focus-visible:ring-0"
           onChange={(event) => {
+            // The refs — not React state — are what the debounced save reads
+            // (state is stale inside the timer closure), so both must update
+            // on every keystroke.
+            titleRef.current = event.target.value;
             setTitle(event.target.value);
             scheduleSave();
           }}
@@ -300,6 +315,7 @@ export function ArticleEditorPage({ articleId }: { articleId: string }) {
             disabled={false}
             editorRef={editorRef}
             onContentChange={(next) => {
+              contentRef.current = next;
               setContent(next);
               scheduleSave();
             }}

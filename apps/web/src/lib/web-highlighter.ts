@@ -11,11 +11,14 @@ import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
 type LanguageImport = import("shiki/core").LanguageInput;
 const LANG_IMPORTS: Record<string, LanguageImport> = {
   typescript: () => import("shiki/langs/typescript.mjs"),
+  // Shiki registers each module under its own name plus DSL aliases (ts, js,
+  // mjs, …), but tsx/jsx are separate grammars, not aliases of their base
+  // languages — so each fence alias needs its own entry to be highlightable.
   ts: () => import("shiki/langs/typescript.mjs"),
-  tsx: () => import("shiki/langs/typescript.mjs"),
+  tsx: () => import("shiki/langs/tsx.mjs"),
   javascript: () => import("shiki/langs/javascript.mjs"),
   js: () => import("shiki/langs/javascript.mjs"),
-  jsx: () => import("shiki/langs/javascript.mjs"),
+  jsx: () => import("shiki/langs/jsx.mjs"),
   python: () => import("shiki/langs/python.mjs"),
   json: () => import("shiki/langs/json.mjs"),
   bash: () => import("shiki/langs/bash.mjs"),

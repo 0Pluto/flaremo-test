@@ -186,15 +186,36 @@ export async function updateArticle(
   }
   if (input.content !== undefined) patch.content = input.content;
   if (input.cover_attachment_id !== undefined) {
-    patch.coverAttachmentId = input.cover_attachment_id
+    const coverId = input.cover_attachment_id
       ? parseResourceName(input.cover_attachment_id, "attachments")
       : null;
+    if (coverId) {
+      // The cover drives og:image on the public page, so it must be an
+      // attachment actually bound to this article — a foreign or unrelated
+      // id would only ever render as a dead URL.
+      const cover = await db.query.attachments.findFirst({
+        where: and(
+          eq(attachments.id, coverId),
+          eq(attachments.articleId, article.id),
+          isNull(attachments.deletedAt),
+          eq(attachments.state, "ready"),
+        ),
+      });
+      if (!cover) {
+        throw new ValidationError(
+          "Cover attachment must be a ready attachment bound to this article.",
+        );
+      }
+    }
+    patch.coverAttachmentId = coverId;
   }
   if (input.lang !== undefined) patch.lang = input.lang?.trim() || null;
-  // Live articles carry the slug they will publish under. A draft may still
-  // re-derive a nicer slug from its (possibly renamed) title; a published
-  // article's slug is frozen — canonical stability beats prettiness.
-  if (article.status === "draft") {
+  // Live articles carry the slug they will publish under. A never-published
+  // draft may still re-derive a nicer slug from its (possibly renamed) title;
+  // once the article has been published the slug is frozen — including across
+  // an unpublish/republish cycle, where a canonical change would be an SEO
+  // incident (publishedAt survives unpublish, so it is the right key here).
+  if (article.status === "draft" && !article.publishedAt) {
     const nextTitle = patch.title ?? article.title;
     const desired = await resolveArticleSlug(
       db,
@@ -249,14 +270,24 @@ export async function publishArticle(
     throw new ValidationError("Article content is required to publish.");
   }
   // A requested slug renames the article's URL one time, at the publish
-  // boundary; after that the slug is frozen.
+  // boundary; after the first publish the slug is frozen. The article's own
+  // current slug is excluded from the collision check, so re-submitting the
+  // dialog with the slug the draft already carries is a no-op rather than a
+  // conflict. Requesting a *different* slug for a previously published piece
+  // is refused loudly — silently publishing under the old slug would hide the
+  // author's intent.
+  if (article.publishedAt && input.slug && input.slug !== article.slug) {
+    throw new ValidationError(
+      "The slug of a published article is frozen and cannot be changed.",
+    );
+  }
   const slug = article.publishedAt
     ? article.slug
     : await resolveArticleSlug(
         db,
         article.title,
         input.slug ?? undefined,
-        input.slug ? undefined : article.slug,
+        article.slug,
       );
   const now = new Date().toISOString();
   const row = await db
@@ -335,6 +366,15 @@ export async function purgeArticleRow(
   db: FlareMoDb,
   id: string,
 ): Promise<void> {
+  // SQLite cannot attach ON DELETE SET NULL to a column added with ALTER
+  // TABLE (migration 0029), so this FK is NO ACTION in every deployed
+  // database. Clear the bindings before dropping the row, or the delete
+  // trips the constraint whenever the article still has attachments. The
+  // rows themselves stay behind for the daily GC (state = 'deleting').
+  await db
+    .update(attachments)
+    .set({ articleId: null, updatedAt: new Date().toISOString() })
+    .where(eq(attachments.articleId, id));
   await db.delete(articles).where(eq(articles.id, id));
 }
 

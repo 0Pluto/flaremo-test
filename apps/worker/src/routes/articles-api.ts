@@ -14,6 +14,7 @@ import {
   restoreArticle,
   unpublishArticle,
   updateArticle,
+  ValidationError,
 } from "@flaremo/domain";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
@@ -29,14 +30,28 @@ function parseArticleId(value: string) {
   return parseResourceName(value, "articles");
 }
 
-/** Publish works with an empty body, so the JSON is parsed leniently. */
+/**
+ * Publish works with an empty body (server derives everything), so a missing
+ * or unparsable body is fine. A *present* body that fails validation is not:
+ * silently dropping a malformed slug would publish under a URL the author
+ * never chose.
+ */
 async function optionalPublishInput(c: { req: { raw: Request } }) {
+  const text = await c.req.raw.text().catch(() => "");
+  if (!text.trim()) return {};
+  let json: unknown;
   try {
-    const parsed = publishArticleSchema.safeParse(await c.req.raw.json());
-    return parsed.success ? parsed.data : {};
+    json = JSON.parse(text);
   } catch {
-    return {};
+    throw new ValidationError("Publish body must be JSON.");
   }
+  const parsed = publishArticleSchema.safeParse(json);
+  if (!parsed.success) {
+    throw new ValidationError(
+      parsed.error.issues[0]?.message ?? "Invalid publish payload.",
+    );
+  }
+  return parsed.data;
 }
 
 articlesApi.get(

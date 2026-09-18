@@ -183,6 +183,110 @@ describe("articles domain services", () => {
     expect(rows).toHaveLength(0);
   });
 
+  it("purges an article that still has bound attachments (NO ACTION FK)", async () => {
+    // SQLite cannot stamp ON DELETE SET NULL on an ALTER TABLE-added column,
+    // so migration 0029's FK is NO ACTION in every deployed database. The
+    // purge must clear bindings itself or the delete trips the constraint.
+    const created = await createArticle(db, user, {
+      title: "Bound",
+      content: "x",
+    });
+    const now = new Date().toISOString();
+    await db.insert(attachments).values({
+      id: "attachments/att-purge",
+      userId: user.id,
+      articleId: created.id,
+      r2Key: "att-purge",
+      filename: "a.bin",
+      contentType: "application/octet-stream",
+      size: 10,
+      state: "deleting",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await expect(purgeArticleRow(db, created.id)).resolves.toBeUndefined();
+
+    const articleRows = await db
+      .select()
+      .from(articles)
+      .where(eq(articles.id, created.id));
+    expect(articleRows).toHaveLength(0);
+    // The attachment row survives for the GC drain (its state is the marker),
+    // now unbound so the FK no longer points at a missing article.
+    const orphan = await db
+      .select()
+      .from(attachments)
+      .where(eq(attachments.id, "attachments/att-purge"));
+    expect(orphan).toHaveLength(1);
+    expect(orphan[0]?.articleId).toBeNull();
+  });
+
+  it("accepts the article's own slug at publish without a conflict", async () => {
+    // The publish dialog pre-fills the derived slug; submitting it unchanged
+    // must not trip the uniqueness check against the article itself.
+    const created = await createArticle(db, user, {
+      title: "Self Slug",
+      content: "c",
+    });
+    expect(created.slug).toBe("self-slug");
+    const published = await publishArticle(db, user, created.id, {
+      slug: created.slug,
+    });
+    expect(published.slug).toBe("self-slug");
+  });
+
+  it("freezes the slug across unpublish, republish, and renames", async () => {
+    const created = await createArticle(db, user, {
+      title: "Frozen",
+      content: "c",
+    });
+    const published = await publishArticle(db, user, created.id);
+    const unpublished = await unpublishArticle(db, user, created.id);
+    expect(unpublished.status).toBe("draft");
+
+    // Editing the title while unpublished must not re-derive the slug:
+    // publishedAt survived, so the canonical URL is frozen.
+    const renamed = await updateArticle(db, user, created.id, {
+      title: "Renamed While Draft",
+    });
+    expect(renamed.slug).toBe(published.slug);
+    const republished = await publishArticle(db, user, created.id);
+    expect(republished.slug).toBe(published.slug);
+  });
+
+  it("validates the cover attachment is bound to the article", async () => {
+    const created = await createArticle(db, user, { title: "C" });
+    await expect(
+      updateArticle(db, user, created.id, {
+        cover_attachment_id: "attachments/no-such-cover",
+      }),
+    ).rejects.toBeInstanceOf(ValidationError);
+
+    const now = new Date().toISOString();
+    await db.insert(attachments).values({
+      id: "attachments/att-cover",
+      userId: user.id,
+      articleId: created.id,
+      r2Key: "att-cover",
+      filename: "cover.png",
+      contentType: "image/png",
+      size: 10,
+      state: "ready",
+      createdAt: now,
+      updatedAt: now,
+    });
+    const updated = await updateArticle(db, user, created.id, {
+      cover_attachment_id: "attachments/att-cover",
+    });
+    expect(updated.cover_attachment_id).toBe("attachments/att-cover");
+    // Clearing it stays legal.
+    const cleared = await updateArticle(db, user, created.id, {
+      cover_attachment_id: null,
+    });
+    expect(cleared.cover_attachment_id).toBeNull();
+  });
+
   it("exposes published articles anonymously and hides drafts", async () => {
     const created = await createArticle(db, user, {
       title: "Public",
