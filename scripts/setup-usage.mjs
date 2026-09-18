@@ -106,15 +106,25 @@ async function main() {
     );
   }
   let accountId = accounts[0];
+  const pinned = process.env.CLOUDFLARE_ACCOUNT_ID?.trim();
   if (accounts.length > 1) {
-    console.log("Multiple accounts are visible:");
-    accounts.forEach((id, index) => {
-      console.log(`  ${index + 1}. ${id}`);
-    });
-    accountId = await prompt(`Select account [1-${accounts.length}]: `);
-    const picked = accounts[Number.parseInt(accountId, 10) - 1];
-    if (!picked) throw new Error("Invalid account selection.");
-    accountId = picked;
+    if (pinned && accounts.includes(pinned)) {
+      accountId = pinned;
+      console.log(`Using CLOUDFLARE_ACCOUNT_ID=${accountId}.`);
+    } else if (!process.stdin.isTTY) {
+      throw new Error(
+        "Multiple Cloudflare accounts are visible; run this script in a terminal to pick one, or set CLOUDFLARE_ACCOUNT_ID.",
+      );
+    } else {
+      console.log("Multiple accounts are visible:");
+      accounts.forEach((id, index) => {
+        console.log(`  ${index + 1}. ${id}`);
+      });
+      const pickedIndex = await prompt(`Select account [1-${accounts.length}]: `);
+      const picked = accounts[Number.parseInt(pickedIndex, 10) - 1];
+      if (!picked) throw new Error("Invalid account selection.");
+      accountId = picked;
+    }
   }
 
   // 2. Current secret state.
@@ -131,16 +141,12 @@ async function main() {
       "Token input needs a terminal, or set FLAREMO_CF_ANALYTICS_TOKEN for non-interactive runs.",
     );
   }
-  if (accounts.length > 1 && !process.stdin.isTTY && !needsTokenInput) {
-    // Account selection below also needs a TTY; fail before mutating secrets.
-    throw new Error(
-      "Multiple Cloudflare accounts are visible; run this script in a terminal to pick one.",
-    );
-  }
   if (tokenConfigured && !reset && !token) {
     console.log(
       `${SECRET_NAMES.token} is already set; keeping it (use --reset to replace).`,
     );
+  } else if (token) {
+    console.log(`${SECRET_NAMES.token} provided via environment; skipping prompt.`);
   } else {
     console.log(
       [
