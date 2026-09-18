@@ -18,6 +18,7 @@ describe("bundled plugin registry", () => {
       "plain",
       "daily",
       "ticket",
+      "postcard",
     ]);
     for (const card of basics?.cards ?? []) {
       expect(card.payload.kind).toBe("document");

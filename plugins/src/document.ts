@@ -50,6 +50,8 @@ export type DocumentStyle = {
   borderRightWidth?: number;
   borderStyle?: "solid" | "dashed";
   shadow?: "none" | "sm" | "md" | "lg";
+  /** Raw CSS box-shadow for fidelity beyond the presets; unsafe values rejected. */
+  shadowCSS?: string;
   /** px */
   padding?: number;
   paddingX?: number;

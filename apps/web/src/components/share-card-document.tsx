@@ -85,6 +85,9 @@ function styleToCSS(
   if (style.opacity !== undefined) css.opacity = style.opacity;
   if (style.borderRadius !== undefined) css.borderRadius = style.borderRadius;
   if (style.shadow) css.boxShadow = SHADOWS[style.shadow];
+  if (style.shadowCSS && !isUnsafeCSS(style.shadowCSS)) {
+    css.boxShadow = style.shadowCSS;
+  }
 
   const borderColor = resolveColor(style.borderColor, mode);
   const borderStyle = style.borderStyle ?? "solid";
