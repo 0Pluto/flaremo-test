@@ -1,0 +1,127 @@
+{
+  "specVersion": 1,
+  "root": {
+    "type": "column",
+    "style": {
+      "height": "100%",
+      "background": "#f4f2ec",
+      "color": "#111111",
+      "borderWidth": 1,
+      "borderColor": "#171717",
+      "borderRadius": 3,
+      "overflow": "hidden",
+      "shadow": "md"
+    },
+    "children": [
+      {
+        "type": "column",
+        "style": { "height": 8, "background": "#ff5a1f" }
+      },
+      {
+        "type": "row",
+        "style": {
+          "justify": "space-between",
+          "align": "center",
+          "paddingX": 28,
+          "paddingTop": 20,
+          "font": {
+            "size": 9,
+            "weight": 600,
+            "letterSpacing": 1.6,
+            "uppercase": true
+          }
+        },
+        "children": [
+          { "type": "text", "text": "KOSX.ai × {brand.product}" },
+          { "type": "text", "text": "{date}" }
+        ]
+      },
+      {
+        "type": "column",
+        "style": {
+          "marginLeft": 28,
+          "marginRight": 28,
+          "marginTop": 16,
+          "borderTopWidth": 2,
+          "borderBottomWidth": 2,
+          "borderColor": "#111111",
+          "paddingY": 16
+        },
+        "children": [
+          {
+            "type": "row",
+            "style": { "justify": "space-between", "align": "end" },
+            "children": [
+              {
+                "type": "text",
+                "text": "BUILD\nSOMETHING\nREAL.",
+                "style": {
+                  "font": {
+                    "size": 31,
+                    "weight": 900,
+                    "lineHeight": 0.86,
+                    "letterSpacing": -1.7
+                  }
+                }
+              },
+              {
+                "type": "text",
+                "text": "↗",
+                "style": {
+                  "width": 32,
+                  "height": 32,
+                  "background": "#ff5a1f",
+                  "font": {
+                    "size": 18,
+                    "weight": 700,
+                    "lineHeight": "32px",
+                    "align": "center",
+                    "color": "#ffffff"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "text": "{body}",
+        "style": {
+          "flex": 1,
+          "overflow": "hidden",
+          "paddingX": 28,
+          "paddingY": 20,
+          "clamp": 9,
+          "font": { "size": 15, "lineHeight": 1.867, "letterSpacing": 0.15 }
+        }
+      },
+      {
+        "type": "row",
+        "style": {
+          "justify": "space-between",
+          "align": "end",
+          "marginLeft": 28,
+          "marginRight": 28,
+          "borderTopWidth": 1,
+          "borderColor": "#111111",
+          "paddingTop": 12,
+          "paddingBottom": 20,
+          "font": { "size": 9, "letterSpacing": 1.26, "uppercase": true }
+        },
+        "children": [
+          {
+            "type": "text",
+            "text": "{stats}",
+            "style": { "color": "#555555" }
+          },
+          {
+            "type": "text",
+            "text": "Field note / {day.padded}",
+            "style": { "font": { "weight": 600 } }
+          }
+        ]
+      }
+    ]
+  }
+}

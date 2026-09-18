@@ -238,6 +238,8 @@ function lookupBinding(
       return ctx.data.date;
     case "day":
       return ctx.data.day;
+    case "day.padded":
+      return ctx.data.day ? ctx.data.day.padStart(2, "0") : "";
     case "stats":
       return ctx.data.stats;
     case "locale":

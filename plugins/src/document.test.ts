@@ -85,6 +85,22 @@ describe("applyBindings", () => {
   it("leaves unknown tokens untouched", () => {
     expect(applyBindings("{nope}", context)).toBe("{nope}");
   });
+
+  it("zero-pads the day with {day.padded}", () => {
+    const singleDigit = {
+      ...context,
+      data: { ...context.data, day: "8" },
+    };
+    expect(applyBindings("{day}", singleDigit)).toBe("8");
+    expect(applyBindings("{day.padded}", singleDigit)).toBe("08");
+    expect(applyBindings("{day.padded}", context)).toBe("18");
+    expect(
+      applyBindings("{day.padded}", {
+        ...context,
+        data: { ...context.data, day: "" },
+      }),
+    ).toBe("");
+  });
 });
 
 describe("resolveOptionValues", () => {

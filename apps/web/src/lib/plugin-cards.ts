@@ -107,20 +107,29 @@ export type CardVisibilityInput = {
 /**
  * Visible cards = (all cards ∩ instance configuration): a plugin shows when
  * its default says so unless explicitly enabled/disabled, hidden cards drop
- * out, configured order wins for the ids it names. An empty result falls back
- * to the bundled cards so the dialog never renders without a card.
+ * out, configured order wins for the ids it names.
+ *
+ * Defaults: bundled **official** plugins are on; bundled community packs,
+ * store installs and local uploads are off until the instance enables them —
+ * a brand pack must never appear on instances that never asked for it. When
+ * the configuration is missing or hides everything, the fallback is the
+ * bundled official cards only (still brand-free), so the dialog can never
+ * render without a card and can never resurrect a hidden brand card.
  */
 export function visibleCardViews(
   settings: PluginSettings | null,
 ): ShareCardView[] {
   const all = allCardViews(settings);
-  const bundled = all.filter((card) => card.source === "bundled");
-  if (!settings) return bundled;
+  const official = all.filter(
+    (card) => card.source === "bundled" && card.pluginTier === "official",
+  );
+  const fallback = official.length > 0 ? official : all;
+  if (!settings) return fallback;
   const enabled = new Set(settings.enabledPlugins);
   const disabled = new Set(settings.disabledPlugins);
   const hidden = new Set(settings.cards.hidden);
   const defaultEnabled = (card: ShareCardView) =>
-    card.source === "bundled" || card.pluginTier === "official" ? true : false;
+    card.source === "bundled" && card.pluginTier === "official";
   const registryOrder = new Map(all.map((card, index) => [card.id, index]));
   const visible = all.filter((card) => {
     const pluginVisible = enabled.has(card.pluginId)
@@ -130,7 +139,7 @@ export function visibleCardViews(
         : defaultEnabled(card);
     return pluginVisible && !hidden.has(card.id);
   });
-  if (visible.length === 0) return bundled;
+  if (visible.length === 0) return fallback;
   const orderIndex = new Map(
     settings.cards.order.map((id, index) => [id, index] as const),
   );
