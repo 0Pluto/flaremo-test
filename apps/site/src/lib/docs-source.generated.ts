@@ -24,8 +24,10 @@ import plugins from "../../../../docs/plugins.md?raw";
 import productRequirements from "../../../../docs/product-requirements.md?raw";
 import release from "../../../../docs/release.md?raw";
 import semanticSearch from "../../../../docs/semantic-search.md?raw";
+import teamMode from "../../../../docs/team-mode.md?raw";
 import techStack from "../../../../docs/tech-stack.md?raw";
 import update from "../../../../docs/update.md?raw";
+import enTeamMode from "../../../../docs/en/team-mode.md?raw";
 
 export type DocLocale = "zh-CN" | "en-US";
 
@@ -121,6 +123,11 @@ const ZH_DOCS: Record<
     group: "concept",
     body: semanticSearch,
   },
+  "team-mode": {
+    title: "团队模式与读者席位",
+    group: "concept",
+    body: teamMode,
+  },
   "tech-stack": {
     title: "FlareMo 技术栈",
     group: "concept",
@@ -156,6 +163,11 @@ const EN_DOCS: Record<
     title: "Plugin System",
     group: "compatibility",
     body: enPlugins,
+  },
+  "team-mode": {
+    title: "Team Mode & Reader Seats",
+    group: "concept",
+    body: enTeamMode,
   },
   update: {
     title: "Updating FlareMo",
@@ -248,6 +260,8 @@ const DESCRIPTIONS_ZH: Record<string, string> = {
   release: "发版流程：tag、CHANGELOG、migration notes、升级说明。",
   "semantic-search":
     "Vectorize 存派生 embedding，D1 仍是事实源；命中回 D1 校验 ACL。",
+  "team-mode":
+    "团队协作模型：owner/admin/member 角色、三级可见性、读者席位与机器开通接口。",
   "tech-stack": "已确定的技术栈与版本约束。",
   update: "升级 FlareMo：上游同步 workflow、PR 流程、回退。",
 };
@@ -262,6 +276,8 @@ const DESCRIPTIONS_EN: Record<string, string> = {
   update: "Upgrading FlareMo: upstream sync workflow, PR flow, and rollbacks.",
   plugins:
     "Share-card plugins: install from the store, upload your own, curate per instance; authors build with plugin:check / plugin:new.",
+  "team-mode":
+    "Team collaboration model: owner/admin/member roles, 3-tier visibility, time-boxed reader seats, and the machine provisioning API.",
   "agent-ingestion":
     "Designing Agent, Telegram, and IM capture paths and conflict policies. (Chinese source; English translation pending.)",
   "agent-memory":

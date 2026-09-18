@@ -36,6 +36,7 @@ const DOC_SLUGS = [
   "product-requirements",
   "release",
   "semantic-search",
+  "team-mode",
   "tech-stack",
   "update",
 ];
