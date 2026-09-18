@@ -111,13 +111,20 @@ describe("instance integration settings (email, OAuth)", () => {
     );
 
   it("saves Resend credentials encrypted, masks them, and gates the API to the owner", async () => {
-    expect((await request("/api/app/admin/email-settings", "GET", undefined, "")).status).toBe(401);
+    expect(
+      (await request("/api/app/admin/email-settings", "GET", undefined, ""))
+        .status,
+    ).toBe(401);
     expect(
       (
         await request("/api/app/admin/email-settings", "PUT", {
           revision: null,
           enabled: true,
-          credentials: { apiKey: "", from: "no-reply@example.com", fromName: "" },
+          credentials: {
+            apiKey: "",
+            from: "no-reply@example.com",
+            fromName: "",
+          },
         })
       ).status,
     ).toBe(400);
@@ -129,7 +136,11 @@ describe("instance integration settings (email, OAuth)", () => {
           {
             revision: null,
             enabled: true,
-            credentials: { apiKey: "re_test-secret", from: "no-reply@example.com", fromName: "FlareMo" },
+            credentials: {
+              apiKey: "re_test-secret",
+              from: "no-reply@example.com",
+              fromName: "FlareMo",
+            },
           },
           sessionCookie,
           "https://evil.test",
@@ -141,7 +152,11 @@ describe("instance integration settings (email, OAuth)", () => {
         await request("/api/app/admin/email-settings", "PUT", {
           revision: null,
           enabled: true,
-          credentials: { apiKey: "re_test-secret", from: "no-reply@example.com", fromName: "FlareMo" },
+          credentials: {
+            apiKey: "re_test-secret",
+            from: "no-reply@example.com",
+            fromName: "FlareMo",
+          },
         })
       ).status,
     ).toBe(200);
@@ -180,7 +195,11 @@ describe("instance integration settings (email, OAuth)", () => {
     await request("/api/app/admin/email-settings", "PUT", {
       revision: null,
       enabled: true,
-      credentials: { apiKey: "re_test-secret", from: "no-reply@example.com", fromName: "" },
+      credentials: {
+        apiKey: "re_test-secret",
+        from: "no-reply@example.com",
+        fromName: "",
+      },
     });
     const db = createDb(env.DB);
     const { resolveEmailIntegration } = await import("./integrations/config");
@@ -199,20 +218,25 @@ describe("instance integration settings (email, OAuth)", () => {
         FLAREMO_EMAIL_FROM: "env@example.com",
       },
     );
-    const envState = (await envApp.json()) as { source: string; provider: string };
+    const envState = (await envApp.json()) as {
+      source: string;
+      provider: string;
+    };
     expect(envState.source).toBe("environment");
     expect(envState.provider).toBe("cloudflare");
   });
 
   it("stores OAuth providers, exposes ids publicly, and deletes cleanly", async () => {
     expect(
-      (await request("/api/app/admin/oauth-settings", "PUT", {
-        revision: null,
-        credentials: {
-          google: { clientId: "", clientSecret: "" },
-          github: { clientId: "", clientSecret: "" },
-        },
-      })).status,
+      (
+        await request("/api/app/admin/oauth-settings", "PUT", {
+          revision: null,
+          credentials: {
+            google: { clientId: "", clientSecret: "" },
+            github: { clientId: "", clientSecret: "" },
+          },
+        })
+      ).status,
     ).toBe(400);
 
     expect(
@@ -244,13 +268,18 @@ describe("instance integration settings (email, OAuth)", () => {
       stored?.ciphertext ?? "",
       (value) => value,
     );
-    expect((opened as { github?: { clientSecret: string } }).github?.clientSecret).toBe("gh-secret");
+    expect(
+      (opened as { github?: { clientSecret: string } }).github?.clientSecret,
+    ).toBe("gh-secret");
 
     const get = (await (
       await request("/api/app/admin/oauth-settings", "GET")
     ).json()) as {
       revision: string;
-      previews: { google: { clientSecret: string }; github: { clientId: string } };
+      previews: {
+        google: { clientSecret: string };
+        github: { clientId: string };
+      };
     };
     expect(get.previews.google.clientSecret).toBe("****cret");
     expect(get.previews.github.clientId).toBe("gh-id");
