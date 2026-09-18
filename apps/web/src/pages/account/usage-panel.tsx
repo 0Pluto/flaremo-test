@@ -1,10 +1,10 @@
 import type { UseQueryResult } from "@tanstack/react-query";
-import { InfoIcon } from "lucide-react";
+import { GaugeIcon, InfoIcon } from "lucide-react";
 import type { VectorUsageReport } from "@/api";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { TranslationKey } from "@/i18n";
 import { formatBytes } from "@/lib/utils";
+import { SettingsRow, SettingsSectionGroup } from "./apple-settings-ui";
 
 type UsagePanelProps = {
   t: (key: TranslationKey) => string;
@@ -13,26 +13,33 @@ type UsagePanelProps = {
 
 export function UsagePanel({ t, vectorUsageQuery }: UsagePanelProps) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("usage.vectorTitle")}</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5">
+      <SettingsSectionGroup
+        title={t("usage.vectorTitle")}
+        footer={
+          <span className="flex items-start gap-1.5 pt-1 text-xs text-muted-foreground">
+            <InfoIcon aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
+            <span>{t("usage.disclaimer")}</span>
+          </span>
+        }
+      >
         {vectorUsageQuery.isLoading ? (
-          <Skeleton className="h-24 w-full" />
+          <div className="p-4">
+            <Skeleton className="h-24 w-full" />
+          </div>
         ) : vectorUsageQuery.isError || !vectorUsageQuery.data ? (
-          <p className="text-sm text-muted-foreground">
+          <div className="p-4 text-sm text-muted-foreground">
             {t("usage.vectorUnavailable")}
-          </p>
+          </div>
         ) : (
-          <VectorUsagePanel report={vectorUsageQuery.data} t={t} />
+          <VectorUsageContent report={vectorUsageQuery.data} t={t} />
         )}
-      </CardContent>
-    </Card>
+      </SettingsSectionGroup>
+    </div>
   );
 }
 
-function VectorUsagePanel({
+function VectorUsageContent({
   report,
   t,
 }: {
@@ -47,39 +54,37 @@ function VectorUsagePanel({
     (sum, index) => sum + index.vectors_count,
     0,
   );
+
   return (
-    <div className="flex flex-col gap-4">
-      <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 rounded-lg bg-muted/50 px-4 py-3 text-sm">
-        <dt className="text-muted-foreground">{t("usage.model")}</dt>
-        <dd className="min-w-0 truncate">{report.model}</dd>
-        <dt className="text-muted-foreground">{t("usage.dimensions")}</dt>
-        <dd className="tabular-nums">{report.dimensions}</dd>
-        <dt className="text-muted-foreground">{t("usage.vectors")}</dt>
-        <dd className="tabular-nums">{totalVectors}</dd>
-      </dl>
-      <UsageBar
-        hint={t("usage.storedHint")}
-        label={t("usage.stored")}
-        used={totalStored}
-        limit={report.stored_limit}
+    <div className="flex flex-col divide-y divide-border/40">
+      <SettingsRow
+        icon={GaugeIcon}
+        iconColor="bg-teal-500"
+        label={t("usage.model")}
+        value={report.model}
       />
-      <UsageBar
-        label={t("usage.queried")}
-        used={report.queried_dimensions_this_month}
-        limit={report.queried_limit}
+      <SettingsRow
+        label={t("usage.vectors")}
+        value={`${totalVectors.toLocaleString()} (${report.dimensions} dim)`}
       />
-      {report.plan && <PlanQuotaBars plan={report.plan} t={t} />}
-      <p className="flex items-start gap-1.5 border-t pt-4 text-xs text-muted-foreground">
-        <InfoIcon aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
-        <span>{t("usage.disclaimer")}</span>
-      </p>
+      <div className="p-4 flex flex-col gap-4">
+        <UsageBar
+          hint={t("usage.storedHint")}
+          label={t("usage.stored")}
+          used={totalStored}
+          limit={report.stored_limit}
+        />
+        <UsageBar
+          label={t("usage.queried")}
+          used={report.queried_dimensions_this_month}
+          limit={report.queried_limit}
+        />
+        {report.plan && <PlanQuotaBars plan={report.plan} t={t} />}
+      </div>
     </div>
   );
 }
 
-// Used-vs-limit rows for the injectable plan quotas. Rows with a null limit
-// (self-hosted default) stay hidden so the panel stays noise-free; when every
-// limit is null there is nothing to render.
 type QuotaRow = {
   key: TranslationKey;
   used: number;
@@ -225,10 +230,8 @@ function UsageBar({
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
         {percent > 0 ? (
-          // min-width keeps a near-empty bar readable as a starting stub
-          // instead of collapsing into a stray dot.
           <div
-            className="h-full min-w-4 rounded-full bg-brand-500 transition-[width]"
+            className="h-full min-w-4 rounded-full bg-primary transition-[width]"
             style={{ width: `${percent}%` }}
           />
         ) : null}

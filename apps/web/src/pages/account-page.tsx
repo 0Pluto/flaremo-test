@@ -4,6 +4,8 @@ import {
   AppWindowMacIcon,
   ArrowDownUpIcon,
   BellRingIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   GaugeIcon,
   KeyRoundIcon,
   LogOutIcon,
@@ -15,6 +17,7 @@ import {
   UserRoundIcon,
   UsersIcon,
   WebhookIcon,
+  XIcon,
 } from "lucide-react";
 import { lazy, type ReactNode, Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -36,12 +39,18 @@ import {
   revokePersonalAccessToken,
 } from "@/api";
 import { authClient } from "@/auth-client";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/i18n";
 import { errorMessage } from "@/lib/error";
 import { cn } from "@/lib/utils";
+import {
+  SettingsIconBadge,
+  SettingsRow,
+  SettingsSectionGroup,
+} from "./account/apple-settings-ui";
 import { InstallAppCard } from "./account/install-app-card";
 import {
   EmailSettingsCard,
@@ -79,51 +88,24 @@ type SettingsSection =
 type NavItem = {
   id: SettingsSection;
   icon: LucideIcon;
+  iconBg: string;
   label: string;
 };
 
-// Matches the lazy VoicePanel's frame (title + description + a few rows) so
-// the chunk download never pops the cards below it upward.
+type NavGroup = {
+  titleKey?:
+    | "settings.group.account"
+    | "settings.group.preferences"
+    | "settings.group.admin";
+  items: NavItem[];
+};
+
 function VoicePanelSkeleton() {
   return (
-    <div className="rounded-xl border">
-      <div className="flex flex-col gap-3 p-6">
-        <Skeleton className="h-6 w-40" />
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-9 w-full" />
-        <Skeleton className="h-9 w-2/3" />
-        <Skeleton className="h-9 w-full" />
-      </div>
+    <div className="flex flex-col gap-3 p-4">
+      <Skeleton className="h-12 w-full rounded-xl" />
+      <Skeleton className="h-28 w-full rounded-xl" />
     </div>
-  );
-}
-
-function NavButton({
-  active,
-  icon: Icon,
-  label,
-  onSelect,
-}: {
-  active: boolean;
-  icon: LucideIcon;
-  label: string;
-  onSelect: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-current={active ? "true" : undefined}
-      onClick={onSelect}
-      className={cn(
-        "flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
-        active
-          ? "bg-accent font-medium text-accent-foreground"
-          : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
-      )}
-    >
-      <Icon className="size-4 shrink-0" />
-      <span className="truncate">{label}</span>
-    </button>
   );
 }
 
@@ -139,6 +121,8 @@ export function AccountSettingsDialog({
   const queryClient = useQueryClient();
   const session = authClient.useSession();
   const [section, setSection] = useState<SettingsSection>("profile");
+  const [mobileView, setMobileView] = useState<"master" | "detail">("master");
+
   const [username, setUsername] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -155,17 +139,15 @@ export function AccountSettingsDialog({
     useState(false);
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const deleteAccountMutation = useMutation({
-    mutationFn: deleteAccount,
-    onSuccess: async () => {
-      // The server deleted the account; every cached query is stale.
-      queryClient.clear();
-      await authClient.signOut().catch(() => undefined);
-      await navigate({ replace: true, to: "/login" });
-    },
-  });
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Reset mobile view to master whenever the dialog opens fresh
+  useEffect(() => {
+    if (open) {
+      setMobileView("master");
+    }
+  }, [open]);
 
   useEffect(() => {
     if (session.data?.user.username) {
@@ -173,22 +155,31 @@ export function AccountSettingsDialog({
     }
   }, [session.data?.user.username]);
 
+  const deleteAccountMutation = useMutation({
+    mutationFn: deleteAccount,
+    onSuccess: async () => {
+      queryClient.clear();
+      await authClient.signOut().catch(() => undefined);
+      await navigate({ replace: true, to: "/login" });
+    },
+  });
+
   const tokensQuery = useQuery({
     queryKey: ["personal-access-tokens"],
     queryFn: listPersonalAccessTokens,
     retry: false,
     enabled: open,
   });
+
   const meQuery = useQuery({
     queryKey: ["current-flaremo-user"],
     queryFn: getCurrentFlareMoUser,
     retry: false,
     enabled: open,
   });
-  // The workspace already holds this viewer under the same key, so opening
-  // the account page renders from cache instead of paying another /me round
-  // trip (and voice permission rides along for free).
+
   const showVoiceSettings = meQuery.data?.can_manage_voice_service === true;
+
   const appInfoQuery = useQuery({
     queryKey: ["app-info"],
     queryFn: getAppInfo,
@@ -196,15 +187,15 @@ export function AccountSettingsDialog({
     retry: false,
     enabled: open,
   });
+
   const vectorUsageQuery = useQuery({
     queryKey: ["vector-usage"],
     queryFn: getVectorUsage,
     retry: false,
     enabled: open,
-    // The global config disables refetchOnWindowFocus; poll mildly so the
-    // quota bars move during a heavy-search session.
     refetchInterval: 120_000,
   });
+
   const dataTasksQuery = useQuery({
     queryKey: ["data-tasks"],
     queryFn: listDataTasks,
@@ -219,6 +210,7 @@ export function AccountSettingsDialog({
         : false;
     },
   });
+
   const retryExportMutation = useMutation({
     mutationFn: createExportTask,
     onSuccess: async () => {
@@ -227,6 +219,7 @@ export function AccountSettingsDialog({
     onError: (error) =>
       toast.error(errorMessage(error, t("transfer.retryFailed"))),
   });
+
   const updateUsernameMutation = useMutation({
     mutationFn: async (nextUsername: string) => {
       const result = await authClient.updateUser({ username: nextUsername });
@@ -234,14 +227,13 @@ export function AccountSettingsDialog({
     },
     onSuccess: async () => {
       await session.refetch();
-      // The renamed viewer feeds the account page, the admin list, and the
-      // workspace header; refresh all cached copies.
       await queryClient.invalidateQueries({
         queryKey: ["current-flaremo-user"],
       });
       await queryClient.invalidateQueries({ queryKey: ["admin-users"] });
     },
   });
+
   const changePasswordMutation = useMutation({
     mutationFn: async (input: {
       currentPassword: string;
@@ -255,15 +247,15 @@ export function AccountSettingsDialog({
       if (result.error) throw result.error;
     },
   });
+
   const changeEmailMutation = useMutation({
     mutationFn: changeEmail,
     onSuccess: async (result) => {
-      // With an email provider configured the change is only staged: the new
-      // address must confirm ownership before the login identity switches.
       setEmailVerificationPending(result.verification_sent === true);
       await session.refetch();
     },
   });
+
   const createTokenMutation = useMutation({
     mutationFn: createPersonalAccessToken,
     onSuccess: async (result) => {
@@ -276,6 +268,7 @@ export function AccountSettingsDialog({
       });
     },
   });
+
   const revokeTokenMutation = useMutation({
     mutationFn: revokePersonalAccessToken,
     onSuccess: async () => {
@@ -284,6 +277,7 @@ export function AccountSettingsDialog({
       });
     },
   });
+
   const deleteTokenMutation = useMutation({
     mutationFn: deletePersonalAccessToken,
     onSuccess: async () => {
@@ -406,8 +400,7 @@ export function AccountSettingsDialog({
     try {
       await authClient.signOut();
     } catch {
-      // Clearing local state is still the right move even if the server
-      // call failed (offline); the cookie will be cleaned server-side later.
+      // Ignore offline sign out failure
     }
     queryClient.clear();
     await navigate({ replace: true, to: "/login" });
@@ -417,10 +410,6 @@ export function AccountSettingsDialog({
     meQuery.data?.role === "owner" || meQuery.data?.role === "admin";
   const isInstanceOwner = meQuery.data?.is_instance_owner === true;
 
-  // Admin cards fetch on mount; warm both queries while the viewer is on
-  // any section so switching to 品牌外观/团队管理 paints with data, not
-  // skeletons. Voice settings rides along too: by the time the lazy
-  // VoicePanel chunk lands, its config is already in cache.
   useEffect(() => {
     if (!open || !isTeamAdmin) return undefined;
     void queryClient.prefetchQuery({
@@ -449,77 +438,110 @@ export function AccountSettingsDialog({
     return undefined;
   }, [meQuery.data?.can_manage_voice_service, open, queryClient]);
 
-  // Sidebar groups read top-down like macOS System Settings: identity first,
-  // then preferences, data, and finally instance management. macOS separates
-  // groups with whitespace only — no group captions.
-  const navGroups: NavItem[][] = [
-    [
-      { icon: UserRoundIcon, id: "profile", label: t("settings.nav.profile") },
-      {
-        icon: ShieldCheckIcon,
-        id: "security",
-        label: t("settings.nav.security"),
-      },
-      { icon: KeyRoundIcon, id: "tokens", label: t("settings.nav.tokens") },
-    ],
-    [
-      { icon: BellRingIcon, id: "push", label: t("settings.nav.push") },
-      {
-        icon: AppWindowMacIcon,
-        id: "install",
-        label: t("settings.nav.install"),
-      },
-      ...(showVoiceSettings
-        ? [
-            {
-              icon: MicIcon,
-              id: "voice" as const,
-              label: t("settings.nav.voice"),
-            },
-          ]
-        : []),
-    ],
-    [
-      { icon: GaugeIcon, id: "usage", label: t("auth.tab.usage") },
-      {
-        icon: ArrowDownUpIcon,
-        id: "transfer",
-        label: t("settings.nav.transfer"),
-      },
-    ],
+  const navGroups: NavGroup[] = [
+    {
+      titleKey: "settings.group.account",
+      items: [
+        {
+          icon: UserRoundIcon,
+          iconBg: "bg-blue-500",
+          id: "profile",
+          label: t("settings.nav.profile"),
+        },
+        {
+          icon: ShieldCheckIcon,
+          iconBg: "bg-emerald-500",
+          id: "security",
+          label: t("settings.nav.security"),
+        },
+        {
+          icon: KeyRoundIcon,
+          iconBg: "bg-amber-500",
+          id: "tokens",
+          label: t("settings.nav.tokens"),
+        },
+      ],
+    },
+    {
+      titleKey: "settings.group.preferences",
+      items: [
+        {
+          icon: BellRingIcon,
+          iconBg: "bg-purple-500",
+          id: "push",
+          label: t("settings.nav.push"),
+        },
+        {
+          icon: AppWindowMacIcon,
+          iconBg: "bg-slate-500 dark:bg-slate-600",
+          id: "install",
+          label: t("settings.nav.install"),
+        },
+        ...(showVoiceSettings
+          ? [
+              {
+                icon: MicIcon,
+                iconBg: "bg-indigo-500",
+                id: "voice" as const,
+                label: t("settings.nav.voice"),
+              },
+            ]
+          : []),
+        {
+          icon: GaugeIcon,
+          iconBg: "bg-teal-500",
+          id: "usage",
+          label: t("auth.tab.usage"),
+        },
+        {
+          icon: ArrowDownUpIcon,
+          iconBg: "bg-sky-500",
+          id: "transfer",
+          label: t("settings.nav.transfer"),
+        },
+      ],
+    },
     ...(isTeamAdmin
       ? [
-          [
-            {
-              icon: UsersIcon,
-              id: "team" as const,
-              label: t("auth.tab.admin"),
-            },
-            ...(isInstanceOwner
-              ? [
-                  {
-                    icon: PaintbrushIcon,
-                    id: "branding" as const,
-                    label: t("auth.tab.branding"),
-                  },
-                  {
-                    icon: PuzzleIcon,
-                    id: "plugins" as const,
-                    label: t("auth.tab.plugins"),
-                  },
-                  {
-                    icon: WebhookIcon,
-                    id: "integrations" as const,
-                    label: t("settings.nav.integrations"),
-                  },
-                ]
-              : []),
-          ],
+          {
+            titleKey: "settings.group.admin" as const,
+            items: [
+              {
+                icon: UsersIcon,
+                iconBg: "bg-violet-600",
+                id: "team" as const,
+                label: t("auth.tab.admin"),
+              },
+              ...(isInstanceOwner
+                ? [
+                    {
+                      icon: PaintbrushIcon,
+                      iconBg: "bg-pink-500",
+                      id: "branding" as const,
+                      label: t("auth.tab.branding"),
+                    },
+                    {
+                      icon: PuzzleIcon,
+                      iconBg: "bg-fuchsia-500",
+                      id: "plugins" as const,
+                      label: t("auth.tab.plugins"),
+                    },
+                    {
+                      icon: WebhookIcon,
+                      iconBg: "bg-orange-500",
+                      id: "integrations" as const,
+                      label: t("settings.nav.integrations"),
+                    },
+                  ]
+                : []),
+            ],
+          },
         ]
       : []),
   ];
 
-  const activeSection = navGroups.flat().find((item) => item.id === section);
+  const allItems = navGroups.flatMap((group) => group.items);
+  const activeSection = allItems.find((item) => item.id === section);
   const activeLabel = activeSection?.label ?? t("settings.nav.profile");
 
   const contentBySection: Record<SettingsSection, ReactNode> = {
@@ -621,12 +643,21 @@ export function AccountSettingsDialog({
     branding: isInstanceOwner ? <BrandingCard /> : null,
     plugins: isInstanceOwner ? <PluginsCard /> : null,
     integrations: isInstanceOwner ? (
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-5">
         <EmailSettingsCard />
         <OauthSettingsCard />
       </div>
     ) : null,
   };
+
+  const roleLabel =
+    meQuery.data?.role === "owner"
+      ? "所有者"
+      : meQuery.data?.role === "admin"
+        ? "管理员"
+        : meQuery.data?.role === "reader"
+          ? "读者"
+          : "成员";
 
   return (
     <Dialog
@@ -635,57 +666,260 @@ export function AccountSettingsDialog({
         if (!nextOpen) onClose();
       }}
     >
-      <DialogContent className="flex h-svh max-h-svh w-full max-w-none flex-col gap-0 overflow-hidden rounded-none border-0 p-0 sm:h-[min(46rem,calc(100svh-4rem))] sm:max-h-[calc(100svh-4rem)] sm:max-w-4xl sm:flex-row sm:rounded-2xl">
-        <aside className="flex shrink-0 flex-col gap-2 border-b bg-muted/40 p-3 sm:w-60 sm:border-b-0 sm:border-r sm:p-4">
-          <DialogTitle className="px-2 pt-1 text-lg font-semibold tracking-tight">
-            {t("settings.title")}
-          </DialogTitle>
-          <div className="hidden items-center gap-3 px-2 pb-1 sm:flex">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-semibold text-accent-foreground">
-              {(session.data?.user.username ?? "?").slice(0, 1)}
+      <DialogContent
+        showCloseButton={false}
+        className="flex h-svh max-h-svh w-full max-w-none flex-col gap-0 overflow-hidden rounded-none border-0 p-0 sm:h-[min(46rem,calc(100svh-4rem))] sm:max-h-[calc(100svh-4rem)] sm:max-w-4xl sm:flex-row sm:rounded-2xl sm:border"
+      >
+        {/* ========================================================================= */}
+        {/* 1. NARROW SCREEN / MOBILE: MASTER VIEW (一级主菜单)                         */}
+        {/* ========================================================================= */}
+        <div
+          className={cn(
+            "flex flex-1 flex-col overflow-hidden bg-background sm:hidden",
+            mobileView === "detail" && "hidden",
+          )}
+        >
+          {/* Mobile Master Navigation Bar */}
+          <div className="flex shrink-0 items-center justify-between border-b bg-background/90 px-4 py-3 backdrop-blur-md">
+            <DialogTitle className="text-lg font-bold tracking-tight">
+              {t("settings.title")}
+            </DialogTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              className="h-8 px-2.5 font-medium text-primary hover:bg-accent/50"
+            >
+              {t("settings.done")}
+            </Button>
+          </div>
+
+          {/* Mobile Master List */}
+          <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-5">
+            {/* Apple ID Style Account Header */}
+            <button
+              type="button"
+              onClick={() => {
+                setSection("profile");
+                setMobileView("detail");
+              }}
+              className="flex w-full items-center justify-between gap-3.5 rounded-2xl border border-border/60 bg-card p-4 text-left shadow-2xs cursor-pointer hover:bg-accent/40 active:bg-accent/60 transition-colors"
+            >
+              <div className="flex min-w-0 items-center gap-3.5">
+                <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xl font-bold text-primary">
+                  {(session.data?.user.username ?? "?")
+                    .slice(0, 1)
+                    .toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate text-base font-semibold text-foreground">
+                    {session.data?.user.username}
+                  </div>
+                  <div className="truncate text-xs text-muted-foreground mt-0.5">
+                    {session.data?.user.email}
+                  </div>
+                  <div className="mt-1.5 flex items-center gap-1.5">
+                    <Badge
+                      variant="secondary"
+                      className="h-4 px-1.5 text-[10px] font-normal"
+                    >
+                      {roleLabel}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+              <ChevronRightIcon className="size-5 text-muted-foreground/40 shrink-0" />
+            </button>
+
+            {/* Mobile Nav Groups */}
+            {navGroups.map((group) => (
+              <SettingsSectionGroup
+                key={group.titleKey ?? "default"}
+                title={group.titleKey ? t(group.titleKey) : undefined}
+              >
+                {group.items.map((item) => (
+                  <SettingsRow
+                    key={item.id}
+                    icon={item.icon}
+                    iconColor={item.iconBg}
+                    label={item.label}
+                    chevron
+                    onClick={() => {
+                      setSection(item.id);
+                      setMobileView("detail");
+                    }}
+                  />
+                ))}
+              </SettingsSectionGroup>
+            ))}
+
+            {/* Mobile Sign Out */}
+            <SettingsSectionGroup>
+              <SettingsRow
+                destructive
+                icon={LogOutIcon}
+                label={t("auth.signOut")}
+                onClick={() => void handleSignOut()}
+              />
+            </SettingsSectionGroup>
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* 2. NARROW SCREEN / MOBILE: DETAIL VIEW (二级详情页)                         */}
+        {/* ========================================================================= */}
+        <div
+          className={cn(
+            "flex flex-1 flex-col overflow-hidden bg-background sm:hidden",
+            mobileView === "master" && "hidden",
+          )}
+        >
+          {/* Mobile Detail Navigation Bar */}
+          <div className="flex shrink-0 items-center justify-between border-b bg-background/90 px-2 py-2 backdrop-blur-md">
+            <button
+              type="button"
+              onClick={() => setMobileView("master")}
+              className="flex items-center gap-1 text-sm font-medium text-primary hover:opacity-80 transition-opacity py-1 px-2 -ml-1"
+            >
+              <ChevronLeftIcon className="size-5" />
+              <span>{t("settings.title")}</span>
+            </button>
+            <h2 className="text-sm font-semibold truncate px-2 text-foreground">
+              {activeLabel}
+            </h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              className="h-8 px-2.5 font-medium text-primary hover:bg-accent/50"
+            >
+              {t("settings.done")}
+            </Button>
+          </div>
+
+          {/* Mobile Detail Body */}
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex flex-col gap-4">
+              {contentBySection[section]}
             </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium">
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* 3. WIDE SCREEN / DESKTOP: macOS STYLE SPLIT VIEW (宽屏双栏分栏)            */}
+        {/* ========================================================================= */}
+        <aside className="hidden shrink-0 flex-col border-r bg-muted/30 p-3 sm:flex sm:w-64">
+          <div className="flex items-center justify-between px-2 pt-1 pb-2">
+            <DialogTitle className="text-base font-semibold tracking-tight text-foreground">
+              {t("settings.title")}
+            </DialogTitle>
+          </div>
+
+          {/* Compact User Header in Sidebar */}
+          <button
+            type="button"
+            onClick={() => setSection("profile")}
+            className={cn(
+              "flex w-full items-center gap-3 rounded-xl p-2 text-left transition-colors cursor-pointer mb-2",
+              section === "profile" ? "bg-accent/70" : "hover:bg-accent/40",
+            )}
+          >
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+              {(session.data?.user.username ?? "?").slice(0, 1).toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-semibold leading-tight text-foreground">
                 {session.data?.user.username}
               </p>
-              <p className="truncate text-xs text-muted-foreground">
+              <p className="truncate text-[11px] text-muted-foreground mt-0.5">
                 {session.data?.user.email}
               </p>
             </div>
-          </div>
-          <nav className="flex gap-3 overflow-x-auto pb-1 sm:flex-col sm:gap-4 sm:overflow-y-auto sm:overflow-x-visible sm:pb-0">
+          </button>
+
+          {/* Sidebar Nav Items */}
+          <nav className="flex-1 overflow-y-auto flex flex-col gap-4 py-1">
             {navGroups.map((group) => (
-              <div className="flex gap-1 sm:flex-col" key={group[0].id}>
-                {group.map((item) => (
-                  <NavButton
-                    active={section === item.id}
-                    icon={item.icon}
-                    key={item.id}
-                    label={item.label}
-                    onSelect={() => setSection(item.id)}
-                  />
-                ))}
+              <div
+                key={group.titleKey ?? "default"}
+                className="flex flex-col gap-0.5"
+              >
+                {group.titleKey && (
+                  <div className="px-2.5 pb-1 text-[11px] font-medium text-muted-foreground/80 tracking-wider">
+                    {t(group.titleKey)}
+                  </div>
+                )}
+                {group.items.map((item) => {
+                  const active = section === item.id;
+                  return (
+                    <button
+                      type="button"
+                      key={item.id}
+                      aria-current={active ? "true" : undefined}
+                      onClick={() => setSection(item.id)}
+                      className={cn(
+                        "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors text-left",
+                        active
+                          ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
+                          : "text-foreground hover:bg-accent/60",
+                      )}
+                    >
+                      <SettingsIconBadge
+                        icon={item.icon}
+                        color={
+                          active
+                            ? "bg-white/20 text-primary-foreground"
+                            : item.iconBg
+                        }
+                        className="size-5.5 rounded-md text-xs"
+                      />
+                      <span className="truncate flex-1">{item.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             ))}
           </nav>
-          <div className="mt-auto pt-2">
+
+          {/* Desktop Sign Out */}
+          <div className="mt-auto pt-3 border-t border-border/40">
             <Button
-              className="w-full"
+              className="w-full justify-start text-xs h-8"
               onClick={() => void handleSignOut()}
-              variant="outline"
+              variant="ghost"
             >
-              <LogOutIcon data-icon="inline-start" />
+              <LogOutIcon
+                data-icon="inline-start"
+                className="size-3.5 text-muted-foreground"
+              />
               {t("auth.signOut")}
             </Button>
           </div>
         </aside>
-        <section className="min-w-0 flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-2xl px-5 py-5 sm:px-8 sm:py-7">
-            <h2 className="pr-8 font-heading text-lg font-semibold tracking-tight">
+
+        {/* Desktop Detail Pane */}
+        <section className="hidden min-w-0 flex-1 flex-col overflow-hidden sm:flex">
+          {/* Desktop Detail Header */}
+          <div className="flex shrink-0 items-center justify-between border-b px-6 py-4">
+            <h2 className="font-heading text-lg font-semibold tracking-tight text-foreground">
               {activeLabel}
             </h2>
-            <div className="mt-4 flex flex-col gap-4">
-              {contentBySection[section]}
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={onClose}
+              className="size-7 rounded-md text-muted-foreground hover:text-foreground"
+            >
+              <XIcon className="size-4" />
+            </Button>
+          </div>
+
+          {/* Desktop Detail Body */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="mx-auto w-full max-w-2xl px-6 py-6">
+              <div className="flex flex-col gap-4">
+                {contentBySection[section]}
+              </div>
             </div>
           </div>
         </section>

@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2Icon } from "lucide-react";
+import { Loader2Icon, MailIcon, ShieldCheckIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -24,19 +24,21 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { useI18n } from "@/i18n";
 import { errorMessage } from "@/lib/error";
-
-/**
- * Owner-only instance integration settings: transactional email (Resend) and
- * social sign-in (Google, GitHub). Same shape as the voice panel: masked
- * write-only previews, revision-checked saves, env-first resolution.
- */
+import { SettingsRow, SettingsSectionGroup } from "./apple-settings-ui";
 
 export function EmailSettingsCard() {
   const { t } = useI18n();
@@ -46,14 +48,16 @@ export function EmailSettingsCard() {
   const [fields, setFields] = useState({ apiKey: "", from: "", fromName: "" });
   const [busy, setBusy] = useState(false);
   const [pendingAction, setPendingAction] = useState<
-    "save" | "test" | "delete" | null
+    "save" | "test" | "delete" | "toggle" | null
   >(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const settingsQuery = useQuery({
     queryKey: ["email-settings"],
     queryFn: getEmailSettings,
   });
+
   useEffect(() => {
     const value = settingsQuery.data;
     if (!value) return;
@@ -66,7 +70,7 @@ export function EmailSettingsCard() {
     busy || envManaged || !config || config.unreadable;
 
   async function run(
-    action: "save" | "test" | "delete",
+    action: "save" | "test" | "delete" | "toggle",
     task: () => Promise<unknown>,
     successKey: Parameters<ReturnType<typeof useI18n>["t"]>[0],
   ) {
@@ -83,6 +87,7 @@ export function EmailSettingsCard() {
       setEnabled(value.enabled);
       setFields({ apiKey: "", from: "", fromName: "" });
       toast.success(t(successKey));
+      if (action === "save") setDialogOpen(false);
     } catch (error) {
       toast.error(errorMessage(error, t("admin.integrations.emailError")));
     } finally {
@@ -91,203 +96,253 @@ export function EmailSettingsCard() {
     }
   }
 
+  const handleToggle = (nextEnabled: boolean) => {
+    setEnabled(nextEnabled);
+    if (!config) return;
+    void run(
+      "toggle",
+      () =>
+        saveEmailSettings({
+          revision: config.revision,
+          enabled: nextEnabled,
+          credentials: {
+            apiKey: "",
+            from: "",
+            fromName: "",
+          },
+        }),
+      "admin.integrations.saved",
+    );
+  };
+
+  if (!config && settingsQuery.isPending) {
+    return (
+      <div className="flex flex-col gap-3 p-4">
+        <Skeleton className="h-12 w-full rounded-xl" />
+        <Skeleton className="h-28 w-full rounded-xl" />
+      </div>
+    );
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("admin.integrations.emailTitle")}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="text-sm text-muted-foreground">
-          {t("admin.integrations.emailDescription")}
-        </p>
-        {!config && settingsQuery.isPending && (
-          <div aria-hidden="true" className="flex flex-col gap-3">
-            <Skeleton className="h-9 w-full" />
-            <Skeleton className="h-9 w-2/3" />
-            <Skeleton className="h-9 w-full" />
-          </div>
+    <div className="flex flex-col gap-5">
+      <SettingsSectionGroup
+        title={t("admin.integrations.emailTitle")}
+        footer={
+          envManaged
+            ? t("admin.integrations.emailEnvManaged")
+            : config?.provider === "cloudflare"
+              ? t("admin.integrations.emailCloudflareNote")
+              : undefined
+        }
+      >
+        <SettingsRow
+          icon={MailIcon}
+          iconColor="bg-blue-500"
+          label={t("admin.integrations.emailTitle")}
+          description={
+            config?.configured
+              ? t("admin.integrations.emailConfigured", {
+                  provider: config.provider,
+                })
+              : t("admin.integrations.emailUnconfigured")
+          }
+          action={
+            <Switch
+              checked={enabled}
+              disabled={emailEditingDisabled}
+              onCheckedChange={handleToggle}
+            />
+          }
+        />
+        {config?.provider !== "cloudflare" && (
+          <SettingsRow
+            label={t("admin.integrations.emailConfigure")}
+            value={
+              envManaged
+                ? t("settings.status.envManaged")
+                : config?.configured
+                  ? config.previews?.from || t("settings.status.configured")
+                  : t("settings.status.notConfigured")
+            }
+            chevron={!emailEditingDisabled}
+            onClick={
+              emailEditingDisabled ? undefined : () => setDialogOpen(true)
+            }
+          />
         )}
-        {config && (
-          <>
-            <p className="text-sm">
-              {envManaged
-                ? t("admin.integrations.emailEnvManaged")
-                : config.configured
-                  ? t("admin.integrations.emailConfigured", {
-                      provider: config.provider,
-                    })
-                  : t("admin.integrations.emailUnconfigured")}
-            </p>
-            {!config.canEncrypt && (
-              <p className="text-sm text-muted-foreground">
-                {t("admin.integrations.plainStore")}
-              </p>
-            )}
-            {config.unreadable && (
-              <p className="text-destructive text-sm">
-                {t("admin.integrations.unreadable")}
-              </p>
-            )}
-            {config.provider === "cloudflare" ? (
-              <p className="text-sm text-muted-foreground">
-                {t("admin.integrations.emailCloudflareNote")}
-              </p>
-            ) : (
-              <form
-                className="space-y-4"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  void run(
-                    "save",
-                    () =>
-                      saveEmailSettings({
-                        revision: config.revision,
-                        enabled,
-                        credentials: {
-                          apiKey: fields.apiKey.trim(),
-                          from: fields.from.trim(),
-                          fromName: fields.fromName.trim(),
-                        },
-                      }),
-                    "admin.integrations.saved",
-                  );
-                }}
-              >
-                <label
-                  className="flex flex-col gap-1.5 text-sm font-medium"
-                  htmlFor="email-from"
-                >
-                  {t("admin.integrations.emailFrom")}
-                  <Input
-                    autoComplete="off"
-                    disabled={emailEditingDisabled}
-                    id="email-from"
-                    placeholder={config.previews?.from ?? ""}
-                    value={fields.from}
-                    onChange={(event) =>
-                      setFields({ ...fields, from: event.target.value })
-                    }
-                  />
-                </label>
-                <label
-                  className="flex flex-col gap-1.5 text-sm font-medium"
-                  htmlFor="email-from-name"
-                >
-                  {t("admin.integrations.emailFromName")}
-                  <Input
-                    autoComplete="off"
-                    disabled={emailEditingDisabled}
-                    id="email-from-name"
-                    placeholder={config.previews?.fromName ?? ""}
-                    value={fields.fromName}
-                    onChange={(event) =>
-                      setFields({ ...fields, fromName: event.target.value })
-                    }
-                  />
-                </label>
-                <label
-                  className="flex flex-col gap-1.5 text-sm font-medium"
-                  htmlFor="email-api-key"
-                >
-                  {t("admin.integrations.emailApiKey")}
-                  <PasswordInput
-                    autoComplete="new-password"
-                    disabled={emailEditingDisabled}
-                    id="email-api-key"
-                    placeholder={config.previews?.apiKey ?? ""}
-                    value={fields.apiKey}
-                    onChange={(event) =>
-                      setFields({ ...fields, apiKey: event.target.value })
-                    }
-                  />
-                </label>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={enabled}
-                    disabled={emailEditingDisabled}
-                    id="email-enabled"
-                    onCheckedChange={setEnabled}
-                  />
-                  <label
-                    className="text-sm font-medium"
-                    htmlFor="email-enabled"
-                  >
-                    {t("admin.integrations.enabled")}
-                  </label>
-                </div>
-                <Button disabled={emailEditingDisabled} type="submit">
-                  {pendingAction === "save" && (
-                    <Loader2Icon
-                      className="animate-spin"
-                      data-icon="inline-start"
-                    />
-                  )}
-                  {t("admin.integrations.save")}
-                </Button>
-              </form>
-            )}
-            <div className="flex flex-wrap gap-2">
+      </SettingsSectionGroup>
+
+      <SettingsSectionGroup title={t("common.actions")}>
+        <SettingsRow
+          label={t("admin.integrations.testEmail")}
+          action={
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy || !config?.configured}
+              onClick={() =>
+                void run(
+                  "test",
+                  testEmailSettings,
+                  "admin.integrations.testSuccess",
+                )
+              }
+            >
+              {pendingAction === "test" && (
+                <Loader2Icon
+                  className="animate-spin"
+                  data-icon="inline-start"
+                />
+              )}
+              {t("admin.integrations.testEmail")}
+            </Button>
+          }
+        />
+        {config?.revision && !envManaged && (
+          <SettingsRow
+            destructive
+            label={t("admin.integrations.delete")}
+            onClick={() => setConfirmDelete(true)}
+          />
+        )}
+      </SettingsSectionGroup>
+
+      {/* Progressive Disclosure: Email Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("admin.integrations.emailConfigure")}</DialogTitle>
+            <DialogDescription>
+              {t("admin.integrations.emailDescription")}
+            </DialogDescription>
+          </DialogHeader>
+
+          <form
+            className="flex flex-col gap-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!config) return;
+              void run(
+                "save",
+                () =>
+                  saveEmailSettings({
+                    revision: config.revision,
+                    enabled,
+                    credentials: {
+                      apiKey: fields.apiKey.trim(),
+                      from: fields.from.trim(),
+                      fromName: fields.fromName.trim(),
+                    },
+                  }),
+                "admin.integrations.saved",
+              );
+            }}
+          >
+            <label
+              className="flex flex-col gap-1.5 text-sm font-medium"
+              htmlFor="email-from"
+            >
+              {t("admin.integrations.emailFrom")}
+              <Input
+                autoComplete="off"
+                disabled={emailEditingDisabled}
+                id="email-from"
+                placeholder={config?.previews?.from ?? "noreply@example.com"}
+                value={fields.from}
+                onChange={(event) =>
+                  setFields({ ...fields, from: event.target.value })
+                }
+              />
+            </label>
+
+            <label
+              className="flex flex-col gap-1.5 text-sm font-medium"
+              htmlFor="email-from-name"
+            >
+              {t("admin.integrations.emailFromName")}
+              <Input
+                autoComplete="off"
+                disabled={emailEditingDisabled}
+                id="email-from-name"
+                placeholder={config?.previews?.fromName ?? "FlareMo"}
+                value={fields.fromName}
+                onChange={(event) =>
+                  setFields({ ...fields, fromName: event.target.value })
+                }
+              />
+            </label>
+
+            <label
+              className="flex flex-col gap-1.5 text-sm font-medium"
+              htmlFor="email-api-key"
+            >
+              {t("admin.integrations.emailApiKey")}
+              <PasswordInput
+                autoComplete="new-password"
+                disabled={emailEditingDisabled}
+                id="email-api-key"
+                placeholder={config?.previews?.apiKey ?? "re_..."}
+                value={fields.apiKey}
+                onChange={(event) =>
+                  setFields({ ...fields, apiKey: event.target.value })
+                }
+              />
+            </label>
+
+            <DialogFooter className="mt-2">
               <Button
                 variant="outline"
-                disabled={busy || !config.configured}
-                onClick={() =>
-                  void run(
-                    "test",
-                    testEmailSettings,
-                    "admin.integrations.testSuccess",
-                  )
-                }
+                type="button"
+                onClick={() => setDialogOpen(false)}
               >
-                {pendingAction === "test" && (
+                {t("common.cancel")}
+              </Button>
+              <Button disabled={emailEditingDisabled} type="submit">
+                {pendingAction === "save" && (
                   <Loader2Icon
                     className="animate-spin"
                     data-icon="inline-start"
                   />
                 )}
-                {t("admin.integrations.testEmail")}
+                {t("common.save")}
               </Button>
-              <Button
-                variant="destructive"
-                disabled={busy || !config.revision}
-                onClick={() => setConfirmDelete(true)}
-              >
-                {t("admin.integrations.delete")}
-              </Button>
-            </div>
-          </>
-        )}
-        <AlertDialog onOpenChange={setConfirmDelete} open={confirmDelete}>
-          <AlertDialogContent size="sm">
-            <AlertDialogHeader>
-              <AlertDialogTitle>
-                {t("admin.integrations.delete")}
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                {t("admin.integrations.emailConfirmDelete")}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel variant="ghost">
-                {t("common.cancel")}
-              </AlertDialogCancel>
-              <AlertDialogAction
-                variant="destructive"
-                onClick={() => {
-                  if (config)
-                    void run(
-                      "delete",
-                      () => deleteEmailSettings(config.revision),
-                      "admin.integrations.deleted",
-                    );
-                }}
-              >
-                {t("admin.integrations.delete")}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </CardContent>
-    </Card>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog onOpenChange={setConfirmDelete} open={confirmDelete}>
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("admin.integrations.delete")}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("admin.integrations.emailConfirmDelete")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel variant="ghost">
+              {t("common.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                if (config)
+                  void run(
+                    "delete",
+                    () => deleteEmailSettings(config.revision),
+                    "admin.integrations.deleted",
+                  );
+              }}
+            >
+              {t("admin.integrations.delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }
 
@@ -305,11 +360,15 @@ export function OauthSettingsCard() {
   });
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [activeDialog, setActiveDialog] = useState<OauthProviderKey | null>(
+    null,
+  );
 
   const settingsQuery = useQuery({
     queryKey: ["oauth-settings"],
     queryFn: getOauthSettings,
   });
+
   useEffect(() => {
     if (settingsQuery.data) setConfig(settingsQuery.data);
   }, [settingsQuery.data]);
@@ -337,6 +396,7 @@ export function OauthSettingsCard() {
         githubClientSecret: "",
       });
       toast.success(t(successKey));
+      setActiveDialog(null);
     } catch (error) {
       toast.error(errorMessage(error, t("admin.integrations.oauthError")));
     } finally {
@@ -344,177 +404,268 @@ export function OauthSettingsCard() {
     }
   }
 
-  const providerRow = (key: OauthProviderKey) => {
-    const preview = config?.previews?.[key] ?? null;
-    return (
-      <div className="flex flex-col gap-3 rounded-lg border p-3">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold">
-            {key === "google" ? "Google" : "GitHub"}
-          </p>
-          {preview?.active && (
-            <span className="text-muted-foreground text-xs">
-              {t("admin.integrations.providerActive")}
-            </span>
-          )}
-        </div>
-        <label
-          className="flex flex-col gap-1.5 text-sm font-medium"
-          htmlFor={`${key}-client-id`}
-        >
-          {t("admin.integrations.oauthClientId")}
-          <Input
-            autoComplete="off"
-            disabled={editingDisabled}
-            id={`${key}-client-id`}
-            placeholder={preview?.clientId ?? ""}
-            value={fields[`${key}ClientId`]}
-            onChange={(event) =>
-              setFields({
-                ...fields,
-                [`${key}ClientId`]: event.target.value,
-              })
-            }
-          />
-        </label>
-        <label
-          className="flex flex-col gap-1.5 text-sm font-medium"
-          htmlFor={`${key}-client-secret`}
-        >
-          {t("admin.integrations.oauthClientSecret")}
-          <PasswordInput
-            autoComplete="new-password"
-            disabled={editingDisabled}
-            id={`${key}-client-secret`}
-            placeholder={preview?.clientSecret ?? ""}
-            value={fields[`${key}ClientSecret`]}
-            onChange={(event) =>
-              setFields({
-                ...fields,
-                [`${key}ClientSecret`]: event.target.value,
-              })
-            }
-          />
-        </label>
-        <p className="text-muted-foreground text-xs">
-          {t("admin.integrations.oauthCallbackPrefix")}{" "}
-          <code className="rounded bg-muted px-1 py-0.5">
-            {typeof window !== "undefined"
-              ? window.location.origin
-              : "https://your-instance"}
-            /api/auth/callback/{key}
-          </code>
-        </p>
-      </div>
+  const handleSaveProvider = (providerKey: OauthProviderKey) => {
+    if (!config) return;
+    const isGoogle = providerKey === "google";
+    void run(
+      () =>
+        saveOauthSettings({
+          revision: config.revision,
+          credentials: {
+            google: {
+              clientId: isGoogle
+                ? fields.googleClientId.trim()
+                : (config.previews?.google?.clientId ?? ""),
+              clientSecret: isGoogle
+                ? fields.googleClientSecret.trim()
+                : (config.previews?.google?.clientSecret ?? ""),
+            },
+            github: {
+              clientId: !isGoogle
+                ? fields.githubClientId.trim()
+                : (config.previews?.github?.clientId ?? ""),
+              clientSecret: !isGoogle
+                ? fields.githubClientSecret.trim()
+                : (config.previews?.github?.clientSecret ?? ""),
+            },
+          },
+        }),
+      "admin.integrations.saved",
     );
   };
 
+  const isGoogleActive = Boolean(config?.previews?.google?.active);
+  const isGithubActive = Boolean(config?.previews?.github?.active);
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("admin.integrations.oauthTitle")}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="text-muted-foreground text-sm">
-          {t("admin.integrations.oauthDescription")}
-        </p>
-        {!config && settingsQuery.isPending && (
-          <div aria-hidden="true" className="flex flex-col gap-3">
-            <Skeleton className="h-9 w-full" />
-            <Skeleton className="h-9 w-2/3" />
-            <Skeleton className="h-9 w-full" />
-          </div>
-        )}
-        {config && (
-          <>
-            {envManaged && (
-              <p className="text-sm">
-                {t("admin.integrations.oauthEnvManaged")}
-              </p>
+    <div className="flex flex-col gap-5">
+      <SettingsSectionGroup
+        title={t("admin.integrations.oauthTitle")}
+        footer={
+          envManaged
+            ? t("admin.integrations.oauthEnvManaged")
+            : t("admin.integrations.oauthDescription")
+        }
+      >
+        <SettingsRow
+          icon={ShieldCheckIcon}
+          iconColor="bg-rose-500"
+          label="Google"
+          description={
+            isGoogleActive
+              ? t("admin.integrations.providerActive")
+              : t("settings.status.notConfigured")
+          }
+          value={
+            isGoogleActive
+              ? t("settings.status.configured")
+              : t("settings.status.notConfigured")
+          }
+          chevron={!editingDisabled}
+          onClick={
+            editingDisabled ? undefined : () => setActiveDialog("google")
+          }
+        />
+        <SettingsRow
+          icon={ShieldCheckIcon}
+          iconColor="bg-zinc-800 dark:bg-zinc-700"
+          label="GitHub"
+          description={
+            isGithubActive
+              ? t("admin.integrations.providerActive")
+              : t("settings.status.notConfigured")
+          }
+          value={
+            isGithubActive
+              ? t("settings.status.configured")
+              : t("settings.status.notConfigured")
+          }
+          chevron={!editingDisabled}
+          onClick={
+            editingDisabled ? undefined : () => setActiveDialog("github")
+          }
+        />
+      </SettingsSectionGroup>
+
+      {config?.revision && !envManaged && (
+        <SettingsSectionGroup title={t("common.actions")}>
+          <SettingsRow
+            destructive
+            label={t("admin.integrations.delete")}
+            onClick={() => setConfirmDelete(true)}
+          />
+        </SettingsSectionGroup>
+      )}
+
+      {/* Progressive Disclosure: Provider Dialog */}
+      <Dialog
+        open={activeDialog !== null}
+        onOpenChange={(open) => {
+          if (!open) setActiveDialog(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {activeDialog === "google"
+                ? t("admin.integrations.googleConfigure")
+                : t("admin.integrations.githubConfigure")}
+            </DialogTitle>
+            <DialogDescription>
+              {t("admin.integrations.oauthCallbackPrefix")}{" "}
+              <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">
+                {typeof window !== "undefined"
+                  ? window.location.origin
+                  : "https://your-instance"}
+                /api/auth/callback/{activeDialog}
+              </code>
+            </DialogDescription>
+          </DialogHeader>
+
+          <form
+            className="flex flex-col gap-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (activeDialog) handleSaveProvider(activeDialog);
+            }}
+          >
+            {activeDialog === "google" && (
+              <>
+                <label
+                  className="flex flex-col gap-1.5 text-sm font-medium"
+                  htmlFor="google-client-id"
+                >
+                  {t("admin.integrations.oauthClientId")}
+                  <Input
+                    autoComplete="off"
+                    disabled={editingDisabled}
+                    id="google-client-id"
+                    placeholder={config?.previews?.google?.clientId ?? ""}
+                    value={fields.googleClientId}
+                    onChange={(event) =>
+                      setFields({
+                        ...fields,
+                        googleClientId: event.target.value,
+                      })
+                    }
+                  />
+                </label>
+                <label
+                  className="flex flex-col gap-1.5 text-sm font-medium"
+                  htmlFor="google-client-secret"
+                >
+                  {t("admin.integrations.oauthClientSecret")}
+                  <PasswordInput
+                    autoComplete="new-password"
+                    disabled={editingDisabled}
+                    id="google-client-secret"
+                    placeholder={config?.previews?.google?.clientSecret ?? ""}
+                    value={fields.googleClientSecret}
+                    onChange={(event) =>
+                      setFields({
+                        ...fields,
+                        googleClientSecret: event.target.value,
+                      })
+                    }
+                  />
+                </label>
+              </>
             )}
-            {!config.canEncrypt && (
-              <p className="text-sm text-muted-foreground">
-                {t("admin.integrations.plainStore")}
-              </p>
+
+            {activeDialog === "github" && (
+              <>
+                <label
+                  className="flex flex-col gap-1.5 text-sm font-medium"
+                  htmlFor="github-client-id"
+                >
+                  {t("admin.integrations.oauthClientId")}
+                  <Input
+                    autoComplete="off"
+                    disabled={editingDisabled}
+                    id="github-client-id"
+                    placeholder={config?.previews?.github?.clientId ?? ""}
+                    value={fields.githubClientId}
+                    onChange={(event) =>
+                      setFields({
+                        ...fields,
+                        githubClientId: event.target.value,
+                      })
+                    }
+                  />
+                </label>
+                <label
+                  className="flex flex-col gap-1.5 text-sm font-medium"
+                  htmlFor="github-client-secret"
+                >
+                  {t("admin.integrations.oauthClientSecret")}
+                  <PasswordInput
+                    autoComplete="new-password"
+                    disabled={editingDisabled}
+                    id="github-client-secret"
+                    placeholder={config?.previews?.github?.clientSecret ?? ""}
+                    value={fields.githubClientSecret}
+                    onChange={(event) =>
+                      setFields({
+                        ...fields,
+                        githubClientSecret: event.target.value,
+                      })
+                    }
+                  />
+                </label>
+              </>
             )}
-            {config.unreadable && (
-              <p className="text-destructive text-sm">
-                {t("admin.integrations.unreadable")}
-              </p>
-            )}
-            <div className="flex flex-col gap-3">
-              {providerRow("google")}
-              {providerRow("github")}
-            </div>
-            <Button
-              disabled={editingDisabled}
-              onClick={() =>
-                void run(
-                  () =>
-                    saveOauthSettings({
-                      revision: config.revision,
-                      credentials: {
-                        google: {
-                          clientId: fields.googleClientId.trim(),
-                          clientSecret: fields.googleClientSecret.trim(),
-                        },
-                        github: {
-                          clientId: fields.githubClientId.trim(),
-                          clientSecret: fields.githubClientSecret.trim(),
-                        },
-                      },
-                    }),
-                  "admin.integrations.saved",
-                )
-              }
-            >
-              {busy && (
-                <Loader2Icon
-                  className="animate-spin"
-                  data-icon="inline-start"
-                />
-              )}
-              {t("admin.integrations.save")}
-            </Button>
-            <Button
+
+            <DialogFooter className="mt-2">
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => setActiveDialog(null)}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button disabled={editingDisabled} type="submit">
+                {busy && (
+                  <Loader2Icon
+                    className="animate-spin"
+                    data-icon="inline-start"
+                  />
+                )}
+                {t("common.save")}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog onOpenChange={setConfirmDelete} open={confirmDelete}>
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("admin.integrations.delete")}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("admin.integrations.oauthConfirmDelete")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel variant="ghost">
+              {t("common.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
               variant="destructive"
-              disabled={busy || !config.revision}
-              onClick={() => setConfirmDelete(true)}
+              onClick={() => {
+                if (config)
+                  void run(
+                    () => deleteOauthSettings(config.revision),
+                    "admin.integrations.deleted",
+                  );
+              }}
             >
               {t("admin.integrations.delete")}
-            </Button>
-          </>
-        )}
-        <AlertDialog onOpenChange={setConfirmDelete} open={confirmDelete}>
-          <AlertDialogContent size="sm">
-            <AlertDialogHeader>
-              <AlertDialogTitle>
-                {t("admin.integrations.delete")}
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                {t("admin.integrations.oauthConfirmDelete")}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel variant="ghost">
-                {t("common.cancel")}
-              </AlertDialogCancel>
-              <AlertDialogAction
-                variant="destructive"
-                onClick={() => {
-                  if (config)
-                    void run(
-                      () => deleteOauthSettings(config.revision),
-                      "admin.integrations.deleted",
-                    );
-                }}
-              >
-                {t("admin.integrations.delete")}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </CardContent>
-    </Card>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }
