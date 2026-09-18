@@ -1,7 +1,7 @@
 {
   "specVersion": 1,
   "name": "FlareMo 官方目录",
-  "updatedAt": "2026-09-18T09:17:08.870Z",
+  "updatedAt": "2026-09-18T09:20:31.769Z",
   "plugins": [
     {
       "id": "flaremo-cards",
@@ -206,7 +206,7 @@
       },
       "license": "AGPL-3.0-only",
       "defaultEnabled": false,
-      "preview": null,
+      "preview": "kosx-pack/preview.png",
       "contributes": {
         "shareCardTemplates": [
           {
@@ -225,14 +225,15 @@
             "size": {
               "width": 340,
               "height": 420
-            }
+            },
+            "preview": "kosx-pack/kosx-editorial.png"
           }
         ]
       },
       "artifact": {
         "url": "kosx-pack/kosx-pack-1.0.0.zip",
-        "sha256": "2987a85646552ec0bd10f8cf1783faee0443f48d3882f5b1d458b46ebb5cf21e",
-        "size": 1605
+        "sha256": "0babfcef0ff6ce269d13240dd90bef1e9b389f28a2f146ef31f14e81073b1bf4",
+        "size": 100233
       }
     }
   ]
