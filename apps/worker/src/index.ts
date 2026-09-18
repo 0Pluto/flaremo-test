@@ -65,6 +65,7 @@ import { memosFileApi } from "./routes/memos-file-api";
 import { memosSocialApi } from "./routes/memos-social-api";
 import { memosSseApi } from "./routes/memos-sse";
 import { pluginsApi } from "./routes/plugins-api";
+import { pluginsStoreApi } from "./routes/plugins-store-api";
 import { projectsApi } from "./routes/projects-api";
 import { publicApi } from "./routes/public-api";
 import { registerSharePage } from "./routes/share-page";
@@ -225,6 +226,9 @@ export function createFlareMoApp(
   app.route("/api/app/voice-settings", voiceSettingsApi);
   app.route("/api/app/capture", captureApi);
   app.route("/api/app/account", accountApi);
+  // Registered before adminApi so the store's own routes win; paths
+  // adminApi owns (/plugins GET/PUT) still fall through to it.
+  app.route("/api/app/admin/plugins", pluginsStoreApi);
   app.route("/api/app/admin", adminApi);
   app.route("/api/app/memory", memoryApi);
   app.route("/api/app/projects", projectsApi);

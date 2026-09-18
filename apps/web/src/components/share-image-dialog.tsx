@@ -1,8 +1,4 @@
-import {
-  type BundledShareCard,
-  listBundledPluginsSorted,
-  resolveOptionValues,
-} from "@flaremo/plugins";
+import { resolveOptionValues } from "@flaremo/plugins";
 import { useQuery } from "@tanstack/react-query";
 import { toPng } from "html-to-image";
 import { DownloadIcon, Loader2Icon } from "lucide-react";
@@ -27,14 +23,21 @@ import {
 } from "@/components/ui/dialog";
 import { type TranslationKey, useI18n } from "@/i18n";
 import { formatMemoTime } from "@/lib/memo";
+import {
+  loadCardPayload,
+  type ShareCardView,
+  visibleCardViews,
+} from "@/lib/plugin-cards";
 import { cn } from "@/lib/utils";
 
 /**
  * The "output" half of sharing (flomo's 生成分享图片): turn one memo into a
- * card image. Cards come from the plugin registry (`@flaremo/plugins`):
- * `document` cards render in-app from data; `sandbox` cards run in an
- * opaque-origin iframe and hand back a PNG. Permission lives in the ⋯
- * visibility submenu — this dialog only renders and exports.
+ * card image. Cards come from the plugin platform: bundled cards compile in
+ * from `plugins/`; store-installed cards load their payload from the
+ * instance's asset endpoint on selection. `document` cards render in-app from
+ * data; `sandbox` cards run in an opaque-origin iframe and hand back a PNG.
+ * Permission lives in the ⋯ visibility submenu — this dialog only renders and
+ * exports.
  */
 
 type ShareImageDialogProps = {
@@ -57,9 +60,9 @@ function shareBodyText(content: string) {
 }
 
 /**
- * Free-text label a template picker shows. Contributions carry their own
- * localized table; `labelKey` is the legacy fallback for card ids that shipped
- * with core i18n keys before the plugin platform.
+ * Label a card shows in the picker. Contributions carry their own localized
+ * table; the legacy keys cover card ids that shipped with core i18n entries
+ * before the plugin platform.
  */
 const LEGACY_TEMPLATE_LABEL_KEYS: Record<string, TranslationKey> = {
   plain: "share.template.plain",
@@ -85,7 +88,7 @@ function useDarkMode() {
 }
 
 function resolveCardLabel(
-  card: BundledShareCard,
+  card: ShareCardView,
   locale: string,
   t: (key: TranslationKey) => string,
 ): string {
@@ -94,65 +97,6 @@ function resolveCardLabel(
   if (localized) return localized;
   const legacyKey = LEGACY_TEMPLATE_LABEL_KEYS[card.id];
   return legacyKey ? t(legacyKey) : card.id;
-}
-
-/** Bundled cards that exist unless instance settings say otherwise. */
-export function bundledCards(): BundledShareCard[] {
-  return listBundledPluginsSorted().flatMap((plugin) => {
-    const defaultEnabled =
-      plugin.manifest.defaultEnabled ?? plugin.tier === "official";
-    return defaultEnabled ? plugin.cards : [];
-  });
-}
-
-export type CardVisibilityInput = {
-  enabledPlugins: string[];
-  disabledPlugins: string[];
-  cards: { order: string[]; hidden: string[] };
-};
-
-/**
- * The picker = (bundled registry ∩ instance configuration): a plugin is
- * visible when its default says so, unless the instance explicitly enabled
- * (e.g. a community plugin) or disabled it; hidden cards drop out; the
- * configured order wins for the ids it names and everything else keeps
- * registry order. An empty result falls back to the registry defaults so the
- * dialog can never render without a card.
- */
-export function visibleCards(
-  config: CardVisibilityInput | null,
-): BundledShareCard[] {
-  const fallback = bundledCards();
-  if (!config) return fallback;
-  const enabled = new Set(config.enabledPlugins);
-  const disabled = new Set(config.disabledPlugins);
-  const hidden = new Set(config.cards.hidden);
-  const registryOrder = new Map(
-    fallback.map((card, index) => [card.id, index] as const),
-  );
-  const visible = listBundledPluginsSorted().flatMap((plugin) => {
-    const defaultEnabled =
-      plugin.manifest.defaultEnabled ?? plugin.tier === "official";
-    const pluginVisible = enabled.has(plugin.manifest.id)
-      ? true
-      : disabled.has(plugin.manifest.id)
-        ? false
-        : defaultEnabled;
-    return pluginVisible ? plugin.cards : [];
-  });
-  const filtered = visible.filter((card) => !hidden.has(card.id));
-  if (filtered.length === 0) return fallback;
-  const orderIndex = new Map(
-    config.cards.order.map((id, index) => [id, index] as const),
-  );
-  return [...filtered].sort((a, b) => {
-    const aOrder = orderIndex.get(a.id);
-    const bOrder = orderIndex.get(b.id);
-    if (aOrder !== undefined && bOrder !== undefined) return aOrder - bOrder;
-    if (aOrder !== undefined) return -1;
-    if (bOrder !== undefined) return 1;
-    return (registryOrder.get(a.id) ?? 0) - (registryOrder.get(b.id) ?? 0);
-  });
 }
 
 export function ShareImageDialog({
@@ -177,7 +121,7 @@ export function ShareImageDialog({
     staleTime: 60_000,
   });
   // Instance plugin configuration drives the picker; the dialog renders the
-  // registry defaults immediately and swaps to the configured set when the
+  // bundled defaults immediately and swaps to the configured set when the
   // public endpoint responds, so opening the dialog never blocks on a fetch.
   const pluginsQuery = useQuery({
     queryKey: ["plugin-settings"],
@@ -186,7 +130,7 @@ export function ShareImageDialog({
     staleTime: 5 * 60_000,
   });
   const cards = useMemo(
-    () => visibleCards(pluginsQuery.data ?? null),
+    () => visibleCardViews(pluginsQuery.data ?? null),
     [pluginsQuery.data],
   );
 
@@ -202,6 +146,22 @@ export function ShareImageDialog({
     (templateId && cards.find((candidate) => candidate.id === templateId)) ||
     cards.find((candidate) => candidate.id === defaultCard) ||
     cards[0];
+
+  // Bundled payloads are already in memory; installed ones load per
+  // selection and cache by (plugin, version, card).
+  const payloadQuery = useQuery({
+    queryKey: [
+      "plugin-card-payload",
+      card?.pluginId ?? "",
+      card?.pluginVersion ?? "",
+      card?.id ?? "",
+    ],
+    queryFn: () => loadCardPayload(card as ShareCardView),
+    enabled: open && !!card,
+    staleTime: Number.POSITIVE_INFINITY,
+    retry: false,
+  });
+  const payload = payloadQuery.data ?? null;
 
   const date = formatMemoTime(memo.display_time, locale);
   const day = useMemo(() => {
@@ -247,11 +207,11 @@ export function ShareImageDialog({
   );
 
   const exportImage = async () => {
-    if (!card) return;
+    if (!card || !payload) return;
     setIsExporting(true);
     try {
       let dataUrl: string | null = null;
-      if (card.payload.kind === "sandbox") {
+      if (payload.kind === "sandbox") {
         dataUrl = (await sandboxRef.current?.exportPng()) ?? null;
         if (!dataUrl) toast.error(t("share.exportFailed"));
       } else {
@@ -282,7 +242,7 @@ export function ShareImageDialog({
           <DialogDescription>{t("share.imageSubtitle")}</DialogDescription>
         </DialogHeader>
         <div className="flex justify-center py-2">
-          {card?.payload.kind === "document" && (
+          {payload?.kind === "document" && (
             <div ref={previewRef}>
               <ShareCardDocumentView
                 context={{
@@ -290,17 +250,17 @@ export function ShareImageDialog({
                   options: optionValues,
                   mode: dark ? "dark" : "light",
                 }}
-                document={card.payload.document}
+                document={payload.document}
                 height={size.height}
                 mode={dark ? "dark" : "light"}
                 width={size.width}
               />
             </div>
           )}
-          {card?.payload.kind === "sandbox" && (
+          {payload?.kind === "sandbox" && (
             <ShareCardSandboxHost
               height={size.height}
-              html={card.payload.html}
+              html={payload.html}
               payload={{
                 data: cardData,
                 mode: dark ? "dark" : "light",
@@ -309,6 +269,16 @@ export function ShareImageDialog({
               ref={sandboxRef}
               width={size.width}
             />
+          )}
+          {!payload && (
+            <div
+              className="flex items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground"
+              style={{ width: size.width, height: size.height }}
+            >
+              {payloadQuery.isError
+                ? t("share.templateUnavailable")
+                : t("share.loadingTemplate")}
+            </div>
           )}
         </div>
         <fieldset
@@ -335,7 +305,13 @@ export function ShareImageDialog({
         <DialogFooter>
           <Button
             className="w-full sm:w-auto"
-            disabled={isExporting || statsQuery.isPending || !card}
+            disabled={
+              isExporting ||
+              statsQuery.isPending ||
+              !card ||
+              !payload ||
+              payloadQuery.isError
+            }
             onClick={() => void exportImage()}
             type="button"
             variant="brand"

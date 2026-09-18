@@ -22,7 +22,18 @@ import { getFlaremoUserById } from "./users";
 export const PLUGINS_SETTING_KEY = "flaremo.instance.PLUGINS";
 export const PLUGIN_LIST_LIMIT = 50;
 export const PLUGIN_OPTIONS_MAX_BYTES = 8 * 1024;
+/** R2 prefix owned by the plugin store: `plugins/<id>/<version>/<file>`. */
+export const PLUGIN_R2_PREFIX = "plugins/";
 const ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}$/;
+
+export function pluginAssetPrefix(id: string, version: string): string {
+  return `${PLUGIN_R2_PREFIX}${id}/${version}/`;
+}
+
+/** The instance-relative URL prefix the assets of one installed plugin. */
+export function pluginAssetBaseUrl(id: string, version: string): string {
+  return `/api/app/plugins/assets/${id}/${version}`;
+}
 /** Option keys are plain JSON keys (camelCase is the convention), not ids. */
 const OPTION_KEY_PATTERN = /^[a-zA-Z][a-zA-Z0-9_]{0,63}$/;
 
@@ -37,21 +48,48 @@ export type ShareCardSettings = {
   options: Record<string, Record<string, string | number | boolean>>;
 };
 
+/**
+ * A store-installed plugin: the manifest is snapshotted at install time so
+ * the public config endpoint can hand the full card list to the share dialog
+ * without another round trip; the assets themselves live in R2 under
+ * `plugins/<id>/<version>/`. `source` names where it came from ("local" for
+ * admin uploads, otherwise the directory source id).
+ */
+export type InstalledPluginRecord = {
+  id: string;
+  version: string;
+  source: string;
+  manifest: Record<string, unknown>;
+};
+
+/** A store directory the instance can browse beyond the built-in official one. */
+export type PluginSourceRecord = {
+  id: string;
+  name: string;
+  url: string;
+};
+
 export type PluginSettings = {
   enabledPlugins: string[];
   disabledPlugins: string[];
+  installed: InstalledPluginRecord[];
+  sources: PluginSourceRecord[];
   cards: ShareCardSettings;
 };
 
 export const DEFAULT_PLUGIN_SETTINGS: PluginSettings = {
   enabledPlugins: [],
   disabledPlugins: [],
+  installed: [],
+  sources: [],
   cards: { order: [], hidden: [], default: null, options: {} },
 };
 
 type StoredPluginSettings = {
   enabledPlugins?: unknown;
   disabledPlugins?: unknown;
+  installed?: unknown;
+  sources?: unknown;
   cards?: {
     order?: unknown;
     hidden?: unknown;
@@ -171,6 +209,89 @@ function withoutOverlap(
   };
 }
 
+function normalizeInstalled(value: unknown): InstalledPluginRecord[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) {
+    throw new ValidationError("installed must be an array.");
+  }
+  if (value.length > PLUGIN_LIST_LIMIT) {
+    throw new ValidationError(
+      `installed cannot contain more than ${PLUGIN_LIST_LIMIT} plugins.`,
+    );
+  }
+  const seen = new Set<string>();
+  const records: InstalledPluginRecord[] = [];
+  for (const raw of value) {
+    if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+      throw new ValidationError("installed contains an invalid record.");
+    }
+    const record = raw as Record<string, unknown>;
+    if (typeof record.id !== "string" || !ID_PATTERN.test(record.id)) {
+      throw new ValidationError("installed contains an invalid id.");
+    }
+    if (typeof record.version !== "string" || record.version.length > 64) {
+      throw new ValidationError("installed contains an invalid version.");
+    }
+    if (typeof record.source !== "string" || record.source.length > 64) {
+      throw new ValidationError("installed contains an invalid source.");
+    }
+    if (
+      typeof record.manifest !== "object" ||
+      record.manifest === null ||
+      Array.isArray(record.manifest)
+    ) {
+      throw new ValidationError("installed contains an invalid manifest.");
+    }
+    if (seen.has(record.id)) continue;
+    seen.add(record.id);
+    records.push({
+      id: record.id,
+      version: record.version,
+      source: record.source,
+      manifest: record.manifest as Record<string, unknown>,
+    });
+  }
+  return records;
+}
+
+function normalizeSources(value: unknown): PluginSourceRecord[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) {
+    throw new ValidationError("sources must be an array.");
+  }
+  if (value.length > 20) {
+    throw new ValidationError("sources cannot contain more than 20 entries.");
+  }
+  const seen = new Set<string>();
+  const records: PluginSourceRecord[] = [];
+  for (const raw of value) {
+    if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+      throw new ValidationError("sources contains an invalid record.");
+    }
+    const record = raw as Record<string, unknown>;
+    if (typeof record.id !== "string" || !ID_PATTERN.test(record.id)) {
+      throw new ValidationError("sources contains an invalid id.");
+    }
+    if (typeof record.name !== "string" || record.name.trim().length === 0) {
+      throw new ValidationError("sources contains an invalid name.");
+    }
+    if (typeof record.url !== "string" || record.url.length > 2000) {
+      throw new ValidationError("sources contains an invalid url.");
+    }
+    if (!/^https:\/\//i.test(record.url)) {
+      throw new ValidationError("source urls must use https.");
+    }
+    if (seen.has(record.id)) continue;
+    seen.add(record.id);
+    records.push({
+      id: record.id,
+      name: record.name.trim().slice(0, 80),
+      url: record.url.trim(),
+    });
+  }
+  return records;
+}
+
 /** Normalize stored settings, falling back to defaults on any invalid shape. */
 export function normalizePluginSettings(
   stored: StoredPluginSettings | null,
@@ -189,6 +310,8 @@ export function normalizePluginSettings(
     return {
       enabledPlugins: lists.enabledPlugins,
       disabledPlugins: lists.disabledPlugins,
+      installed: normalizeInstalled(stored.installed),
+      sources: normalizeSources(stored.sources),
       cards: {
         order: normalizeIdList(cards.order, "cards.order"),
         hidden: normalizeIdList(cards.hidden, "cards.hidden"),
@@ -216,6 +339,8 @@ export async function getPluginSettings(
 export type PluginSettingsPatch = {
   enabledPlugins?: string[];
   disabledPlugins?: string[];
+  installed?: InstalledPluginRecord[];
+  sources?: PluginSourceRecord[];
   cards?: {
     order?: string[];
     hidden?: string[];
@@ -239,6 +364,14 @@ export async function setPluginSettings(
   const next: PluginSettings = {
     enabledPlugins: lists.enabledPlugins,
     disabledPlugins: lists.disabledPlugins,
+    installed:
+      patch.installed !== undefined
+        ? normalizeInstalled(patch.installed)
+        : current.installed,
+    sources:
+      patch.sources !== undefined
+        ? normalizeSources(patch.sources)
+        : current.sources,
     cards: {
       order:
         patch.cards?.order !== undefined
