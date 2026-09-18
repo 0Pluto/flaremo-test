@@ -284,7 +284,14 @@ const ARTICLE_PAGE_STYLES = `
   :root { --bg: #0d0c0b; --fg: #e7e5e4; --muted: #a8a29e; --border: #292524; --accent: #fb923c; }
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.75 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; }
+/* Han fallbacks are keyed off the <html lang> this document already emits:
+   font matching walks the family list per character, so one shared list would
+   hand Japanese kana/kanji to a Chinese face and paint them with Chinese
+   glyph forms. The first block stays the default for every other locale. */
+:root { --font-cjk: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei"; }
+:root:lang(ja) { --font-cjk: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Yu Gothic", Meiryo, "Noto Sans JP", "Noto Sans CJK JP", "PingFang SC", "Microsoft YaHei"; }
+:root:lang(ko) { --font-cjk: "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", "Noto Sans CJK KR", "PingFang SC", "Microsoft YaHei"; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.75 -apple-system, BlinkMacSystemFont, "Segoe UI", var(--font-cjk), system-ui, sans-serif; }
 main { max-width: 42rem; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
 header, footer { max-width: 42rem; margin: 0 auto; padding: 1rem 1.25rem; }
 header { border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
