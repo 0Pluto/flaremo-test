@@ -16,7 +16,9 @@
     "zh-CN": "KOSX 风格的编辑体卡片：粗黑标题、信号橙点缀，源自社区贡献。",
     "en-US": "A stark editorial card with KOSX signal-orange accents; from a community contribution."
   },
-  "author": { "name": "Kimberlying" },
+  "author": {
+    "name": "Kimberlying"
+  },
   "license": "AGPL-3.0-only",
   "defaultEnabled": false,
   "contributes": {
@@ -34,7 +36,8 @@
           "es": "KOSX",
           "ar": "KOSX"
         },
-        "document": "cards/editorial.json"
+        "document": "cards/editorial.json",
+        "preview": "cards/kosx-editorial.preview.png"
       }
     ]
   }
