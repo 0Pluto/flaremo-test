@@ -294,6 +294,9 @@ importers:
       '@flaremo/memos':
         specifier: workspace:*
         version: link:../../packages/memos
+      '@flaremo/plugins':
+        specifier: workspace:*
+        version: link:../../plugins
       '@hono/zod-validator':
         specifier: ^0.7.6
         version: 0.7.6(hono@4.13.7)(zod@4.5.4)

@@ -19,11 +19,9 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { zipSync } from "fflate";
-import {
-  PLUGIN_SPEC_VERSION,
-  validatePluginManifest,
-} from "../plugins/src/validate";
+import { zipPluginFiles } from "../plugins/src/package";
+import { PLUGIN_SPEC_VERSION } from "../plugins/src/spec";
+import { validatePluginManifest } from "../plugins/src/validate";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, "..");
@@ -123,7 +121,7 @@ async function buildTier(
     for (const [name, data] of Object.entries(files)) {
       zipEntries[name.slice(prefix.length)] = data;
     }
-    const zipped = zipSync(zipEntries, { level: 6 });
+    const zipped = zipPluginFiles(zipEntries);
     const artifactName = `${manifest.id}-${manifest.version}.zip`;
     await mkdir(path.join(storeDir, manifest.id), { recursive: true });
     await writeFile(path.join(storeDir, manifest.id, artifactName), zipped);

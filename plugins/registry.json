@@ -1,0 +1,148 @@
+{
+  "specVersion": 1,
+  "name": "FlareMo 官方目录",
+  "updatedAt": "2026-09-18T07:46:56.169Z",
+  "plugins": [
+    {
+      "id": "flaremo-cards",
+      "version": "1.0.0",
+      "tier": "official",
+      "name": {
+        "zh-CN": "基础卡片",
+        "en-US": "Basic cards",
+        "ja": "ベーシックカード",
+        "ko": "기본 카드",
+        "ru": "Базовые карточки",
+        "fr": "Cartes de base",
+        "es": "Tarjetas básicas",
+        "ar": "البطاقات الأساسية"
+      },
+      "description": {
+        "zh-CN": "素白、日签、票根——三张随 FlareMo 内置的基础卡。",
+        "en-US": "Plain, daily, and ticket — the three cards bundled with FlareMo."
+      },
+      "author": {
+        "name": "FlareMo"
+      },
+      "license": "AGPL-3.0-only",
+      "defaultEnabled": true,
+      "preview": null,
+      "contributes": {
+        "shareCardTemplates": [
+          {
+            "id": "plain",
+            "kind": "document",
+            "name": {
+              "zh-CN": "素白",
+              "en-US": "Plain",
+              "ja": "素白",
+              "ko": "소백",
+              "ru": "Простой",
+              "fr": "Blanc",
+              "es": "Sencillo",
+              "ar": "أبيض"
+            }
+          },
+          {
+            "id": "daily",
+            "kind": "document",
+            "name": {
+              "zh-CN": "日签",
+              "en-US": "Daily",
+              "ja": "日签",
+              "ko": "데일리",
+              "ru": "Ежедневник",
+              "fr": "Citation du jour",
+              "es": "Diario",
+              "ar": "يومية"
+            }
+          },
+          {
+            "id": "ticket",
+            "kind": "document",
+            "name": {
+              "zh-CN": "票根",
+              "en-US": "Ticket",
+              "ja": "票根",
+              "ko": "티켓",
+              "ru": "Билет",
+              "fr": "Ticket",
+              "es": "Billete",
+              "ar": "تذكرة"
+            }
+          }
+        ]
+      },
+      "artifact": {
+        "url": "flaremo-cards/flaremo-cards-1.0.0.zip",
+        "sha256": "fb39c6be9fbed2c40b6b0509bfccbc1aefff89ca9fd13511795d86320705b305",
+        "size": 3212
+      }
+    },
+    {
+      "id": "sandbox-demo",
+      "version": "1.0.0",
+      "tier": "official",
+      "name": {
+        "zh-CN": "沙箱示例",
+        "en-US": "Sandbox demo",
+        "ja": "サンドボックス例",
+        "ko": "샌드박스 예시",
+        "ru": "Пример песочницы",
+        "fr": "Démo sandbox",
+        "es": "Demo sandbox",
+        "ar": "عرض الصندوق الرملي"
+      },
+      "description": {
+        "zh-CN": "一张用自由 HTML/Canvas 绘制的邮戳卡，演示沙箱插件能力。",
+        "en-US": "A postmark card drawn with free-form HTML/Canvas, demonstrating sandbox plugins."
+      },
+      "author": {
+        "name": "FlareMo"
+      },
+      "license": "AGPL-3.0-only",
+      "defaultEnabled": true,
+      "preview": null,
+      "contributes": {
+        "shareCardTemplates": [
+          {
+            "id": "stamp",
+            "kind": "sandbox",
+            "name": {
+              "zh-CN": "邮戳",
+              "en-US": "Postmark",
+              "ja": "消印",
+              "ko": "소인",
+              "ru": "Штемпель",
+              "fr": "Cachet",
+              "es": "Matasellos",
+              "ar": "ختم بريدي"
+            },
+            "options": [
+              {
+                "key": "accent",
+                "type": "color",
+                "label": {
+                  "zh-CN": "邮戳颜色",
+                  "en-US": "Postmark color",
+                  "ja": "消印の色",
+                  "ko": "소인 색상",
+                  "ru": "Цвет штемпеля",
+                  "fr": "Couleur du cachet",
+                  "es": "Color del matasellos",
+                  "ar": "لون الختم"
+                },
+                "default": "#c2410c"
+              }
+            ]
+          }
+        ]
+      },
+      "artifact": {
+        "url": "sandbox-demo/sandbox-demo-1.0.0.zip",
+        "sha256": "80adce5d9a1ddc6a2612135c1fed7b972314e64f433405aa91f9bcecfcfb7117",
+        "size": 2464
+      }
+    }
+  ]
+}

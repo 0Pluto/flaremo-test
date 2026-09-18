@@ -3,6 +3,7 @@ import {
   type LocalizedText,
   PLUGIN_ID_PATTERN,
   PLUGIN_SPEC_VERSION,
+  type PluginAuthor,
   type PluginManifest,
   type ShareCardContribution,
   type ShareCardOptionSpec,
@@ -184,6 +185,20 @@ export type ManifestValidation = {
   problems: string[];
 };
 
+function normalizeAuthor(raw: unknown): PluginAuthor | undefined {
+  if (!isPlainObject(raw) || typeof raw.name !== "string") return undefined;
+  return {
+    name: raw.name,
+    ...(typeof raw.url === "string" ? { url: raw.url } : {}),
+    ...(typeof raw.email === "string" ? { email: raw.email } : {}),
+  };
+}
+
+/**
+ * Validate + normalize a manifest. The returned manifest is a fresh object
+ * with defaults applied (card sizes) and unknown fields dropped, so every
+ * consumer — bundled registry, installer, web app — sees the same shape.
+ */
 export function validatePluginManifest(raw: unknown): ManifestValidation {
   const problems: string[] = [];
   if (!isPlainObject(raw)) {
@@ -226,5 +241,29 @@ export function validatePluginManifest(raw: unknown): ManifestValidation {
     }
   }
   if (problems.length > 0) return { manifest: null, problems };
-  return { manifest: raw as unknown as PluginManifest, problems: [] };
+
+  const contributes = raw.contributes as Record<string, unknown>;
+  const cards = Array.isArray(contributes.shareCardTemplates)
+    ? (contributes.shareCardTemplates as unknown[])
+        .map((card) => validateContribution(card).contribution)
+        .filter((card): card is ShareCardContribution => card !== null)
+    : [];
+  const author = normalizeAuthor(raw.author);
+  const manifest: PluginManifest = {
+    specVersion: PLUGIN_SPEC_VERSION,
+    id: raw.id as string,
+    version: raw.version as string,
+    name: raw.name as LocalizedText,
+    contributes: { shareCardTemplates: cards },
+  };
+  if (isLocalizedText(raw.description)) manifest.description = raw.description;
+  if (author) manifest.author = author;
+  if (typeof raw.license === "string") manifest.license = raw.license;
+  if (typeof raw.defaultEnabled === "boolean") {
+    manifest.defaultEnabled = raw.defaultEnabled;
+  }
+  if (typeof raw.minAppVersion === "string") {
+    manifest.minAppVersion = raw.minAppVersion;
+  }
+  return { manifest, problems: [] };
 }

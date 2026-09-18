@@ -21,6 +21,7 @@
     "@flaremo/db": "workspace:*",
     "@flaremo/domain": "workspace:*",
     "@flaremo/memos": "workspace:*",
+    "@flaremo/plugins": "workspace:*",
     "@hono/zod-validator": "^0.7.6",
     "better-auth": "1.6.25",
     "drizzle-orm": "^0.45.1",

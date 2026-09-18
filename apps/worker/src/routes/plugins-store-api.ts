@@ -191,7 +191,10 @@ async function installPackage(
   const prefix = pluginAssetPrefix(manifest.id, manifest.version);
   await Promise.all(
     Object.entries(files).map(([relative, data]) =>
-      env.ATTACHMENTS.put(`${prefix}${relative}`, data),
+      env.ATTACHMENTS.put(
+        `${prefix}${relative}`,
+        data as unknown as ArrayBuffer,
+      ),
     ),
   );
   const current = await getPluginSettings(db);
