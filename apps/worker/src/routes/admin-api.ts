@@ -9,9 +9,9 @@ import {
   type BrandingMark,
   beginFlaremoMemberRemoval,
   brandingMarkR2Key,
+  ConflictError,
   CUSTOM_BRANDING_ACCENT,
   clearBrandingMark,
-  ConflictError,
   createFlaremoMemberWithLink,
   createMemberRemovalJob,
   DEFAULT_FLAREMO_PRODUCT_NAME,
@@ -22,8 +22,8 @@ import {
   getAuthUserById,
   getAuthUserIdByFlaremoUserId,
   getBranding,
-  getFlaremoUserById,
   getFlaremoUserByAuthUserId,
+  getFlaremoUserById,
   getMemberRemovalJob,
   getMembershipState,
   getPluginSettings,
@@ -426,10 +426,14 @@ adminApi.post("/users", zValidator("json", createUserSchema), async (c) => {
   try {
     const context = await teamAdminContext(c);
     const input = c.req.valid("json");
-    const { member, username, activationToken } = await createMemberAccount(c, context, {
-      email: input.email,
-      name: input.name,
-    });
+    const { member, username, activationToken } = await createMemberAccount(
+      c,
+      context,
+      {
+        email: input.email,
+        name: input.name,
+      },
+    );
     return c.json(
       {
         id: member.id,

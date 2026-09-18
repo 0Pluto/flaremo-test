@@ -3408,11 +3408,14 @@ describe("FlareMo Worker API", () => {
   it("lets the instance owner's PAT drive the admin surface and provision reader seats by email", async () => {
     // The owner mints a PAT through their browser session.
     const created = await json<{ token: string }>(
-      await fetchApp("http://flaremo.test/api/app/account/personal-access-tokens", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "provisioning", expires_in_days: 30 }),
-      }),
+      await fetchApp(
+        "http://flaremo.test/api/app/account/personal-access-tokens",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: "provisioning", expires_in_days: 30 }),
+        },
+      ),
     );
     expect(created.token).toMatch(/^memos_pat_/);
 
@@ -3438,15 +3441,18 @@ describe("FlareMo Worker API", () => {
     );
     const memberToken = await json<{ token: string }>(
       await app.fetch(
-        new Request("http://flaremo.test/api/app/account/personal-access-tokens", {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-            cookie: member.cookie,
-            origin: "http://flaremo.test",
+        new Request(
+          "http://flaremo.test/api/app/account/personal-access-tokens",
+          {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              cookie: member.cookie,
+              origin: "http://flaremo.test",
+            },
+            body: JSON.stringify({ name: "self" }),
           },
-          body: JSON.stringify({ name: "self" }),
-        }),
+        ),
         env,
       ),
     );
@@ -3485,9 +3491,7 @@ describe("FlareMo Worker API", () => {
     );
     expect(provisioned.created).toBe(true);
     expect(provisioned.role).toBe("reader");
-    expect(provisioned.reader_expires_at).toBe(
-      "2027-01-01T00:00:00.000Z",
-    );
+    expect(provisioned.reader_expires_at).toBe("2027-01-01T00:00:00.000Z");
     expect(provisioned.activation_path).toMatch(/^\/reset\?token=/);
 
     // Idempotent renewal: the same email re-grants with a new absolute date.
@@ -3516,7 +3520,11 @@ describe("FlareMo Worker API", () => {
 
     // The seat is visible in the admin member list.
     const memberList = await json<{
-      users: Array<{ id: string; role: string; reader_expires_at: string | null }>;
+      users: Array<{
+        id: string;
+        role: string;
+        reader_expires_at: string | null;
+      }>;
     }>(
       await app.fetch(
         new Request("http://flaremo.test/api/app/admin/users", {
@@ -3598,7 +3606,9 @@ describe("FlareMo Worker API", () => {
       ),
     );
     expect(me.role).toBe("reader");
-    expect(me.team).toEqual(expect.objectContaining({ id: "orgs/default-team" }));
+    expect(me.team).toEqual(
+      expect.objectContaining({ id: "orgs/default-team" }),
+    );
     expect(me.team_expired).toBe(false);
     expect(me.reader_expires_at).toBe("2027-06-01T00:00:00.000Z");
   });
