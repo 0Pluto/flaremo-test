@@ -156,4 +156,18 @@ describe("plugin settings persistence", () => {
     const cleared = await setPluginSettings(db, { cards: { default: null } });
     expect(cleared.cards.default).toBeNull();
   });
+
+  it("never stores an id as both enabled and disabled", async () => {
+    // An explicit enable is the stronger signal; the direct-API path can send
+    // contradictory lists, and the row must not keep the conflict.
+    const saved = await setPluginSettings(db, {
+      enabledPlugins: ["sandbox-demo"],
+      disabledPlugins: ["sandbox-demo", "other-plugin"],
+    });
+    expect(saved.enabledPlugins).toEqual(["sandbox-demo"]);
+    expect(saved.disabledPlugins).toEqual(["other-plugin"]);
+    // Pre-existing contradictory rows are cleaned on read too.
+    const reread = await getPluginSettings(db);
+    expect(reread.disabledPlugins).toEqual(["other-plugin"]);
+  });
 });

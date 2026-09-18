@@ -122,6 +122,22 @@ function readStored(value: unknown): StoredPluginSettings | null {
   return value as StoredPluginSettings;
 }
 
+/**
+ * An id can never be both enabled and disabled: an explicit enable is the
+ * stronger signal (it is the only way a community plugin becomes visible), so
+ * the disabled entry is dropped. Handles rows written before this rule.
+ */
+function withoutOverlap(
+  enabledPlugins: string[],
+  disabledPlugins: string[],
+): { enabledPlugins: string[]; disabledPlugins: string[] } {
+  const enabled = new Set(enabledPlugins);
+  return {
+    enabledPlugins,
+    disabledPlugins: disabledPlugins.filter((id) => !enabled.has(id)),
+  };
+}
+
 /** Normalize stored settings, falling back to defaults on any invalid shape. */
 export function normalizePluginSettings(
   stored: StoredPluginSettings | null,
@@ -133,12 +149,13 @@ export function normalizePluginSettings(
       typeof cards.default === "string" && ID_PATTERN.test(cards.default)
         ? cards.default
         : null;
+    const lists = withoutOverlap(
+      normalizeIdList(stored.enabledPlugins, "enabledPlugins"),
+      normalizeIdList(stored.disabledPlugins, "disabledPlugins"),
+    );
     return {
-      enabledPlugins: normalizeIdList(stored.enabledPlugins, "enabledPlugins"),
-      disabledPlugins: normalizeIdList(
-        stored.disabledPlugins,
-        "disabledPlugins",
-      ),
+      enabledPlugins: lists.enabledPlugins,
+      disabledPlugins: lists.disabledPlugins,
       cards: {
         order: normalizeIdList(cards.order, "cards.order"),
         hidden: normalizeIdList(cards.hidden, "cards.hidden"),
@@ -185,15 +202,17 @@ export async function setPluginSettings(
   const owner = await getFlaremoUserById(db, OWNER_FLAREMO_USER_ID);
   if (!owner) throw new NotFoundError("Owner not found");
   const current = await getPluginSettings(db);
+  const lists = withoutOverlap(
+    patch.enabledPlugins !== undefined
+      ? normalizeIdList(patch.enabledPlugins, "enabledPlugins")
+      : current.enabledPlugins,
+    patch.disabledPlugins !== undefined
+      ? normalizeIdList(patch.disabledPlugins, "disabledPlugins")
+      : current.disabledPlugins,
+  );
   const next: PluginSettings = {
-    enabledPlugins:
-      patch.enabledPlugins !== undefined
-        ? normalizeIdList(patch.enabledPlugins, "enabledPlugins")
-        : current.enabledPlugins,
-    disabledPlugins:
-      patch.disabledPlugins !== undefined
-        ? normalizeIdList(patch.disabledPlugins, "disabledPlugins")
-        : current.disabledPlugins,
+    enabledPlugins: lists.enabledPlugins,
+    disabledPlugins: lists.disabledPlugins,
     cards: {
       order:
         patch.cards?.order !== undefined
