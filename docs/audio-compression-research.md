@@ -113,6 +113,7 @@
 
 ## 8. 上传前预检与输入上限（同轮修复）
 
-- **预检曾把该压的文件挡在门外**：`validateMemoCaptureSubmission` 原先在校验阶段对 >25 MiB 的文件直接报「附件过大」，而转码发生在更后的上传阶段——恰好把 30 MiB 手机照片、40 MiB 录音（转码存在的理由）拒了。现改为**只拒下游不会碰的文件**：超过服务端上限且 `willCompressOnUpload()` 为假才报错（视频、mp3、PDF，或对应开关已关）。**超过上限但会转码的文件放行**，交给管道去缩。
+- **预检曾把该压的文件挡在门外**：`validateMemoCaptureSubmission` 原先在校验阶段对 >25 MiB 的文件直接报「附件过大」，而转码发生在更后的上传阶段——恰好把 30 MiB 手机照片、40 MiB 录音（转码存在的理由）拒了。真机实测：一份 28.8 MB 的 48 kHz WAV 压成 1.24 MB（23×）只用 **1 秒**。现改为**只拒下游不会碰的文件**：超过服务端上限且 `willCompressOnUpload()` 为假才报错（视频、mp3、PDF，或对应开关已关）。**超过上限但会转码的文件放行**，交给管道去缩。
+- **放行判断要带上引擎能力**：`willCompressOnUpload()` 的图片分支会同步查 `supportsWebpEncode()`——Safari 无法编码 WebP（真机 WebKit 实测 `toDataURL` 返回 `data:image/png`，故返回 false），放行只会换来一次注定被服务端拒绝的长上传。音频分支不重复那道异步回放证明（要实例化 wasm），该窄口子（旧引擎 + >25 MiB 无损文件）由服务端上限兜底。
 - **新增输入上限**：单文件 > **64 MiB** 不转码、原样上传（服务端自己会以 25 MiB 上限拒绝）。理由是内存而非策略——管道要整份持有源文件（音频还要解码后的 PCM），不设限就会在移动端标签页缓冲几百 MB。64 MiB 覆盖一小时 16 kHz WAV（解码约 115 MB，会另被 96 MB 门禁拦下）与任何手机照片。
 - 新增导出 `willCompressOnUpload()` / `MAX_UPLOAD_BYTES` / `MAX_COMPRESSION_INPUT_BYTES`，预检与压缩共用一套判定，不再各写一份 25 MiB 常量。
