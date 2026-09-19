@@ -7,8 +7,10 @@
 ```bash
 pnpm install
 pnpm migrate:local
-pnpm dev
+pnpm dev:hot   # 前端 HMR + Worker 热重载，浏览器开 http://localhost:5573
 ```
+
+`pnpm dev:hot` 起 Vite 与 `wrangler dev` 两个进程，把 Worker 拥有的路径（API、SSR 分享页、R2 附件、feed）代理给后者，所以浏览器只访问一个源。前端跑在 **5573**（避开其他 Vite 项目的默认 5173）。该模式下还启用了 React Grab——悬停元素即可复制其组件与源码位置给 agent。想要无热重载的单进程模式仍可用 `pnpm dev`（Worker 托管前端构建产物，端口 8787）。
 
 推荐 Node.js 22+ 和仓库声明的 pnpm 版本：
 

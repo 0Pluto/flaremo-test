@@ -38,16 +38,7 @@ export function AppearancePanel({ t }: AppearancePanelProps) {
   ];
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h3 className="text-sm font-semibold text-foreground">
-          {t("theme.title")}
-        </h3>
-        <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-          {t("theme.description")}
-        </p>
-      </div>
-
+    <div className="flex flex-col gap-5">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {themes.map((item) => {
           const active = theme === item.id;
@@ -108,9 +99,6 @@ export function AppearancePanel({ t }: AppearancePanelProps) {
               <div className="flex items-center gap-1.5 font-medium text-xs text-foreground">
                 <span>{item.label}</span>
               </div>
-              <p className="mt-1 text-xs text-muted-foreground line-clamp-1">
-                {item.description}
-              </p>
             </button>
           );
         })}

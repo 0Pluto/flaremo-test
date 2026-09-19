@@ -3,6 +3,7 @@ import { BellRingIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { getPushConfig, subscribeToPush, unsubscribeFromPush } from "@/api";
+import { InfoTip } from "@/components/info-tip";
 import { Switch } from "@/components/ui/switch";
 import { useI18n } from "@/i18n";
 import { errorMessage } from "@/lib/error";
@@ -90,13 +91,15 @@ export function PushPanel() {
 
   return (
     <div className="flex flex-col gap-5">
-      <SettingsSectionGroup
-        title={t("push.title")}
-        footer={t("push.description")}
-      >
+      <SettingsSectionGroup title={t("push.title")}>
         <SettingsRow
           icon={BellRingIcon}
-          label={t("push.title")}
+          label={
+            <div className="flex items-center gap-1.5">
+              <span>{t("push.title")}</span>
+              <InfoTip text={t("push.description")} />
+            </div>
+          }
           description={
             !configured
               ? t("push.notConfigured")

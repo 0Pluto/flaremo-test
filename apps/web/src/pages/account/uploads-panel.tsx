@@ -1,5 +1,6 @@
 import { AudioLinesIcon, ImageIcon } from "lucide-react";
 import { useState } from "react";
+import { InfoTip } from "@/components/info-tip";
 import { Switch } from "@/components/ui/switch";
 import { useI18n } from "@/i18n";
 import {
@@ -20,21 +21,16 @@ export function UploadsPanel() {
   );
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h3 className="text-sm font-semibold text-foreground">
-          {t("uploads.title")}
-        </h3>
-        <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-          {t("uploads.description")}
-        </p>
-      </div>
-
+    <div className="flex flex-col gap-5">
       <SettingsSectionGroup>
         <SettingsRow
           icon={ImageIcon}
-          label={t("uploads.imageCompression")}
-          description={t("uploads.imageCompressionDescription")}
+          label={
+            <div className="flex items-center gap-1.5">
+              <span>{t("uploads.imageCompression")}</span>
+              <InfoTip text={t("uploads.imageCompressionDescription")} />
+            </div>
+          }
           action={
             <Switch
               checked={imageCompression}
@@ -47,8 +43,12 @@ export function UploadsPanel() {
         />
         <SettingsRow
           icon={AudioLinesIcon}
-          label={t("uploads.audioCompression")}
-          description={t("uploads.audioCompressionDescription")}
+          label={
+            <div className="flex items-center gap-1.5">
+              <span>{t("uploads.audioCompression")}</span>
+              <InfoTip text={t("uploads.audioCompressionDescription")} />
+            </div>
+          }
           action={
             <Switch
               checked={audioCompression}

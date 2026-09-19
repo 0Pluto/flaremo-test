@@ -32,8 +32,23 @@ pnpm backup:drill
 
 ```bash
 pnpm migrate:local
-pnpm dev
+pnpm dev:hot   # 推荐：前端 HMR + Worker 热重载
+pnpm dev       # 无热重载：先构建前端，再由 Worker 托管该产物
 ```
+
+`pnpm dev:hot` 同时起 Vite（前端，默认 **5573**）和 `wrangler dev`（Worker，默认 8787），浏览器只开 **5573**：
+
+- 改前端源码 → Vite 即时热更新（React Fast Refresh，页面状态不丢）
+- 改 worker / packages 源码 → wrangler 自动重新打包，刷新即见
+- API、SSR 分享页 `/share/:token`、文章页 `/article/:slug`、R2 附件 `/file/*`、`/mcp`、feed 与 sitemap 由 Vite 代理到 Worker，因此同源，cookie 与 origin 校验照常工作
+
+端口用 `FLAREMO_DEV_WEB_PORT` / `FLAREMO_DEV_WORKER_PORT` 覆盖（第二个 checkout 或端口转发时用）。首次运行若 `apps/web/dist` 不存在会先构建一次（`wrangler dev` 要求 assets 目录存在）；该分支只跑 `vite build`，不含 `tsc`，不会因类型错误挡住 dev 启动。
+
+改 `wrangler.jsonc` 的 `assets.run_worker_first` 时必须同步 `apps/web/vite.config.ts` 的 `server.proxy`——两者不一致会让某条路径在 dev 下走错的服务器（`apps/web/src/dev-proxy-parity.test.ts` 会失败提醒）。
+
+dev:hot 下额外启用 **React Grab**（`apps/web/src/dev/react-grab.ts`）：悬停任意界面元素即可复制其组件名、源码行列与 CSS 选择器，粘贴给 agent 比用文字描述位置准确得多。引入点在 `main.tsx` 的 `import.meta.env.DEV` 分支，生产构建实测不含其任何代码；`pnpm dev`（Worker 托管构建产物）与部署产物同样没有它。SSR 分享页/文章页是 Worker 渲染的独立文档，不在其作用范围。初始化显式传 `telemetry: false`，不向 react-grab.com 发版本检查。
+
+已知小限制：组件栈里的文件名只有基名（`input.tsx` 而非完整路径）——Vite dev 的 sourcemap `sources` 本身就只发布基名，拾取器只是如实转述。靠组件名 + 行列号 + CSS 选择器足以定位。
 
 生产部署：
 
@@ -105,7 +120,7 @@ issue -> branch -> PR 流程只用于：对外贡献者、维护者明确要求�
 - 全量 `pnpm verify` 只在维护者明确要求时执行；发版脚本（`pnpm release`）默认不跑，`--verify` 可按需开启。
 
 涉及部署、Wrangler、D1、R2 或 Access 的改动，建议跑 `pnpm deploy:dry-run`。
-涉及 UI 的改动，用 `pnpm dev` 目检桌面和移动端；e2e 不主动跑（见上）。
+涉及 UI 的改动，用 `pnpm dev:hot` 目检桌面和移动端（改样式即时生效，省掉每次重建）；e2e 不主动跑（见上）。
 
 ## 文档入口
 

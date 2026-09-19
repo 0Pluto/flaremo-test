@@ -4,6 +4,10 @@ FlareMo 使用 SemVer。每个 release 都要写清楚升级影响、Cloudflare 
 
 ## 未发布
 
+开发体验：新增 `pnpm dev:hot`（`scripts/dev-hot.mjs`）——Vite dev server 与 `wrangler dev` 并行，前端改动走 HMR（React Fast Refresh，页面状态不丢），worker / packages 改动由 wrangler 自动重新打包；API、SSR 分享页与文章页、R2 附件、`/mcp`、feed 与 sitemap 经 Vite 代理到 Worker，浏览器只对一个源，cookie 与 origin 校验照常。前端默认端口用 **5573**（避开其他 Vite 项目的 5173），Worker 仍是 8787，均可用 `FLAREMO_DEV_WEB_PORT` / `FLAREMO_DEV_WORKER_PORT` 覆盖；首次运行缺 `apps/web/dist` 时自动补一次 `vite build`（`wrangler dev` 要求 assets 目录存在；不含 `tsc`，类型错误不会挡住启动）。`pnpm dev` 保持原样。新增守卫测试，防止 `assets.run_worker_first` 与 Vite 代理清单漂移。
+
+dev:hot 下同时接入 **React Grab**（`react-grab`，MIT）——悬停界面元素即可复制其组件名、源码行列与 CSS 选择器，粘贴给 agent 比文字描述位置精确。包体在 `main.tsx` 处以 `import.meta.env.DEV` 为门禁动态引入，生产构建经实测不含其任何代码；初始化显式 `telemetry: false`，不向 react-grab.com 发送版本检查。
+
 任务与日历版本：一次性补记 v0.20.0 之后落地的三波能力（此前未入账）。
 
 - **Projects & Tasks 基座**（2026-08-23）：侧栏一级入口「项目」——按项目归拢记录与任务；项目内提供看板（状态列拖拽）、优先级、手动排序与截止日（`due_at` 为 YYYY-MM-DD 本地日历日）。任务为 owner 私有资源，删除先入回收站（可还原，到期自动清理）。

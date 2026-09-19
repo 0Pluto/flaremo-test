@@ -7,6 +7,7 @@
   "packageManager": "pnpm@11.7.0",
   "scripts": {
     "dev": "pnpm --filter @flaremo/web build && pnpm --filter @flaremo/worker dev",
+    "dev:hot": "node ./scripts/dev-hot.mjs",
     "dev:web": "pnpm --filter @flaremo/web dev",
     "dev:worker": "pnpm --filter @flaremo/worker dev",
     "dev:site": "pnpm --filter @flaremo/site dev",

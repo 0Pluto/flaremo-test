@@ -1,22 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
-  AppWindowMacIcon,
   ArrowDownUpIcon,
   BellRingIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   FileUpIcon,
   GaugeIcon,
-  KeyRoundIcon,
   LogOutIcon,
   type LucideIcon,
   MicIcon,
   PaintbrushIcon,
   PuzzleIcon,
-  ShieldCheckIcon,
   SunMoonIcon,
-  UserRoundIcon,
   UsersIcon,
   WebhookIcon,
   XIcon,
@@ -49,22 +45,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/i18n";
 import { errorMessage } from "@/lib/error";
 import { cn } from "@/lib/utils";
+import { AccountPanel, MIN_PASSWORD_LENGTH } from "./account/account-panel";
 import { AppearancePanel } from "./account/appearance-panel";
 import {
   SettingsIconBadge,
   SettingsRow,
   SettingsSectionGroup,
 } from "./account/apple-settings-ui";
-import { InstallAppCard } from "./account/install-app-card";
 import {
   EmailSettingsCard,
   OauthSettingsCard,
 } from "./account/integrations-card";
-import { ProfilePanel } from "./account/profile-panel";
 import { PushPanel } from "./account/push-panel";
-import { MIN_PASSWORD_LENGTH, SecurityPanel } from "./account/security-panel";
-import { TokensPanel } from "./account/tokens-panel";
 import { TransferPanel } from "./account/transfer-panel";
+import { UploadsPanel } from "./account/uploads-panel";
 import { UsagePanel } from "./account/usage-panel";
 import { PluginsCard } from "./admin/plugins-card";
 import { AdminPanel, BrandingCard } from "./admin-page";
@@ -75,20 +69,11 @@ const VoicePanel = lazy(() =>
   })),
 );
 
-const UploadsPanel = lazy(() =>
-  import("./account/uploads-panel").then((module) => ({
-    default: module.UploadsPanel,
-  })),
-);
-
 type SettingsSection =
-  | "profile"
+  | "account"
   | "appearance"
   | "uploads"
-  | "security"
-  | "tokens"
   | "push"
-  | "install"
   | "voice"
   | "usage"
   | "transfer"
@@ -105,10 +90,7 @@ type NavItem = {
 };
 
 type NavGroup = {
-  titleKey?:
-    | "settings.group.account"
-    | "settings.group.preferences"
-    | "settings.group.admin";
+  titleKey?: "settings.group.preferences" | "settings.group.admin";
   items: NavItem[];
 };
 
@@ -132,7 +114,7 @@ export function AccountSettingsDialog({
   const navigate = useNavigate({ from: "/account" });
   const queryClient = useQueryClient();
   const session = authClient.useSession();
-  const [section, setSection] = useState<SettingsSection>("profile");
+  const [section, setSection] = useState<SettingsSection>("account");
   const [mobileView, setMobileView] = useState<"master" | "detail">("master");
 
   const [username, setUsername] = useState("");
@@ -462,29 +444,6 @@ export function AccountSettingsDialog({
 
   const navGroups: NavGroup[] = [
     {
-      titleKey: "settings.group.account",
-      items: [
-        {
-          icon: UserRoundIcon,
-          iconBg: "bg-muted text-muted-foreground",
-          id: "profile",
-          label: t("settings.nav.profile"),
-        },
-        {
-          icon: ShieldCheckIcon,
-          iconBg: "bg-muted text-muted-foreground",
-          id: "security",
-          label: t("settings.nav.security"),
-        },
-        {
-          icon: KeyRoundIcon,
-          iconBg: "bg-muted text-muted-foreground",
-          id: "tokens",
-          label: t("settings.nav.tokens"),
-        },
-      ],
-    },
-    {
       titleKey: "settings.group.preferences",
       items: [
         {
@@ -504,12 +463,6 @@ export function AccountSettingsDialog({
           iconBg: "bg-muted text-muted-foreground",
           id: "push",
           label: t("settings.nav.push"),
-        },
-        {
-          icon: AppWindowMacIcon,
-          iconBg: "bg-muted text-muted-foreground",
-          id: "install",
-          label: t("settings.nav.install"),
         },
         ...(showVoiceSettings
           ? [
@@ -576,89 +529,78 @@ export function AccountSettingsDialog({
 
   const allItems = navGroups.flatMap((group) => group.items);
   const activeSection = allItems.find((item) => item.id === section);
-  const activeLabel = activeSection?.label ?? t("settings.nav.profile");
+  const activeLabel = activeSection?.label ?? t("settings.group.account");
 
   const contentBySection: Record<SettingsSection, ReactNode> = {
-    profile: (
-      <ProfilePanel
+    account: (
+      <AccountPanel
+        accountError={accountError}
+        changeEmailIsPending={changeEmailMutation.isPending}
+        changePasswordIsPending={changePasswordMutation.isPending}
+        copied={copied}
+        createTokenIsPending={createTokenMutation.isPending}
+        createdToken={createdToken}
+        currentEmail={session.data?.user.email ?? ""}
+        currentPassword={currentPassword}
         currentUsername={session.data?.user.username ?? ""}
-        error={accountError}
-        isPending={updateUsernameMutation.isPending}
+        deleteAccountIsPending={deleteAccountMutation.isPending}
+        deleteError={deleteError}
+        deletePassword={deletePassword}
+        deletingTokenId={
+          deleteTokenMutation.isPending
+            ? deleteTokenMutation.variables
+            : undefined
+        }
+        emailCurrentPassword={emailCurrentPassword}
+        emailError={emailError}
+        emailProviderDisabled={appInfoQuery.data?.email_provider === "none"}
+        emailVerificationPending={emailVerificationPending}
+        isOwner={isInstanceOwner}
+        locale={locale}
+        newEmail={newEmail}
+        newPassword={newPassword}
+        newPasswordConfirmation={newPasswordConfirmation}
+        passwordError={passwordError}
         readerExpiry={
           meQuery.data?.role === "reader"
             ? (meQuery.data.reader_expires_at ?? null)
             : null
         }
-        setUsername={setUsername}
-        t={t}
-        username={username}
-        onSubmit={handleUsernameSubmit}
-      />
-    ),
-    appearance: <AppearancePanel t={t} />,
-    uploads: <UploadsPanel />,
-    security: (
-      <SecurityPanel
-        emailProviderDisabled={appInfoQuery.data?.email_provider === "none"}
-        changeEmailIsPending={changeEmailMutation.isPending}
-        changePasswordIsPending={changePasswordMutation.isPending}
-        currentEmail={session.data?.user.email ?? ""}
-        currentPassword={currentPassword}
-        deleteAccountIsPending={deleteAccountMutation.isPending}
-        deleteError={deleteError}
-        deletePassword={deletePassword}
-        emailCurrentPassword={emailCurrentPassword}
-        emailError={emailError}
-        emailVerificationPending={emailVerificationPending}
-        isOwner={isInstanceOwner}
-        newPassword={newPassword}
-        newPasswordConfirmation={newPasswordConfirmation}
-        passwordError={passwordError}
+        revokingTokenId={
+          revokeTokenMutation.isPending
+            ? revokeTokenMutation.variables
+            : undefined
+        }
         setCurrentPassword={setCurrentPassword}
         setDeletePassword={setDeletePassword}
         setEmailCurrentPassword={setEmailCurrentPassword}
         setNewEmail={setNewEmail}
         setNewPassword={setNewPassword}
         setNewPasswordConfirmation={setNewPasswordConfirmation}
-        t={t}
-        newEmail={newEmail}
-        onEmailSubmit={handleEmailSubmit}
-        onPasswordSubmit={handlePasswordSubmit}
-        onDeleteAccount={handleDeleteAccount}
-      />
-    ),
-    tokens: (
-      <TokensPanel
-        copied={copied}
-        createTokenIsPending={createTokenMutation.isPending}
-        createdToken={createdToken}
-        locale={locale}
-        revokingTokenId={
-          revokeTokenMutation.isPending
-            ? revokeTokenMutation.variables
-            : undefined
-        }
-        deletingTokenId={
-          deleteTokenMutation.isPending
-            ? deleteTokenMutation.variables
-            : undefined
-        }
         setTokenExpiryDays={setTokenExpiryDays}
         setTokenName={setTokenName}
+        setUsername={setUsername}
         t={t}
         tokenError={tokenError}
         tokenExpiryDays={tokenExpiryDays}
         tokenName={tokenName}
         tokensQuery={tokensQuery}
+        updateUsernameIsPending={updateUsernameMutation.isPending}
+        username={username}
         onCopyToken={handleCopyToken}
         onCreateToken={handleCreateToken}
-        onRevokeToken={handleRevokeToken}
+        onDeleteAccount={handleDeleteAccount}
         onDeleteToken={handleDeleteToken}
+        onEmailSubmit={handleEmailSubmit}
         onHideCreatedToken={() => setCreatedToken(null)}
+        onPasswordSubmit={handlePasswordSubmit}
+        onRevokeToken={handleRevokeToken}
+        onUsernameSubmit={handleUsernameSubmit}
       />
     ),
+    appearance: <AppearancePanel t={t} />,
+    uploads: <UploadsPanel />,
     push: <PushPanel />,
-    install: <InstallAppCard />,
     voice: showVoiceSettings ? (
       <Suspense fallback={<VoicePanelSkeleton />}>
         <VoicePanel key={session.data?.user.id} />
@@ -743,7 +685,7 @@ export function AccountSettingsDialog({
             <button
               type="button"
               onClick={() => {
-                setSection("profile");
+                setSection("account");
                 setMobileView("detail");
               }}
               className="flex w-full items-center justify-between gap-3.5 rounded-2xl border border-border/60 bg-card p-4 text-left shadow-2xs cursor-pointer hover:bg-accent/40 active:bg-accent/60 transition-colors"
@@ -865,21 +807,31 @@ export function AccountSettingsDialog({
           {/* Compact User Header in Sidebar */}
           <button
             type="button"
-            onClick={() => setSection("profile")}
+            onClick={() => setSection("account")}
             className={cn(
-              "flex w-full items-center gap-3 rounded-xl p-2 text-left transition-colors cursor-pointer mb-2",
-              section === "profile" ? "bg-accent/70" : "hover:bg-accent/40",
+              "flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-all cursor-pointer mb-2 border",
+              section === "account"
+                ? "bg-accent/80 border-border/60 shadow-2xs text-foreground"
+                : "border-transparent hover:bg-accent/40 text-foreground",
             )}
           >
             <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
               {(session.data?.user.username ?? "?").slice(0, 1).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-semibold leading-tight text-foreground">
-                {session.data?.user.username}
-              </p>
-              <p className="truncate text-[11px] text-muted-foreground mt-0.5">
-                {session.data?.user.email}
+              <div className="flex items-center gap-1.5">
+                <p className="truncate text-xs font-semibold leading-tight text-foreground">
+                  {session.data?.user.username}
+                </p>
+                <Badge
+                  variant="secondary"
+                  className="h-3.5 px-1 text-[9px] font-normal"
+                >
+                  {roleLabel}
+                </Badge>
+              </div>
+              <p className="truncate text-xs text-muted-foreground mt-0.5">
+                {t("settings.group.account")}
               </p>
             </div>
           </button>

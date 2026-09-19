@@ -3,6 +3,38 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
+// `pnpm dev:hot` runs this dev server next to `wrangler dev`, which keeps the
+// Worker side hot too. The Worker owns the API, the SSR share/article pages, R2
+// attachments and the feeds; proxying those paths keeps the browser on a single
+// origin, so Better Auth's cookie and origin checks see the URL that is
+// actually in the address bar and no build step sits between an edit and the
+// page. Both ports are overridable so a second checkout (or a port-forward from
+// another machine) can run its own pair.
+// Deliberately not Vite's default 5173: every other Vite project on this
+// machine claims that port, so this loop uses its own and `strictPort` turns a
+// collision into a loud failure instead of a silent port drift that would also
+// break the Worker's origin check.
+const WEB_DEV_PORT = Number(process.env.FLAREMO_DEV_WEB_PORT ?? 5573);
+const WORKER_DEV_PORT = Number(process.env.FLAREMO_DEV_WORKER_PORT ?? 8787);
+// `changeOrigin` rewrites Host to the Worker's own address. Without it the
+// Worker sees `Host: localhost:5173` while the browser also sends
+// `Origin: http://localhost:5173`, and wrangler's local proxy drops an Origin
+// that matches the request host — the Worker then reads a missing Origin and
+// rejects every write with "must use FlareMo's origin". Rewriting Host keeps
+// the two apart, which is what the origin check wants to see.
+const WORKER_PROXY = {
+  target: `http://127.0.0.1:${WORKER_DEV_PORT}`,
+  changeOrigin: true,
+} as const;
+
+// Each key is one entry of `assets.run_worker_first` in wrangler.jsonc with a
+// trailing `*` dropped: Vite matches these as path prefixes while Cloudflare
+// matches its entries as globs, and the trailing slash is what keeps a prefix
+// from over-reaching. Without it `/article` would also swallow the SPA's
+// `/articles` route, and `/memory` its `/memory` route, serving both from the
+// stale build this dev server exists to replace. A parity test in
+// src/dev-proxy-parity.test.ts fails if the two lists drift.
+
 // https://vite.dev/config/
 export default defineConfig({
   build: {
@@ -56,6 +88,28 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+    },
+  },
+  server: {
+    port: WEB_DEV_PORT,
+    // The proxy target and the trusted dev origins are keyed to these ports;
+    // silently drifting to another one would fail the Worker's origin check.
+    strictPort: true,
+    // Mirrors `assets.run_worker_first` in wrangler.jsonc: everything the
+    // Worker renders itself. Keep the two lists in sync.
+    proxy: {
+      "/api/": WORKER_PROXY,
+      "/article/": WORKER_PROXY,
+      "/feed.xml": WORKER_PROXY,
+      "/file/": WORKER_PROXY,
+      "/mcp": WORKER_PROXY,
+      "/memory/": WORKER_PROXY,
+      "/memos.api.v1.": WORKER_PROXY,
+      "/openapi.json": WORKER_PROXY,
+      "/share/": WORKER_PROXY,
+      "/sitemap.xml": WORKER_PROXY,
+      "/sitemap-articles.xml": WORKER_PROXY,
+      "/favicon.ico": WORKER_PROXY,
     },
   },
 });

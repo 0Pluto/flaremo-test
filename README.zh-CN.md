@@ -246,9 +246,16 @@ pnpm install
 # 初始化本地 D1 数据库
 pnpm migrate:local
 
-# 启动本地开发服务 (默认 http://localhost:8787)
+# 开发（推荐）：前端 HMR + Worker 热重载，浏览器开 http://localhost:5573
+pnpm dev:hot
+
+# 或者：无热重载，Worker 直接托管构建产物 http://localhost:8787
 pnpm dev
 ```
+
+`pnpm dev:hot` 让前端跑在 Vite dev server 上（改动即时热更新、页面状态不丢），同时把 API、SSR 分享页、R2 附件等 Worker 拥有的路径代理过去——浏览器始终只对着一个源，登录 cookie 与同源校验照常工作。`pnpm dev` 每次启动先构建一次前端，改一行样式也要等构建出来。
+
+dev:hot 下还内置了 [React Grab](https://github.com/aidenybai/react-grab)：悬停任意界面元素即可复制它的组件名、源码行列与 CSS 选择器，粘贴给 AI agent 比用文字描述位置精确得多。它只在 Vite dev server 下加载，生产构建不含这段代码。
 
 ### 质量门禁与测试规范
 
