@@ -65,6 +65,12 @@ describe("buildMonthGrid", () => {
       ).getDay(),
     ).toBe(0);
   });
+
+  it("trims the 6th week in compact mode when all days are out-of-month", () => {
+    const compactGrid = buildMonthGrid("2026-09", "monday", true);
+    expect(compactGrid).toHaveLength(35);
+    expect(compactGrid[34].key).toBe("2026-10-04");
+  });
 });
 
 describe("weekdayLabels / weekdayHeaders", () => {

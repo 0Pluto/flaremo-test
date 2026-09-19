@@ -51,6 +51,7 @@ const WEEKDAY_ORDER: Record<WeekStart, number[]> = {
 export function buildMonthGrid(
   monthKey: string,
   weekStart: WeekStart,
+  compact = false,
 ): CalendarDay[] {
   const base = new Date(`${monthKey}-01T12:00:00`);
   const year = base.getFullYear();
@@ -67,6 +68,9 @@ export function buildMonthGrid(
       inMonth: cursor.getMonth() === month,
     });
     cursor.setDate(cursor.getDate() + 1);
+  }
+  if (compact && days.slice(35).every((day) => !day.inMonth)) {
+    return days.slice(0, 35);
   }
   return days;
 }

@@ -115,34 +115,24 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
         <StatCell label={t("explorer.streak")} value={streak} />
       </section>
 
-      <section className="mb-4 px-1 motion-safe:animate-fade">
+      <section className="mb-2 px-1 motion-safe:animate-fade">
         <MiniCalendarReminders />
-        <div className="rounded-xl border border-border/60 bg-card/40 p-2 shadow-xs">
+        <div className="flex flex-col">
           <MiniCalendarPanel
             activity={stats.activity}
             onDayClick={onDaySelect}
           />
 
-          <div className="mt-2.5 border-t border-border/50 px-1 pt-2">
-            <div className="mb-1.5 flex items-center justify-between text-xs text-muted-foreground">
-              <span className="font-medium text-foreground/85">
-                {streak > 0
-                  ? `🔥 ${streak} ${t("explorer.streak")}`
-                  : t("explorer.heatmapSummary", {
-                      count: stats.counts.total,
-                      days: 84,
-                    })}
-              </span>
-            </div>
+          <div className="mt-2 border-t border-border/40 px-0.5 pt-1.5">
             <div
-              className="grid grid-flow-col grid-rows-7 gap-[2px]"
+              className="grid grid-flow-col grid-rows-7 gap-[1.5px]"
               data-testid="activity-heatmap"
             >
               {stats.activity.map((day) =>
                 onDaySelect ? (
                   <button
                     className={cn(
-                      "h-2 w-full rounded-[1.5px] motion-safe:transition-[opacity,transform] hover:opacity-85 motion-safe:hover:scale-125",
+                      "h-1.5 w-full rounded-[1px] motion-safe:transition-[opacity,transform] hover:opacity-85 motion-safe:hover:scale-125",
                       heatmapColor(day.count),
                     )}
                     key={day.date}
@@ -157,7 +147,7 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
                   <div
                     aria-hidden="true"
                     className={cn(
-                      "h-2 w-full rounded-[1.5px] motion-safe:transition-[opacity,transform] hover:opacity-85 motion-safe:hover:scale-125",
+                      "h-1.5 w-full rounded-[1px] motion-safe:transition-[opacity,transform] hover:opacity-85 motion-safe:hover:scale-125",
                       heatmapColor(day.count),
                     )}
                     key={day.date}
@@ -171,7 +161,7 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
             </div>
             <div
               aria-hidden="true"
-              className="mt-1 flex items-center justify-between px-0.5 text-[10px] text-muted-foreground/70"
+              className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground/60"
             >
               {monthLabels
                 .filter((month) => Boolean(month.label))
@@ -187,7 +177,7 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
 
       <nav
         aria-label={t("sidebar.navigation")}
-        className="mt-5 flex flex-col gap-1 border-t border-border/60 pt-4"
+        className="mt-2 flex flex-col gap-1 border-t border-border/60 pt-2.5"
       >
         <Link
           activeProps={{

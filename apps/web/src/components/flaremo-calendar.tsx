@@ -270,7 +270,7 @@ export const FlareMoMiniCalendar = memo(function FlareMoMiniCalendar({
   const { locale, t } = useI18n();
   const weekStart: WeekStart = locale.startsWith("en") ? "sunday" : "monday";
   const grid = useMemo(
-    () => buildMonthGrid(monthKey, weekStart),
+    () => buildMonthGrid(monthKey, weekStart, true),
     [monthKey, weekStart],
   );
   const weekdays = useMemo(

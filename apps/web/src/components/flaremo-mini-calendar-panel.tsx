@@ -50,7 +50,7 @@ function useOpenTasks(rangeStart: string, rangeEnd: string) {
 
 function currentMonthGrid(locale: string, today: string) {
   const weekStart: WeekStart = locale.startsWith("en") ? "sunday" : "monday";
-  return buildMonthGrid(monthOf(today), weekStart);
+  return buildMonthGrid(monthOf(today), weekStart, true);
 }
 
 export function MiniCalendarReminders() {
@@ -111,7 +111,7 @@ export function MiniCalendarPanel({
   const monthKey = monthOf(today);
   const weekStart: WeekStart = locale.startsWith("en") ? "sunday" : "monday";
   const grid = useMemo(
-    () => buildMonthGrid(monthKey, weekStart),
+    () => buildMonthGrid(monthKey, weekStart, true),
     [monthKey, weekStart],
   );
   const rangeStart = grid[0].key;
