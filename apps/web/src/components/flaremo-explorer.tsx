@@ -230,6 +230,9 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
         className="mt-5 flex flex-col gap-1 border-t border-border/60 pt-4"
       >
         <Link
+          activeProps={{
+            className: "!bg-accent !text-accent-foreground font-medium",
+          }}
           className="flex h-9 items-center gap-3 rounded-lg px-2.5 text-muted-foreground motion-safe:transition-[background-color,color,transform] motion-safe:duration-150 hover:bg-muted hover:text-foreground motion-safe:hover:translate-x-0.5"
           onClick={onNavigate}
           to="/review/daily"
@@ -240,6 +243,9 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
           </span>
         </Link>
         <Link
+          activeProps={{
+            className: "!bg-accent !text-accent-foreground font-medium",
+          }}
           className="flex h-9 items-center gap-3 rounded-lg px-2.5 text-muted-foreground motion-safe:transition-[background-color,color,transform] motion-safe:duration-150 hover:bg-muted hover:text-foreground motion-safe:hover:translate-x-0.5"
           onClick={onNavigate}
           to="/review/walk"
@@ -249,6 +255,9 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
         </Link>
         {captureStatus.data?.available && (
           <Link
+            activeProps={{
+              className: "!bg-accent !text-accent-foreground font-medium",
+            }}
             className="flex h-9 items-center gap-3 rounded-lg px-2.5 text-muted-foreground motion-safe:transition-[background-color,color,transform] motion-safe:duration-150 hover:bg-muted hover:text-foreground motion-safe:hover:translate-x-0.5"
             onClick={onNavigate}
             to="/capture"
@@ -258,6 +267,9 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
           </Link>
         )}
         <Link
+          activeProps={{
+            className: "!bg-accent !text-accent-foreground font-medium",
+          }}
           className="flex h-9 items-center gap-3 rounded-lg px-2.5 text-muted-foreground motion-safe:transition-[background-color,color,transform] motion-safe:duration-150 hover:bg-muted hover:text-foreground motion-safe:hover:translate-x-0.5"
           onClick={onNavigate}
           search={{ date: undefined }}
@@ -267,6 +279,9 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
           <span className="min-w-0 flex-1 truncate">{t("nav.calendar")}</span>
         </Link>
         <Link
+          activeProps={{
+            className: "!bg-accent !text-accent-foreground font-medium",
+          }}
           className="flex h-9 items-center gap-3 rounded-lg px-2.5 text-muted-foreground motion-safe:transition-[background-color,color,transform] motion-safe:duration-150 hover:bg-muted hover:text-foreground motion-safe:hover:translate-x-0.5"
           onClick={onNavigate}
           to="/memory"
@@ -275,6 +290,9 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
           <span className="min-w-0 flex-1 truncate">{t("nav.memory")}</span>
         </Link>
         <Link
+          activeProps={{
+            className: "!bg-accent !text-accent-foreground font-medium",
+          }}
           className="flex h-9 items-center gap-3 rounded-lg px-2.5 text-muted-foreground motion-safe:transition-[background-color,color,transform] motion-safe:duration-150 hover:bg-muted hover:text-foreground motion-safe:hover:translate-x-0.5"
           onClick={onNavigate}
           to="/projects"
@@ -283,6 +301,9 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
           <span className="min-w-0 flex-1 truncate">{t("nav.projects")}</span>
         </Link>
         <Link
+          activeProps={{
+            className: "!bg-accent !text-accent-foreground font-medium",
+          }}
           className="flex h-9 items-center gap-3 rounded-lg px-2.5 text-muted-foreground motion-safe:transition-[background-color,color,transform] motion-safe:duration-150 hover:bg-muted hover:text-foreground motion-safe:hover:translate-x-0.5"
           onClick={onNavigate}
           to="/articles"

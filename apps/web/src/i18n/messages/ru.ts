@@ -1157,6 +1157,12 @@ const messages = {
   "search.emptyHint": "Ничего не найдено",
   "search.navigateHint": "Навигация",
   "search.selectHint": "Выбрать",
+  "shortcuts.theme": "Переключить темную тему",
+  "shortcuts.cancel": "Отмена или закрыть",
+  "shortcuts.help": "Горячие клавиши",
+  "review.writeTodayMemo": "Записать заметку за сегодня",
+  "review.writeFirstMemo": "Создать первую заметку",
+  "common.scrollToTop": "Наверх",
 } as const satisfies Record<TranslationKey, string>;
 
 export const ru = messages;

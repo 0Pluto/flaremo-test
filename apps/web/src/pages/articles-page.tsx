@@ -1,6 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { ExternalLinkIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import {
+  ExternalLinkIcon,
+  FileTextIcon,
+  Loader2Icon,
+  PlusIcon,
+  Trash2Icon,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   createArticle,
@@ -14,8 +20,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Empty,
+  EmptyContent,
   EmptyDescription,
   EmptyHeader,
+  EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -97,7 +105,7 @@ export function ArticlesPage() {
               type="button"
             >
               {createMutation.isPending ? (
-                <PlusIcon className="size-4 animate-pulse" />
+                <Loader2Icon className="size-4 motion-safe:animate-spin" />
               ) : (
                 <PlusIcon className="size-4" />
               )}
@@ -113,13 +121,30 @@ export function ArticlesPage() {
           </div>
         )}
         {articlesQuery.data && articles.length === 0 && (
-          <Empty className="min-h-72 border">
+          <Empty className="min-h-72 border border-border/60 bg-card/50 motion-safe:animate-rise">
             <EmptyHeader>
+              <EmptyMedia
+                className="bg-accent text-accent-foreground"
+                variant="icon"
+              >
+                <FileTextIcon className="size-5" />
+              </EmptyMedia>
               <EmptyTitle>{t("article.emptyTitle")}</EmptyTitle>
               <EmptyDescription>
                 {t("article.emptyDescription")}
               </EmptyDescription>
             </EmptyHeader>
+            <EmptyContent>
+              <Button
+                disabled={createMutation.isPending}
+                size="sm"
+                variant="outline"
+                onClick={() => createMutation.mutate()}
+              >
+                <PlusIcon className="size-4" data-icon="inline-start" />
+                {t("article.newAction")}
+              </Button>
+            </EmptyContent>
           </Empty>
         )}
         {articlesQuery.data && articles.length > 0 && (

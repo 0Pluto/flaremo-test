@@ -1143,6 +1143,12 @@ const messages = {
   "search.emptyHint": "일치하는 항목이 없습니다",
   "search.navigateHint": "이동",
   "search.selectHint": "선택",
+  "shortcuts.theme": "다크 모드 전환",
+  "shortcuts.cancel": "취소 또는 닫기",
+  "shortcuts.help": "키보드 단축키",
+  "review.writeTodayMemo": "오늘의 기록 작성",
+  "review.writeFirstMemo": "첫 번째 기록 작성",
+  "common.scrollToTop": "맨 위로 이동",
 } as const satisfies Record<TranslationKey, string>;
 
 export const ko = messages;

@@ -1163,6 +1163,12 @@ const messages = {
   "search.emptyHint": "No se encontraron coincidencias",
   "search.navigateHint": "Navegar",
   "search.selectHint": "Seleccionar",
+  "shortcuts.theme": "Alternar modo oscuro",
+  "shortcuts.cancel": "Cancelar o cerrar",
+  "shortcuts.help": "Atajos de teclado",
+  "review.writeTodayMemo": "Escribir la nota de hoy",
+  "review.writeFirstMemo": "Escribir la primera nota",
+  "common.scrollToTop": "Volver arriba",
 } as const satisfies Record<TranslationKey, string>;
 
 export const es = messages;

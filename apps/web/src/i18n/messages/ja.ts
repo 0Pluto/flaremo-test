@@ -1151,6 +1151,12 @@ const messages = {
   "search.emptyHint": "一致する項目が見つかりません",
   "search.navigateHint": "移動",
   "search.selectHint": "選択",
+  "shortcuts.theme": "ダークモードの切り替え",
+  "shortcuts.cancel": "キャンセルまたは閉じる",
+  "shortcuts.help": "キーボードショートカット",
+  "review.writeTodayMemo": "今日の記録を書く",
+  "review.writeFirstMemo": "最初の記録を書く",
+  "common.scrollToTop": "トップに戻る",
 } as const satisfies Record<TranslationKey, string>;
 
 export const ja = messages;

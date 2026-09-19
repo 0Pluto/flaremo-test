@@ -1,4 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
+import { CalendarDaysIcon, PlusIcon } from "lucide-react";
 import { useMemo } from "react";
 import { getDailyReview, type Memo } from "@/api";
 import { MemoSnapshotCard } from "@/components/memo-snapshot-card";
@@ -6,8 +8,10 @@ import { SubpageHeader } from "@/components/subpage-header";
 import { Button } from "@/components/ui/button";
 import {
   Empty,
+  EmptyContent,
   EmptyDescription,
   EmptyHeader,
+  EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -57,13 +61,41 @@ export function DailyReviewPage() {
           </Empty>
         )}
         {reviewQuery.data && groups.length === 0 && (
-          <Empty className="min-h-72 border">
+          <Empty className="min-h-72 border border-border/60 bg-card/50 motion-safe:animate-rise">
             <EmptyHeader>
+              <EmptyMedia
+                className="bg-accent text-accent-foreground"
+                variant="icon"
+              >
+                <CalendarDaysIcon className="size-5" />
+              </EmptyMedia>
               <EmptyTitle>{t("review.dailyEmptyTitle")}</EmptyTitle>
               <EmptyDescription>
                 {t("review.dailyEmptyDescription")}
               </EmptyDescription>
             </EmptyHeader>
+            <EmptyContent>
+              <Button
+                render={
+                  <Link
+                    search={{
+                      compose: true,
+                      q: undefined,
+                      tag: undefined,
+                      view: undefined,
+                      space: undefined,
+                      untagged: undefined,
+                    }}
+                    to="/"
+                  />
+                }
+                size="sm"
+                variant="outline"
+              >
+                <PlusIcon className="size-4" data-icon="inline-start" />
+                {t("review.writeTodayMemo")}
+              </Button>
+            </EmptyContent>
           </Empty>
         )}
         {groups.map((group) => (

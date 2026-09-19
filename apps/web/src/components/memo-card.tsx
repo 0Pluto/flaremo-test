@@ -408,7 +408,10 @@ export const MemoCard = memo(function MemoCard({
             />
           </Suspense>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
+            <span className="hidden sm:inline text-xs text-muted-foreground">
+              ⌘Enter / Esc
+            </span>
+            <div className="flex items-center gap-2 ml-auto">
               <Button
                 disabled={isSaving}
                 size="sm"
@@ -424,7 +427,7 @@ export const MemoCard = memo(function MemoCard({
               >
                 {isSaving && (
                   <Loader2Icon
-                    className="animate-spin"
+                    className="motion-safe:animate-spin"
                     data-icon="inline-start"
                   />
                 )}

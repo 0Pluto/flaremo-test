@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
+  ArrowUpIcon,
   CalendarDaysIcon,
   CalendarIcon,
   CheckCircle2Icon,
@@ -194,11 +195,17 @@ export function FlareMoApp() {
     () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
   );
   const mobileSearchRef = useRef<HTMLInputElement>(null);
+  const mainRef = useRef<HTMLElement | null>(null);
   const [isTimelineScrolled, setIsTimelineScrolled] = useState(false);
+  const [showScrollToTop, setShowScrollToTop] = useState(false);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [shortcutsOpen, setShowShortcutsOpen] = useState(false);
   const [accountSettingsOpen, setAccountSettingsOpen] = useState(false);
   const [spotlightOpen, setSpotlightOpen] = useState(false);
+
+  const scrollToTop = useCallback(() => {
+    mainRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try {
       return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1";
@@ -701,12 +708,16 @@ export function FlareMoApp() {
             </div>
           </header>
           <main
+            ref={mainRef}
             className="mx-auto min-h-0 w-full max-w-[640px] flex-1 overflow-y-auto px-5 pt-1 pb-8 lg:px-3"
             onScroll={(event) => {
-              const scrolled = event.currentTarget.scrollTop > 4;
+              const top = event.currentTarget.scrollTop;
+              const scrolled = top > 4;
               setIsTimelineScrolled((prev) =>
                 prev === scrolled ? prev : scrolled,
               );
+              const showTop = top > 400;
+              setShowScrollToTop((prev) => (prev === showTop ? prev : showTop));
             }}
           >
             <WorkspaceSearch
@@ -943,6 +954,19 @@ export function FlareMoApp() {
                         : t("list.trashEmptyTitle")
                 }
               />
+              {showScrollToTop && (
+                <Button
+                  aria-label={t("common.scrollToTop")}
+                  className="fixed bottom-6 right-6 z-30 size-9 rounded-full border border-border/60 bg-background/85 p-0 text-muted-foreground shadow-sm backdrop-blur-md hover:bg-muted hover:text-foreground active:scale-95 motion-safe:animate-scale-in motion-safe:transition-all sm:right-8"
+                  size="icon"
+                  title={t("common.scrollToTop")}
+                  type="button"
+                  variant="outline"
+                  onClick={scrollToTop}
+                >
+                  <ArrowUpIcon className="size-4" />
+                </Button>
+              )}
             </div>
           </main>
         </div>
@@ -982,6 +1006,9 @@ export function FlareMoApp() {
                 ["shortcuts.send", "Enter"],
                 ["shortcuts.linebreak", "Shift + Enter"],
                 ["shortcuts.saveEdit", "⌘Enter"],
+                ["shortcuts.theme", "D"],
+                ["shortcuts.cancel", "Esc"],
+                ["shortcuts.help", "?"],
                 ["shortcuts.capture", "Enter (on /capture)"],
               ] as const
             ).map(([key, combo]) => (

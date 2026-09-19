@@ -1,4 +1,10 @@
-import { FootprintsIcon, Loader2Icon, ShuffleIcon } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import {
+  FootprintsIcon,
+  Loader2Icon,
+  PlusIcon,
+  ShuffleIcon,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getRandomWalkMemo, getWalkNextMemo } from "@/api";
 import { MemoSnapshotCard } from "@/components/memo-snapshot-card";
@@ -7,8 +13,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Empty,
+  EmptyContent,
   EmptyDescription,
   EmptyHeader,
+  EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -123,13 +131,41 @@ export function RandomWalkPage() {
               </Empty>
             )}
             {!pending && !loadError && steps.length === 0 && (
-              <Empty className="min-h-72 border">
+              <Empty className="min-h-72 border border-border/60 bg-card/50 motion-safe:animate-rise">
                 <EmptyHeader>
+                  <EmptyMedia
+                    className="bg-accent text-accent-foreground"
+                    variant="icon"
+                  >
+                    <FootprintsIcon className="size-5" />
+                  </EmptyMedia>
                   <EmptyTitle>{t("review.walkEmptyTitle")}</EmptyTitle>
                   <EmptyDescription>
                     {t("review.walkEmptyDescription")}
                   </EmptyDescription>
                 </EmptyHeader>
+                <EmptyContent>
+                  <Button
+                    render={
+                      <Link
+                        search={{
+                          compose: true,
+                          q: undefined,
+                          tag: undefined,
+                          view: undefined,
+                          space: undefined,
+                          untagged: undefined,
+                        }}
+                        to="/"
+                      />
+                    }
+                    size="sm"
+                    variant="outline"
+                  >
+                    <PlusIcon className="size-4" data-icon="inline-start" />
+                    {t("review.writeFirstMemo")}
+                  </Button>
+                </EmptyContent>
               </Empty>
             )}
             {step && (
@@ -146,7 +182,7 @@ export function RandomWalkPage() {
                   >
                     {pending ? (
                       <Loader2Icon
-                        className="animate-spin"
+                        className="motion-safe:animate-spin"
                         data-icon="inline-start"
                       />
                     ) : (

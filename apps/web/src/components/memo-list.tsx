@@ -4,7 +4,7 @@ import {
   Loader2Icon,
   SearchIcon,
 } from "lucide-react";
-import { memo } from "react";
+import { memo, useEffect, useRef } from "react";
 import type { Attachment, Memo, MemoVisibility, Share } from "@/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -104,6 +104,25 @@ export const MemoList = memo(function MemoList({
   onTagClick,
 }: MemoListProps) {
   const { t } = useI18n();
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!hasNextPage || isFetchingNextPage || hasError) return;
+    const element = sentinelRef.current;
+    if (!element || typeof IntersectionObserver === "undefined") return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          onLoadMore();
+        }
+      },
+      { rootMargin: "300px" },
+    );
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, hasError, onLoadMore]);
 
   if (isLoading && !hasError && memos.length === 0) {
     return (
@@ -241,7 +260,12 @@ export const MemoList = memo(function MemoList({
       </div>
       {isPaginationError && retryNotice}
       {hasNextPage && !hasError && (
-        <div className="flex justify-center py-5">
+        <div className="flex flex-col items-center justify-center py-5">
+          <div
+            ref={sentinelRef}
+            className="h-2 w-full pointer-events-none"
+            aria-hidden="true"
+          />
           <Button
             disabled={isFetchingNextPage}
             size="sm"

@@ -1117,6 +1117,12 @@ const messages = {
   "search.emptyHint": "لم يتم العثور على تطابقات",
   "search.navigateHint": "تنقل",
   "search.selectHint": "اختيار",
+  "shortcuts.theme": "تبديل الوضع الداكن",
+  "shortcuts.cancel": "إلغاء أو إغلاق",
+  "shortcuts.help": "اختصارات لوحة المفاتيح",
+  "review.writeTodayMemo": "كتابة ملاحظة اليوم",
+  "review.writeFirstMemo": "كتابة أول ملاحظة",
+  "common.scrollToTop": "العودة إلى الأعلى",
 } as const satisfies Record<TranslationKey, string>;
 
 export const ar = messages;

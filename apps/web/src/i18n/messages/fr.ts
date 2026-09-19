@@ -1176,6 +1176,12 @@ const messages = {
   "search.emptyHint": "Aucun résultat trouvé",
   "search.navigateHint": "Naviguer",
   "search.selectHint": "Sélectionner",
+  "shortcuts.theme": "Basculer le mode sombre",
+  "shortcuts.cancel": "Annuler ou fermer",
+  "shortcuts.help": "Raccourcis clavier",
+  "review.writeTodayMemo": "Écrire la note du jour",
+  "review.writeFirstMemo": "Écrire votre première note",
+  "common.scrollToTop": "Retour en haut",
 } as const satisfies Record<TranslationKey, string>;
 
 export const fr = messages;
