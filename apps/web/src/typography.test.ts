@@ -138,8 +138,36 @@ describe("micro text sizes", () => {
 
   it("keeps translated text at 12px or larger", () => {
     const offenders: string[] = [];
-    const src = readFileSync(new URL("./index.css", import.meta.url), "utf8");
-    // Scan components for a micro size whose element renders a Han string.
+    /** Where the opening tag that starts at line `i` ends, or null. Braces are
+     *  tracked so `=>`, `{}` and nested calls inside attributes do not end it
+     *  early; quotes are skipped so a `>` inside a string is ignored too. */
+    const tagEnd = (
+      lines: string[],
+      i: number,
+    ): { line: number; col: number } | null => {
+      let depth = 0;
+      let quote: string | null = null;
+      for (let k = i; k < Math.min(lines.length, i + 8); k += 1) {
+        const line = lines[k];
+        for (let c = 0; c < line.length; c += 1) {
+          const ch = line[c];
+          if (quote) {
+            if (ch === quote) quote = null;
+            continue;
+          }
+          if (ch === '"' || ch === "'" || ch === "`") quote = ch;
+          else if (ch === "{") depth += 1;
+          else if (ch === "}") depth -= 1;
+          else if (ch === ">" && depth === 0 && line[c - 1] !== "=") {
+            return { line: k, col: c + 1 };
+          }
+        }
+      }
+      return null;
+    };
+    // Scan components for a micro size on an element that actually RENDERS a
+    // Han string. A t() inside an attribute (title/aria-label) is not rendered
+    // at that size, and an emoji+digit counter carries no Han — both allowed.
     const walk = (dir: URL): void => {
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
         const child = new URL(
@@ -153,17 +181,19 @@ describe("micro text sizes", () => {
         }
         if (!entry.name.endsWith(".tsx")) continue;
         if (entry.name.includes(".test.")) continue;
-        const text = readFileSync(child, "utf8");
-        const lines = text.split("\n");
+        const lines = readFileSync(child, "utf8").split("\n");
         lines.forEach((line, i) => {
           const size = TOO_SMALL.find((s) => line.includes(s));
           if (!size) return;
-          const isKbd = /<kbd\b|font-mono/.test(line);
-          if (isKbd) return;
-          // A size inside a template-literal/attribute is not a rendered size.
-          if (/\b(title|aria-label|placeholder|alt)=/.test(line)) return;
-          const window = lines.slice(i, i + 6).join("\n");
-          const keys = [...window.matchAll(/\bt\("([\w.]+)"/g)].map((m) =>
+          if (/<kbd\b|font-mono/.test(line)) return;
+          const end = tagEnd(lines, i);
+          if (!end) return;
+          // Children of this element: everything after the opening tag.
+          const children =
+            lines[end.line].slice(end.col) +
+            "\n" +
+            lines.slice(end.line + 1, end.line + 5).join("\n");
+          const keys = [...children.matchAll(/\bt\("([\w.]+)"/g)].map((m) =>
             ZH.get(m[1]),
           );
           const rendered = keys.filter((v) => v && HAN.test(v));
@@ -175,7 +205,6 @@ describe("micro text sizes", () => {
         });
       }
     };
-    void src;
     walk(new URL(".", import.meta.url));
     expect(offenders).toEqual([]);
   });
