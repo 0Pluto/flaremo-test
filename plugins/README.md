@@ -52,7 +52,7 @@ instance that installs the package:
 | single file | 4MB |
 | uncompressed total | 8MB |
 | preview | 512KB |
-| fonts | 2 files, 400KB each |
+| fonts | not supported (see **Fonts** below) |
 
 Plugins run **without network access** and are self-contained: assets are
 inlined (`data:` URIs) or live next to the card. That constraint is what lets

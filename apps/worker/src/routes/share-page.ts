@@ -221,7 +221,11 @@ function buildHeadTags(input: ShareMetaInput): string {
     metaTag("property", "og:type", "article"),
     metaTag("property", "og:url", canonical),
     metaTag("property", "og:site_name", product),
-    metaTag("property", "og:locale", "zh_CN"),
+    metaTag(
+      "property",
+      "og:locale",
+      ogLocaleFor(detectShareLang(data.memo.content)),
+    ),
     metaTag("property", "article:published_time", data.memo.createdAt),
     metaTag(
       "name",
@@ -248,13 +252,47 @@ function buildHeadTags(input: ShareMetaInput): string {
   return tags.join("\n    ");
 }
 
+/**
+ * Best-effort content language for a shared note.
+ *
+ * A memo carries no declared language (the `memos` table has no such column),
+ * so the alternative is guessing from the text. Only scripts that are
+ * *uniquely identifying* are used: kana appear in Japanese and nowhere else in
+ * our locale set, hangul only in Korean, and the Arabic block only in Arabic.
+ * Shared Han is deliberately not tested — it would misclassify Simplified as
+ * Japanese/Korean — so everything else keeps the zh-CN default, which matches
+ * this page's Chinese chrome.
+ *
+ * The value drives <html lang>, which is what selects the Han *font face*:
+ * without it a Japanese note renders through PingFang SC and its kana/kanji
+ * take Chinese glyph forms.
+ */
+/** `og:locale` uses underscores ("zh_CN"); the document uses hyphens. */
+function ogLocaleFor(lang: string): string {
+  return lang.replace(/-/g, "_");
+}
+
+export function detectShareLang(content: string): string {
+  if (/[\u3040-\u30ff\u31f0-\u31ff]/.test(content)) return "ja";
+  if (/[\uac00-\ud7af\u1100-\u11ff\u3130-\u318f]/.test(content)) return "ko";
+  if (/[\u0600-\u06ff\u0750-\u077f\ufb50-\ufdff]/.test(content)) return "ar";
+  return "zh-CN";
+}
+
 const SHARE_PAGE_STYLES = `
 :root { color-scheme: light dark; --bg: #faf9f7; --fg: #1c1917; --muted: #78716c; --border: #e7e5e4; --accent: #c2410c; }
 @media (prefers-color-scheme: dark) {
   :root { --bg: #0d0c0b; --fg: #e7e5e4; --muted: #a8a29e; --border: #292524; --accent: #fb923c; }
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.75 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; }
+/* Han fallbacks are keyed off the <html lang> this document emits (see
+   detectShareLang): font matching walks the list per character, so one shared
+   Chinese-first list would paint Japanese kana/kanji with Chinese glyph forms
+   and drop Korean to a last-resort face. */
+:root { --font-cjk: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei"; }
+:root:lang(ja) { --font-cjk: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Yu Gothic", Meiryo, "Noto Sans JP", "Noto Sans CJK JP", "PingFang SC", "Microsoft YaHei"; }
+:root:lang(ko) { --font-cjk: "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", "Noto Sans CJK KR", "PingFang SC", "Microsoft YaHei"; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.75 -apple-system, BlinkMacSystemFont, "Segoe UI", var(--font-cjk), system-ui, sans-serif; }
 main { max-width: 42rem; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
 header, footer { max-width: 42rem; margin: 0 auto; padding: 1rem 1.25rem; }
 header { border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
@@ -284,7 +322,7 @@ audio { width: 100%; }
 .muted { color: var(--muted); }
 `;
 
-function renderShareDocument(input: ShareMetaInput): string {
+export function renderShareDocument(input: ShareMetaInput): string {
   const { origin, token, product, data } = input;
   const dimensionsByAttachmentId = new Map<
     string,
@@ -311,8 +349,13 @@ function renderShareDocument(input: ShareMetaInput): string {
   );
   const publishedDate = utcDate(data.memo.createdAt);
 
+  // Derived from the note's own script so its Han text selects the right face
+  // (see detectShareLang). The surrounding chrome is Chinese-only, so an RTL
+  // note still renders its chrome LTR — fixing that needs translated copy.
+  const lang = detectShareLang(data.memo.content);
+
   return `<!doctype html>
-<html lang="zh-CN">
+<html lang="${escapeHtml(lang)}">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />

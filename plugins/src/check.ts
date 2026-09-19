@@ -120,6 +120,16 @@ const FONT_KEYS = new Set([
 
 const BUILT_IN_FONT_FAMILIES = new Set(["sans", "heading", "serif", "mono"]);
 
+const FONT_ALIGNS = new Set(["start", "center", "end"]);
+
+/** Card font sizes render as inline `font-size`, so the floor that keeps Han
+ *  legible and the ceiling that keeps a card from overflowing its frame are
+ *  enforced here rather than clamped silently at render time. */
+const FONT_SIZE_MIN = 8;
+const FONT_SIZE_MAX = 96;
+/** Tracking beyond this is either unreadable or a typo. */
+const FONT_TRACKING_MAX = 10;
+
 const KNOWN_BINDINGS = new Set([
   "body",
   "date",
@@ -320,7 +330,89 @@ function checkLocalizedText(
   );
 }
 
-function checkStyle(checker: Checker, style: unknown, where: string): void {
+/** Validate a numeric font field against a range. `undefined` is allowed —
+ *  omitted fields inherit. */
+function checkFontNumber(
+  checker: Checker,
+  value: unknown,
+  where: string,
+  bounds: { min: number; max: number; unit: string; integer: boolean },
+): void {
+  if (value === undefined) return;
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    checker.error("style/invalid", `${where}: must be a finite number`);
+    return;
+  }
+  if (bounds.integer && !Number.isInteger(value)) {
+    checker.error("style/invalid", `${where}: must be a whole number`);
+    return;
+  }
+  if (value < bounds.min || value > bounds.max) {
+    checker.error(
+      "style/invalid",
+      `${where}: ${value}${bounds.unit} is outside the supported range ${bounds.min}–${bounds.max}${bounds.unit}`,
+    );
+  }
+}
+
+/** `lineHeight` accepts a unitless multiple or a CSS length string. A bare
+ *  string like "1.8" is a common authoring slip that React renders verbatim,
+ *  so require an explicit unit when it is a string. */
+function checkLineHeight(
+  checker: Checker,
+  value: unknown,
+  where: string,
+): void {
+  if (value === undefined) return;
+  if (typeof value === "number") {
+    checkFontNumber(checker, value, where, {
+      min: 0.5,
+      max: 4,
+      unit: "",
+      integer: false,
+    });
+    return;
+  }
+  if (typeof value === "string") {
+    if (!/^\d*\.?\d+(px|em|rem|%)$/.test(value.trim())) {
+      checker.error(
+        "style/invalid",
+        `${where}: "${value}" must be a unitless multiple (e.g. 1.8) or carry a unit (e.g. "1.8em", "24px")`,
+      );
+    }
+    return;
+  }
+  checker.error(
+    "style/invalid",
+    `${where}: must be a number or a CSS length string`,
+  );
+}
+
+/** Bindings whose resolved text is Han for zh/ja/ko users: the note body is
+ *  prose in the user's language, and `{date}` formats as "9月19日 11:25". The
+ *  rest (day.padded, stats, marks) are digits or images. */
+const HAN_CAPABLE_BINDINGS = new Set(["body", "date", "brand.product"]);
+
+/** True when the node renders text that is Han for some locale — a localized
+ *  string, or a `{binding}` placeholder for one of the Han-capable bindings.
+ *  Used to warn when card tracking will be ignored at render time. */
+function nodeTextIsTranslatable(node: Record<string, unknown>): boolean {
+  const text = node.text;
+  if (isPlainObject(text)) return Object.keys(text).length > 0;
+  if (typeof text !== "string") return false;
+  // A bare placeholder ("{date}") resolves through the binding table.
+  const placeholder = /^\{([\w.]+)\}$/.exec(text.trim());
+  if (placeholder?.[1]) return HAN_CAPABLE_BINDINGS.has(placeholder[1]);
+  // Otherwise it is a literal, which is authored per locale.
+  return text.trim().length > 0;
+}
+
+function checkStyle(
+  checker: Checker,
+  style: unknown,
+  where: string,
+  nodeTranslatable = false,
+): void {
   if (style === undefined) return;
   if (!isPlainObject(style)) {
     checker.error("style/invalid", `${where}: style must be an object`);
@@ -394,6 +486,58 @@ function checkStyle(checker: Checker, style: unknown, where: string): void {
             `${where}.font.family: "${String(family)}" is not a built-in family (${[...BUILT_IN_FONT_FAMILIES].join("/")}); packaged fonts are not supported yet, the card will fall back`,
           );
         }
+      }
+      // The numeric/size fields reach the renderer as inline styles, so an
+      // out-of-range value is not clamped away — it renders (or silently drops
+      // the declaration) and, for exported cards, bakes into the PNG.
+      checkFontNumber(checker, font.size, `${where}.font.size`, {
+        min: FONT_SIZE_MIN,
+        max: FONT_SIZE_MAX,
+        unit: "px",
+        integer: false,
+      });
+      checkFontNumber(checker, font.weight, `${where}.font.weight`, {
+        min: 1,
+        max: 1000,
+        unit: "",
+        integer: true,
+      });
+      checkFontNumber(
+        checker,
+        font.letterSpacing,
+        `${where}.font.letterSpacing`,
+        {
+          min: -FONT_TRACKING_MAX,
+          max: FONT_TRACKING_MAX,
+          unit: "px",
+          integer: false,
+        },
+      );
+      checkLineHeight(checker, font.lineHeight, `${where}.font.lineHeight`);
+      if (font.align !== undefined && !FONT_ALIGNS.has(font.align as string)) {
+        checker.error(
+          "style/invalid",
+          `${where}.font.align: must be one of ${[...FONT_ALIGNS].join("/")}`,
+        );
+      }
+      if (font.uppercase !== undefined && typeof font.uppercase !== "boolean") {
+        checker.error(
+          "style/invalid",
+          `${where}.font.uppercase: must be a boolean`,
+        );
+      }
+      // Han text ignores tracking at render time (see isHanLocale), so a card
+      // that sets it on translatable content is not broken — just expressing
+      // something that will not happen in zh/ja/ko, which is worth knowing.
+      if (
+        typeof font.letterSpacing === "number" &&
+        font.letterSpacing !== 0 &&
+        nodeTranslatable
+      ) {
+        checker.warn(
+          "font/tracking-ignored-for-han",
+          `${where}.font.letterSpacing: dropped for zh/ja/ko, whose text ignores card tracking; only Latin-only cards will show it`,
+        );
       }
       if (font.color !== undefined) {
         checkColorValue(checker, font.color, `${where}.font.color`);
@@ -536,7 +680,15 @@ function checkNode(
     );
     return;
   }
-  checkStyle(checker, node.style, `${where}.style`);
+  // A node whose text is resolved per locale (a literal, or a `{body}` /
+  // `{date}` binding) renders Han for zh/ja/ko users, where card tracking is
+  // ignored at render time.
+  checkStyle(
+    checker,
+    node.style,
+    `${where}.style`,
+    nodeTextIsTranslatable(node),
+  );
 
   switch (type) {
     case "row":
@@ -966,24 +1118,19 @@ export function checkPluginFiles(input: PluginCheckInput): PluginCheckResult {
     checkPreview(checker, files["preview.png"], "preview.png");
   }
 
-  let fontCount = 0;
-  for (const [name, bytes] of Object.entries(files)) {
-    if (!/\.(woff2?|ttf|otf)$/i.test(name)) continue;
-    fontCount += 1;
-    if (bytes.byteLength > PLUGIN_PACKAGE_LIMITS.maxFontBytes) {
-      checker.error(
-        "asset/font-too-large",
-        `${name}: fonts must stay under ${PLUGIN_PACKAGE_LIMITS.maxFontBytes / 1024}KB`,
-      );
-    }
-    if (!/\.woff2$/i.test(name)) {
-      checker.warn("asset/font-format", `${name}: prefer woff2 (smaller)`);
-    }
-  }
-  if (fontCount > PLUGIN_PACKAGE_LIMITS.maxFonts) {
+  // Font binaries are rejected outright rather than size-limited. No runtime
+  // path can consume one: a document card can only name the four built-in
+  // families (ShareCardContribution has no fonts field, and the renderer maps
+  // family → an app CSS variable), while a sandbox card runs under a
+  // `font-src data:` CSP that blocks every packaged file. So shipping one would
+  // only add weight — and risk: the free-for-commercial Han faces this project
+  // may reference by name (MiSans, HarmonyOS Sans) forbid redistribution as
+  // standalone files, which is exactly what a package asset is.
+  for (const name of Object.keys(files)) {
+    if (!/\.(woff2?|ttf|otf|eot)$/i.test(name)) continue;
     checker.error(
-      "asset/too-many-fonts",
-      `package contains ${fontCount} font files (limit ${PLUGIN_PACKAGE_LIMITS.maxFonts})`,
+      "asset/font-not-supported",
+      `${name}: card packages cannot ship font files. Document cards choose one of the built-in families (${[...BUILT_IN_FONT_FAMILIES].join("/")}), and sandbox cards may only use system fonts (their CSP blocks packaged webfonts). Referencing a font by name in a CSS stack is fine; bundling the file is not.`,
     );
   }
 

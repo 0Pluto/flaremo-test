@@ -54,7 +54,7 @@ const PROBLEM_CODES: Record<string, string> = {
   "sandbox/css-import": "inline the styles",
   "preview/not-png": "export the preview as PNG",
   "preview/too-large": "shrink the preview image",
-  "asset/font-too-large": "subset or compress the font",
+  "asset/font-not-supported": "remove the font file; use a built-in family",
 };
 
 class CliError extends Error {}

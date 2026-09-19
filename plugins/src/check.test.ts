@@ -386,3 +386,203 @@ describe("checkPluginFiles — package-level rules", () => {
     expect(errors.map((issue) => issue.code)).toContain("preview/too-large");
   });
 });
+
+describe("checkPluginFiles — font field ranges", () => {
+  // rootFolder is required: without it the checker rejects the package for a
+  // structural reason and every assertion below would pass vacuously.
+  const withFont = (font: Record<string, unknown>) => ({
+    rootFolder: "demo-pack",
+    files: packageFiles(baseManifest(), {
+      "cards/demo.json": file({
+        specVersion: 1,
+        root: {
+          type: "column",
+          style: { font },
+          children: [{ type: "text", text: "hello" }],
+        },
+      }),
+    }),
+  });
+
+  it("accepts values inside the supported range", () => {
+    const errors = errorsOf(
+      withFont({
+        family: "serif",
+        size: 15,
+        weight: 600,
+        lineHeight: 1.8,
+        letterSpacing: 0.2,
+        align: "center",
+        uppercase: true,
+      }),
+    );
+    expect(errors).toEqual([]);
+  });
+
+  it("rejects non-numeric and non-finite size/weight/letterSpacing", () => {
+    for (const font of [
+      { size: "15" },
+      { size: Number.NaN },
+      { weight: "600" },
+      { weight: Number.POSITIVE_INFINITY },
+      { letterSpacing: "0.2" },
+    ]) {
+      const errors = errorsOf(withFont(font));
+      expect(errors.length, JSON.stringify(font)).toBeGreaterThan(0);
+      expect(errors[0]?.message, JSON.stringify(font)).toMatch(/finite number/);
+    }
+  });
+
+  it("rejects out-of-range sizes and tracking", () => {
+    expect(errorsOf(withFont({ size: 4 }))[0]?.message).toMatch(/8–96px/);
+    expect(errorsOf(withFont({ size: 200 }))[0]?.message).toMatch(/8–96px/);
+    expect(errorsOf(withFont({ letterSpacing: 40 }))[0]?.message).toMatch(
+      /-10–10px/,
+    );
+    expect(errorsOf(withFont({ weight: -100 }))[0]?.message).toMatch(/1–1000/);
+  });
+
+  it("requires weight to be a whole number", () => {
+    expect(errorsOf(withFont({ weight: 550.5 }))[0]?.message).toMatch(
+      /whole number/,
+    );
+  });
+
+  it("checks the line-height shape", () => {
+    expect(errorsOf(withFont({ lineHeight: 1.8 }))).toEqual([]);
+    expect(errorsOf(withFont({ lineHeight: "1.8em" }))).toEqual([]);
+    // A bare numeric string renders verbatim and silently does nothing usizeful.
+    expect(errorsOf(withFont({ lineHeight: "1.8" }))[0]?.message).toMatch(
+      /unitless multiple/,
+    );
+    expect(errorsOf(withFont({ lineHeight: {} }))[0]?.message).toMatch(
+      /number or a CSS length/,
+    );
+    expect(errorsOf(withFont({ lineHeight: 9 }))[0]?.message).toMatch(/0\.5–4/);
+  });
+
+  it("rejects an unknown align and a non-boolean uppercase", () => {
+    expect(errorsOf(withFont({ align: "middle" }))[0]?.message).toMatch(
+      /start\/center\/end/,
+    );
+    expect(errorsOf(withFont({ uppercase: "yes" }))[0]?.message).toMatch(
+      /boolean/,
+    );
+  });
+
+  it("warns when tracking is set on translatable text", () => {
+    const result = checkPluginFiles({
+      rootFolder: "demo-pack",
+      files: packageFiles(baseManifest(), {
+        "cards/demo.json": file({
+          specVersion: 1,
+          root: {
+            type: "column",
+            children: [
+              {
+                type: "text",
+                text: "{date}",
+                style: { font: { letterSpacing: 0.4 } },
+              },
+            ],
+          },
+        }),
+      }),
+    });
+    const warnings = result.issues.filter(
+      (issue) => issue.code === "font/tracking-ignored-for-han",
+    );
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]?.message).toMatch(/zh\/ja\/ko/);
+  });
+
+  it("does not warn for a digit-only binding", () => {
+    const result = checkPluginFiles({
+      rootFolder: "demo-pack",
+      files: packageFiles(baseManifest(), {
+        "cards/demo.json": file({
+          specVersion: 1,
+          root: {
+            type: "column",
+            children: [
+              {
+                type: "text",
+                text: "{day.padded}",
+                style: { font: { letterSpacing: 1.5, uppercase: true } },
+              },
+            ],
+          },
+        }),
+      }),
+    });
+    expect(
+      result.issues.filter(
+        (issue) => issue.code === "font/tracking-ignored-for-han",
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe("checkPluginFiles — font binaries are rejected", () => {
+  it("rejects a bundled font file and explains why", () => {
+    const errors = errorsOf({
+      rootFolder: "demo-pack",
+      files: packageFiles(baseManifest(), {
+        "cards/demo.json": file({
+          specVersion: 1,
+          root: { type: "text", text: "hello" },
+        }),
+        "cards/assets/custom.woff2": new Uint8Array([0x77, 0x4f, 0x46, 0x32]),
+      }),
+    });
+    const fontError = errors.find(
+      (issue) => issue.code === "asset/font-not-supported",
+    );
+    expect(fontError).toBeDefined();
+    // The message has to point at the two real constraints, not just say "no".
+    expect(fontError?.message).toMatch(/built-in families/);
+    expect(fontError?.message).toMatch(/system fonts/);
+  });
+
+  it("covers every font container format, not just woff2", () => {
+    for (const name of [
+      "cards/a.woff",
+      "cards/a.woff2",
+      "cards/a.ttf",
+      "cards/a.otf",
+      "cards/a.eot",
+    ]) {
+      const errors = errorsOf({
+        rootFolder: "demo-pack",
+        files: packageFiles(baseManifest(), {
+          "cards/demo.json": file({
+            specVersion: 1,
+            root: { type: "text", text: "hello" },
+          }),
+          [name]: new Uint8Array([1, 2, 3]),
+        }),
+      });
+      expect(
+        errors.some((issue) => issue.code === "asset/font-not-supported"),
+        name,
+      ).toBe(true);
+    }
+  });
+
+  it("still accepts a card that references a font by name", () => {
+    const errors = errorsOf({
+      rootFolder: "demo-pack",
+      files: packageFiles(baseManifest(), {
+        "cards/demo.json": file({
+          specVersion: 1,
+          root: {
+            type: "text",
+            text: "hello",
+            style: { font: { family: "serif" } },
+          },
+        }),
+      }),
+    });
+    expect(errors).toEqual([]);
+  });
+});

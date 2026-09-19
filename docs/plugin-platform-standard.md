@@ -153,7 +153,7 @@
 - **样式**：布局（padding/margin/gap/width/height/flex/align/justify/absolute 四边）；外观（纯色或 CSS 渐变背景、border、圆角、shadow 档位、opacity、rotate）；文字（family 仅 `sans|heading|serif|mono` 四档内置族、size/weight/lineHeight/letterSpacing/align/uppercase/color、clamp 行数截断）。非内置族名由校验器发 `font/unsupported` 警告，渲染时不下发 `font-family`（沿用继承族）。
 - **颜色**：任意 `#rrggbb(aa)` 或**实例主题 token**：`brand.50…950`、`brand.coral`、`ink`、`paper`、`muted`——模板写 `"color": "brand.600"` 即自动跟随实例换肤。
 - **绑定**：`{body} {date} {day} {stats} {locale} {brand.product} {brand.markLight} {brand.markDark}`，文本内可混排；卡片内固定文案写多语言表。
-- **字体（现状）**：**不支持打包字体**。贡献项 `ShareCardContribution` 没有 fonts/assets 字段，宿主不会注入 `@font-face`，`cards/assets/*.woff2` 这类做法不存在；`document` 卡只能用上面四个内置族（由宿主映射到应用字体栈，含语言作用域的 CJK 回退）。`sandbox` 卡的 CSP 为 `font-src data:`，加载不了 webfont，字形完全依赖宿主注入的文档语言做系统字体回退。
+- **字体（现状）**：**不支持打包字体，且 `plugin:check` 会直接拒绝任何 `woff/woff2/ttf/otf/eot` 文件**（`asset/font-not-supported`）。贡献项 `ShareCardContribution` 没有 fonts/assets 字段，宿主不会注入 `@font-face`，`cards/assets/*.woff2` 这类做法不存在；`document` 卡只能用上面四个内置族（由宿主映射到应用字体栈，含语言作用域的 CJK 回退）。`sandbox` 卡的 CSP 为 `font-src data:`，加载不了 webfont，字形完全依赖宿主注入的文档语言做系统字体回退。
 - **兼容**：未知节点/样式跳过并忽略；`specVersion` 超限或 `minAppVersion` 不满足 → 可安装但「启用」置灰并提示升级。
 - **汉字排版红线**（document 卡渲染在应用 DOM 内、字号/字距走内联样式，应用的全站「`:lang(zh/ja/ko)` 字距归零」规则拦不住内联值，写进去的字距会被压进导出图）：正文与 `{date}` 这类可能含汉字的节点，字号不低于 12px，`letterSpacing` 保持缺省（负字距让汉字笔画粘连，正字距让汉字显得松散）；`uppercase` 只对拉丁文案有意义，别加在会被翻译的节点上。
 

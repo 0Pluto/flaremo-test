@@ -123,8 +123,6 @@ export const PLUGIN_PACKAGE_LIMITS = {
   maxFileBytes: 4 * 1024 * 1024,
   maxTotalBytes: 8 * 1024 * 1024,
   maxPreviewBytes: 512 * 1024,
-  maxFonts: 2,
-  maxFontBytes: 400 * 1024,
 } as const;
 
 /** A contribution plus the plugin identity it came from. */
