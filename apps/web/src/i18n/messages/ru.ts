@@ -586,6 +586,8 @@ const messages = {
   "auth.changeAvatar": "Изменить аватар",
   "auth.uploadAvatar": "Загрузить изображение",
   "auth.avatarUrl": "URL изображения",
+  "auth.avatarPresets": "Симпатичные аватары",
+  "auth.shufflePresets": "Перемешать",
   "auth.removeAvatar": "Сбросить на аватар по умолчанию",
   "auth.avatarUpdateFailed": "Не удалось обновить аватар.",
   "auth.nameTitle": "Отображаемое имя",

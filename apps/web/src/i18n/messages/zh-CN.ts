@@ -535,6 +535,8 @@ const messages = {
   "auth.changeAvatar": "更换头像",
   "auth.uploadAvatar": "上传图片",
   "auth.avatarUrl": "图片链接",
+  "auth.avatarPresets": "预设可爱头像",
+  "auth.shufflePresets": "换一批",
   "auth.removeAvatar": "恢复默认头像",
   "auth.avatarUpdateFailed": "无法更新头像。",
   "auth.nameTitle": "姓名与昵称",

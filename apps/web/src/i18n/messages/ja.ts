@@ -580,6 +580,8 @@ const messages = {
   "auth.changeAvatar": "アバターを変更",
   "auth.uploadAvatar": "画像をアップロード",
   "auth.avatarUrl": "画像URL",
+  "auth.avatarPresets": "かわいいプリセット",
+  "auth.shufflePresets": "シャッフル",
   "auth.removeAvatar": "デフォルトに戻す",
   "auth.avatarUpdateFailed": "アバターを更新できませんでした。",
   "auth.nameTitle": "表示名",

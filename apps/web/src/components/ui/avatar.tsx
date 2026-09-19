@@ -1,10 +1,20 @@
-import { type HTMLAttributes, useState } from "react";
+import BoringAvatar from "boring-avatars";
+import { type HTMLAttributes, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+
+export type AvatarFallbackVariant =
+  | "beam"
+  | "pixel"
+  | "bauhaus"
+  | "marble"
+  | "ring"
+  | "initials";
 
 export interface AvatarProps extends HTMLAttributes<HTMLDivElement> {
   src?: string | null;
   name?: string | null;
   size?: "xs" | "sm" | "md" | "lg" | "xl";
+  fallbackVariant?: AvatarFallbackVariant;
 }
 
 const SIZE_CLASSES = {
@@ -14,6 +24,14 @@ const SIZE_CLASSES = {
   lg: "size-12 text-base",
   xl: "size-16 text-xl",
 };
+
+export const FLAREMO_AVATAR_PALETTE = [
+  "#FF6B4A", // Flame coral
+  "#FFAA5A", // Warm peach
+  "#FFE194", // Soft sun cream
+  "#264653", // Deep slate
+  "#2A9D8F", // Sage teal
+];
 
 const PALETTES = [
   "from-amber-500 to-orange-600",
@@ -47,11 +65,19 @@ export function Avatar({
   src,
   name,
   size = "md",
+  fallbackVariant = "beam",
   className,
   ...props
 }: AvatarProps) {
   const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [src]);
+
   const showImage = Boolean(src && !imgError);
+  const seed = name?.trim() || "FlareMo";
+  const isInitials = fallbackVariant === "initials";
   const initial = getInitial(name);
   const palette = PALETTES[getPaletteIndex(name)];
 
@@ -59,9 +85,9 @@ export function Avatar({
     <div
       aria-label={name ?? "Avatar"}
       className={cn(
-        "relative inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full font-medium text-white shadow-xs transition-colors",
+        "relative inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full font-medium shadow-2xs transition-colors",
         SIZE_CLASSES[size],
-        !showImage && cn("bg-gradient-to-br", palette),
+        !showImage && isInitials && cn("bg-gradient-to-br text-white", palette),
         className,
       )}
       role="img"
@@ -76,8 +102,16 @@ export function Avatar({
           src={src ?? undefined}
           onError={() => setImgError(true)}
         />
-      ) : (
+      ) : isInitials ? (
         <span className="leading-none">{initial}</span>
+      ) : (
+        <BoringAvatar
+          className="size-full block"
+          colors={FLAREMO_AVATAR_PALETTE}
+          name={seed}
+          size="100%"
+          variant={fallbackVariant}
+        />
       )}
     </div>
   );

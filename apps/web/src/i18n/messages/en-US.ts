@@ -580,6 +580,8 @@ const messages = {
   "auth.changeAvatar": "Change avatar",
   "auth.uploadAvatar": "Upload image",
   "auth.avatarUrl": "Image URL",
+  "auth.avatarPresets": "Preset Cute Avatars",
+  "auth.shufflePresets": "Shuffle",
   "auth.removeAvatar": "Restore default avatar",
   "auth.avatarUpdateFailed": "Failed to update avatar.",
   "auth.nameTitle": "Display name",

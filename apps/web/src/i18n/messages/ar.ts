@@ -571,6 +571,8 @@ const messages = {
   "auth.changeAvatar": "تغيير الصورة الرمزية",
   "auth.uploadAvatar": "تحميل صورة",
   "auth.avatarUrl": "رابط الصورة",
+  "auth.avatarPresets": "صور رمزية لطيفة جاهزة",
+  "auth.shufflePresets": "خلط",
   "auth.removeAvatar": "استعادة الصورة الافتراضية",
   "auth.avatarUpdateFailed": "فشل تحديث الصورة الرمزية.",
   "auth.nameTitle": "الاسم المعروض",

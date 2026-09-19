@@ -39,6 +39,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { TranslationKey, TranslationParams } from "@/i18n";
 import { prepareAvatarFile } from "@/lib/upload-compression";
+import { cn } from "@/lib/utils";
 import { SettingsRow, SettingsSectionGroup } from "./apple-settings-ui";
 
 export const MIN_PASSWORD_LENGTH = 8;
@@ -133,6 +134,45 @@ export type AccountPanelProps = {
   t: (key: TranslationKey, params?: TranslationParams) => string;
 };
 
+const CUTE_AVATAR_PRESETS = [
+  {
+    id: "bottts",
+    name: "机器人",
+    getUrl: (seed: string) =>
+      `https://api.dicebear.com/9.x/bottts/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`,
+  },
+  {
+    id: "lorelei",
+    name: "二次元",
+    getUrl: (seed: string) =>
+      `https://api.dicebear.com/9.x/lorelei/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`,
+  },
+  {
+    id: "thumbs",
+    name: "大拇指",
+    getUrl: (seed: string) =>
+      `https://api.dicebear.com/9.x/thumbs/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`,
+  },
+  {
+    id: "adventurer",
+    name: "冒险家",
+    getUrl: (seed: string) =>
+      `https://api.dicebear.com/9.x/adventurer/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`,
+  },
+  {
+    id: "pixel-art",
+    name: "像素小人",
+    getUrl: (seed: string) =>
+      `https://api.dicebear.com/9.x/pixel-art/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`,
+  },
+  {
+    id: "notionists",
+    name: "极简手绘",
+    getUrl: (seed: string) =>
+      `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(seed)}&backgroundColor=e5e7eb,f3f4f6,fee2e2,fef3c7,ecfdf5`,
+  },
+];
+
 export function AccountPanel({
   currentAvatarUrl,
   currentName,
@@ -212,12 +252,14 @@ export function AccountPanel({
   const [createTokenOpen, setCreateTokenOpen] = useState(false);
 
   const [avatarInputUrl, setAvatarInputUrl] = useState("");
+  const [presetSeed, setPresetSeed] = useState("");
   const avatarFileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Auto-close dialogs on mutation success
   useCloseOnSuccess(avatarIsPending, avatarError !== null, () => {
     setAvatarOpen(false);
     setAvatarInputUrl("");
+    setPresetSeed("");
   });
   useCloseOnSuccess(updateNameIsPending, nameError !== null, () =>
     setNameOpen(false),
@@ -396,7 +438,7 @@ export function AccountPanel({
               className="size-24 text-3xl shadow-md ring-2 ring-border"
               name={currentName || currentUsername}
               size="xl"
-              src={currentAvatarUrl}
+              src={avatarInputUrl.trim() || currentAvatarUrl}
             />
 
             <input
@@ -440,12 +482,65 @@ export function AccountPanel({
                   type="button"
                   variant="ghost"
                   className="text-muted-foreground hover:text-destructive"
-                  onClick={() => void onAvatarDelete()}
+                  onClick={() => {
+                    setAvatarInputUrl("");
+                    void onAvatarDelete();
+                  }}
                 >
                   <RotateCcwIcon className="size-4" />
                   {t("auth.removeAvatar")}
                 </Button>
               )}
+            </div>
+
+            {/* Cute Avatar Presets */}
+            <div className="flex w-full flex-col gap-2 pt-2 border-t">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">
+                  {t("auth.avatarPresets")}
+                </span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
+                  onClick={() =>
+                    setPresetSeed(Math.random().toString(36).slice(2, 8))
+                  }
+                  type="button"
+                >
+                  <RefreshCcwIcon className="size-3" />
+                  {t("auth.shufflePresets")}
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-6 gap-2">
+                {CUTE_AVATAR_PRESETS.map((preset) => {
+                  const seed = presetSeed || currentUsername || "user";
+                  const url = preset.getUrl(seed);
+                  const isSelected = avatarInputUrl === url;
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      title={preset.name}
+                      onClick={() => setAvatarInputUrl(url)}
+                      className={cn(
+                        "group relative flex aspect-square items-center justify-center overflow-hidden rounded-full border-2 p-0.5 transition-all cursor-pointer hover:scale-105 active:scale-95 bg-muted/40",
+                        isSelected
+                          ? "border-primary ring-2 ring-primary/20 shadow-xs"
+                          : "border-border/60 hover:border-border",
+                      )}
+                    >
+                      <img
+                        alt={preset.name}
+                        className="size-full rounded-full object-cover"
+                        loading="lazy"
+                        src={url}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="flex w-full items-center gap-2 pt-2 border-t">

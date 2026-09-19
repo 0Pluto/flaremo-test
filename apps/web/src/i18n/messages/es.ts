@@ -592,6 +592,8 @@ const messages = {
   "auth.changeAvatar": "Cambiar avatar",
   "auth.uploadAvatar": "Subir imagen",
   "auth.avatarUrl": "URL de la imagen",
+  "auth.avatarPresets": "Avatares lindos predefinidos",
+  "auth.shufflePresets": "Mezclar",
   "auth.removeAvatar": "Restaurar avatar predeterminado",
   "auth.avatarUpdateFailed": "No se pudo actualizar el avatar.",
   "auth.nameTitle": "Nombre visible",
