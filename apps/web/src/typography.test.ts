@@ -264,3 +264,140 @@ describe("synthetic italic guard", () => {
     expect(css).not.toMatch(/^html\s*\{[^}]*font-synthesis/m);
   });
 });
+
+/**
+ * One i18n key must render one way. `list.errorTitle` used to appear as a
+ * hand-rolled `<h1 className="text-lg font-semibold">` on the root error page
+ * and as `<EmptyTitle>` (14px/500) in six inline error states — the same words
+ * looking like two different products. Routing every use through the shared
+ * component is the fix; this keeps a new error surface from re-introducing a
+ * bespoke treatment.
+ */
+describe("error state typography", () => {
+  it("renders list.errorTitle only through the shared EmptyTitle", () => {
+    const offenders: string[] = [];
+    const walk = (dir: URL): void => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const child = new URL(
+          `${entry.name}${entry.isDirectory() ? "/" : ""}`,
+          dir,
+        );
+        if (entry.isDirectory()) {
+          if (entry.name === "node_modules" || entry.name === "ui") continue;
+          walk(child);
+          continue;
+        }
+        if (!entry.name.endsWith(".tsx")) continue;
+        if (entry.name.includes(".test.")) continue;
+        const lines = readFileSync(child, "utf8").split("\n");
+        lines.forEach((line, i) => {
+          if (!line.includes('t("list.errorTitle")')) return;
+          if (line.includes("<EmptyTitle>")) return;
+          offenders.push(
+            `${child.pathname.replace(process.cwd(), "")}:${i + 1}`,
+          );
+        });
+      }
+    };
+    walk(new URL(".", import.meta.url));
+    expect(offenders).toEqual([]);
+  });
+});
+
+/**
+ * Headings follow a two-tier system, and the tiers differ on purpose:
+ *
+ *  1. Primary panel titles — `font-heading` + semibold + foreground + a larger
+ *     size. The calendar day panel and the settings detail pane are the only
+ *     ones; they read as "this is what you are looking at".
+ *  2. In-page sub-section labels — `text-sm font-medium`, muted when they label
+ *     a group. The overwhelming majority of h2s.
+ *
+ * The 11:5 medium/semibold split an audit flagged is that system, not drift.
+ * These assertions pin the parts that *were* genuine defects, so a future
+ * heading cannot silently join neither tier.
+ */
+describe("heading tiers", () => {
+  const comps = readdirSync(new URL(".", import.meta.url), {
+    withFileTypes: true,
+  });
+  void comps;
+
+  const sources = (() => {
+    const out: { path: string; text: string }[] = [];
+    const walk = (dir: URL): void => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const child = new URL(
+          `${entry.name}${entry.isDirectory() ? "/" : ""}`,
+          dir,
+        );
+        if (entry.isDirectory()) {
+          if (entry.name === "node_modules") continue;
+          walk(child);
+          continue;
+        }
+        if (!entry.name.endsWith(".tsx") || entry.name.includes(".test.")) {
+          continue;
+        }
+        out.push({
+          path: child.pathname.replace(process.cwd(), ""),
+          text: readFileSync(child, "utf8"),
+        });
+      }
+    };
+    walk(new URL(".", import.meta.url));
+    return out;
+  })();
+
+  it("gives every <h2> an explicit font size", () => {
+    // An h2 with no size class inherits whatever an ancestor happens to set,
+    // which is how one shipped at the browser default 16px by accident.
+    const offenders: string[] = [];
+    const SIZE = /text-(xs|sm|base|lg|xl|2xl|3xl|4xl|5xl|\[)/;
+    for (const { path, text } of sources) {
+      text.split("\n").forEach((line, i) => {
+        if (!/<h2\b/.test(line)) return;
+        if (SIZE.test(line)) return;
+        // Only an unterminated opening tag can carry classes on the next
+        // line; peeking past a closed tag would let a sibling element's
+        // classes (e.g. a <p> with text-sm) mask the offender.
+        if (!line.includes(">")) {
+          const next = text.split("\n")[i + 1] ?? "";
+          if (SIZE.test(next)) return;
+        }
+        offenders.push(`${path}:${i + 1}`);
+      });
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it("never pairs semibold with a muted colour", () => {
+    // Weight says "emphasise", the colour says "de-emphasise"; the app's muted
+    // labels are all medium.
+    const offenders: string[] = [];
+    for (const { path, text } of sources) {
+      text.split("\n").forEach((line, i) => {
+        if (!/font-semibold/.test(line)) return;
+        if (!/text-muted-foreground/.test(line)) return;
+        offenders.push(`${path}:${i + 1}`);
+      });
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it("keeps the settings pane's mobile and desktop titles in one family", () => {
+    const page = sources.find((entry) =>
+      entry.path.endsWith("pages/account-page.tsx"),
+    );
+    expect(page).toBeDefined();
+    // Both render `activeLabel` (responsive alternatives); a heading must not
+    // change font family between breakpoints.
+    const h2s = [
+      ...(page?.text ?? "").matchAll(/<h2 className="([^"]*)"/g),
+    ].map((m) => m[1]);
+    const withLabel = h2s.filter((cls) => !cls.includes("sr-only"));
+    for (const cls of withLabel) {
+      expect(cls, cls).toContain("font-heading");
+    }
+  });
+});

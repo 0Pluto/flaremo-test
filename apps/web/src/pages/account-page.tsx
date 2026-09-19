@@ -828,7 +828,7 @@ export function AccountSettingsDialog({
               <ChevronLeftIcon className="size-5" />
               <span>{t("settings.title")}</span>
             </button>
-            <h2 className="text-sm font-semibold truncate px-2 text-foreground">
+            <h2 className="font-heading text-sm font-semibold tracking-tight truncate px-2 text-foreground">
               {activeLabel}
             </h2>
             <Button

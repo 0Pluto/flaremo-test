@@ -651,7 +651,7 @@ export function CapturePage() {
       )}
       {recovery && (
         <section className="space-y-3 rounded-xl border bg-card p-5">
-          <h2 className="font-medium">{t("capture.recovery")}</h2>
+          <h2 className="text-sm font-medium">{t("capture.recovery")}</h2>
           <p className="line-clamp-3 whitespace-pre-wrap text-sm text-muted-foreground">
             {recovery.text}
           </p>

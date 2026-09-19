@@ -1082,7 +1082,7 @@ function AgendaView({
                       !unscheduledOpen && "-rotate-90 rtl:rotate-90",
                     )}
                   />
-                  <span className="text-xs font-semibold text-muted-foreground">
+                  <span className="text-xs font-medium text-muted-foreground">
                     {t("calendar.agendaUnscheduled")}
                   </span>
                   <span className="ml-auto text-xs text-muted-foreground">
