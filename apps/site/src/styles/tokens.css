@@ -238,6 +238,16 @@
       Meiryo, "Noto Sans JP", "Noto Sans CJK JP", "PingFang SC",
       "Microsoft YaHei";
   }
+  /* The variables live on :root, so a subtree that declares a different
+     language (the docs body, which is Chinese for every UI locale) would keep
+     inheriting the page's list. Matching :lang() on the element itself lets a
+     zh-CN subtree switch back to the Chinese faces — without this, Chinese
+     body text on a /ja/ page renders with Japanese glyph forms. */
+  :lang(zh) {
+    --font-cjk:
+      "PingFang SC", "Hiragino Sans GB", MiSans, "HarmonyOS Sans SC",
+      "Microsoft YaHei", "Noto Sans CJK SC", "Noto Sans SC";
+  }
   :root:lang(ko) {
     --font-cjk:
       "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR",

@@ -292,6 +292,10 @@ const SHARE_PAGE_STYLES = `
 :root { --font-cjk: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei"; }
 :root:lang(ja) { --font-cjk: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Yu Gothic", Meiryo, "Noto Sans JP", "Noto Sans CJK JP", "PingFang SC", "Microsoft YaHei"; }
 :root:lang(ko) { --font-cjk: "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", "Noto Sans CJK KR", "PingFang SC", "Microsoft YaHei"; }
+/* The variables sit on :root, so a subtree declaring another language (the
+   Chinese-only chrome inside a Japanese note's page) would inherit the page
+   list. Matching :lang() on the element lets that subtree switch back. */
+:lang(zh) { --font-cjk: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei"; }
 body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.75 -apple-system, BlinkMacSystemFont, "Segoe UI", var(--font-cjk), system-ui, sans-serif; }
 main { max-width: 42rem; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
 header, footer { max-width: 42rem; margin: 0 auto; padding: 1rem 1.25rem; }
@@ -379,7 +383,9 @@ export function renderShareDocument(input: ShareMetaInput): string {
       <article data-flaremo-share-article>${bodyHtml}</article>
       ${galleryHtml}
     </main>
-    <footer>发布于 ${escapeHtml(publishedDate)} · 作者 ${escapeHtml(data.user.name)} · <a href="${escapeHtml(origin)}">用 ${escapeHtml(product)} 打开</a></footer>
+    <!-- The page declares the note's language; this chrome is Chinese-only
+         copy, so it carries its own lang to keep Chinese glyph forms. -->
+    <footer lang="zh-CN">发布于 ${escapeHtml(publishedDate)} · 作者 ${escapeHtml(data.user.name)} · <a href="${escapeHtml(origin)}">用 ${escapeHtml(product)} 打开</a></footer>
   </body>
 </html>`;
 }

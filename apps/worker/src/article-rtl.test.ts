@@ -46,3 +46,28 @@ describe("article page direction", () => {
     expect(docFor("ja")).toContain(":root:lang(ja)");
   });
 });
+
+describe("share page chrome language", () => {
+  it("marks the Chinese-only footer with its own lang", async () => {
+    const { renderShareDocument } = await import("./routes/share-page");
+    const html = renderShareDocument({
+      origin: "https://example.test",
+      token: "t",
+      product: "FlareMo",
+      faviconUrl: null,
+      faviconType: null,
+      data: {
+        memo: {
+          id: "m",
+          content: "日本語のメモ",
+          createdAt: "2026-09-19T00:00:00.000Z",
+        },
+        user: { id: "u", name: "A" },
+        attachments: [],
+      },
+    } as unknown as Parameters<typeof renderShareDocument>[0]);
+    // The note drives <html lang>, the chrome keeps Chinese glyph forms.
+    expect(html).toContain('<html lang="ja">');
+    expect(html).toContain('<footer lang="zh-CN">');
+  });
+});
