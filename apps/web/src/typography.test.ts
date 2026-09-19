@@ -57,3 +57,28 @@ describe("app font stacks", () => {
     expect(ko).not.toMatch(/^"PingFang SC"/);
   });
 });
+
+/**
+ * Share-card plugins pick one of four families by name, so the serif tier is
+ * part of the plugin API: it must keep resolving through the language-scoped
+ * variables rather than a hardcoded Han face (which is what painted Japanese
+ * users' exported cards with Chinese glyphs).
+ */
+describe("share card font tiers", () => {
+  it("exposes a serif tier that defers its Han faces to the script scope", () => {
+    const serif = declaration("font-serif");
+    expect(serif).toContain("var(--font-cjk-serif)");
+    expect(serif).not.toMatch(/Songti|SimSun|Mincho/);
+  });
+
+  it("scopes the Han serif list per script", () => {
+    const list = (pattern: RegExp) =>
+      css.match(pattern)?.[1].replace(/\s+/g, " ").trim() ?? "";
+    const zh = list(/:root\s*\{[^}]*--font-cjk-serif:\s*([\s\S]*?);/);
+    const ja = list(/:root:lang\(ja\)\s*\{[^}]*--font-cjk-serif:\s*([\s\S]*?);/);
+
+    expect(zh).toMatch(/^"Songti SC"/);
+    expect(ja).toMatch(/Mincho/);
+    expect(ja).not.toMatch(/^"Songti SC"/);
+  });
+});

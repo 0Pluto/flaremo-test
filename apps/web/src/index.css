@@ -32,6 +32,12 @@
         var(--font-cjk), "Noto Sans Arabic Variable", system-ui, sans-serif;
     --font-mono:
         ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    /* Fourth tier, exposed to share-card plugins as `family: "serif"`. Latin
+       keeps Georgia — present on every desktop, so an exported card rasterizes
+       the same everywhere — and the Han side is script-scoped below for the
+       same reason as --font-cjk. */
+    --font-serif:
+        Georgia, "Times New Roman", var(--font-cjk-serif), serif;
 
     /* Brand ramp (default = flame; presets override --brand-* under
        [data-accent] set by BrandingProvider). .dark remaps the tokens below. */
@@ -348,6 +354,22 @@
   :root:lang(ko) {
     --font-cjk: "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR",
       "Noto Sans CJK KR", "PingFang SC", "Microsoft YaHei";
+    }
+  /* Same scoping for the serif tier the share-card plugins select. Exported
+     card images are rasterized in this document, so a Japanese user must get
+     Mincho forms here — the pre-existing Chinese-only list is exactly what
+     painted their cards with Chinese glyphs. */
+  :root {
+    --font-cjk-serif: "Songti SC", "STSong", "Noto Serif CJK SC",
+      "Noto Serif SC", SimSun;
+    }
+  :root:lang(ja) {
+    --font-cjk-serif: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP",
+      "Noto Serif CJK JP", "Songti SC";
+    }
+  :root:lang(ko) {
+    --font-cjk-serif: "AppleMyungjo", Batang, "Noto Serif KR",
+      "Noto Serif CJK KR", "Songti SC";
     }
   /* RTL 排版重置：负字距会切断阿拉伯字母的连笔曲线 */
   [dir="rtl"] :is(h1, h2, h3, h4, [class*="tracking-"]) {

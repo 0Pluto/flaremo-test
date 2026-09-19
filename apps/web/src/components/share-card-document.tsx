@@ -21,12 +21,13 @@ import type { CSSProperties, ElementType, ReactNode } from "react";
  * Unknown nodes and unsafe values are skipped rather than rendered.
  */
 
+/** Maps the plugin-facing DocumentFontFamily onto the app's token tiers, so a
+ *  card inherits the same language-scoped stacks the UI uses. */
 const FONT_STACKS: Record<string, string> = {
   sans: "var(--font-sans)",
   heading: "var(--font-heading)",
   mono: "var(--font-mono)",
-  serif:
-    'Georgia, "Songti SC", "STSong", "Noto Serif CJK SC", "Noto Serif SC", serif',
+  serif: "var(--font-serif)",
 };
 
 const SHADOWS: Record<string, string> = {

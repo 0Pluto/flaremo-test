@@ -127,8 +127,15 @@ const BRIDGE_SCRIPT = `(function () {
   });
 })();`;
 
-export function buildSandboxSrcdoc(html: string): string {
-  const injection = `<meta http-equiv="Content-Security-Policy" content="${SANDBOX_CSP}"><script>${BRIDGE_SCRIPT}</script>`;
+export function buildSandboxSrcdoc(html: string, locale = "en-US"): string {
+  // The frame is opaque-origin, so plugin cards cannot reach the app's font
+  // tokens; their Han glyphs come from the browser's own fallback, which is
+  // disambiguated by the document language. Stamping lang/dir here is what
+  // keeps a Japanese user's exported card out of Chinese glyph forms, and it
+  // works even when the plugin omits <html> (the parser creates one).
+  const dir = locale === "ar" ? "rtl" : "ltr";
+  const boot = `document.documentElement.lang=${JSON.stringify(locale)};document.documentElement.dir=${JSON.stringify(dir)};`;
+  const injection = `<meta http-equiv="Content-Security-Policy" content="${SANDBOX_CSP}"><script>${boot}${BRIDGE_SCRIPT}</script>`;
   if (/<head[^>]*>/i.test(html)) {
     return html.replace(/<head[^>]*>/i, (match) => `${match}${injection}`);
   }
@@ -183,7 +190,11 @@ export const ShareCardSandboxHost = forwardRef<ShareCardSandboxHandle, Props>(
     >(null);
     const requestIdRef = useRef(0);
     const [ready, setReady] = useState(false);
-    const srcdoc = useMemo(() => buildSandboxSrcdoc(html), [html]);
+    const locale = payload.data.locale;
+    const srcdoc = useMemo(
+      () => buildSandboxSrcdoc(html, locale),
+      [html, locale],
+    );
 
     // Keep the latest callbacks without re-running the message-listener effect
     // (which would reset the ready latch and restart the init loop).

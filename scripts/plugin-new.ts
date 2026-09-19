@@ -112,7 +112,9 @@ function sandboxEntry(title: string) {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    font-family: system-ui, -apple-system, "PingFang SC", sans-serif;
+    /* system-ui already resolves CJK per script from the lang the host
+       stamps on this frame; naming a Han face here would override it. */
+    font-family: system-ui, -apple-system, sans-serif;
   }
   .label {
     font-size: 11px;

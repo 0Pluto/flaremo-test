@@ -13,7 +13,9 @@
     padding: 26px 28px;
     display: flex;
     flex-direction: column;
-    font-family: Georgia, "Songti SC", "STSong", "Noto Serif CJK SC", serif;
+    /* No Han face is named on purpose: the host stamps lang on this
+       document, and the generic serif resolves per script from it. */
+    font-family: Georgia, "Times New Roman", serif;
   }
   .head { display: flex; justify-content: space-between; align-items: flex-start; }
   .meta {
