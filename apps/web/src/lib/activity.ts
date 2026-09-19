@@ -48,3 +48,12 @@ export function currentStreak(activity: ActivityDay[]): number {
   }
   return streak;
 }
+
+/** Returns a Tailwind colour class for a heatmap cell given the note count. */
+export function heatmapColor(count: number): string {
+  if (count <= 0) return "bg-muted";
+  if (count === 1) return "bg-primary/20";
+  if (count === 2) return "bg-primary/40";
+  if (count === 3) return "bg-primary/70";
+  return "bg-primary";
+}
