@@ -1,7 +1,7 @@
 # 文章功能调研报告（成熟第三方框架优先）
 
 - 日期：2026-09-19（v2，重写自 09-18 设计稿）
-- 状态：**P0 + P1 已实施并交付**（2026-09-19 同日实施：articles 迁移 0029、worker SSR/兼容 API、web 编辑器与列表、i18n 8 语言、253 worker + 368 web + 13 domain 测试全绿；P2 按需后置）。调研结论保持有效，正文未回改。方向已按推荐定案（见 §3.1），本轮报告回答的核心问题是：**每一层有没有成熟第三方框架？有，就按成熟框架做完整集成；没有，才允许应用层胶水。**
+- 状态：**P0 + P1 已实施并交付**（2026-09-19 同日实施：articles 迁移 0029、worker SSR/兼容 API、web 编辑器与列表、i18n 8 语言、253 worker + 368 web + 13 domain 测试全绿；P1 的 rehype 插件组未采用——文章面锚点沿用现有 createSlugger（见 §2.3 注）；P2 按需后置）。调研结论保持有效，正文未回改。方向已按推荐定案（见 §3.1），本轮报告回答的核心问题是：**每一层有没有成熟第三方框架？有，就按成熟框架做完整集成；没有，才允许应用层胶水。**
 - 前置事实：2026-09-18 已完成现状审计——FlareMo 无文章形态（无标题/无草稿/无 slug/无公开发布面），分享 token 是刻意不可枚举设计与文章"可收录"契约相反；渲染底座（react-markdown / marked / TipTap 3 / share-page SSR 基建 / TOC 设施）大半现成。**发布链路是新活，渲染是大半现成。**
 
 ---
@@ -65,6 +65,8 @@
 | 代码高亮桥 | `marked-highlight`（官方，接 Shiki 自定义 highlighter，支持 async） |
 | 现有安全行为 | 维持现实现（raw HTML 丢弃 + 不安全链接中和是 share-page 已验证的自定义 renderer，属于安全逻辑非轮子，保留） |
 
+**实施口径（2026-09-19 落地时）**：上表 web 侧插件行除代码高亮（Shiki 已接）外**未采用**——`rehype-slug` / `rehype-autolink-headings` / `remark-toc` / `remark-footnotes` / `rehype-external-links` 均未引入：文章面（编辑器预览）锚点沿用现有 `createSlugger`（`withHeadingIds`），目录沿用应用内 `MemoOutline`（已去「仅音频」条件），SSR 面锚点走 `marked-gfm-heading-id`。如日后切换 rehype-slug，按 §7.3 同步两套锚点规则。未采用的行保留为升级候选。
+
 ### 2.4 代码高亮
 
 **Shiki**（唯一推荐）：VS Code 同源 TextMate 引擎；`createJavaScriptRegexEngine` 无 WASM、可跑 Cloudflare Workers、按语言注册控 bundle（已核实官方文档）；`@shikijs/rehype` 接 web、`marked-highlight` 接 SSR，两端同一套主题/语言配置。首期语言集合：ts/js/py/json/bash/html/css/rust/go + 纯文本兜底。编辑态用 TipTap 官方 `code-block-lowlight`（highlight.js 系，轻），阅读态 Shiki。
@@ -96,15 +98,15 @@
 
 `articles` 表：`id`（复用 `createResourceId`，新增 `articles` 前缀）、`userId`、`teamId?`、`slug`（唯一；标题 translit kebab + 冲突回退随机后缀；**发布后冻结**，canonical 稳定性）、`title`、`description?`、`content`（纯 Markdown）、`status(draft/published)`、`coverAttachmentId?`、`lang?`、`publishedAt?`、时间戳/软删三件套；索引对齐 memos 惯例（user_status_updated / slug 唯一 / publishedAt / 回收站清扫）。
 
-**附件绑定**：现有 `attachments.memoId` 可空，孤儿附件 7 天被 cron 清扫。文章上传必须绑 `attachments.articleId`（新增可空列 + FK `ON DELETE SET NULL`），并把孤儿清扫谓词扩为"memoId 与 articleId 均空"。文章硬删时对其附件走 R2 清扫同款批处理。公开读面新增 `/api/public/articles/:slug/attachments/:id/blob`（校验：文章已发布 + 附件绑定该文章），镜像现有分享 blob 路由。
+**附件绑定**：现有 `attachments.memoId` 可空，孤儿附件 7 天被 cron 清扫。文章上传必须绑 `attachments.articleId`（新增可空列 + FK；注：SQLite/D1 的 `ALTER TABLE ADD COLUMN` 带不了 `ON DELETE` 子句，实际落库为 NO ACTION——文章硬删由 `purgeArticleRow` 先清附件绑定再删行），并把孤儿清扫谓词扩为"memoId 与 articleId 均空"。文章硬删时对其附件走 R2 清扫同款批处理。公开读面新增 `/api/public/articles/:slug/attachments/:id/blob`（校验：文章已发布 + 附件绑定该文章），镜像现有分享 blob 路由。
 
 ### 3.3 编写链路
 
-`/articles`（列表：草稿/已发布）→ `/articles/new` 即建草稿行 → `/articles/:id/edit`：标题输入 + 全屏 TipTap（§2.2 扩展集，图片上传复用现有 `image-insert` 编排并绑 `articleId`）+ 2s debounce 自动保存 + 发布对话框（description/cover/slug 展示/公开确认）。
+`/articles`（列表：草稿/已发布）→ 右上「写文章」按钮调 `POST /api/app/articles` 即建草稿行并跳 `/articles/<uuid>/edit`（**无独立 `/articles/new` 路由**）：标题输入 + 全屏 TipTap（§2.2 扩展集，图片上传复用现有 `image-insert` 编排并绑 `articleId`）+ 2s debounce 自动保存 + 发布对话框（自定义 slug / SEO description / 公开确认；封面 `coverAttachmentId` 字段与 SSR og:image 已就绪，**编辑器 UI 未做**）。
 
 ### 3.4 发布链路（worker）
 
-`apps/worker/src/routes/article-page.ts`，复刻 share-page 基建（`run_worker_first: true` 已是全局布尔，新路径天然接住，部署后仍须实测 curl）：
+`apps/worker/src/routes/article-page.ts`，复刻 share-page 基建（企业实例的 `run_worker_first` 是**路径白名单**——`flaremo-cloud/deployments/enterprise-kosx/wrangler.jsonc`，新顶级路径必须显式加入；本轮已补 `/article/*`、`/sitemap.xml`、`/sitemap-articles.xml`、`/feed.xml` 并 curl 实测）：
 
 - `GET /article/:slug`：零 JS SSR；draft/删除/不存在 → 404+noindex；marked + `marked-gfm-heading-id` + `marked-highlight`(Shiki)；meta/OG/Twitter 用文章 `title`/`description`/cover；JSON-LD 用 `schema-dts` 的 `BlogPosting`（顺手把 share-page 的 `SocialMediaPosting` 一并换掉）；og:locale 取文章 lang 或实例 locale，去硬编码。
 - `GET /sitemap-articles.xml`：`sitemap` 包生成，仅 published + lastmod；`/sitemap.xml` 变 sitemapindex 指向它（分享 token 的不可枚举设计不动）。
@@ -112,7 +114,7 @@
 
 ### 3.5 渲染链路
 
-SSR 高亮主题对齐 `.memo-markdown` 明暗双套 CSS 变量；TOC 放开 `memo-reading-view` 的"仅音频"限制（`MemoOutline` 自带 <2 条目隐藏）；web 端文章阅读面挂 §2.3 的 rehype/remark 插件集（memo 卡片渲染不受影响——插件按调用方选择性传入，Shiki chunk 懒加载）。
+SSR 高亮主题对齐 `.memo-markdown` 明暗双套 CSS 变量；TOC 放开 `memo-reading-view` 的"仅音频"限制（`MemoOutline` 自带 <2 条目隐藏）；web 端文章阅读面挂 Shiki rehype 插件（其余 §2.3 插件未采用，见 §2.3 实施口径；memo 卡片渲染不受影响——插件按调用方选择性传入，Shiki chunk 懒加载）。
 
 ## 4. 路线对比（为什么是"组装"而不是"整框架"）
 
@@ -132,7 +134,7 @@ SSR 高亮主题对齐 `.memo-markdown` 明暗双套 CSS 变量；TOC 放开 `me
 | 期 | 内容 | 新装框架 |
 |---|---|---|
 | **P0 最小闭环**（2–3 天） | articles 表+迁移（attachments.articleId 同批）；编辑页（TipTap 官方扩展）+自动保存+发布对话框；SSR 文章页（marked-gfm-heading-id + schema-dts BlogPosting）；`/articles` 列表 | @tiptap/extension-table、code-block-lowlight、marked-gfm-heading-id、schema-dts |
-| **P1 渲染与收录**（1–2 天） | Shiki 双侧（marked-highlight + @shikijs/rehype）；TOC 放开；rehype-slug/autolink/external-links 进文章阅读面；sitemap-articles.xml + feed.xml；share-page JSON-LD 顺手修正 | shiki、marked-highlight、@shikijs/rehype、remark-footnotes、rehype-slug、rehype-autolink-headings、rehype-external-links、feed、sitemap |
+| **P1 渲染与收录**（1–2 天） | Shiki 双侧（marked-highlight + @shikijs/rehype）；TOC 放开（`memo-reading-view` 去音频条件）；sitemap-articles.xml + feed.xml；share-page JSON-LD 换 BlogPosting。**未采用**：rehype-slug / autolink / external-links / remark-footnotes / remark-toc（锚点沿用现有 `createSlugger`，见 §2.3 实施口径） | shiki、marked-highlight、@shikijs/rehype、feed、sitemap（候选未装：remark-footnotes、rehype-slug、rehype-autolink-headings、rehype-external-links） |
 | **P2 可选** | satori OG 图、remark-math+rehype-katex、团队文章流整合、语义搜索接入 | workers-og 或 @cloudflare/pages-plugin-vercel-og、remark-math、rehype-katex |
 
 门禁按既定约定：定向 vitest（articles 域层 + article-page SSR Miniflare 用例 + share/article parity）+ tsc + build + dev 目检；不跑 e2e、不跑全量 verify（除非 Kim 点名）。

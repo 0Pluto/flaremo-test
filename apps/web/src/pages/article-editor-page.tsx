@@ -43,10 +43,10 @@ const AUTOSAVE_DEBOUNCE_MS = 2000;
 type SaveState = "idle" | "dirty" | "saving" | "saved";
 
 /**
- * The article editor surface. One article is one draft row: /articles/new
- * creates it up front (uploads bind articleId immediately, so inline images
- * survive the orphan GC), and every keystroke lands in a 2s-debounced PATCH
- * that also flushes on unmount / beforeunload.
+ * The article editor surface. One article is one draft row: the list page's
+ * create action allocates it up front (uploads bind articleId immediately, so
+ * inline images survive the orphan GC), and every keystroke lands in a
+ * 2s-debounced PATCH that also flushes on unmount / beforeunload.
  */
 export function ArticleEditorPage({ articleId }: { articleId: string }) {
   const { t } = useI18n();
