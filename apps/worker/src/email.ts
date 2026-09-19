@@ -162,12 +162,14 @@ function emailHtml(
   actionHtml: string,
   footer: string,
 ) {
-  const rtl = isRtlEmailLocale(locale)
-    ? ' dir="rtl" style="text-align:right"'
-    : "";
-  return `<div${rtl} style="font-family:system-ui,-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:24px"><h2 style="margin:0 0 12px">${heading}</h2><p style="color:#444;line-height:1.6">${body}</p>${actionHtml}${footer}</div>`;
+  // lang rides along with dir: it selects the Han face a client picks for CJK
+  // mail (Japanese recipients otherwise get Chinese glyph forms) and lets a
+  // screen reader pronounce the message in the right language.
+  const rtl = isRtlEmailLocale(locale);
+  const dir = rtl ? "rtl" : "ltr";
+  const align = rtl ? ";text-align:right" : "";
+  return `<div lang="${locale}" dir="${dir}" style="font-family:system-ui,-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:24px${align}"><h2 style="margin:0 0 12px">${heading}</h2><p style="color:#444;line-height:1.6">${body}</p>${actionHtml}${footer}</div>`;
 }
-
 /**
  * Send the registration verification email.
  */

@@ -145,6 +145,12 @@
   --font-sans:
     "Geist Variable", -apple-system, BlinkMacSystemFont, "Segoe UI",
     var(--font-cjk), "Noto Sans Arabic Variable", system-ui, sans-serif;
+  /* Same stack as --font-sans, but a distinct token: components reach for
+     `font-heading` by name (site-mark does), and without this declaration
+     Tailwind emits no rule for that class at all. */
+  --font-heading:
+    "Geist Variable", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    var(--font-cjk), "Noto Sans Arabic Variable", system-ui, sans-serif;
   --font-display:
     "Geist Variable", -apple-system, BlinkMacSystemFont, "Segoe UI",
     var(--font-cjk), "Noto Sans Arabic Variable", system-ui, sans-serif;
