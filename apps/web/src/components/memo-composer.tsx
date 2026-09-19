@@ -45,6 +45,7 @@ import {
   filterTagSuggestions,
   type TagSuggestion,
 } from "@/lib/tag-autocomplete";
+import { cn } from "@/lib/utils";
 
 type MemoComposerProps = {
   draft: MemoCaptureInput;
@@ -444,7 +445,7 @@ export function MemoComposer({
         </div>
       )}
       <div className="flex h-10 items-center justify-between gap-2 rounded-b-xl bg-card px-3 pb-1">
-        <div className="flex min-w-0 items-center gap-1">
+        <div className="flex min-w-0 items-center gap-0.5 sm:gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden py-0.5">
           <Button
             aria-label={t("composer.addTag")}
             disabled={isPending}
@@ -575,20 +576,29 @@ export function MemoComposer({
                 render={
                   <Button
                     aria-label={t("composer.visibility.aria")}
-                    className="h-7 gap-1 rounded-full border-border bg-card px-2.5 text-xs"
+                    className={cn(
+                      "h-7 gap-1 rounded-full border px-2 text-xs transition-colors",
+                      draft.visibility === "protected"
+                        ? "border-brand-500/40 bg-brand-50/60 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300"
+                        : "border-border/60 bg-card text-muted-foreground hover:text-foreground",
+                    )}
                     disabled={isPending}
                     size="sm"
                     type="button"
-                    variant="outline"
+                    variant="ghost"
                   />
                 }
               >
                 {draft.visibility === "protected" ? (
-                  <UsersIcon data-icon="inline-start" />
+                  <UsersIcon data-icon="inline-start" className="size-3.5" />
                 ) : (
-                  <LockIcon data-icon="inline-start" />
+                  <LockIcon data-icon="inline-start" className="size-3.5" />
                 )}
-                <span>
+                <span
+                  className={cn(
+                    draft.visibility === "private" && "hidden sm:inline",
+                  )}
+                >
                   {draft.visibility === "protected"
                     ? t("composer.visibility.team")
                     : t("composer.visibility.personal")}

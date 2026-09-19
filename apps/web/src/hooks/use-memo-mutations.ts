@@ -85,8 +85,15 @@ export function useMemoMutations() {
     mutationFn: trashMemo,
     onMutate: (id) =>
       optimisticallyPatchMemo(queryClient, id, { state: "trashed" }),
-    onSuccess: () => {
-      toast.success(t("toast.movedToTrash"));
+    onSuccess: (_data, id) => {
+      toast.success(t("toast.movedToTrash"), {
+        action: {
+          label: t("common.undo"),
+          onClick: () => {
+            restoreMutation.mutate(id);
+          },
+        },
+      });
     },
     onError: (error, _id, snapshot) => {
       restoreMemoSnapshot(queryClient, snapshot);
@@ -138,8 +145,22 @@ export function useMemoMutations() {
     }) => updateMemo(id, input),
     onMutate: ({ id, input }) =>
       optimisticallyPatchMemo(queryClient, id, memoPatchFromUpdate(input)),
-    onSuccess: () => {
-      toast.success(t("toast.updated"));
+    onSuccess: (_data, variables) => {
+      if (variables.input.status === "archived") {
+        toast.success(t("toast.saved"), {
+          action: {
+            label: t("common.undo"),
+            onClick: () => {
+              updateMutation.mutate({
+                id: variables.id,
+                input: { status: "normal" },
+              });
+            },
+          },
+        });
+      } else {
+        toast.success(t("toast.updated"));
+      }
     },
     onError: (error, _variables, snapshot) => {
       restoreMemoSnapshot(queryClient, snapshot);

@@ -130,6 +130,7 @@ const messages = {
   "common.save": "저장",
   "common.cancel": "취소",
   "common.close": "닫기",
+  "common.download": "다운로드",
   "common.retry": "재시도",
   "common.edit": "편집",
   "common.delete": "삭제",

@@ -131,6 +131,7 @@ const messages = {
   "common.save": "Сохранить",
   "common.cancel": "Отмена",
   "common.close": "Закрыть",
+  "common.download": "Скачать",
   "common.retry": "Повторить",
   "common.edit": "Изменить",
   "common.delete": "Удалить",

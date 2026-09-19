@@ -129,6 +129,7 @@ const messages = {
   "common.save": "Save",
   "common.cancel": "Cancel",
   "common.close": "Close",
+  "common.download": "Download",
   "common.retry": "Retry",
   "common.edit": "Edit",
   "common.delete": "Delete",

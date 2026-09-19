@@ -132,6 +132,7 @@ const messages = {
   "common.save": "Enregistrer",
   "common.cancel": "Annuler",
   "common.close": "Fermer",
+  "common.download": "Télécharger",
   "common.retry": "Réessayer",
   "common.edit": "Modifier",
   "common.delete": "Supprimer",

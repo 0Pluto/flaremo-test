@@ -7,7 +7,7 @@ import {
   LockIcon,
   UsersIcon,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { Memo, MemoVisibility, Share } from "@/api";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useClipboard } from "@/hooks/use-clipboard";
 import { useI18n } from "@/i18n";
 import { cn } from "@/lib/utils";
 
@@ -43,21 +44,13 @@ export function MemoVisibilityDialog({
 }: MemoVisibilityDialogProps) {
   const { t } = useI18n();
   const [isUpdating, setIsUpdating] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [ensuredShare, setEnsuredShare] = useState<Share | undefined>(share);
-  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { copied, copy } = useClipboard();
 
   // Sync share when prop changes
   useEffect(() => {
     setEnsuredShare(share);
   }, [share]);
-
-  // Clean up copy timeout
-  useEffect(() => {
-    return () => {
-      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
-    };
-  }, []);
 
   const activeShare = ensuredShare ?? share;
   const shareUrl = activeShare
@@ -99,16 +92,7 @@ export function MemoVisibilityDialog({
         return;
       }
     }
-
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      toast.success(t("toast.linkCopied"));
-      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
-      copyTimerRef.current = setTimeout(() => setCopied(false), 2000);
-    } catch {
-      toast.error(t("share.copyFailed"));
-    }
+    await copy(url);
   };
 
   const options: Array<{

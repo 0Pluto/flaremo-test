@@ -122,6 +122,7 @@ const messages = {
   "common.save": "保存",
   "common.cancel": "取消",
   "common.close": "关闭",
+  "common.download": "下载",
   "common.retry": "重试",
   "common.edit": "编辑",
   "common.delete": "删除",

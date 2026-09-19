@@ -128,6 +128,7 @@ const messages = {
   "common.save": "保存",
   "common.cancel": "キャンセル",
   "common.close": "閉じる",
+  "common.download": "ダウンロード",
   "common.retry": "再試行",
   "common.edit": "編集",
   "common.delete": "削除",

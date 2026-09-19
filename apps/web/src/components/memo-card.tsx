@@ -276,11 +276,11 @@ export const MemoCard = memo(function MemoCard({
           {/* flomo's header rule: identity only, no placeholders. The
               timestamp is the sole anchor; hovering swaps relative for the
               absolute instant, so both facts live in one pixel row. */}
-          <span className="truncate">
-            <span className="group-hover:hidden">
+          <span className="inline-grid [grid-template-areas:'stack'] items-center truncate">
+            <span className="[grid-area:stack] transition-opacity duration-150 group-hover:opacity-0 pointer-events-none">
               {formatMemoRelativeTime(memo.display_time, locale)}
             </span>
-            <span className="hidden group-hover:inline">
+            <span className="[grid-area:stack] opacity-0 transition-opacity duration-150 group-hover:opacity-100 whitespace-nowrap">
               {formatMemoTime(memo.display_time, locale)}
             </span>
           </span>
@@ -438,8 +438,8 @@ export const MemoCard = memo(function MemoCard({
           <div className="relative">
             <div
               className={cn(
-                "overflow-hidden motion-safe:transition-[max-height] motion-safe:duration-300 motion-safe:ease-signal",
-                collapsed ? "max-h-52" : "max-h-[3000px]",
+                "overflow-hidden motion-safe:transition-[max-height] motion-safe:duration-250 motion-safe:ease-signal",
+                collapsed ? "max-h-52" : "max-h-[1600px]",
               )}
             >
               <LazyMemoContent
