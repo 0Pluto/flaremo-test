@@ -75,6 +75,28 @@ export function buildMonthGrid(
   return days;
 }
 
+// Builds a 1 x 7 grid covering the week containing dayKey.
+export function buildWeekGrid(
+  dayKey: string,
+  weekStart: WeekStart,
+): CalendarDay[] {
+  const base = new Date(`${dayKey}T12:00:00`);
+  const weekday = base.getDay();
+  const lead = WEEKDAY_ORDER[weekStart].indexOf(weekday);
+  const cursor = new Date(base);
+  cursor.setDate(cursor.getDate() - lead);
+
+  const days: CalendarDay[] = [];
+  for (let i = 0; i < 7; i += 1) {
+    days.push({
+      key: isoDay(cursor),
+      inMonth: true,
+    });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return days;
+}
+
 export function weekdayLabels(
   weekStart: WeekStart,
   formatter: (dayNumber: number) => string,

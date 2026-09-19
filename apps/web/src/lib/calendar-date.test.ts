@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   addMonths,
   buildMonthGrid,
+  buildWeekGrid,
   dayFilterFromQuery,
   dayFilterQuery,
   isoDay,
@@ -70,6 +71,22 @@ describe("buildMonthGrid", () => {
     const compactGrid = buildMonthGrid("2026-09", "monday", true);
     expect(compactGrid).toHaveLength(35);
     expect(compactGrid[34].key).toBe("2026-10-04");
+  });
+});
+
+describe("buildWeekGrid", () => {
+  it("produces 7 days anchored to the week start containing the date", () => {
+    // 2026-09-20 is a Sunday. With Monday week start, week is 2026-09-14 to 2026-09-20.
+    const week = buildWeekGrid("2026-09-20", "monday");
+    expect(week).toHaveLength(7);
+    expect(week[0].key).toBe("2026-09-14");
+    expect(week[6].key).toBe("2026-09-20");
+
+    // With Sunday week start, week starts on 2026-09-20.
+    const sundayWeek = buildWeekGrid("2026-09-20", "sunday");
+    expect(sundayWeek).toHaveLength(7);
+    expect(sundayWeek[0].key).toBe("2026-09-20");
+    expect(sundayWeek[6].key).toBe("2026-09-26");
   });
 });
 

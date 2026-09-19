@@ -1136,7 +1136,7 @@ function AgendaView({
                   <div className="flex items-center gap-2">
                     {group.notesCount > 0 && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-brand-500/10 px-2 py-0.5 text-xs font-medium text-brand-600 dark:text-brand-400">
-                        <span>📝</span>
+                        <FileTextIcon className="size-3" />
                         <span>
                           {t("calendar.notesCount", {
                             count: group.notesCount,

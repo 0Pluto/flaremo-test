@@ -8,6 +8,7 @@ import { FlareMoMiniCalendar } from "@/components/flaremo-calendar";
 import { useI18n } from "@/i18n";
 import {
   buildMonthGrid,
+  buildWeekGrid,
   dayFilterQuery,
   monthOf,
   todayKey,
@@ -100,10 +101,16 @@ export function MiniCalendarReminders() {
 
 export function MiniCalendarPanel({
   activity,
+  hoveredDate,
   onDayClick,
+  onHoverDate,
+  viewMode = "month",
 }: {
   activity: MemoStatsResponse["activity"];
+  hoveredDate?: string | null;
   onDayClick?: (day: string) => void;
+  onHoverDate?: (date: string | null) => void;
+  viewMode?: "month" | "week";
 }) {
   const { locale } = useI18n();
   const navigate = useNavigate();
@@ -111,8 +118,11 @@ export function MiniCalendarPanel({
   const monthKey = monthOf(today);
   const weekStart: WeekStart = locale.startsWith("en") ? "sunday" : "monday";
   const grid = useMemo(
-    () => buildMonthGrid(monthKey, weekStart, true),
-    [monthKey, weekStart],
+    () =>
+      viewMode === "week"
+        ? buildWeekGrid(today, weekStart)
+        : buildMonthGrid(monthKey, weekStart, true),
+    [monthKey, weekStart, viewMode, today],
   );
   const rangeStart = grid[0].key;
   const rangeEnd = grid[grid.length - 1].key;
@@ -142,11 +152,14 @@ export function MiniCalendarPanel({
 
   return (
     <FlareMoMiniCalendar
+      hoveredDate={hoveredDate}
       monthKey={monthKey}
       notes={notes}
+      onDayClick={jump}
+      onHoverDate={onHoverDate}
       tasks={openTasks}
       today={today}
-      onDayClick={jump}
+      viewMode={viewMode}
     />
   );
 }

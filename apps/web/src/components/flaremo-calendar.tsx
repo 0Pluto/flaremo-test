@@ -1,11 +1,18 @@
 import { Link } from "@tanstack/react-router";
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import {
+  AlertCircleIcon,
+  CheckIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  FileTextIcon,
+} from "lucide-react";
 import { memo, useMemo, useState } from "react";
 import type { Task } from "@/api";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/i18n";
 import {
   buildMonthGrid,
+  buildWeekGrid,
   formatMonthTitle,
   type WeekStart,
   weekdayHeaders,
@@ -180,7 +187,7 @@ export const FlareMoCalendar = memo(function FlareMoCalendar({
                     className="inline-flex items-center gap-0.5 rounded-full bg-brand-500/10 px-1.5 py-0.5 text-[10px] font-medium text-brand-600 dark:text-brand-400"
                     title={t("calendar.notesCount", { count: noteCount })}
                   >
-                    <span className="text-[10px]">📝</span>
+                    <FileTextIcon className="size-2.5" />
                     <span className="tabular-nums">{noteCount}</span>
                   </span>
                 )}
@@ -220,12 +227,12 @@ export const FlareMoCalendar = memo(function FlareMoCalendar({
                   <div className="flex flex-wrap items-center gap-1">
                     {overdueCount > 0 ? (
                       <span className="inline-flex items-center gap-0.5 rounded bg-destructive/10 px-1 py-0.5 text-[10px] font-medium text-destructive">
-                        <span>⚠️</span>
+                        <AlertCircleIcon className="size-2.5" />
                         <span className="tabular-nums">{overdueCount}</span>
                       </span>
                     ) : allTasksDone ? (
                       <span className="inline-flex items-center gap-0.5 rounded bg-emerald-500/10 px-1 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
-                        <span>✓</span>
+                        <CheckIcon className="size-2.5" />
                         <span className="tabular-nums">{taskCount}</span>
                       </span>
                     ) : (
@@ -254,6 +261,9 @@ export type FlareMoMiniCalendarProps = {
   notes: Map<string, number>;
   tasks: Map<string, number>;
   className?: string;
+  viewMode?: "month" | "week";
+  hoveredDate?: string | null;
+  onHoverDate?: (dayKey: string | null) => void;
 };
 
 // Read-only companion for the explorer sidebar. Shares the grid primitives
@@ -261,18 +271,23 @@ export type FlareMoMiniCalendarProps = {
 export const FlareMoMiniCalendar = memo(function FlareMoMiniCalendar({
   activeDay,
   className,
+  hoveredDate,
   monthKey,
   notes,
   onDayClick,
+  onHoverDate,
   tasks,
   today,
+  viewMode = "month",
 }: FlareMoMiniCalendarProps) {
   const { locale, t } = useI18n();
   const weekStart: WeekStart = locale.startsWith("en") ? "sunday" : "monday";
-  const grid = useMemo(
-    () => buildMonthGrid(monthKey, weekStart, true),
-    [monthKey, weekStart],
-  );
+  const grid = useMemo(() => {
+    if (viewMode === "week") {
+      return buildWeekGrid(today, weekStart);
+    }
+    return buildMonthGrid(monthKey, weekStart, true);
+  }, [monthKey, weekStart, viewMode, today]);
   const weekdays = useMemo(
     () => weekdayHeaders(weekStart, locale, "narrow"),
     [weekStart, locale],
@@ -346,10 +361,14 @@ export const FlareMoMiniCalendar = memo(function FlareMoMiniCalendar({
               title={hoverText}
               type="button"
               onClick={() => onDayClick(day.key)}
+              onMouseEnter={() => onHoverDate?.(day.key)}
+              onMouseLeave={() => onHoverDate?.(null)}
               className={cn(
-                "group relative flex h-7 w-full flex-col items-center justify-center rounded-md motion-safe:transition-colors motion-safe:duration-150",
+                "group relative flex h-7 w-full flex-col items-center justify-center rounded-md motion-safe:transition-all motion-safe:duration-150",
                 day.inMonth ? "" : "opacity-30",
                 isActive ? "bg-accent" : "hover:bg-muted/70",
+                hoveredDate === day.key &&
+                  "ring-1.5 ring-brand-500 scale-105 bg-accent/60 z-10",
               )}
             >
               <span

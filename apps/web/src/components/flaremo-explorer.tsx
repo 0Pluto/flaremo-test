@@ -102,6 +102,14 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
     [stats.activity, locale],
   );
 
+  const [horizon, setHorizon] = useState<"week" | "month" | "year">("month");
+  const [hoveredDate, setHoveredDate] = useState<string | null>(null);
+
+  const hoveredDayStat = useMemo(() => {
+    if (!hoveredDate) return null;
+    return stats.activity.find((d) => d.date === hoveredDate) ?? null;
+  }, [hoveredDate, stats.activity]);
+
   return (
     <aside className="flex min-h-full flex-col px-3 py-4 text-sm">
       <header className="mb-5 flex items-center justify-between gap-2 px-1">
@@ -109,31 +117,67 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
         {headerAction}
       </header>
 
-      <section className="mb-4 grid grid-cols-3 gap-2 px-1 motion-safe:animate-rise">
-        <StatCell label={t("explorer.records")} value={stats.counts.total} />
-        <StatCell label={t("explorer.tags")} value={stats.tags.length} />
-        <StatCell label={t("explorer.streak")} value={streak} />
+      <section className="mb-3 px-1 motion-safe:animate-rise">
+        <div className="grid grid-cols-3 divide-x divide-border/60 rounded-xl border border-border/60 bg-muted/20 py-2.5 shadow-2xs">
+          <StatCell label={t("explorer.records")} value={stats.counts.total} />
+          <StatCell label={t("explorer.tags")} value={stats.tags.length} />
+          <StatCell label={t("explorer.streak")} value={streak} />
+        </div>
       </section>
 
       <section className="mb-2 px-1 motion-safe:animate-fade">
         <MiniCalendarReminders />
         <div className="flex flex-col">
-          <MiniCalendarPanel
-            activity={stats.activity}
-            onDayClick={onDaySelect}
-          />
-
-          <div className="mt-2 border-t border-border/40 px-0.5 pt-1.5">
+          <div className="mb-2 flex items-center justify-between px-0.5">
+            <span className="text-xs font-semibold text-foreground">
+              {horizon === "year"
+                ? `${new Date().getFullYear()}年 活跃全景`
+                : t("explorer.timeViewLabel")}
+            </span>
             <div
-              className="grid grid-flow-col grid-rows-7 gap-[1.5px]"
-              data-testid="activity-heatmap"
+              aria-label={t("explorer.timeViewLabel")}
+              className="flex items-center rounded-lg border border-border/50 bg-muted/30 p-0.5"
+              role="tablist"
             >
-              {stats.activity.map((day) =>
-                onDaySelect ? (
+              {(
+                [
+                  ["week", "周"],
+                  ["month", "月"],
+                  ["year", "年"],
+                ] as const
+              ).map(([mode, label]) => (
+                <button
+                  aria-selected={horizon === mode}
+                  className={cn(
+                    "rounded px-2 py-0.5 text-xs font-medium transition-colors",
+                    horizon === mode
+                      ? "bg-background text-foreground shadow-2xs font-semibold"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                  key={mode}
+                  role="tab"
+                  type="button"
+                  onClick={() => setHorizon(mode)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {horizon === "year" ? (
+            <div className="rounded-lg border border-border/40 bg-muted/10 p-2">
+              <div
+                className="grid grid-flow-col grid-rows-7 gap-1"
+                data-testid="activity-heatmap"
+              >
+                {stats.activity.map((day) => (
                   <button
                     className={cn(
-                      "h-1.5 w-full rounded-[1px] motion-safe:transition-[opacity,transform] hover:opacity-85 motion-safe:hover:scale-125",
+                      "aspect-square w-full rounded-[2px] motion-safe:transition-all hover:opacity-90",
                       heatmapColor(day.count),
+                      hoveredDate === day.date &&
+                        "ring-1.5 ring-brand-500 scale-125 z-10 brightness-110",
                     )}
                     key={day.date}
                     title={t("explorer.heatmapDay", {
@@ -141,36 +185,91 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
                       date: day.date,
                     })}
                     type="button"
-                    onClick={() => onDaySelect(day.date)}
+                    onClick={() => onDaySelect?.(day.date)}
+                    onMouseEnter={() => setHoveredDate(day.date)}
+                    onMouseLeave={() => setHoveredDate(null)}
                   />
-                ) : (
-                  <div
-                    aria-hidden="true"
-                    className={cn(
-                      "h-1.5 w-full rounded-[1px] motion-safe:transition-[opacity,transform] hover:opacity-85 motion-safe:hover:scale-125",
-                      heatmapColor(day.count),
-                    )}
-                    key={day.date}
-                    title={t("explorer.heatmapDay", {
-                      count: day.count,
-                      date: day.date,
-                    })}
-                  />
-                ),
-              )}
-            </div>
-            <div
-              aria-hidden="true"
-              className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground/60"
-            >
-              {monthLabels
-                .filter((month) => Boolean(month.label))
-                .map((month) => (
-                  <span className="whitespace-nowrap" key={month.date}>
-                    {month.label}
-                  </span>
                 ))}
+              </div>
+              <div
+                aria-hidden="true"
+                className="mt-2 flex items-center justify-between px-0.5 text-xs text-muted-foreground/70"
+              >
+                {monthLabels
+                  .filter((month) => Boolean(month.label))
+                  .map((month) => (
+                    <span className="whitespace-nowrap" key={month.date}>
+                      {month.label}
+                    </span>
+                  ))}
+              </div>
             </div>
+          ) : (
+            <>
+              <MiniCalendarPanel
+                activity={stats.activity}
+                hoveredDate={hoveredDate}
+                onDayClick={onDaySelect}
+                onHoverDate={setHoveredDate}
+                viewMode={horizon}
+              />
+
+              <div className="mt-2 border-t border-border/40 px-0.5 pt-1.5">
+                <div
+                  className="grid grid-flow-col grid-rows-7 gap-[1.5px]"
+                  data-testid="activity-heatmap"
+                >
+                  {stats.activity.map((day) => (
+                    <button
+                      className={cn(
+                        "h-1.5 w-full rounded-[1px] motion-safe:transition-all hover:opacity-85",
+                        heatmapColor(day.count),
+                        hoveredDate === day.date &&
+                          "scale-150 ring-1 ring-brand-500 z-10 brightness-125",
+                      )}
+                      key={day.date}
+                      title={t("explorer.heatmapDay", {
+                        count: day.count,
+                        date: day.date,
+                      })}
+                      type="button"
+                      onClick={() => onDaySelect?.(day.date)}
+                      onMouseEnter={() => setHoveredDate(day.date)}
+                      onMouseLeave={() => setHoveredDate(null)}
+                    />
+                  ))}
+                </div>
+                <div
+                  aria-hidden="true"
+                  className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground/60"
+                >
+                  {monthLabels
+                    .filter((month) => Boolean(month.label))
+                    .map((month) => (
+                      <span className="whitespace-nowrap" key={month.date}>
+                        {month.label}
+                      </span>
+                    ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          <div className="mt-1.5 px-0.5 text-xs text-muted-foreground transition-all">
+            {hoveredDayStat ? (
+              <span className="text-foreground font-medium">
+                {hoveredDayStat.date} ·{" "}
+                {hoveredDayStat.count > 0
+                  ? `${hoveredDayStat.count} 条记录`
+                  : "无记录"}
+              </span>
+            ) : (
+              <span className="text-muted-foreground/80">
+                {streak > 0
+                  ? `${streak} ${t("explorer.streak")}`
+                  : "近 12 周活动"}
+              </span>
+            )}
           </div>
         </div>
       </section>
@@ -551,8 +650,8 @@ function TagRenameInput({
 
 function StatCell({ label, value }: { label: string; value: number }) {
   return (
-    <div>
-      <div className="font-heading text-2xl leading-none font-semibold tabular-nums">
+    <div className="flex flex-col items-center justify-center px-1 text-center">
+      <div className="font-heading text-xl leading-none font-semibold tabular-nums tracking-tight text-foreground">
         {value}
       </div>
       <div className="mt-1.5 text-xs text-muted-foreground">{label}</div>
