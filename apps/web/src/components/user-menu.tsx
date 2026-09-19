@@ -110,7 +110,7 @@ export function UserMenu({
         <DropdownMenuContent align="start" className="w-60">
           {user?.email && (
             <>
-              <DropdownMenuLabel className="px-1.5 py-1 font-normal text-muted-foreground text-xs">
+              <DropdownMenuLabel className="font-normal">
                 <span className="block truncate">{user.email}</span>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
