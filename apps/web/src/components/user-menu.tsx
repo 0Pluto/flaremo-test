@@ -19,6 +19,7 @@ import {
   useNotifications,
 } from "@/components/notification-bell";
 import { useTheme } from "@/components/theme-provider";
+import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -83,19 +84,33 @@ export function UserMenu({
           render={
             <Button
               aria-label={label}
-              className="relative h-7 max-w-full gap-1 px-1.5 sm:max-w-[12rem]"
+              className="relative h-7 max-w-full gap-1.5 px-1.5 sm:max-w-[14rem]"
               size="sm"
               variant="ghost"
             >
               {user ? (
-                <span className="min-w-0 truncate font-medium">
-                  {user.name || user.username || user.email}
-                </span>
+                <>
+                  <Avatar
+                    className="size-4.5 shrink-0"
+                    name={user.name || user.username}
+                    size="xs"
+                    src={user.avatar_url}
+                  />
+                  <span className="min-w-0 truncate font-medium">
+                    {user.name || user.username || user.email}
+                  </span>
+                </>
               ) : (
-                <span
-                  aria-hidden="true"
-                  className="h-4 w-20 rounded bg-muted"
-                />
+                <>
+                  <span
+                    aria-hidden="true"
+                    className="size-4.5 shrink-0 rounded-full bg-muted"
+                  />
+                  <span
+                    aria-hidden="true"
+                    className="h-4 w-20 rounded bg-muted"
+                  />
+                </>
               )}
               <ChevronDownIcon className="size-3 shrink-0 text-muted-foreground" />
               {unreadCount > 0 && (
@@ -107,11 +122,28 @@ export function UserMenu({
             </Button>
           }
         />
-        <DropdownMenuContent align="start" className="w-60">
-          {user?.email && (
+        <DropdownMenuContent align="start" className="w-64">
+          {user && (
             <>
               <DropdownMenuLabel className="font-normal">
-                <span className="block truncate">{user.email}</span>
+                <div className="flex items-center gap-2.5 py-0.5">
+                  <Avatar
+                    className="size-8 shrink-0"
+                    name={user.name || user.username}
+                    size="md"
+                    src={user.avatar_url}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium text-sm text-foreground">
+                      {user.name || user.username}
+                    </p>
+                    {user.email && (
+                      <p className="truncate text-xs text-muted-foreground">
+                        {user.email}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
             </>

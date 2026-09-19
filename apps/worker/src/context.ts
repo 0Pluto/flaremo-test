@@ -77,6 +77,7 @@ const runtimeCache = new WeakMap<
 type AuthUserSummary = {
   email: string;
   username: string | null;
+  image?: string | null;
 };
 
 /**
@@ -89,11 +90,13 @@ function browserAuthUserSummary(user: unknown): AuthUserSummary | undefined {
   const record = user as {
     email?: unknown;
     username?: unknown;
+    image?: unknown;
   } | null;
   if (typeof record?.email !== "string") return undefined;
   return {
     email: record.email,
     username: typeof record.username === "string" ? record.username : null,
+    image: typeof record.image === "string" ? record.image : null,
   };
 }
 

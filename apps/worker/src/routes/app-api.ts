@@ -56,6 +56,7 @@ import {
   savePushSubscription,
   semanticSearchMemos,
   type UserNotificationDto,
+  updateFlaremoUserProfile,
   updateMemo,
   updateUserNotification,
   ValidationError,
@@ -96,6 +97,11 @@ const FLAREMO_RELEASES_URL =
 const FLAREMO_UPDATE_GUIDE_URL =
   "https://github.com/realchendahuang/FlareMo/blob/main/docs/update.md";
 
+const updateProfileSchema = z.object({
+  name: z.string().trim().min(1).max(100).optional(),
+  avatar_url: z.string().nullable().optional(),
+});
+
 appApi.get("/me", async (c) => {
   try {
     const { db, user, authUserId, authUser } = await getRequestContext(c);
@@ -115,6 +121,7 @@ appApi.get("/me", async (c) => {
       state?.role === "reader" &&
       state.expiresAt !== null &&
       state.expiresAt.getTime() <= Date.now();
+    const avatarUrl = user.avatarUrl ?? resolvedAuthUser?.image ?? null;
     return c.json({
       id: user.id,
       role: user.teamRole,
@@ -124,6 +131,7 @@ appApi.get("/me", async (c) => {
       name: user.name,
       email: resolvedAuthUser?.email ?? user.email,
       username: resolvedAuthUser?.username ?? user.id.replace(/^users\//, ""),
+      avatar_url: avatarUrl,
       team:
         state && !teamExpired
           ? { id: state.organizationId, name: state.organizationName }
@@ -140,6 +148,101 @@ appApi.get("/me", async (c) => {
   } catch (error) {
     return jsonError(c, error);
   }
+});
+
+appApi.patch("/me", zValidator("json", updateProfileSchema), async (c) => {
+  try {
+    const { db, user, authUserId } = await getRequestContext(c);
+    const input = c.req.valid("json");
+    const updatedUser = await updateFlaremoUserProfile(db, user, {
+      name: input.name,
+      avatarUrl: input.avatar_url,
+      authUserId,
+    });
+    return c.json({
+      ok: true,
+      user: {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        avatar_url: updatedUser.avatarUrl,
+      },
+    });
+  } catch (error) {
+    return jsonError(c, error);
+  }
+});
+
+appApi.put("/me/avatar", async (c) => {
+  try {
+    const { db, user, authUserId } = await getRequestContext(c);
+    const contentType = c.req.header("content-type") ?? null;
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (!contentType || !allowedTypes.includes(contentType.toLowerCase())) {
+      throw new ValidationError(
+        `Avatar must be one of: ${allowedTypes.join(", ")}.`,
+      );
+    }
+    const bytes = await c.req.arrayBuffer();
+    if (bytes.byteLength === 0 || bytes.byteLength > 2 * 1024 * 1024) {
+      throw new ValidationError("Avatar must be between 1 byte and 2MB.");
+    }
+    const bareUserId = user.id.replace(/^users\//, "");
+    const ext = contentType.includes("webp")
+      ? "webp"
+      : contentType.includes("png")
+        ? "png"
+        : contentType.includes("gif")
+          ? "gif"
+          : "jpg";
+    const key = `avatars/users/${bareUserId}.${ext}`;
+    await c.env.ATTACHMENTS.put(key, bytes, {
+      httpMetadata: { contentType },
+    });
+    const avatarUrl = `/api/app/avatar/${encodeURIComponent(bareUserId)}?v=${Date.now()}`;
+    await updateFlaremoUserProfile(db, user, {
+      avatarUrl,
+      authUserId,
+    });
+    return c.json({ ok: true, avatar_url: avatarUrl });
+  } catch (error) {
+    return jsonError(c, error);
+  }
+});
+
+appApi.delete("/me/avatar", async (c) => {
+  try {
+    const { db, user, authUserId } = await getRequestContext(c);
+    const bareUserId = user.id.replace(/^users\//, "");
+    for (const ext of ["webp", "png", "gif", "jpg"]) {
+      await c.env.ATTACHMENTS.delete(
+        `avatars/users/${bareUserId}.${ext}`,
+      ).catch(() => undefined);
+    }
+    await updateFlaremoUserProfile(db, user, {
+      avatarUrl: null,
+      authUserId,
+    });
+    return c.json({ ok: true, avatar_url: null });
+  } catch (error) {
+    return jsonError(c, error);
+  }
+});
+
+appApi.get("/avatar/:userId", async (c) => {
+  const userId = c.req.param("userId");
+  for (const ext of ["webp", "png", "jpg", "gif"]) {
+    const object = await c.env.ATTACHMENTS.get(
+      `avatars/users/${userId}.${ext}`,
+    );
+    if (object) {
+      const headers = new Headers();
+      object.writeHttpMetadata(headers);
+      headers.set("etag", object.httpEtag);
+      headers.set("Cache-Control", "public, max-age=3600");
+      return new Response(object.body, { headers });
+    }
+  }
+  return c.json({ error: { message: "Avatar not found" } }, 404);
 });
 
 appApi.get("/health", async (c) => {

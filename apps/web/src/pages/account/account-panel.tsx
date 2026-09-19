@@ -1,10 +1,13 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import {
+  CameraIcon,
   KeyRoundIcon,
   Loader2Icon,
   PlusIcon,
   RefreshCcwIcon,
+  RotateCcwIcon,
   ShieldCheckIcon,
+  UploadIcon,
   UserRoundIcon,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -21,6 +24,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +38,7 @@ import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { TranslationKey, TranslationParams } from "@/i18n";
+import { prepareAvatarFile } from "@/lib/upload-compression";
 import { SettingsRow, SettingsSectionGroup } from "./apple-settings-ui";
 
 export const MIN_PASSWORD_LENGTH = 8;
@@ -51,7 +56,22 @@ function useCloseOnSuccess(
 }
 
 export type AccountPanelProps = {
-  // Username / Profile
+  // Avatar & Profile
+  currentAvatarUrl?: string | null;
+  currentName?: string;
+  name: string;
+  nameError: string | null;
+  setName: (value: string) => void;
+  onNameSubmit: () => Promise<void>;
+  updateNameIsPending: boolean;
+
+  avatarError: string | null;
+  avatarIsPending: boolean;
+  onAvatarUpload: (file: File) => Promise<void>;
+  onAvatarUrlSubmit: (url: string) => Promise<void>;
+  onAvatarDelete: () => Promise<void>;
+
+  // Username
   currentUsername: string;
   accountError: string | null;
   updateUsernameIsPending: boolean;
@@ -114,6 +134,20 @@ export type AccountPanelProps = {
 };
 
 export function AccountPanel({
+  currentAvatarUrl,
+  currentName,
+  name,
+  nameError,
+  setName,
+  onNameSubmit,
+  updateNameIsPending,
+
+  avatarError,
+  avatarIsPending,
+  onAvatarUpload,
+  onAvatarUrlSubmit,
+  onAvatarDelete,
+
   currentUsername,
   accountError,
   updateUsernameIsPending,
@@ -169,13 +203,25 @@ export function AccountPanel({
   t,
 }: AccountPanelProps) {
   // Dialog visibility states
+  const [avatarOpen, setAvatarOpen] = useState(false);
+  const [nameOpen, setNameOpen] = useState(false);
   const [usernameOpen, setUsernameOpen] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [createTokenOpen, setCreateTokenOpen] = useState(false);
 
+  const [avatarInputUrl, setAvatarInputUrl] = useState("");
+  const avatarFileInputRef = useRef<HTMLInputElement | null>(null);
+
   // Auto-close dialogs on mutation success
+  useCloseOnSuccess(avatarIsPending, avatarError !== null, () => {
+    setAvatarOpen(false);
+    setAvatarInputUrl("");
+  });
+  useCloseOnSuccess(updateNameIsPending, nameError !== null, () =>
+    setNameOpen(false),
+  );
   useCloseOnSuccess(updateUsernameIsPending, accountError !== null, () =>
     setUsernameOpen(false),
   );
@@ -203,6 +249,33 @@ export function AccountPanel({
     <div className="flex flex-col gap-5">
       {/* 1. Account & Credentials */}
       <SettingsSectionGroup title={t("settings.group.account")}>
+        <SettingsRow
+          icon={CameraIcon}
+          label={t("auth.avatar")}
+          value={
+            <Avatar
+              className="size-7 shrink-0"
+              name={currentName || currentUsername}
+              size="sm"
+              src={currentAvatarUrl}
+            />
+          }
+          chevron
+          onClick={() => {
+            setAvatarInputUrl(currentAvatarUrl ?? "");
+            setAvatarOpen(true);
+          }}
+        />
+        <SettingsRow
+          icon={UserRoundIcon}
+          label={t("auth.nameTitle")}
+          value={currentName || "—"}
+          chevron
+          onClick={() => {
+            setName(currentName ?? "");
+            setNameOpen(true);
+          }}
+        />
         <SettingsRow
           icon={UserRoundIcon}
           label={
@@ -312,6 +385,146 @@ export function AccountPanel({
       {/* Dialogs & Action Modals                                                    */}
       {/* ========================================================================= */}
 
+      {/* Avatar Edit Dialog */}
+      <Dialog open={avatarOpen} onOpenChange={setAvatarOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("auth.changeAvatar")}</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-2">
+            <Avatar
+              className="size-24 text-3xl shadow-md ring-2 ring-border"
+              name={currentName || currentUsername}
+              size="xl"
+              src={currentAvatarUrl}
+            />
+
+            <input
+              ref={avatarFileInputRef}
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              className="hidden"
+              type="file"
+              onChange={async (event) => {
+                const file = event.target.files?.[0];
+                if (!file) return;
+                try {
+                  const prepared = await prepareAvatarFile(file);
+                  await onAvatarUpload(prepared);
+                } finally {
+                  if (avatarFileInputRef.current) {
+                    avatarFileInputRef.current.value = "";
+                  }
+                }
+              }}
+            />
+
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Button
+                disabled={avatarIsPending}
+                size="sm"
+                type="button"
+                variant="outline"
+                onClick={() => avatarFileInputRef.current?.click()}
+              >
+                {avatarIsPending ? (
+                  <Loader2Icon className="size-4 animate-spin" />
+                ) : (
+                  <UploadIcon className="size-4" />
+                )}
+                {t("auth.uploadAvatar")}
+              </Button>
+              {currentAvatarUrl && (
+                <Button
+                  disabled={avatarIsPending}
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                  className="text-muted-foreground hover:text-destructive"
+                  onClick={() => void onAvatarDelete()}
+                >
+                  <RotateCcwIcon className="size-4" />
+                  {t("auth.removeAvatar")}
+                </Button>
+              )}
+            </div>
+
+            <div className="flex w-full items-center gap-2 pt-2 border-t">
+              <Input
+                disabled={avatarIsPending}
+                placeholder={t("auth.avatarUrl")}
+                type="url"
+                value={avatarInputUrl}
+                onChange={(e) => setAvatarInputUrl(e.target.value)}
+              />
+              <Button
+                disabled={avatarIsPending || !avatarInputUrl.trim()}
+                size="sm"
+                type="button"
+                onClick={() => void onAvatarUrlSubmit(avatarInputUrl.trim())}
+              >
+                {t("common.save")}
+              </Button>
+            </div>
+
+            {avatarError && (
+              <p className="w-full rounded-lg border border-destructive/30 bg-destructive/8 px-3 py-2 text-sm text-destructive">
+                {avatarError}
+              </p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Name Edit Dialog */}
+      <Dialog open={nameOpen} onOpenChange={setNameOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("auth.nameTitle")}</DialogTitle>
+          </DialogHeader>
+          <form
+            className="flex flex-col gap-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void onNameSubmit();
+            }}
+          >
+            <label
+              className="flex flex-col gap-1.5 text-sm font-medium"
+              htmlFor="account-name"
+            >
+              {t("auth.displayName")}
+              <Input
+                autoComplete="name"
+                disabled={updateNameIsPending}
+                id="account-name"
+                maxLength={100}
+                required
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+              />
+            </label>
+            {nameError && (
+              <p className="rounded-lg border border-destructive/30 bg-destructive/8 px-3 py-2 text-sm text-destructive">
+                {nameError}
+              </p>
+            )}
+            <DialogFooter className="mt-2">
+              <Button
+                disabled={updateNameIsPending}
+                type="button"
+                variant="outline"
+                onClick={() => setNameOpen(false)}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button disabled={updateNameIsPending} type="submit">
+                {updateNameIsPending ? t("auth.saving") : t("auth.saveName")}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       {/* Username Edit Dialog */}
       <Dialog open={usernameOpen} onOpenChange={setUsernameOpen}>
         <DialogContent className="sm:max-w-md">
@@ -330,18 +543,26 @@ export function AccountPanel({
               htmlFor="account-username"
             >
               {t("auth.usernameHandle")}
-              <Input
-                autoCapitalize="none"
-                autoComplete="username"
-                disabled={updateUsernameIsPending}
-                id="account-username"
-                maxLength={30}
-                minLength={3}
-                pattern="[A-Za-z0-9_]+"
-                required
-                value={username}
-                onChange={(event) => setUsername(event.target.value)}
-              />
+              <div className="relative flex items-center">
+                <span className="absolute left-3 text-muted-foreground text-sm font-medium select-none pointer-events-none">
+                  @
+                </span>
+                <Input
+                  autoCapitalize="none"
+                  autoComplete="username"
+                  className="pl-7"
+                  disabled={updateUsernameIsPending}
+                  id="account-username"
+                  maxLength={30}
+                  minLength={3}
+                  pattern="[A-Za-z0-9_]+"
+                  required
+                  value={username.replace(/^@/, "")}
+                  onChange={(event) =>
+                    setUsername(event.target.value.replace(/^@/, ""))
+                  }
+                />
+              </div>
             </label>
             {accountError && (
               <p className="rounded-lg border border-destructive/30 bg-destructive/8 px-3 py-2 text-sm text-destructive">

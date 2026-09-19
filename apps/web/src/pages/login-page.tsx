@@ -34,7 +34,7 @@ export function LoginPage() {
     queryFn: getAuthProviders,
     staleTime: 60_000,
   });
-  const [email, setEmail] = useState("");
+  const [account, setAccount] = useState("");
   const [password, setPassword] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -104,13 +104,29 @@ export function LoginPage() {
   const handleSubmit = async () => {
     setFormError(null);
     setIsSubmitting(true);
+    const trimmed = account.trim();
+    const isExplicitHandle = trimmed.startsWith("@");
+    const isEmail =
+      !isExplicitHandle && trimmed.includes("@") && trimmed.includes(".");
+
     try {
-      const result = await authClient.signIn.email({
-        password,
-        email: email.trim(),
-      });
-      if (result.error) {
-        throw result.error;
+      if (isEmail) {
+        const result = await authClient.signIn.email({
+          password,
+          email: trimmed,
+        });
+        if (result.error) {
+          throw result.error;
+        }
+      } else {
+        const username = trimmed.replace(/^@/, "");
+        const result = await authClient.signIn.username({
+          password,
+          username,
+        });
+        if (result.error) {
+          throw result.error;
+        }
       }
       setPassword("");
     } catch (error) {
@@ -144,20 +160,21 @@ export function LoginPage() {
       >
         <label
           className="flex flex-col gap-1.5 text-sm font-medium"
-          htmlFor="login-email"
+          htmlFor="login-account"
         >
-          {t("auth.email")}
+          {t("auth.emailOrUsername")}
           <Input
             autoCapitalize="none"
-            autoComplete="email"
+            autoComplete="username"
             disabled={isSubmitting}
-            id="login-email"
+            id="login-account"
             maxLength={320}
-            name="email"
+            name="account"
+            placeholder={t("auth.emailOrUsernamePlaceholder")}
             required
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            type="text"
+            value={account}
+            onChange={(event) => setAccount(event.target.value)}
           />
         </label>
         <label

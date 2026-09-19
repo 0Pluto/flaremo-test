@@ -160,6 +160,7 @@ export type CurrentFlareMoUser = {
   name: string;
   email: string;
   username: string;
+  avatar_url?: string | null;
   /** Present when the viewer holds an unexpired team membership; drives the space UI. */
   team: { id: string; name: string } | null;
   /** True when a reader seat exists but has lapsed: the team space is hidden and a renewal notice shows instead. */

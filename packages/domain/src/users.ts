@@ -685,7 +685,11 @@ export async function updateFlaremoUserEmail(
 export async function updateFlaremoUserProfile(
   db: FlareMoDb,
   user: UserRow,
-  input: { name?: string; avatarUrl?: string | null },
+  input: {
+    name?: string;
+    avatarUrl?: string | null;
+    authUserId?: string | null;
+  },
 ) {
   const nextName = input.name?.trim();
   if (nextName === "") throw new Error("Display name cannot be empty");
@@ -697,6 +701,28 @@ export async function updateFlaremoUserProfile(
       updatedAt: new Date().toISOString(),
     })
     .where(eq(users.id, user.id));
+
+  const authUserId =
+    input.authUserId ??
+    (
+      await db.query.authUserLinks.findFirst({
+        where: eq(authUserLinks.flaremoUserId, user.id),
+      })
+    )?.authUserId;
+
+  if (authUserId) {
+    await db
+      .update(authUsers)
+      .set({
+        ...(nextName !== undefined
+          ? { name: nextName, displayUsername: nextName }
+          : {}),
+        ...(input.avatarUrl !== undefined ? { image: input.avatarUrl } : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(authUsers.id, authUserId));
+  }
+
   return (
     (await db.query.users.findFirst({ where: eq(users.id, user.id) })) ?? user
   );

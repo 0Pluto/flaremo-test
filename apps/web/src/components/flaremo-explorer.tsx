@@ -237,7 +237,7 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
           onClick={onNavigate}
           to="/review/daily"
         >
-          <CalendarDaysIcon />
+          <CalendarDaysIcon className="size-4 shrink-0" />
           <span className="min-w-0 flex-1 truncate">
             {t("nav.dailyReview")}
           </span>
@@ -250,7 +250,7 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
           onClick={onNavigate}
           to="/review/walk"
         >
-          <FootprintsIcon />
+          <FootprintsIcon className="size-4 shrink-0" />
           <span className="min-w-0 flex-1 truncate">{t("nav.randomWalk")}</span>
         </Link>
         {captureStatus.data?.available && (
@@ -262,7 +262,7 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
             onClick={onNavigate}
             to="/capture"
           >
-            <MicIcon />
+            <MicIcon className="size-4 shrink-0" />
             <span className="min-w-0 flex-1 truncate">{t("nav.capture")}</span>
           </Link>
         )}
@@ -275,7 +275,7 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
           search={{ date: undefined }}
           to="/calendar"
         >
-          <CalendarIcon />
+          <CalendarIcon className="size-4 shrink-0" />
           <span className="min-w-0 flex-1 truncate">{t("nav.calendar")}</span>
         </Link>
         <Link
@@ -286,7 +286,7 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
           onClick={onNavigate}
           to="/memory"
         >
-          <BrainIcon />
+          <BrainIcon className="size-4 shrink-0" />
           <span className="min-w-0 flex-1 truncate">{t("nav.memory")}</span>
         </Link>
         <Link
@@ -297,7 +297,7 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
           onClick={onNavigate}
           to="/projects"
         >
-          <FolderKanbanIcon />
+          <FolderKanbanIcon className="size-4 shrink-0" />
           <span className="min-w-0 flex-1 truncate">{t("nav.projects")}</span>
         </Link>
         <Link
@@ -308,7 +308,7 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
           onClick={onNavigate}
           to="/articles"
         >
-          <FileTextIcon />
+          <FileTextIcon className="size-4 shrink-0" />
           <span className="min-w-0 flex-1 truncate">{t("nav.articles")}</span>
         </Link>
       </nav>
@@ -317,7 +317,7 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
         <button
           aria-pressed={untagged}
           className={cn(
-            "inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-left motion-safe:transition-colors motion-safe:duration-150",
+            "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-left motion-safe:transition-colors motion-safe:duration-150",
             untagged
               ? "bg-brand-100 text-brand-700 dark:bg-brand-400/12 dark:text-brand-200"
               : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -328,7 +328,7 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
             onNavigate?.();
           }}
         >
-          <HashIcon className="opacity-50" />
+          <HashIcon className="size-3.5 shrink-0 opacity-60" />
           <span className="truncate">{t("explorer.untagged")}</span>
         </button>
         {hierarchyPending ? (

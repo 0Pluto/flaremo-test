@@ -14,7 +14,7 @@ export function SettingsIconBadge({
   return (
     <div
       className={cn(
-        "flex size-7 shrink-0 items-center justify-center rounded-lg border border-border/40 shadow-2xs transition-colors",
+        "flex size-7 shrink-0 items-center justify-center rounded-lg border border-border/40 transition-colors",
         color,
         className,
       )}
@@ -38,7 +38,7 @@ export function SettingsSectionGroup({
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
       {title && (
-        <div className="px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        <div className="px-3 text-xs font-medium text-muted-foreground">
           {title}
         </div>
       )}

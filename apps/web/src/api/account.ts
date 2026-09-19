@@ -16,6 +16,35 @@ export async function getCurrentFlareMoUser() {
   return apiRequest<CurrentFlareMoUser>("/api/app/me");
 }
 
+export async function updateCurrentUserProfile(input: {
+  name?: string;
+  avatar_url?: string | null;
+}) {
+  return apiRequest<{
+    ok: true;
+    user: { id: string; name: string; avatar_url: string | null };
+  }>("/api/app/me", {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function uploadAvatar(file: File) {
+  return apiRequest<{ ok: true; avatar_url: string }>("/api/app/me/avatar", {
+    method: "PUT",
+    headers: {
+      "Content-Type": file.type || "image/webp",
+    },
+    body: file,
+  });
+}
+
+export async function deleteAvatar() {
+  return apiRequest<{ ok: true; avatar_url: null }>("/api/app/me/avatar", {
+    method: "DELETE",
+  });
+}
+
 export async function listAdminUsers() {
   return apiRequest<{ users: AdminUser[] }>("/api/app/admin/users");
 }

@@ -3,6 +3,7 @@ import {
   compressAudio,
   compressImage,
   MAX_COMPRESSION_INPUT_BYTES,
+  prepareAvatarFile,
   prepareUploadFile,
   shouldCompressAudio,
   shouldCompressImage,
@@ -379,6 +380,20 @@ describe("compressImage", () => {
     const output = created[created.length - 1];
     expect(output.width).toBe(2560);
     expect(output.height).toBe(1920);
+  });
+
+  it("prepareAvatarFile scales to 512px max edge", async () => {
+    const created = stubCanvas({
+      blob: new Blob([new Uint8Array(10_000)], { type: "image/webp" }),
+    });
+    const input = new File([new Uint8Array(50_000)], "avatar.png", {
+      type: "image/png",
+    });
+    const result = await prepareAvatarFile(input);
+    expect(result.name).toBe("avatar.webp");
+    const output = created[created.length - 1];
+    expect(output.width).toBe(512);
+    expect(output.height).toBe(384);
   });
 });
 

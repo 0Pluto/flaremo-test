@@ -24,6 +24,7 @@ import {
   createExportTask,
   createPersonalAccessToken,
   deleteAccount,
+  deleteAvatar,
   deletePersonalAccessToken,
   getAdminBranding,
   getAdminPluginSettings,
@@ -36,8 +37,11 @@ import {
   listDataTasks,
   listPersonalAccessTokens,
   revokePersonalAccessToken,
+  updateCurrentUserProfile,
+  uploadAvatar,
 } from "@/api";
 import { authClient } from "@/auth-client";
+import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -47,11 +51,7 @@ import { errorMessage } from "@/lib/error";
 import { cn } from "@/lib/utils";
 import { AccountPanel, MIN_PASSWORD_LENGTH } from "./account/account-panel";
 import { AppearancePanel } from "./account/appearance-panel";
-import {
-  SettingsIconBadge,
-  SettingsRow,
-  SettingsSectionGroup,
-} from "./account/apple-settings-ui";
+import { SettingsRow, SettingsSectionGroup } from "./account/apple-settings-ui";
 import {
   EmailSettingsCard,
   OauthSettingsCard,
@@ -118,6 +118,7 @@ export function AccountSettingsDialog({
   const [mobileView, setMobileView] = useState<"master" | "detail">("master");
 
   const [username, setUsername] = useState("");
+  const [name, setName] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [newPasswordConfirmation, setNewPasswordConfirmation] = useState("");
@@ -127,6 +128,8 @@ export function AccountSettingsDialog({
   const [tokenExpiryDays, setTokenExpiryDays] = useState("");
   const [createdToken, setCreatedToken] = useState<string | null>(null);
   const [accountError, setAccountError] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [emailVerificationPending, setEmailVerificationPending] =
@@ -170,6 +173,44 @@ export function AccountSettingsDialog({
     queryFn: getCurrentFlareMoUser,
     retry: false,
     enabled: open,
+  });
+
+  useEffect(() => {
+    if (meQuery.data?.name) {
+      setName(meQuery.data.name);
+    } else if (session.data?.user.name) {
+      setName(session.data.user.name);
+    }
+  }, [meQuery.data?.name, session.data?.user.name]);
+
+  const updateProfileMutation = useMutation({
+    mutationFn: updateCurrentUserProfile,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["current-flaremo-user"],
+      });
+      await session.refetch();
+    },
+  });
+
+  const uploadAvatarMutation = useMutation({
+    mutationFn: uploadAvatar,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["current-flaremo-user"],
+      });
+      await session.refetch();
+    },
+  });
+
+  const deleteAvatarMutation = useMutation({
+    mutationFn: deleteAvatar,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["current-flaremo-user"],
+      });
+      await session.refetch();
+    },
   });
 
   const showVoiceSettings = meQuery.data?.can_manage_voice_service === true;
@@ -290,6 +331,42 @@ export function AccountSettingsDialog({
       });
     },
   });
+
+  const handleNameSubmit = async () => {
+    setNameError(null);
+    try {
+      await updateProfileMutation.mutateAsync({ name: name.trim() });
+    } catch (error) {
+      setNameError(errorMessage(error, t("auth.nameUpdateFailed")));
+    }
+  };
+
+  const handleAvatarUpload = async (file: File) => {
+    setAvatarError(null);
+    try {
+      await uploadAvatarMutation.mutateAsync(file);
+    } catch (error) {
+      setAvatarError(errorMessage(error, t("auth.avatarUpdateFailed")));
+    }
+  };
+
+  const handleAvatarUrlSubmit = async (url: string) => {
+    setAvatarError(null);
+    try {
+      await updateProfileMutation.mutateAsync({ avatar_url: url.trim() });
+    } catch (error) {
+      setAvatarError(errorMessage(error, t("auth.avatarUpdateFailed")));
+    }
+  };
+
+  const handleAvatarDelete = async () => {
+    setAvatarError(null);
+    try {
+      await deleteAvatarMutation.mutateAsync();
+    } catch (error) {
+      setAvatarError(errorMessage(error, t("auth.avatarUpdateFailed")));
+    }
+  };
 
   const handleUsernameSubmit = async () => {
     setAccountError(null);
@@ -534,6 +611,29 @@ export function AccountSettingsDialog({
   const contentBySection: Record<SettingsSection, ReactNode> = {
     account: (
       <AccountPanel
+        currentAvatarUrl={
+          meQuery.data?.avatar_url ?? session.data?.user.image ?? null
+        }
+        currentName={
+          meQuery.data?.name ??
+          session.data?.user.name ??
+          session.data?.user.username ??
+          ""
+        }
+        name={name}
+        setName={setName}
+        onNameSubmit={handleNameSubmit}
+        updateNameIsPending={updateProfileMutation.isPending}
+        nameError={nameError}
+        avatarError={avatarError}
+        avatarIsPending={
+          uploadAvatarMutation.isPending ||
+          deleteAvatarMutation.isPending ||
+          updateProfileMutation.isPending
+        }
+        onAvatarUpload={handleAvatarUpload}
+        onAvatarUrlSubmit={handleAvatarUrlSubmit}
+        onAvatarDelete={handleAvatarDelete}
         accountError={accountError}
         changeEmailIsPending={changeEmailMutation.isPending}
         changePasswordIsPending={changePasswordMutation.isPending}
@@ -691,22 +791,33 @@ export function AccountSettingsDialog({
               className="flex w-full items-center justify-between gap-3.5 rounded-2xl border border-border/60 bg-card p-4 text-left shadow-2xs cursor-pointer hover:bg-accent/40 active:bg-accent/60 transition-colors"
             >
               <div className="flex min-w-0 items-center gap-3.5">
-                <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xl font-semibold text-primary">
-                  {(session.data?.user.username ?? "?")
-                    .slice(0, 1)
-                    .toUpperCase()}
-                </div>
+                <Avatar
+                  src={
+                    meQuery.data?.avatar_url ?? session.data?.user.image ?? null
+                  }
+                  name={
+                    meQuery.data?.name ??
+                    session.data?.user.name ??
+                    session.data?.user.username ??
+                    ""
+                  }
+                  size="xl"
+                />
                 <div className="min-w-0">
                   <div className="truncate text-base font-semibold text-foreground">
-                    {session.data?.user.username}
+                    {meQuery.data?.name ??
+                      session.data?.user.name ??
+                      session.data?.user.username}
                   </div>
                   <div className="truncate text-xs text-muted-foreground mt-0.5">
-                    {session.data?.user.email}
+                    {session.data?.user.username
+                      ? `@${session.data.user.username}`
+                      : session.data?.user.email}
                   </div>
                   <div className="mt-1.5 flex items-center gap-1.5">
                     <Badge
                       variant="secondary"
-                      className="h-4 px-1.5 text-[10px] font-normal"
+                      className="h-4 px-1.5 text-xs font-normal"
                     >
                       {roleLabel}
                     </Badge>
@@ -815,41 +926,53 @@ export function AccountSettingsDialog({
                 : "border-transparent hover:bg-accent/40 text-foreground",
             )}
           >
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-              {(session.data?.user.username ?? "?").slice(0, 1).toUpperCase()}
-            </div>
+            <Avatar
+              src={meQuery.data?.avatar_url ?? session.data?.user.image ?? null}
+              name={
+                meQuery.data?.name ??
+                session.data?.user.name ??
+                session.data?.user.username ??
+                ""
+              }
+              size="sm"
+            />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
-                <p className="truncate text-xs font-semibold leading-tight text-foreground">
-                  {session.data?.user.username}
+                <p className="truncate text-sm font-semibold leading-tight text-foreground">
+                  {meQuery.data?.name ??
+                    session.data?.user.name ??
+                    session.data?.user.username}
                 </p>
                 <Badge
                   variant="secondary"
-                  className="h-3.5 px-1 text-[9px] font-normal"
+                  className="h-4 px-1.5 text-xs font-normal"
                 >
                   {roleLabel}
                 </Badge>
               </div>
               <p className="truncate text-xs text-muted-foreground mt-0.5">
-                {t("settings.group.account")}
+                {session.data?.user.username
+                  ? `@${session.data.user.username}`
+                  : t("settings.group.account")}
               </p>
             </div>
           </button>
 
           {/* Sidebar Nav Items */}
-          <nav className="flex-1 overflow-y-auto flex flex-col gap-4 py-1">
+          <nav className="flex-1 overflow-y-auto flex flex-col gap-3 py-1">
             {navGroups.map((group) => (
               <div
                 key={group.titleKey ?? "default"}
                 className="flex flex-col gap-0.5"
               >
                 {group.titleKey && (
-                  <div className="px-2.5 pb-1 text-xs font-medium text-muted-foreground/80 tracking-wider">
+                  <div className="px-2.5 pb-1 pt-1.5 text-xs font-medium text-muted-foreground">
                     {t(group.titleKey)}
                   </div>
                 )}
                 {group.items.map((item) => {
                   const active = section === item.id;
+                  const Icon = item.icon;
                   return (
                     <button
                       type="button"
@@ -857,21 +980,13 @@ export function AccountSettingsDialog({
                       aria-current={active ? "true" : undefined}
                       onClick={() => setSection(item.id)}
                       className={cn(
-                        "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors text-left",
+                        "flex h-9 items-center gap-3 rounded-lg px-2.5 text-sm transition-colors text-left",
                         active
-                          ? "bg-primary text-primary-foreground shadow-2xs"
-                          : "text-foreground hover:bg-accent/60",
+                          ? "bg-accent text-accent-foreground font-medium"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground",
                       )}
                     >
-                      <SettingsIconBadge
-                        icon={item.icon}
-                        color={
-                          active
-                            ? "bg-white/20 text-primary-foreground border-transparent"
-                            : item.iconBg
-                        }
-                        className="size-5.5 rounded-md text-xs"
-                      />
+                      <Icon className="size-4 shrink-0" />
                       <span className="truncate flex-1">{item.label}</span>
                     </button>
                   );
@@ -883,13 +998,13 @@ export function AccountSettingsDialog({
           {/* Desktop Sign Out */}
           <div className="mt-auto pt-3 border-t border-border/40">
             <Button
-              className="w-full justify-start text-xs h-8"
+              className="h-9 w-full justify-start gap-3 px-2.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
               onClick={() => void handleSignOut()}
               variant="ghost"
             >
               <LogOutIcon
                 data-icon="inline-start"
-                className="size-3.5 text-muted-foreground"
+                className="size-4 shrink-0"
               />
               {t("auth.signOut")}
             </Button>

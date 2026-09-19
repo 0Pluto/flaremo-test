@@ -591,6 +591,17 @@ const messages = {
   "auth.saving": "Enregistrement…",
   "auth.usernameUpdateFailed":
     "Impossible de mettre à jour le nom d'utilisateur.",
+  "auth.emailOrUsername": "E-mail ou nom d'utilisateur",
+  "auth.emailOrUsernamePlaceholder": "you@example.com ou @username",
+  "auth.avatar": "Avatar",
+  "auth.changeAvatar": "Changer l'avatar",
+  "auth.uploadAvatar": "Téléverser une image",
+  "auth.avatarUrl": "URL de l'image",
+  "auth.removeAvatar": "Rétablir l'avatar par défaut",
+  "auth.avatarUpdateFailed": "Impossible de mettre à jour l'avatar.",
+  "auth.nameTitle": "Nom affiché",
+  "auth.saveName": "Enregistrer le nom",
+  "auth.nameUpdateFailed": "Impossible de mettre à jour le nom.",
   "auth.passwordTitle": "Changer le mot de passe",
   "push.title": "Notifications push",
   "push.description":

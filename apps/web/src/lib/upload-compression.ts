@@ -108,11 +108,14 @@ function concatChunks(chunks: Uint8Array[]): Uint8Array<ArrayBuffer> {
   return joined;
 }
 
-export function shouldCompressImage(file: File): boolean {
+export function shouldCompressImage(
+  file: File,
+  minBytes = MIN_COMPRESSIBLE_IMAGE_BYTES,
+): boolean {
   const type = file.type.toLowerCase();
   if (!type.startsWith("image/")) return false;
   if (SKIP_IMAGE_TYPES.has(type)) return false;
-  if (file.size < MIN_COMPRESSIBLE_IMAGE_BYTES) return false;
+  if (file.size < minBytes) return false;
   return true;
 }
 
@@ -464,7 +467,10 @@ function drawScaled(
   return canvas;
 }
 
-function canvasToWebpBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
+function canvasToWebpBlob(
+  canvas: HTMLCanvasElement,
+  quality = WEBP_QUALITY,
+): Promise<Blob | null> {
   return new Promise((resolve) => {
     let settled = false;
     const settle = (blob: Blob | null) => {
@@ -482,7 +488,7 @@ function canvasToWebpBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
           settle(blob);
         },
         "image/webp",
-        WEBP_QUALITY,
+        quality,
       );
     } catch {
       clearTimeout(timer);
@@ -491,12 +497,25 @@ function canvasToWebpBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
   });
 }
 
+export type ImageCompressionOptions = {
+  maxLongEdge?: number;
+  quality?: number;
+  minBytes?: number;
+};
+
 /**
  * Returns a WebP File, or null when the input should be uploaded as-is
  * (skip rules, unsupported browser, encode failure, or no size win).
  */
-export async function compressImage(file: File): Promise<File | null> {
-  if (!shouldCompressImage(file)) return null;
+export async function compressImage(
+  file: File,
+  options: ImageCompressionOptions = {},
+): Promise<File | null> {
+  const minBytes = options.minBytes ?? MIN_COMPRESSIBLE_IMAGE_BYTES;
+  const maxLongEdge = options.maxLongEdge ?? MAX_LONG_EDGE;
+  const quality = options.quality ?? WEBP_QUALITY;
+
+  if (!shouldCompressImage(file, minBytes)) return null;
   if (file.size > MAX_COMPRESSION_INPUT_BYTES) return null;
   if (!supportsWebpEncode()) return null;
   const source = await decodeOriented(file).catch(() => null);
@@ -504,13 +523,13 @@ export async function compressImage(file: File): Promise<File | null> {
   try {
     const { width, height } = sourceDimensions(source);
     if (!width || !height) return null;
-    const scale = Math.min(1, MAX_LONG_EDGE / Math.max(width, height));
+    const scale = Math.min(1, maxLongEdge / Math.max(width, height));
     const targetWidth = Math.max(1, Math.round(width * scale));
     const targetHeight = Math.max(1, Math.round(height * scale));
     const canvas = drawScaled(source, width, height, targetWidth, targetHeight);
     if (!canvas) return null;
-    const blob = await canvasToWebpBlob(canvas);
-    if (!blob || blob.size >= file.size) return null;
+    const blob = await canvasToWebpBlob(canvas, quality);
+    if (!blob || (minBytes > 0 && blob.size >= file.size)) return null;
     return new File([blob], withExtension(file.name, "webp"), {
       type: "image/webp",
     });
@@ -519,6 +538,20 @@ export async function compressImage(file: File): Promise<File | null> {
   } finally {
     releaseSource(source);
   }
+}
+
+/**
+ * Avatar compression helper. Resizes to 512px max long edge and encodes as
+ * WebP at high quality (0.85), returning the compressed File or the original
+ * file as fallback.
+ */
+export async function prepareAvatarFile(file: File): Promise<File> {
+  const compressed = await compressImage(file, {
+    maxLongEdge: 512,
+    quality: 0.85,
+    minBytes: 0,
+  });
+  return compressed ?? file;
 }
 
 /**
