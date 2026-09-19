@@ -169,18 +169,24 @@ describe("fetchCloudflareUsage", () => {
     expect(workersBody.variables.scriptName).toBe("flaremo");
     expect(workersBody.variables.since).toBe("2026-09-01T00:00:00.000Z");
     const d1Body = JSON.parse(String(fetchMock.mock.calls[1][1]?.body)) as {
+      query: string;
       variables: Record<string, string>;
     };
     expect(d1Body.variables.databaseId).toBe(
       "5a5094d8-efcc-4aef-909b-c8455358247d",
     );
     expect(d1Body.variables.since).toBe("2026-09-01");
+    // The storage group is ordered by date, so date must be a selected
+    // dimension — Cloudflare rejects the query otherwise.
+    expect(d1Body.query).toContain("dimensions { date }");
     const r2Body = JSON.parse(String(fetchMock.mock.calls[2][1]?.body)) as {
+      query: string;
       variables: Record<string, string>;
     };
     expect(r2Body.variables.bucketName).toBe("flaremo-attachments");
     // R2 datasets filter on datetime (Time), unlike D1's date filters.
     expect(r2Body.variables.since).toBe("2026-09-01T00:00:00.000Z");
+    expect(r2Body.query).toContain("dimensions { datetime }");
   });
 
   it("isolates per-section failures and keeps the rest of the report", async () => {

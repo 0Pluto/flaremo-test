@@ -94,6 +94,7 @@ query($accountTag: string!, $databaseId: string!, $since: Date!, $until: Date!) 
         filter: { databaseId: $databaseId, date_geq: $since, date_leq: $until }
         orderBy: [date_DESC]
       ) {
+        dimensions { date }
         max { databaseSizeBytes }
       }
     }
@@ -109,6 +110,7 @@ query($accountTag: string!, $bucketName: string!, $since: Time!, $until: Time!) 
         filter: { bucketName: $bucketName, datetime_geq: $since, datetime_leq: $until }
         orderBy: [datetime_DESC]
       ) {
+        dimensions { datetime }
         max { payloadSize metadataSize objectCount }
       }
       ops: r2OperationsAdaptiveGroups(
