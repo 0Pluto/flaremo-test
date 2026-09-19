@@ -11,6 +11,7 @@ import { TagHighlight } from "@/components/tag-highlight-extension";
 import { UploadPlaceholder } from "@/components/upload-placeholder-extension";
 import { extractImageFiles } from "@/lib/image-insert";
 import { extractActiveTagToken } from "@/lib/tag-autocomplete";
+import { extractActiveWikiLinkToken } from "@/lib/wikilink-autocomplete";
 
 /**
  * The element whitelist mirrors what the card renderer supports. Only
@@ -55,6 +56,13 @@ export type RichComposerEditorProps = {
    * picked tag. Emitted once per token change (including → null).
    */
   onTagTokenChange?: (token: { from: number; text: string } | null) => void;
+  /**
+   * The in-progress "[[" under the caret, if any. `from` is the ProseMirror
+   * position of the leading "[[".
+   */
+  onWikiLinkTokenChange?: (
+    token: { from: number; query: string } | null,
+  ) => void;
   /**
    * Plain Enter submits the note (composer behavior). Turn off for the card
    * inline editor, where plain Enter keeps editing and Cmd/Ctrl+Enter saves.
@@ -109,6 +117,7 @@ export function RichComposerEditor({
   onImageFiles,
   onSubmitRequest,
   onTagTokenChange,
+  onWikiLinkTokenChange,
   submitOnEnter = true,
   onEscape,
   autoFocus = false,
@@ -130,6 +139,9 @@ export function RichComposerEditor({
   const onTagTokenChangeRef = useRef(onTagTokenChange);
   onTagTokenChangeRef.current = onTagTokenChange;
   const lastTagTokenRef = useRef<string | null>(null);
+  const onWikiLinkTokenChangeRef = useRef(onWikiLinkTokenChange);
+  onWikiLinkTokenChangeRef.current = onWikiLinkTokenChange;
+  const lastWikiTokenRef = useRef<string | null>(null);
   // The markdown last pushed downstream. Guards the restore effect against
   // re-parsing the editor's own output (which would fight the update loop).
   const lastEmittedRef = useRef(content);
@@ -205,31 +217,53 @@ export function RichComposerEditor({
       onContentChangeRef.current(markdown);
     },
     onTransaction: ({ editor: current }) => {
-      if (!onTagTokenChangeRef.current) return;
       const { state } = current.view;
       const { $from } = state.selection;
-      let token: { from: number; text: string } | null = null;
-      // A tag token only exists inside a plain text run: node selections and
-      // non-text parents emit null so the caller closes the suggestion list.
-      if ($from.parent.inlineContent && $from.parentOffset > 0) {
-        const before = $from.parent.textBetween(
-          0,
-          $from.parentOffset,
-          undefined,
-          "\ufffc",
-        );
-        const active = extractActiveTagToken(before, before.length);
-        if (active) {
-          // Inline leaf nodes map to one replacement char in `textBetween`
-          // and hold one ProseMirror position, so plain-text offsets convert
-          // directly to document positions inside the parent block.
-          token = { from: $from.start() + active.start, text: active.token };
+
+      if (onTagTokenChangeRef.current) {
+        let token: { from: number; text: string } | null = null;
+        if ($from.parent.inlineContent && $from.parentOffset > 0) {
+          const before = $from.parent.textBetween(
+            0,
+            $from.parentOffset,
+            undefined,
+            "\ufffc",
+          );
+          const active = extractActiveTagToken(before, before.length);
+          if (active) {
+            token = { from: $from.start() + active.start, text: active.token };
+          }
+        }
+        const key = token ? `${token.from}:${token.text}` : null;
+        if (key !== lastTagTokenRef.current) {
+          lastTagTokenRef.current = key;
+          onTagTokenChangeRef.current(token);
         }
       }
-      const key = token ? `${token.from}:${token.text}` : null;
-      if (key === lastTagTokenRef.current) return;
-      lastTagTokenRef.current = key;
-      onTagTokenChangeRef.current(token);
+
+      if (onWikiLinkTokenChangeRef.current) {
+        let wikiToken: { from: number; query: string } | null = null;
+        if ($from.parent.inlineContent && $from.parentOffset >= 2) {
+          const before = $from.parent.textBetween(
+            0,
+            $from.parentOffset,
+            undefined,
+            "\ufffc",
+          );
+          const active = extractActiveWikiLinkToken(before, before.length);
+          if (active) {
+            wikiToken = {
+              from: $from.start() + active.start,
+              query: active.query,
+            };
+          }
+        }
+        const key = wikiToken ? `${wikiToken.from}:${wikiToken.query}` : null;
+        if (key !== lastWikiTokenRef.current) {
+          lastWikiTokenRef.current = key;
+          onWikiLinkTokenChangeRef.current(wikiToken);
+        }
+      }
     },
   });
 

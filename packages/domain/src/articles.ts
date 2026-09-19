@@ -7,7 +7,7 @@ import type {
 } from "@flaremo/contracts";
 import type { ArticleRow, FlareMoDb, UserRow } from "@flaremo/db";
 import { articles, attachments, users } from "@flaremo/db";
-import { and, desc, eq, isNotNull, isNull, lt, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, lt, ne } from "drizzle-orm";
 import { slugify } from "transliteration";
 import { ConflictError, NotFoundError, ValidationError } from "./errors";
 import { createResourceId, createToken, parseResourceName } from "./ids";
@@ -143,6 +143,29 @@ export async function createArticle(
   const title = (input.title ?? "").trim().slice(0, 200);
   const content = input.content ?? "";
   const now = new Date().toISOString();
+  const attachmentIds = (input.attachment_names ?? []).map((name) =>
+    parseResourceName(name, "attachments"),
+  );
+  // The claim preflight runs before the insert so a bad id cannot leave a
+  // half-created article behind (same checks bindMemoAttachments applies).
+  if (attachmentIds.length > 0) {
+    const claimable = await db
+      .select({ id: attachments.id })
+      .from(attachments)
+      .where(
+        and(
+          eq(attachments.userId, user.id),
+          inArray(attachments.id, attachmentIds),
+          isNull(attachments.deletedAt),
+          eq(attachments.state, "ready"),
+        ),
+      );
+    const claimableIds = new Set(claimable.map((row) => row.id));
+    const missing = attachmentIds.find((id) => !claimableIds.has(id));
+    if (missing) {
+      throw new NotFoundError(`Attachment not found: ${missing}`);
+    }
+  }
   const slug = await resolveArticleSlug(db, title);
   const row = await db
     .insert(articles)
@@ -160,6 +183,17 @@ export async function createArticle(
     })
     .returning()
     .get();
+  if (attachmentIds.length > 0) {
+    await db
+      .update(attachments)
+      .set({ articleId: row.id, updatedAt: now })
+      .where(
+        and(
+          eq(attachments.userId, user.id),
+          inArray(attachments.id, attachmentIds),
+        ),
+      );
+  }
   return articleToDto(row);
 }
 

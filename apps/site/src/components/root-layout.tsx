@@ -4,11 +4,7 @@ import { useEffect } from "react";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
 import { ThemeProvider } from "@/components/theme-provider";
-import {
-  getLocaleFromPath,
-  localeDirection,
-  localeHtmlLang,
-} from "@/lib/seo";
+import { getLocaleFromPath, localeDirection, localeHtmlLang } from "@/lib/seo";
 
 export function RootLayout() {
   const { pathname } = useLocation();

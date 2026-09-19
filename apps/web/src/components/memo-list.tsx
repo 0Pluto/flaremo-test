@@ -4,9 +4,21 @@ import {
   Loader2Icon,
   SearchIcon,
 } from "lucide-react";
-import { memo, useEffect, useRef } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import type { Attachment, Memo, MemoVisibility, Share } from "@/api";
+import { MemoVisibilityDialog } from "@/components/memo-visibility-dialog";
+import { ShareImageDialog } from "@/components/share-image-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Empty,
@@ -18,6 +30,7 @@ import {
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/i18n";
+import { getMemoResourceId } from "@/lib/memo";
 import { MemoCard } from "./memo-card";
 
 type MemoListProps = {
@@ -32,6 +45,7 @@ type MemoListProps = {
   attachmentsByMemo: Map<string, Attachment[]>;
   sharesByMemo: Map<string, Share>;
   searchQuery?: string;
+  focusedMemoId?: string | null;
   /** Overrides the generic empty-state copy (e.g. semantic search). */
   emptyDescription?: string;
   emptyTitle?: string;
@@ -85,6 +99,7 @@ export const MemoList = memo(function MemoList({
   attachmentsByMemo,
   sharesByMemo,
   searchQuery,
+  focusedMemoId,
   emptyDescription,
   emptyTitle,
   onClearFilters,
@@ -105,6 +120,11 @@ export const MemoList = memo(function MemoList({
 }: MemoListProps) {
   const { t } = useI18n();
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  // Singleton dialog states to prevent hundreds of dialog DOM instances in long lists
+  const [deleteTargetMemo, setDeleteTargetMemo] = useState<Memo | null>(null);
+  const [shareImageMemo, setShareImageMemo] = useState<Memo | null>(null);
+  const [visibilityMemo, setVisibilityMemo] = useState<Memo | null>(null);
 
   useEffect(() => {
     if (!hasNextPage || isFetchingNextPage || hasError) return;
@@ -242,8 +262,12 @@ export const MemoList = memo(function MemoList({
             canManage={memo.can_manage === true}
             canGovern={memo.can_govern === true}
             index={index}
+            isFocused={focusedMemoId === (memo.id || memo.name)}
             key={memo.name}
             memo={memo}
+            onRequestDelete={setDeleteTargetMemo}
+            onRequestShareImage={setShareImageMemo}
+            onRequestVisibility={setVisibilityMemo}
             searchQuery={searchQuery}
             share={sharesByMemo.get(memo.name)}
             onArchive={onArchive}
@@ -281,6 +305,69 @@ export const MemoList = memo(function MemoList({
             {isFetchingNextPage ? t("common.loading") : t("list.loadMore")}
           </Button>
         </div>
+      )}
+      {deleteTargetMemo && (
+        <AlertDialog
+          open={Boolean(deleteTargetMemo)}
+          onOpenChange={(open) => {
+            if (!open) setDeleteTargetMemo(null);
+          }}
+        >
+          <AlertDialogContent size="sm">
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {t("memo.deleteConfirmTitle")}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {t("memo.deleteConfirmDescription")}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel variant="ghost">
+                {t("common.cancel")}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                onClick={() => {
+                  const id = getMemoResourceId(deleteTargetMemo);
+                  void onHardDelete(id);
+                  setDeleteTargetMemo(null);
+                }}
+              >
+                {t("memo.deleteForever")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+      {shareImageMemo && (
+        <ShareImageDialog
+          memo={shareImageMemo}
+          open={Boolean(shareImageMemo)}
+          onOpenChange={(open) => {
+            if (!open) setShareImageMemo(null);
+          }}
+        />
+      )}
+      {visibilityMemo && (
+        <MemoVisibilityDialog
+          memo={visibilityMemo}
+          open={Boolean(visibilityMemo)}
+          onOpenChange={(open) => {
+            if (!open) setVisibilityMemo(null);
+          }}
+          onRevokeShare={onRevokeShare}
+          onShare={onShare}
+          onUpdateVisibility={async (visibility) => {
+            const id = getMemoResourceId(visibilityMemo);
+            await onUpdate(id, {
+              content: visibilityMemo.content,
+              visibility,
+            });
+            setVisibilityMemo(null);
+          }}
+          share={sharesByMemo.get(visibilityMemo.name)}
+        />
       )}
     </>
   );

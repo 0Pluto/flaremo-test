@@ -183,6 +183,66 @@ describe("articles domain services", () => {
     expect(rows).toHaveLength(0);
   });
 
+  it("claims pre-uploaded attachments when the article is created", async () => {
+    // Composer → article: inline images were uploaded before the row existed,
+    // so create must bind them in the same request (otherwise the orphan GC
+    // collects them within its 7-day window).
+    const now = new Date().toISOString();
+    await db.insert(attachments).values({
+      id: "attachments/att-claim",
+      userId: user.id,
+      r2Key: "att-claim",
+      filename: "draft.png",
+      contentType: "image/png",
+      size: 10,
+      state: "ready",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const created = await createArticle(db, user, {
+      content: "![draft](/file/attachments/att-claim/draft.png)",
+      attachment_names: ["attachments/att-claim"],
+    });
+
+    const bound = await db
+      .select()
+      .from(attachments)
+      .where(eq(attachments.id, "attachments/att-claim"));
+    expect(bound[0]?.articleId).toBe(created.id);
+  });
+
+  it("rejects a foreign or missing attachment claim without creating a row", async () => {
+    const now = new Date().toISOString();
+    await db.insert(attachments).values({
+      id: "attachments/att-other",
+      userId: other.id,
+      r2Key: "att-other",
+      filename: "theirs.png",
+      contentType: "image/png",
+      size: 10,
+      state: "ready",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await expect(
+      createArticle(db, user, {
+        title: "Nope",
+        attachment_names: ["attachments/att-other"],
+      }),
+    ).rejects.toBeInstanceOf(NotFoundError);
+    await expect(
+      createArticle(db, user, {
+        title: "Nope",
+        attachment_names: ["attachments/does-not-exist"],
+      }),
+    ).rejects.toBeInstanceOf(NotFoundError);
+
+    const rows = await db.select().from(articles);
+    expect(rows).toHaveLength(0);
+  });
+
   it("purges an article that still has bound attachments (NO ACTION FK)", async () => {
     // SQLite cannot stamp ON DELETE SET NULL on an ALTER TABLE-added column,
     // so migration 0029's FK is NO ACTION in every deployed database. The

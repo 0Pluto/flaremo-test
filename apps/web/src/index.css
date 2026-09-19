@@ -522,6 +522,13 @@
 @layer components {
   .memo-markdown {
     @apply text-[15px] leading-7 text-foreground;
+    text-wrap: pretty;
+    word-break: break-word;
+  }
+
+  .dark .bg-card,
+  .dark [data-slot="card"] {
+    box-shadow: inset 0 1px 0 0 oklch(1 0 0 / 0.05);
   }
 
   .memo-markdown > * + * {

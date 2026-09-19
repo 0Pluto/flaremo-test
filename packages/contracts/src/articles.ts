@@ -37,6 +37,13 @@ export const createArticleSchema = z.object({
     .string()
     .max(200_000, "Article content exceeds the 200KB limit.")
     .optional(),
+  // Attachments uploaded before the article existed (the composer's inline
+  // paste and file picks) are claimed in the create request. The claim is the
+  // only binding these rows ever get — unclaimed uploads fall to the orphan GC.
+  attachment_names: z
+    .array(z.string().trim().min(1).max(256))
+    .max(100)
+    .optional(),
   lang: z.string().trim().max(20).optional(),
 });
 

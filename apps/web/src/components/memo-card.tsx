@@ -96,6 +96,11 @@ type MemoCardProps = {
   canManage?: boolean;
   /** Lifecycle governance (archive/trash/restore) without content editing. */
   canGovern?: boolean;
+  /** Focused via J/K keyboard navigation. */
+  isFocused?: boolean;
+  onRequestDelete?: (memo: Memo) => void;
+  onRequestShareImage?: (memo: Memo) => void;
+  onRequestVisibility?: (memo: Memo) => void;
 };
 
 export const MemoCard = memo(function MemoCard({
@@ -115,6 +120,10 @@ export const MemoCard = memo(function MemoCard({
   onTagClick,
   canManage = false,
   canGovern = false,
+  isFocused = false,
+  onRequestDelete,
+  onRequestShareImage,
+  onRequestVisibility,
 }: MemoCardProps) {
   const { locale, t } = useI18n();
   const queryClient = useQueryClient();
@@ -257,10 +266,12 @@ export const MemoCard = memo(function MemoCard({
 
   return (
     <article
+      data-memo-id={memo.id}
       className={cn(
         "group relative flex w-full flex-col gap-2 rounded-xl border border-border/50 bg-card/60 px-3.5 py-4 text-card-foreground [content-visibility:auto] [contain-intrinsic-size:auto_120px] motion-safe:animate-rise motion-safe:transition-[background-color,border-color,transform,box-shadow] motion-safe:duration-150 hover:border-border hover:bg-card hover:shadow-xs motion-safe:hover:-translate-y-px",
         memo.pinned &&
-          "border-brand-300/40 bg-brand-50/35 dark:border-brand-400/25 dark:bg-brand-400/5",
+          "border-l-brand-500 border-l-[3px] dark:border-l-brand-400 bg-card",
+        isFocused && "ring-2 ring-brand-400/60 shadow-xs bg-card",
         isEditing && "bg-card shadow-xs ring-1 ring-brand-400/40",
       )}
       style={{ animationDelay: `${Math.min(index, 7) * 35}ms` }}
@@ -295,7 +306,11 @@ export const MemoCard = memo(function MemoCard({
           {memo.visibility !== "private" && (
             <VisibilityBadge
               visibility={memo.visibility}
-              onClick={() => setIsVisibilityOpen(true)}
+              onClick={() =>
+                onRequestVisibility
+                  ? onRequestVisibility(memo)
+                  : setIsVisibilityOpen(true)
+              }
             />
           )}
           {(canManage || canGovern) && (
@@ -324,7 +339,11 @@ export const MemoCard = memo(function MemoCard({
                     {canManage && (
                       <DropdownMenuItem
                         variant="destructive"
-                        onClick={() => setIsDeleteDialogOpen(true)}
+                        onClick={() =>
+                          onRequestDelete
+                            ? onRequestDelete(memo)
+                            : setIsDeleteDialogOpen(true)
+                        }
                       >
                         <Trash2Icon />
                         {t("memo.deleteForever")}
@@ -346,13 +365,21 @@ export const MemoCard = memo(function MemoCard({
                           {memo.pinned ? t("memo.unpin") : t("memo.pin")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => setIsVisibilityOpen(true)}
+                          onClick={() =>
+                            onRequestVisibility
+                              ? onRequestVisibility(memo)
+                              : setIsVisibilityOpen(true)
+                          }
                         >
                           <Globe2Icon />
                           {t("memo.visibilityAndShare")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => setIsShareImageOpen(true)}
+                          onClick={() =>
+                            onRequestShareImage
+                              ? onRequestShareImage(memo)
+                              : setIsShareImageOpen(true)
+                          }
                         >
                           <ImageIcon />
                           {t("share.imageCard")}
@@ -514,44 +541,52 @@ export const MemoCard = memo(function MemoCard({
           </div>
         </footer>
       )}
-      <AlertDialog
-        open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-      >
-        <AlertDialogContent size="sm">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("memo.deleteConfirmTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("memo.deleteConfirmDescription")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel variant="ghost">
-              {t("common.cancel")}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={() => void onHardDelete(id)}
-            >
-              {t("memo.deleteForever")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      <ShareImageDialog
-        memo={memo}
-        open={isShareImageOpen}
-        onOpenChange={setIsShareImageOpen}
-      />
-      <MemoVisibilityDialog
-        memo={memo}
-        open={isVisibilityOpen}
-        onOpenChange={setIsVisibilityOpen}
-        onRevokeShare={onRevokeShare}
-        onShare={onShare}
-        onUpdateVisibility={changeVisibility}
-        share={share}
-      />
+      {!onRequestDelete && (
+        <AlertDialog
+          open={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+        >
+          <AlertDialogContent size="sm">
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {t("memo.deleteConfirmTitle")}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {t("memo.deleteConfirmDescription")}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel variant="ghost">
+                {t("common.cancel")}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                onClick={() => void onHardDelete(id)}
+              >
+                {t("memo.deleteForever")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+      {!onRequestShareImage && (
+        <ShareImageDialog
+          memo={memo}
+          open={isShareImageOpen}
+          onOpenChange={setIsShareImageOpen}
+        />
+      )}
+      {!onRequestVisibility && (
+        <MemoVisibilityDialog
+          memo={memo}
+          open={isVisibilityOpen}
+          onOpenChange={setIsVisibilityOpen}
+          onRevokeShare={onRevokeShare}
+          onShare={onShare}
+          onUpdateVisibility={changeVisibility}
+          share={share}
+        />
+      )}
     </article>
   );
 });

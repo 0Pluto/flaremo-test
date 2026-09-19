@@ -3,7 +3,15 @@ import { isHanLocale } from "./han-locale";
 
 describe("isHanLocale", () => {
   it("matches the locales whose glyphs are Han", () => {
-    for (const locale of ["zh-CN", "zh", "zh-Hant", "ja", "ja-JP", "ko", "ko-KR"]) {
+    for (const locale of [
+      "zh-CN",
+      "zh",
+      "zh-Hant",
+      "ja",
+      "ja-JP",
+      "ko",
+      "ko-KR",
+    ]) {
       expect(isHanLocale(locale), locale).toBe(true);
     }
   });

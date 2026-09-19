@@ -368,6 +368,21 @@ type TagTreeProps = {
   onNavigate?: () => void;
 };
 
+const TAG_COLLAPSED_STORAGE_KEY = "flaremo.explorer.collapsedTags";
+
+function readCollapsedTags(): Set<string> {
+  try {
+    const stored = localStorage.getItem(TAG_COLLAPSED_STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) return new Set(parsed);
+    }
+  } catch {
+    // Best-effort storage fallback
+  }
+  return new Set();
+}
+
 function TagTree({
   activeTag,
   nodes,
@@ -377,7 +392,7 @@ function TagTree({
   onNavigate,
 }: TagTreeProps) {
   const { t } = useI18n();
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [collapsed, setCollapsed] = useState<Set<string>>(readCollapsedTags);
   const [editing, setEditing] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
@@ -386,6 +401,14 @@ function TagTree({
       const next = new Set(current);
       if (next.has(name)) next.delete(name);
       else next.add(name);
+      try {
+        localStorage.setItem(
+          TAG_COLLAPSED_STORAGE_KEY,
+          JSON.stringify(Array.from(next)),
+        );
+      } catch {
+        // Ignore quota/private mode errors
+      }
       return next;
     });
 

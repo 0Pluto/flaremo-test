@@ -1,9 +1,11 @@
+import { useQuery } from "@tanstack/react-query";
 import type { Editor } from "@tiptap/react";
 import {
   CalendarPlusIcon,
   CheckSquareIcon,
   HashIcon,
   ImageIcon,
+  Link2Icon,
   ListIcon,
   ListOrderedIcon,
   Loader2Icon,
@@ -22,7 +24,13 @@ import {
   useSyncExternalStore,
 } from "react";
 import { toast } from "sonner";
-import { getCaptureStatus, type MemoVisibility, uploadAttachment } from "@/api";
+import {
+  getCaptureStatus,
+  listMemos,
+  type Memo,
+  type MemoVisibility,
+  uploadAttachment,
+} from "@/api";
 import { RichComposerEditor } from "@/components/rich-composer-editor-lazy";
 import { Button } from "@/components/ui/button";
 import {
@@ -114,6 +122,22 @@ export function MemoComposer({
     from: number;
     text: string;
   } | null>(null);
+  // "[[" autocomplete: in-progress wikilink token under the caret
+  const [activeWikiToken, setActiveWikiToken] = useState<{
+    from: number;
+    query: string;
+  } | null>(null);
+
+  const wikiSuggestionsQuery = useQuery({
+    queryKey: ["composer-wiki-suggestions", activeWikiToken?.query],
+    queryFn: ({ signal }) =>
+      listMemos(
+        { q: activeWikiToken?.query?.trim() || undefined, page_size: 5 },
+        signal,
+      ),
+    enabled: Boolean(activeWikiToken),
+    staleTime: 5000,
+  });
   // Quick voice capture: one streaming/batch ASR session per composer, wired
   // the same way as the capture page. The controller persists with the
   // composer (workspace filters keep it mounted) so a draft survives a visit
@@ -285,6 +309,33 @@ export function MemoComposer({
       .run();
   };
 
+  const wikiSuggestions = wikiSuggestionsQuery.data?.memos ?? [];
+  const showWikiSuggestions =
+    Boolean(activeWikiToken) && wikiSuggestions.length > 0 && !isPending;
+
+  const acceptWikiSuggestion = (targetMemo: Memo) => {
+    if (!activeWikiToken) return;
+    const editor = editorRef.current;
+    if (!editor) return;
+    const title =
+      targetMemo.content
+        .split("\n")[0]
+        ?.replace(/[#*`]/g, "")
+        .trim()
+        .slice(0, 30) || targetMemo.id;
+    const linkText = `[${title}](/memo/${targetMemo.id}) `;
+    const caret = activeWikiToken.from + 2 + activeWikiToken.query.length;
+    editor
+      .chain()
+      .focus()
+      .insertContentAt(
+        { from: activeWikiToken.from, to: caret },
+        { type: "text", text: linkText },
+      )
+      .run();
+    setActiveWikiToken(null);
+  };
+
   return (
     <form
       className="group relative flex w-full flex-col rounded-xl border border-border bg-card shadow-xs motion-safe:animate-rise motion-safe:transition-[border-color,box-shadow] motion-safe:duration-200 focus-within:border-brand-400/60 focus-within:shadow-md focus-within:ring-2 focus-within:ring-brand-400/25"
@@ -309,6 +360,7 @@ export function MemoComposer({
           onContentChange={updateContent}
           onImageFiles={enqueueInlineUploads}
           onTagTokenChange={tags ? setActiveTagToken : undefined}
+          onWikiLinkTokenChange={setActiveWikiToken}
           onSubmitRequest={() => {
             if (!isUploadingImages && !voiceActive) void submit();
           }}
@@ -413,6 +465,38 @@ export function MemoComposer({
               </span>
             </button>
           ))}
+        </div>
+      )}
+      {showWikiSuggestions && (
+        <div
+          className="absolute inset-x-4 bottom-12 z-30 max-h-56 overflow-y-auto rounded-lg border border-border bg-popover py-1 shadow-md motion-safe:animate-rise divide-y divide-border/20"
+          data-testid="composer-wikilink-suggestions"
+        >
+          {wikiSuggestions.map((memo) => {
+            const preview =
+              memo.content.split("\n")[0]?.slice(0, 50) || memo.id;
+            return (
+              <button
+                className="flex w-full items-center justify-between gap-3 px-3.5 py-2 text-left text-sm text-muted-foreground motion-safe:transition-colors hover:bg-muted/60 hover:text-foreground cursor-pointer"
+                key={memo.name}
+                type="button"
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  acceptWikiSuggestion(memo);
+                }}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <Link2Icon className="size-3.5 shrink-0 text-primary" />
+                  <span className="truncate font-medium text-foreground text-xs">
+                    {preview}
+                  </span>
+                </div>
+                <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
+                  {(memo.display_time ?? memo.create_time)?.slice(0, 10)}
+                </span>
+              </button>
+            );
+          })}
         </div>
       )}
       {draft.files.length > 0 && (

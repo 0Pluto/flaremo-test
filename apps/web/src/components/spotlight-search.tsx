@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRightIcon,
   CheckSquareIcon,
@@ -16,7 +17,7 @@ import {
   useRef,
   useState,
 } from "react";
-import type { Memo, Task } from "@/api";
+import { listMemos, type Memo, type Task } from "@/api";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -75,9 +76,20 @@ export function SpotlightSearch({
     }
   }, [open, query]);
 
+  const trimmedDraft = draft.trim();
+
+  // Instant global search probe across the entire corpus
+  const remoteMemosQuery = useQuery({
+    queryKey: ["spotlight-remote-memos", trimmedDraft],
+    queryFn: ({ signal }) =>
+      listMemos({ q: trimmedDraft, page_size: 6 }, signal),
+    enabled: open && trimmedDraft.length >= 1,
+    staleTime: 10_000,
+  });
+
   // Filter tasks based on draft
   const matchingTasks = useMemo(() => {
-    const q = draft.trim().toLowerCase();
+    const q = trimmedDraft.toLowerCase();
     if (!q) return [];
     return tasks
       .filter(
@@ -86,16 +98,20 @@ export function SpotlightSearch({
           (task.notes?.toLowerCase().includes(q) ?? false),
       )
       .slice(0, 4);
-  }, [tasks, draft]);
+  }, [tasks, trimmedDraft]);
 
-  // Filter memos based on draft
+  // Global matching memos: prefer server results once returned; fall back
+  // immediately to memory cache so keystroke feedback is instant.
   const matchingMemos = useMemo(() => {
-    const q = draft.trim().toLowerCase();
-    if (!q) return [];
+    if (!trimmedDraft) return [];
+    if (remoteMemosQuery.data?.memos) {
+      return remoteMemosQuery.data.memos.slice(0, 6);
+    }
+    const q = trimmedDraft.toLowerCase();
     return memos
       .filter((memo) => memo.content.toLowerCase().includes(q))
       .slice(0, 5);
-  }, [memos, draft]);
+  }, [trimmedDraft, remoteMemosQuery.data, memos]);
 
   // Collect all selectable action items
   type SearchActionItem = {
@@ -248,7 +264,7 @@ export function SpotlightSearch({
         <div className="border-b border-border/60 p-2.5">
           <InputGroup className="h-11 border-none bg-transparent shadow-none ring-0 focus-within:ring-0">
             <InputGroupAddon className="pl-1 text-muted-foreground">
-              {isSearching ? (
+              {isSearching || remoteMemosQuery.isFetching ? (
                 <Loader2Icon className="size-4.5 animate-spin text-primary" />
               ) : (
                 <SearchIcon className="size-4.5" />

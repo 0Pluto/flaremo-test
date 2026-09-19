@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { ListPlusIcon } from "lucide-react";
 import {
   Children,
@@ -187,6 +188,17 @@ export const MemoContent = memo(function MemoContent({
                 >
                   {children}
                 </button>
+              );
+            }
+
+            if (href?.startsWith("/memo/")) {
+              return (
+                <Link
+                  className="font-medium text-foreground underline decoration-brand-500/50 underline-offset-2 transition-colors hover:text-brand-600 hover:decoration-brand-500"
+                  to={href}
+                >
+                  {children}
+                </Link>
               );
             }
 
