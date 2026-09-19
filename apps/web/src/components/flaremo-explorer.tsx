@@ -298,7 +298,7 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
           className={cn(
             "inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-left motion-safe:transition-colors motion-safe:duration-150",
             untagged
-              ? "bg-brand-100 font-medium text-brand-700 dark:bg-brand-400/12 dark:text-brand-200"
+              ? "bg-brand-100 text-brand-700 dark:bg-brand-400/12 dark:text-brand-200"
               : "text-muted-foreground hover:bg-muted hover:text-foreground",
           )}
           type="button"
@@ -381,7 +381,7 @@ function TagTree({
           className={cn(
             "group flex items-center gap-1 rounded-md py-0.5 pr-1 text-xs motion-safe:transition-colors motion-safe:duration-150",
             isActive
-              ? "bg-brand-100 font-medium text-brand-700 dark:bg-brand-400/12 dark:text-brand-200"
+              ? "bg-brand-100 text-brand-700 dark:bg-brand-400/12 dark:text-brand-200"
               : "text-muted-foreground hover:bg-muted hover:text-foreground",
           )}
           style={{ paddingLeft: `${depth * 0.75}rem` }}

@@ -239,7 +239,7 @@ export function CalendarPage({ initialDate }: { initialDate?: string }) {
                     className={cn(
                       "rounded-md px-3 py-1 text-xs font-medium motion-safe:transition-all motion-safe:duration-150",
                       viewMode === value
-                        ? "bg-accent font-semibold text-accent-foreground shadow-2xs"
+                        ? "bg-accent text-accent-foreground shadow-2xs"
                         : "text-muted-foreground hover:text-foreground",
                     )}
                     key={value}

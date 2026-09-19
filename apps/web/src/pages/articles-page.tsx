@@ -39,7 +39,7 @@ function editorId(articleId: string): string {
 }
 
 export function ArticlesPage() {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const articlesQuery = useQuery({
@@ -50,7 +50,12 @@ export function ArticlesPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: () => createArticle({ title: "" }),
+    // Seed the declared content language from the author's UI locale. `lang`
+    // drives the SSR page's <html lang>, which in turn picks the Han font face
+    // (:lang(ja) → Hiragino Mincho vs :lang(zh) → Songti); leaving it null made
+    // every article render through the zh-CN fallback, so Japanese articles
+    // came out in Chinese glyphs. Authors can still override it via the API.
+    mutationFn: () => createArticle({ lang: locale, title: "" }),
     onSuccess: ({ article }) => {
       void queryClient.invalidateQueries({ queryKey: ["articles"] });
       navigate({

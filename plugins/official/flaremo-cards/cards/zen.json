@@ -28,7 +28,6 @@
               "font": {
                 "family": "serif",
                 "size": 11,
-                "letterSpacing": 0.8,
                 "color": { "light": "#857f74", "dark": "#9e978b" }
               }
             }
@@ -46,8 +45,7 @@
           "font": {
             "family": "serif",
             "size": 15.5,
-            "lineHeight": 2.0,
-            "letterSpacing": 0.4
+            "lineHeight": 2.0
           }
         }
       },

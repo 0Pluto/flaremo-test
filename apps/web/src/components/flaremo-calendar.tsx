@@ -173,7 +173,7 @@ export const FlareMoCalendar = memo(function FlareMoCalendar({
                     "flex size-6 items-center justify-center rounded-full text-xs tabular-nums font-medium transition-colors",
                     isToday &&
                       "bg-brand-500 font-semibold text-[color:var(--brand-gradient-foreground)] shadow-xs",
-                    isSelected && !isToday && "font-bold text-foreground",
+                    isSelected && !isToday && "font-semibold text-foreground",
                   )}
                 >
                   {day.key.slice(-2)}

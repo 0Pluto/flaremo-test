@@ -291,7 +291,7 @@ export function ShareImageDialog({
               className={cn(
                 "rounded-md px-3 py-1 text-xs motion-safe:transition-colors",
                 card?.id === item.id
-                  ? "bg-accent font-medium text-accent-foreground"
+                  ? "bg-accent text-accent-foreground"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
               key={item.id}

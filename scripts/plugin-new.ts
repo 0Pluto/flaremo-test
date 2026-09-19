@@ -52,13 +52,16 @@ function documentCard(id: string) {
       },
       children: [
         {
+          // Labels are localized text: keep them at 12px or above and leave
+          // letterSpacing/uppercase off by default. Han glyphs smear below
+          // 12px, and tracking tuned for Latin reads loose on Han.
           type: "text",
           text: {
             "zh-CN": "我的卡片",
             "en-US": "My card",
           },
           style: {
-            font: { size: 11, letterSpacing: 1.6, uppercase: true, color: "brand.500" },
+            font: { size: 12, color: "brand.500" },
           },
         },
         {
@@ -79,12 +82,12 @@ function documentCard(id: string) {
             {
               type: "text",
               text: "{brand.product} · {date}",
-              style: { font: { size: 11, color: "#a3a3a3" } },
+              style: { font: { size: 12, color: "#a3a3a3" } },
             },
             {
               type: "text",
               text: "{stats}",
-              style: { font: { size: 11, color: "#a3a3a3" } },
+              style: { font: { size: 12, color: "#a3a3a3" } },
             },
           ],
         },
@@ -117,13 +120,13 @@ function sandboxEntry(title: string) {
     font-family: system-ui, -apple-system, sans-serif;
   }
   .label {
-    font-size: 11px;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
+    /* Author-replaceable label: 12px floor and no tracking/uppercase, so it
+       stays legible once it holds Han text. */
+    font-size: 12px;
     color: var(--accent, #ff6a00);
   }
   .body { flex: 1; font-size: 15px; line-height: 1.8; white-space: pre-wrap; overflow: hidden; }
-  .foot { display: flex; justify-content: space-between; font-size: 11px; color: #a3a3a3; }
+  .foot { display: flex; justify-content: space-between; font-size: 12px; color: #a3a3a3; }
 </style>
 </head>
 <body>

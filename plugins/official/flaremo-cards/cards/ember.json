@@ -46,7 +46,6 @@
             "style": {
               "font": {
                 "size": 11,
-                "letterSpacing": 0.4,
                 "color": { "light": "#9a6b52", "dark": "#c2957e" }
               }
             }

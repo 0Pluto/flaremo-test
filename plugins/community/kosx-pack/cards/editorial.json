@@ -48,7 +48,6 @@
             "style": {
               "font": {
                 "size": 11,
-                "letterSpacing": 0.4,
                 "color": { "light": "#71717a", "dark": "#a1a1aa" }
               }
             }
@@ -76,8 +75,7 @@
           "clamp": 13,
           "font": {
             "size": 15,
-            "lineHeight": 1.9,
-            "letterSpacing": 0.1
+            "lineHeight": 1.9
           }
         }
       },

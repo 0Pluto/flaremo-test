@@ -241,7 +241,7 @@ export function InteractiveShowcase({
                   <div className="text-base font-extrabold text-ink tabular-nums">
                     {totalCount}
                   </div>
-                  <div className="text-[10px] text-mist">
+                  <div className="text-xs text-mist">
                     {showcase.ui.statsRecords}
                   </div>
                 </div>
@@ -249,7 +249,7 @@ export function InteractiveShowcase({
                   <div className="text-base font-extrabold text-ink tabular-nums">
                     {tagList.length}
                   </div>
-                  <div className="text-[10px] text-mist">
+                  <div className="text-xs text-mist">
                     {showcase.ui.statsTags}
                   </div>
                 </div>
@@ -257,7 +257,7 @@ export function InteractiveShowcase({
                   <div className="text-base font-extrabold text-ink tabular-nums">
                     1
                   </div>
-                  <div className="text-[10px] text-mist">
+                  <div className="text-xs text-mist">
                     {showcase.ui.statsDays}
                   </div>
                 </div>
@@ -265,7 +265,7 @@ export function InteractiveShowcase({
 
               {/* 贡献热力图卡片 */}
               <div className="space-y-2">
-                <div className="flex rounded-lg bg-soft-surface p-0.5 border border-line/60 text-[10px] font-semibold text-mist">
+                <div className="flex rounded-lg bg-soft-surface p-0.5 border border-line/60 text-xs font-semibold text-mist">
                   <button
                     type="button"
                     onClick={() => setTimeViewTab("trend")}
@@ -309,7 +309,7 @@ export function InteractiveShowcase({
                       />
                     ))}
                   </div>
-                  <div className="flex justify-between text-[9px] text-fog font-mono px-0.5">
+                  <div className="flex justify-between text-xs text-fog font-mono px-0.5">
                     {showcase.ui.months.map((m) => (
                       <span key={m}>{m}</span>
                     ))}
@@ -401,7 +401,7 @@ export function InteractiveShowcase({
 
               {/* 标签列表 */}
               <div className="pt-2 border-t border-line/40 space-y-1">
-                <div className="text-[10px] font-bold text-fog px-2">
+                <div className="text-xs font-bold text-fog px-2">
                   {showcase.ui.tagIndex}
                 </div>
                 <div className="space-y-0.5">
@@ -568,7 +568,7 @@ export function InteractiveShowcase({
                         )}
 
                         {/* 卡片底部操作栏 */}
-                        <div className="flex items-center justify-between pt-1 border-t border-line/40 text-[11px] text-fog font-mono">
+                        <div className="flex items-center justify-between pt-1 border-t border-line/40 text-xs text-fog font-mono">
                           <span>
                             {showcase.ui.recordPrefix} {m.orderNumber}
                           </span>
@@ -576,7 +576,7 @@ export function InteractiveShowcase({
                             {m.tags.map((t) => (
                               <span
                                 key={t}
-                                className="rounded-full bg-soft-surface px-2 py-0.5 text-[10px] text-mist"
+                                className="rounded-full bg-soft-surface px-2 py-0.5 text-xs text-mist"
                               >
                                 #{t}
                               </span>
@@ -643,7 +643,7 @@ export function InteractiveShowcase({
                   <button
                     type="button"
                     onClick={() => setActiveTag(null)}
-                    className="text-[10px] text-mist hover:text-ink cursor-pointer font-medium"
+                    className="text-xs text-mist hover:text-ink cursor-pointer font-medium"
                   >
                     {showcase.ui.clearFilter}
                   </button>
@@ -664,7 +664,7 @@ export function InteractiveShowcase({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={showcase.ui.searchPlaceholder}
-                  className="w-full h-7 pl-7 pr-3 rounded-full border border-line/70 bg-surface text-[11px] text-ink placeholder:text-fog focus:outline-none"
+                  className="w-full h-7 pl-7 pr-3 rounded-full border border-line/70 bg-surface text-xs text-ink placeholder:text-fog focus:outline-none"
                 />
               </div>
 
@@ -751,7 +751,7 @@ export function InteractiveShowcase({
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
                             <span className="size-3.5 rounded-full border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 shrink-0" />
-                            <span className="text-[10px] text-mist">
+                            <span className="text-xs text-mist">
                               {m.timeLabel}
                             </span>
                           </div>
@@ -760,11 +760,11 @@ export function InteractiveShowcase({
                         <div className="font-bold text-ink text-xs line-clamp-1">
                           {m.title}
                         </div>
-                        <p className="text-[11px] text-mist line-clamp-2 leading-relaxed">
+                        <p className="text-xs text-mist line-clamp-2 leading-relaxed">
                           {m.content}
                         </p>
                         {m.quote && (
-                          <div className="border-l-2 border-signal/70 pl-2 text-[10px] italic text-ink/80 bg-wash/60 py-1 rounded-r-md">
+                          <div className="border-l-2 border-signal/70 pl-2 text-xs text-ink/80 bg-wash/60 py-1 rounded-r-md">
                             {m.quote}
                           </div>
                         )}
@@ -773,7 +773,7 @@ export function InteractiveShowcase({
                             {m.tags.map((t) => (
                               <span
                                 key={t}
-                                className="rounded-full bg-flame-50 dark:bg-flame-950/50 px-2 py-0.5 text-[9px] text-flame-600 dark:text-flame-400 font-medium"
+                                className="rounded-full bg-flame-50 dark:bg-flame-950/50 px-2 py-0.5 text-xs text-flame-600 dark:text-flame-400 font-medium"
                               >
                                 #{t}
                               </span>
@@ -845,7 +845,7 @@ export function InteractiveShowcase({
                           <div className="text-sm font-extrabold text-ink tabular-nums">
                             {totalCount}
                           </div>
-                          <div className="text-[9px] text-mist">
+                          <div className="text-xs text-mist">
                             {showcase.ui.statsRecords}
                           </div>
                         </div>
@@ -853,7 +853,7 @@ export function InteractiveShowcase({
                           <div className="text-sm font-extrabold text-ink tabular-nums">
                             {tagList.length}
                           </div>
-                          <div className="text-[9px] text-mist">
+                          <div className="text-xs text-mist">
                             {showcase.ui.statsTags}
                           </div>
                         </div>
@@ -861,7 +861,7 @@ export function InteractiveShowcase({
                           <div className="text-sm font-extrabold text-ink tabular-nums">
                             1
                           </div>
-                          <div className="text-[9px] text-mist">
+                          <div className="text-xs text-mist">
                             {showcase.ui.statsDays}
                           </div>
                         </div>
@@ -884,7 +884,7 @@ export function InteractiveShowcase({
                             />
                           ))}
                         </div>
-                        <div className="flex justify-between text-[8px] text-fog font-mono px-0.5">
+                        <div className="flex justify-between text-xs text-fog font-mono px-0.5">
                           <span>{showcase.ui.months[1]}</span>
                           <span>{showcase.ui.months[2]}</span>
                           <span>{showcase.ui.months[3]}</span>
@@ -892,7 +892,7 @@ export function InteractiveShowcase({
                       </div>
 
                       {/* 菜单列表 */}
-                      <nav className="space-y-0.5 font-semibold text-[11px]">
+                      <nav className="space-y-0.5 font-semibold text-xs">
                         <button
                           type="button"
                           onClick={() => {
@@ -962,7 +962,7 @@ export function InteractiveShowcase({
                       </nav>
 
                       {/* 快捷视图 */}
-                      <div className="pt-2 border-t border-line/40 space-y-0.5 text-[11px] text-mist">
+                      <div className="pt-2 border-t border-line/40 space-y-0.5 text-xs text-mist">
                         {[
                           { icon: Zap, label: showcase.ui.dailyReview },
                           { icon: Footprints, label: showcase.ui.randomWalk },
@@ -987,7 +987,7 @@ export function InteractiveShowcase({
 
                       {/* 标签列表 */}
                       <div className="pt-2 border-t border-line/40 space-y-1">
-                        <div className="text-[10px] font-bold text-fog px-2">
+                        <div className="text-xs font-bold text-fog px-2">
                           {showcase.ui.tagIndex}
                         </div>
                         <div className="space-y-0.5">
@@ -1002,7 +1002,7 @@ export function InteractiveShowcase({
                                 setMobileDrawerOpen(false);
                               }}
                               className={cn(
-                                "w-full flex items-center justify-between px-2 py-1 rounded-lg text-[11px] transition-colors cursor-pointer",
+                                "w-full flex items-center justify-between px-2 py-1 rounded-lg text-xs transition-colors cursor-pointer",
                                 activeTag === tag.name
                                   ? "bg-signal/15 text-signal-ink font-bold"
                                   : "text-mist hover:text-ink hover:bg-wash",

@@ -59,7 +59,7 @@ export function DocsDetailPage() {
             if (docsInGroup.length === 0) return null;
             return (
               <div key={group.id} className="space-y-1.5">
-                <div className="text-[11px] font-bold uppercase tracking-wider text-fog px-2">
+                <div className="text-xs font-bold uppercase tracking-wider text-fog px-2">
                   {group.label}
                 </div>
                 <ul className="space-y-0.5">

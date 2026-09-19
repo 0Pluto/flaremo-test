@@ -97,7 +97,7 @@ export function ProjectsPage() {
               className={
                 "flex h-10 items-center gap-3 rounded-lg px-3 text-sm " +
                 (selected === ALL_TASKS
-                  ? "bg-muted font-medium text-foreground"
+                  ? "bg-muted text-foreground"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground")
               }
               type="button"

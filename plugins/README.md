@@ -123,8 +123,17 @@ the friendliest path for non-developers. Full example:
 `width`/`height`, `flex`, `align`, `justify`, `position` + `top/right/bottom/left`,
 `overflow`, `rotate`); appearance (`background`, `backgroundCSS` gradients,
 `borderWidth`/`borderColor`/`borderStyle`, `borderRadius`, `shadow`
-(`none|sm|md|lg`) or `shadowCSS`, `opacity`); text (`font.size/weight/lineHeight/letterSpacing/align/uppercase/color`,
+(`none|sm|md|lg`) or `shadowCSS`, `opacity`); text (`font.family/…` see below,
+`font.size/weight/lineHeight/letterSpacing/align/uppercase/color`,
 `clamp` for line truncation). Unknown keys warn and are ignored.
+
+**Fonts** — `font.family` picks one of four built-in stacks: `sans`,
+`heading`, `serif`, `mono` (the app's own font tiers). Packaged webfonts are
+**not supported**: any other value warns and the node falls back to the
+inherited family, and the host never injects `@font-face`. Han glyphs come
+from the host's language-scoped system fallback, so keep body text at 12px or
+above and leave `letterSpacing` off — negative tracking smears Han strokes,
+and inline card styles bypass the app's CJK tracking reset.
 
 **Colors** — `#rgb` / `#rrggbb` / `#rrggbbaa`, a `{ "light": …, "dark": … }`
 pair, an app token (`foreground`, `background`, `card`, `muted`, `border`), or

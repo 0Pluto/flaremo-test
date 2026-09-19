@@ -136,6 +136,18 @@ describe("micro text sizes", () => {
   );
   const TOO_SMALL = ["text-[10px]", "text-[11px]", "text-[0.65rem]"];
 
+  /** Resolves `t(x.someKey)` by finding `someKey: "<i18n.key>"` assignments in
+   *  the same file and looking those keys up in the catalog. This is the shape
+   *  that hid `account-page.tsx`'s 11px group headings from an earlier version
+   *  of this guard, which only understood literal keys. */
+  const valuesOfMemberKeys = (
+    memberName: string,
+    fileText: string,
+  ): string[] =>
+    [...fileText.matchAll(new RegExp(`\\b${memberName}:\\s*"([\\w.]+)"`, "g"))]
+      .map((m) => ZH.get(m[1]))
+      .filter((v): v is string => Boolean(v));
+
   it("keeps translated text at 12px or larger", () => {
     const offenders: string[] = [];
     /** Where the opening tag that starts at line `i` ends, or null. Braces are
@@ -181,7 +193,8 @@ describe("micro text sizes", () => {
         }
         if (!entry.name.endsWith(".tsx")) continue;
         if (entry.name.includes(".test.")) continue;
-        const lines = readFileSync(child, "utf8").split("\n");
+        const source = readFileSync(child, "utf8");
+        const lines = source.split("\n");
         lines.forEach((line, i) => {
           const size = TOO_SMALL.find((s) => line.includes(s));
           if (!size) return;
@@ -193,9 +206,19 @@ describe("micro text sizes", () => {
             lines[end.line].slice(end.col) +
             "\n" +
             lines.slice(end.line + 1, end.line + 5).join("\n");
+          // Two call shapes reach the catalog: a literal key, and a key
+          // assembled from a variable (`t(group.titleKey)`), which is how a
+          // real offender hid from an earlier version of this guard. For the
+          // variable form, look up every value of the object it indexes.
           const keys = [...children.matchAll(/\bt\("([\w.]+)"/g)].map((m) =>
             ZH.get(m[1]),
           );
+          const varForms = [
+            ...children.matchAll(/\bt\(([A-Za-z_$][\w$]*)\.([\w.]+)\)/g),
+          ];
+          for (const [, , memberName] of varForms) {
+            keys.push(...valuesOfMemberKeys(memberName, source));
+          }
           const rendered = keys.filter((v) => v && HAN.test(v));
           if (rendered.length > 0) {
             offenders.push(

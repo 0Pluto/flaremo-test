@@ -22,7 +22,6 @@
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 11px;
     line-height: 1.6;
-    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: #8a8072;
   }
@@ -50,7 +49,8 @@
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 10px;
     line-height: 1.5;
-    letter-spacing: 0.14em;
+    /* This line reads "已阅" for zh-CN and "FILED" otherwise; tracking tuned
+       for the Latin branch would spread the Han one. */
     text-transform: uppercase;
     color: var(--ink, #c2410c);
     opacity: 0.85;

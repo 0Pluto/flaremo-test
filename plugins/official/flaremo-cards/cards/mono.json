@@ -53,8 +53,7 @@
           "font": {
             "family": "mono",
             "size": 13.5,
-            "lineHeight": 1.85,
-            "letterSpacing": -0.2
+            "lineHeight": 1.85
           }
         }
       },

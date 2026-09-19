@@ -54,7 +54,6 @@
             "style": {
               "font": {
                 "size": 12,
-                "letterSpacing": 0.3,
                 "color": { "light": "#78716c", "dark": "#a8a29e" }
               }
             }

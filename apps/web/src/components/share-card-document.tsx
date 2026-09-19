@@ -13,6 +13,7 @@ import {
   type SvgNode,
 } from "@flaremo/plugins";
 import type { CSSProperties, ElementType, ReactNode } from "react";
+import { isHanLocale } from "@/lib/han-locale";
 
 /**
  * Renders a share-card document (data, not code) into DOM. Every style field
@@ -69,9 +70,14 @@ export function isSafeImageSource(src: string): boolean {
   );
 }
 
+/** Consumes the share-card's locale to decide letter-spacing, so the rule
+ *  cannot be bypassed the way a stylesheet would be: plugin values arrive as
+ *  inline styles, which outrank every stylesheet declaration, and the exported
+ *  PNG rasterizes this same DOM. */
 function styleToCSS(
   style: DocumentStyle | undefined,
   mode: "light" | "dark",
+  zeroTracking: boolean,
 ): CSSProperties {
   const css: CSSProperties = {};
   if (!style) return css;
@@ -168,7 +174,10 @@ function styleToCSS(
     if (font.size !== undefined) css.fontSize = font.size;
     if (font.weight !== undefined) css.fontWeight = font.weight;
     if (font.lineHeight !== undefined) css.lineHeight = font.lineHeight;
-    if (font.letterSpacing !== undefined)
+    // Han text ignores plugin tracking: card fonts are Han-capable for zh/ja/ko
+    // users, tracking spreads or pinches ideographs, and the value would be
+    // baked into the exported PNG. Latin-only cards keep their tracked look.
+    if (font.letterSpacing !== undefined && !zeroTracking)
       css.letterSpacing = font.letterSpacing;
     if (font.align) css.textAlign = TEXT_ALIGN[font.align];
     if (font.uppercase) css.textTransform = "uppercase";
@@ -235,10 +244,11 @@ function renderNode(
   mode: "light" | "dark",
   key: number,
 ): ReactNode {
+  const zeroTracking = isHanLocale(ctx.data.locale);
   switch (node.type) {
     case "row":
     case "column": {
-      const css = styleToCSS(node.style, mode);
+      const css = styleToCSS(node.style, mode, zeroTracking);
       return (
         <div
           key={key}
@@ -269,7 +279,7 @@ function renderNode(
             whiteSpace: "pre-wrap",
             wordBreak: "break-word",
             minWidth: 0,
-            ...styleToCSS(node.style, mode),
+            ...styleToCSS(node.style, mode, zeroTracking),
           }}
         >
           {content}
@@ -287,13 +297,13 @@ function renderNode(
           style={{
             display: "block",
             maxWidth: "100%",
-            ...styleToCSS(node.style, mode),
+            ...styleToCSS(node.style, mode, zeroTracking),
           }}
         />
       );
     }
     case "svg": {
-      const css = styleToCSS(node.style, mode);
+      const css = styleToCSS(node.style, mode, zeroTracking);
       return (
         <svg
           aria-hidden="true"
@@ -309,7 +319,7 @@ function renderNode(
       );
     }
     case "divider": {
-      const css = styleToCSS(node.style, mode);
+      const css = styleToCSS(node.style, mode, zeroTracking);
       return (
         <div
           key={key}
@@ -330,7 +340,7 @@ function renderNode(
         <div
           aria-hidden="true"
           key={key}
-          style={styleToCSS(node.style, mode)}
+          style={styleToCSS(node.style, mode, zeroTracking)}
         />
       );
     default:

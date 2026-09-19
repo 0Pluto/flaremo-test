@@ -724,7 +724,7 @@ export function AccountSettingsDialog({
         >
           {/* Mobile Master Navigation Bar */}
           <div className="flex shrink-0 items-center justify-between border-b bg-background/90 px-4 py-3 backdrop-blur-md">
-            <DialogTitle className="text-lg font-bold tracking-tight">
+            <DialogTitle className="text-lg font-semibold tracking-tight">
               {t("settings.title")}
             </DialogTitle>
             <Button
@@ -749,7 +749,7 @@ export function AccountSettingsDialog({
               className="flex w-full items-center justify-between gap-3.5 rounded-2xl border border-border/60 bg-card p-4 text-left shadow-2xs cursor-pointer hover:bg-accent/40 active:bg-accent/60 transition-colors"
             >
               <div className="flex min-w-0 items-center gap-3.5">
-                <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xl font-bold text-primary">
+                <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xl font-semibold text-primary">
                   {(session.data?.user.username ?? "?")
                     .slice(0, 1)
                     .toUpperCase()}
@@ -871,7 +871,7 @@ export function AccountSettingsDialog({
               section === "profile" ? "bg-accent/70" : "hover:bg-accent/40",
             )}
           >
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
               {(session.data?.user.username ?? "?").slice(0, 1).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
@@ -892,7 +892,7 @@ export function AccountSettingsDialog({
                 className="flex flex-col gap-0.5"
               >
                 {group.titleKey && (
-                  <div className="px-2.5 pb-1 text-[11px] font-medium text-muted-foreground/80 tracking-wider">
+                  <div className="px-2.5 pb-1 text-xs font-medium text-muted-foreground/80 tracking-wider">
                     {t(group.titleKey)}
                   </div>
                 )}
@@ -907,7 +907,7 @@ export function AccountSettingsDialog({
                       className={cn(
                         "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors text-left",
                         active
-                          ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
+                          ? "bg-primary text-primary-foreground shadow-2xs"
                           : "text-foreground hover:bg-accent/60",
                       )}
                     >
