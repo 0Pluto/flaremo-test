@@ -948,7 +948,7 @@ function AccentPicker({
               key={accent}
               aria-label={t("admin.branding.accentCustom")}
               aria-pressed={isCustom}
-              className="size-6 shrink-0 rounded-full border transition-all focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-50 data-[active=true]:ring-[2px] data-[active=true]:ring-ring data-[active=true]:ring-offset-2 data-[active=true]:ring-offset-background"
+              className="size-6 shrink-0 rounded-full border transition-all focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-50 data-[active=true]:ring-[2px] data-[active=true]:ring-ring data-[active=true]:ring-offset-2 data-[active=true]:ring-offset-background"
               data-active={isCustom}
               disabled={disabled}
               style={{
@@ -969,7 +969,7 @@ function AccentPicker({
             key={accent}
             aria-label={t(`admin.branding.accent_${accent}`)}
             aria-pressed={active}
-            className="size-6 shrink-0 rounded-full border transition-all focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-50 data-[active=true]:ring-[2px] data-[active=true]:ring-ring data-[active=true]:ring-offset-2 data-[active=true]:ring-offset-background"
+            className="size-6 shrink-0 rounded-full border transition-all focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-50 data-[active=true]:ring-[2px] data-[active=true]:ring-ring data-[active=true]:ring-offset-2 data-[active=true]:ring-offset-background"
             data-active={active}
             disabled={disabled}
             style={{ backgroundColor: ACCENT_SWATCH_HEX[accent] }}

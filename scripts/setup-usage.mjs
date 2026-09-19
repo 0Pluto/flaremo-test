@@ -120,7 +120,9 @@ async function main() {
       accounts.forEach((id, index) => {
         console.log(`  ${index + 1}. ${id}`);
       });
-      const pickedIndex = await prompt(`Select account [1-${accounts.length}]: `);
+      const pickedIndex = await prompt(
+        `Select account [1-${accounts.length}]: `,
+      );
       const picked = accounts[Number.parseInt(pickedIndex, 10) - 1];
       if (!picked) throw new Error("Invalid account selection.");
       accountId = picked;
@@ -146,7 +148,9 @@ async function main() {
       `${SECRET_NAMES.token} is already set; keeping it (use --reset to replace).`,
     );
   } else if (token) {
-    console.log(`${SECRET_NAMES.token} provided via environment; skipping prompt.`);
+    console.log(
+      `${SECRET_NAMES.token} provided via environment; skipping prompt.`,
+    );
   } else {
     console.log(
       [

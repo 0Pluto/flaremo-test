@@ -169,57 +169,59 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
           ))}
         </div>
         <div className="min-h-[14.5rem]">
-          {timeView === "trend" ? (
-            <>
-              <div
-                className="grid grid-flow-col grid-rows-7 gap-1"
-                data-testid="activity-heatmap"
-              >
-                {stats.activity.map((day) =>
-                  onDaySelect ? (
-                    <button
-                      className={cn(
-                        "aspect-square rounded-[3px] motion-safe:transition-[opacity,transform] motion-safe:duration-150 hover:opacity-85 motion-safe:hover:scale-110",
-                        heatmapColor(day.count),
-                      )}
-                      key={day.date}
-                      title={t("explorer.heatmapDay", {
-                        count: day.count,
-                        date: day.date,
-                      })}
-                      type="button"
-                      onClick={() => onDaySelect(day.date)}
-                    />
-                  ) : (
-                    <div
-                      aria-hidden="true"
-                      className={cn(
-                        "aspect-square rounded-[3px] motion-safe:transition-[opacity,transform] motion-safe:duration-150 hover:opacity-85 motion-safe:hover:scale-110",
-                        heatmapColor(day.count),
-                      )}
-                      key={day.date}
-                      title={t("explorer.heatmapDay", {
-                        count: day.count,
-                        date: day.date,
-                      })}
-                    />
-                  ),
-                )}
-              </div>
-              <div
-                aria-hidden="true"
-                className="mt-2 grid grid-cols-12 gap-1 px-1 text-xs text-muted-foreground"
-              >
-                {monthLabels.map((month) => (
-                  <span className="whitespace-nowrap" key={month.date}>
-                    {month.label}
-                  </span>
-                ))}
-              </div>
-            </>
-          ) : (
-            <MiniCalendarPanel activity={stats.activity} />
-          )}
+          <div key={timeView} className="motion-safe:animate-fade">
+            {timeView === "trend" ? (
+              <>
+                <div
+                  className="grid grid-flow-col grid-rows-7 gap-1"
+                  data-testid="activity-heatmap"
+                >
+                  {stats.activity.map((day) =>
+                    onDaySelect ? (
+                      <button
+                        className={cn(
+                          "aspect-square rounded-[3px] motion-safe:transition-[opacity,transform] motion-safe:duration-150 hover:opacity-85 motion-safe:hover:scale-110",
+                          heatmapColor(day.count),
+                        )}
+                        key={day.date}
+                        title={t("explorer.heatmapDay", {
+                          count: day.count,
+                          date: day.date,
+                        })}
+                        type="button"
+                        onClick={() => onDaySelect(day.date)}
+                      />
+                    ) : (
+                      <div
+                        aria-hidden="true"
+                        className={cn(
+                          "aspect-square rounded-[3px] motion-safe:transition-[opacity,transform] motion-safe:duration-150 hover:opacity-85 motion-safe:hover:scale-110",
+                          heatmapColor(day.count),
+                        )}
+                        key={day.date}
+                        title={t("explorer.heatmapDay", {
+                          count: day.count,
+                          date: day.date,
+                        })}
+                      />
+                    ),
+                  )}
+                </div>
+                <div
+                  aria-hidden="true"
+                  className="mt-2 grid grid-cols-12 gap-1 px-1 text-xs text-muted-foreground"
+                >
+                  {monthLabels.map((month) => (
+                    <span className="whitespace-nowrap" key={month.date}>
+                      {month.label}
+                    </span>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <MiniCalendarPanel activity={stats.activity} />
+            )}
+          </div>
         </div>
       </section>
 
@@ -453,7 +455,7 @@ function TagTree({
           />
         )}
         {hasChildren && !isCollapsed && (
-          <div className="flex flex-col">
+          <div className="flex flex-col motion-safe:animate-fade">
             {node.children.map((child) => renderNode(child, depth + 1))}
           </div>
         )}

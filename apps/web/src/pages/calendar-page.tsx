@@ -338,6 +338,7 @@ export function CalendarPage({ initialDate }: { initialDate?: string }) {
             <div className="w-full shrink-0 lg:w-[410px] xl:w-[440px]">
               <div className="lg:sticky lg:top-6">
                 <DayInspector
+                  key={selected}
                   day={selected}
                   noteTasks={selectedCell?.note_tasks ?? 0}
                   notesCount={selectedCell?.notes ?? 0}
@@ -506,7 +507,7 @@ function DayInspector({
   };
 
   return (
-    <Card className="border-border/60 bg-card shadow-xs">
+    <Card className="border-border/60 bg-card shadow-xs motion-safe:animate-fade">
       <CardContent className="flex flex-col gap-4 p-4 sm:p-5">
         {/* Day Header */}
         <div className="flex flex-col gap-2 pb-3 border-b border-border/60">
@@ -564,9 +565,7 @@ function DayInspector({
           </div>
 
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span className="text-xs">
-              {formatFullDayHeader(day, locale)}
-            </span>
+            <span className="text-xs">{formatFullDayHeader(day, locale)}</span>
             <span className="tabular-nums">
               {t("calendar.notesCount", { count: memos.length || notesCount })}{" "}
               · {t("calendar.dayTasks", { count: tasks.length })}

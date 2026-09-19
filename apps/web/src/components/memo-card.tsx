@@ -513,8 +513,8 @@ export const MemoCard = memo(function MemoCard({
           <div className="relative">
             <div
               className={cn(
-                collapsed && "max-h-52 overflow-hidden",
-                !collapsed && "transition-[max-height]",
+                "overflow-hidden motion-safe:transition-[max-height] motion-safe:duration-300 motion-safe:ease-signal",
+                collapsed ? "max-h-52" : "max-h-[3000px]",
               )}
             >
               <LazyMemoContent
@@ -525,9 +525,13 @@ export const MemoCard = memo(function MemoCard({
                 onConvertTask={taskInteraction?.onConvertTask}
               />
             </div>
-            {collapsed && (
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-card to-transparent" />
-            )}
+            <div
+              aria-hidden="true"
+              className={cn(
+                "pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-card to-transparent motion-safe:transition-opacity motion-safe:duration-200",
+                collapsed ? "opacity-100" : "opacity-0",
+              )}
+            />
           </div>
           {isCollapsible && (
             <Button

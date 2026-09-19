@@ -17,7 +17,7 @@ export function LocaleSwitcher({ className }: { className?: string }) {
       <DropdownMenuTrigger
         aria-label={t("language.toggle")}
         className={cn(
-          "inline-flex h-7 items-center gap-1 rounded-lg px-2 text-xs font-medium text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 cursor-pointer",
+          "inline-flex h-7 items-center gap-1 rounded-lg px-2 text-xs font-medium text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 cursor-pointer",
           className,
         )}
         title={t("language.toggle")}

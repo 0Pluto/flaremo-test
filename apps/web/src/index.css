@@ -169,10 +169,11 @@
 
     /* Liquid Glass material (docs/liquid-glass-design.md). Neutral by design:
        [data-accent] presets never tint the glass, so the accent matrix stays
-       8 presets x 2 themes regardless of the material. */
+       8 presets x 2 themes regardless of the material. Tint alpha is tuned
+       for text contrast first (readability pass 2026-09-19). */
     --glass-blur: 18px;
-    --glass-saturate: 1.7;
-    --glass-tint: oklch(1 0 0 / 0.62);
+    --glass-saturate: 1.5;
+    --glass-tint: oklch(1 0 0 / 0.78);
     --glass-rim: oklch(1 0 0 / 0.9);
     --glass-edge: oklch(1 0 0 / 0.28);
     --glass-shadow: oklch(0.2 0.02 60 / 0.16);
@@ -213,7 +214,7 @@
     --shadow-lg: 0 0 0 transparent;
     /* Dark hierarchy comes from tint depth, not shadows — same rule as the
        shadow tokens above. */
-    --glass-tint: oklch(0.22 0.012 60 / 0.55);
+    --glass-tint: oklch(0.22 0.012 60 / 0.70);
     --glass-rim: oklch(1 0 0 / 0.24);
     --glass-edge: oklch(1 0 0 / 0.08);
     --glass-shadow: transparent;
@@ -603,7 +604,7 @@
      reading feel like the same surface, minus read-view extras (heading
      anchors, image frames). The box grows with content up to a cap. */
   .composer-editor-content {
-    @apply min-h-32 max-h-80 overflow-y-auto px-4 pt-4 pb-2 text-[15px] leading-7 outline-none;
+    @apply min-h-32 max-h-80 overflow-y-auto px-4 pt-4 pb-2 text-[15px] leading-7 outline-none motion-safe:transition-[min-height,max-height,padding] motion-safe:duration-200 motion-safe:ease-signal;
   }
 
   /* Article editor body: same typography as the reading surface, but

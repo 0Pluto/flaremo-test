@@ -51,7 +51,7 @@ export function CaptureButton({
       className={cn(
         "relative flex size-[72px] items-center justify-center rounded-full",
         "transition-[background-color,border-color,color,transform] duration-[140ms]",
-        "outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+        "outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
         "active:scale-95 disabled:pointer-events-none disabled:opacity-50",
         state === "recording"
           ? "bg-destructive text-white hover:bg-destructive/90 dark:text-background"
@@ -94,7 +94,7 @@ export function CapturePauseButton({
       className={cn(
         "flex size-12 items-center justify-center rounded-full border border-border",
         "bg-background text-foreground hover:bg-muted",
-        "outline-none transition-colors duration-[140ms] focus-visible:ring-3 focus-visible:ring-ring/50",
+        "outline-none transition-colors duration-[140ms] focus-visible:ring-2 focus-visible:ring-ring/50",
         "active:scale-95",
       )}
     >

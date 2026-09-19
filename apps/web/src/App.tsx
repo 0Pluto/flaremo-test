@@ -594,16 +594,21 @@ export function FlareMoApp() {
   return (
     <div className="h-svh overflow-hidden bg-background">
       <div className="mx-auto flex h-full w-full max-w-[950px]">
-        <div
+        <aside
+          aria-hidden={sidebarCollapsed}
           className={cn(
-            "no-scrollbar h-full w-[312px] shrink-0 overflow-y-auto border-r bg-background",
-            sidebarCollapsed ? "hidden" : "hidden lg:block",
+            "hidden lg:block h-full shrink-0 overflow-hidden motion-safe:transition-[width,opacity] motion-safe:duration-250 motion-safe:ease-signal",
+            sidebarCollapsed
+              ? "w-0 opacity-0 pointer-events-none"
+              : "w-[312px] opacity-100",
           )}
         >
-          {renderExplorer("flaremo-import-file-desktop", {
-            showCollapse: true,
-          })}
-        </div>
+          <div className="no-scrollbar h-full w-[312px] overflow-y-auto border-r bg-background">
+            {renderExplorer("flaremo-import-file-desktop", {
+              showCollapse: true,
+            })}
+          </div>
+        </aside>
         <div className="flex h-full min-w-0 flex-1 flex-col">
           <header
             className={cn(
@@ -615,14 +620,20 @@ export function FlareMoApp() {
           >
             <div
               className={cn(
-                "flex h-14 items-center gap-2 px-5 lg:px-3",
+                "flex h-14 items-center gap-2 px-5 lg:px-3 motion-safe:transition-[max-width,padding] motion-safe:duration-250 motion-safe:ease-signal",
                 sidebarCollapsed && "mx-auto w-full max-w-[640px]",
               )}
             >
-              {sidebarCollapsed && (
+              <div
+                className={cn(
+                  "hidden lg:flex items-center overflow-hidden motion-safe:transition-[width,opacity,margin] motion-safe:duration-250 motion-safe:ease-signal",
+                  sidebarCollapsed
+                    ? "w-8 opacity-100"
+                    : "w-0 opacity-0 pointer-events-none -mr-2",
+                )}
+              >
                 <Button
                   aria-label={t("sidebar.expand")}
-                  className="hidden lg:inline-flex"
                   size="icon-sm"
                   title={t("sidebar.expand")}
                   variant="ghost"
@@ -630,7 +641,7 @@ export function FlareMoApp() {
                 >
                   <PanelLeftOpenIcon />
                 </Button>
-              )}
+              </div>
               <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
                 <SheetTrigger
                   render={

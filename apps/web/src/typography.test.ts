@@ -75,7 +75,9 @@ describe("share card font tiers", () => {
     const list = (pattern: RegExp) =>
       css.match(pattern)?.[1].replace(/\s+/g, " ").trim() ?? "";
     const zh = list(/:root\s*\{[^}]*--font-cjk-serif:\s*([\s\S]*?);/);
-    const ja = list(/:root:lang\(ja\)\s*\{[^}]*--font-cjk-serif:\s*([\s\S]*?);/);
+    const ja = list(
+      /:root:lang\(ja\)\s*\{[^}]*--font-cjk-serif:\s*([\s\S]*?);/,
+    );
 
     expect(zh).toMatch(/^"Songti SC"/);
     expect(ja).toMatch(/Mincho/);

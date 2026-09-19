@@ -719,6 +719,7 @@ export function AccountSettingsDialog({
           className={cn(
             "flex flex-1 flex-col overflow-hidden bg-background sm:hidden",
             mobileView === "detail" && "hidden",
+            mobileView === "master" && "motion-safe:animate-fade",
           )}
         >
           {/* Mobile Master Navigation Bar */}
@@ -814,6 +815,7 @@ export function AccountSettingsDialog({
           className={cn(
             "flex flex-1 flex-col overflow-hidden bg-background sm:hidden",
             mobileView === "master" && "hidden",
+            mobileView === "detail" && "motion-safe:animate-fade",
           )}
         >
           {/* Mobile Detail Navigation Bar */}
@@ -841,7 +843,10 @@ export function AccountSettingsDialog({
 
           {/* Mobile Detail Body */}
           <div className="flex-1 overflow-y-auto p-4">
-            <div className="flex flex-col gap-4">
+            <div
+              className="flex flex-col gap-4 motion-safe:animate-fade"
+              key={section}
+            >
               {contentBySection[section]}
             </div>
           </div>
@@ -959,7 +964,10 @@ export function AccountSettingsDialog({
           {/* Desktop Detail Body */}
           <div className="flex-1 overflow-y-auto">
             <div className="mx-auto w-full max-w-2xl px-6 py-6">
-              <div className="flex flex-col gap-4">
+              <div
+                className="flex flex-col gap-4 motion-safe:animate-fade"
+                key={section}
+              >
                 {contentBySection[section]}
               </div>
             </div>
