@@ -309,7 +309,7 @@ export const MemoCard = memo(function MemoCard({
           {/* flomo's header rule: identity only, no placeholders. The
               timestamp is the sole anchor; hovering swaps relative for the
               absolute instant, so both facts live in one pixel row. */}
-          <span className="truncate tabular-nums">
+          <span className="truncate">
             <span className="group-hover:hidden">
               {formatMemoRelativeTime(memo.display_time, locale)}
             </span>

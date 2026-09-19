@@ -389,7 +389,7 @@ export function AdminPanel() {
                     <span>{tab.label}</span>
                     <span
                       className={cn(
-                        "rounded-full px-1.5 py-0.5 text-[10px] tabular-nums leading-none",
+                        "rounded-full px-1.5 py-0.5 text-[10px] leading-none",
                         active
                           ? "bg-primary-foreground/20 text-primary-foreground"
                           : "bg-muted text-muted-foreground",

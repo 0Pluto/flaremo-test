@@ -235,7 +235,7 @@ export const FlareMoCalendar = memo(function FlareMoCalendar({
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-0.5 rounded bg-muted px-1 py-0.5 text-xs font-medium text-muted-foreground">
-                        <span className="tabular-nums">
+                        <span>
                           {t("calendar.dayTasks", { count: taskCount })}
                         </span>
                       </span>

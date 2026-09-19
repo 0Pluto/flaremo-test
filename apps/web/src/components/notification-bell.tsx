@@ -151,7 +151,7 @@ export function NotificationList({ onNavigate }: { onNavigate?: () => void }) {
                 )}
               >
                 {t(TYPE_LABELS[notification.type])}
-                <span className="shrink-0 font-normal text-muted-foreground tabular-nums">
+                <span className="shrink-0 font-normal text-muted-foreground">
                   {formatMemoRelativeTime(notification.create_time, locale)}
                 </span>
               </span>

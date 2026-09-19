@@ -190,7 +190,7 @@ export function CalendarPage({ initialDate }: { initialDate?: string }) {
                 >
                   <ChevronLeftIcon className="size-3.5 rtl:-rotate-180" />
                 </Button>
-                <span className="px-2 text-xs font-semibold tabular-nums text-foreground">
+                <span className="px-2 text-xs font-semibold text-foreground">
                   {formatMonthTitle(monthKey, locale)}
                 </span>
                 <Button
@@ -566,7 +566,7 @@ function DayInspector({
 
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span className="text-xs">{formatFullDayHeader(day, locale)}</span>
-            <span className="tabular-nums">
+            <span>
               {t("calendar.notesCount", { count: memos.length || notesCount })}{" "}
               · {t("calendar.dayTasks", { count: tasks.length })}
             </span>
@@ -1085,7 +1085,7 @@ function AgendaView({
                   <span className="text-xs font-semibold text-muted-foreground">
                     {t("calendar.agendaUnscheduled")}
                   </span>
-                  <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+                  <span className="ml-auto text-xs text-muted-foreground">
                     {t("calendar.dayTasks", { count: unscheduled.length })}
                   </span>
                 </button>
@@ -1115,7 +1115,7 @@ function AgendaView({
                   >
                     <span
                       className={cn(
-                        "font-heading text-sm font-semibold tabular-nums transition-colors group-hover:text-brand-500",
+                        "font-heading text-sm font-semibold transition-colors group-hover:text-brand-500",
                         group.overdue ? "text-destructive" : "text-foreground",
                       )}
                     >
@@ -1137,7 +1137,7 @@ function AgendaView({
                     {group.notesCount > 0 && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-brand-500/10 px-2 py-0.5 text-xs font-medium text-brand-600 dark:text-brand-400">
                         <span>📝</span>
-                        <span className="tabular-nums">
+                        <span>
                           {t("calendar.notesCount", {
                             count: group.notesCount,
                           })}
@@ -1146,7 +1146,7 @@ function AgendaView({
                     )}
                     {group.tasks.length > 0 && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                        <span className="tabular-nums">
+                        <span>
                           {t("calendar.dayTasks", {
                             count: group.tasks.length,
                           })}

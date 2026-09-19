@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json --pretty false && tsc --noEmit -p tsconfig.node.json --pretty false",
     "preview": "vite preview",
     "deploy": "pnpm build && wrangler deploy --config ./wrangler.jsonc",
-    "deploy:dry-run": "pnpm build && wrangler deploy --config ./wrangler.jsonc --dry-run --outdir=dist"
+    "deploy:dry-run": "pnpm build && wrangler deploy --config ./wrangler.jsonc --dry-run --outdir=dist",
+    "test": "vitest run --config ../../vitest.config.ts --passWithNoTests"
   },
   "dependencies": {
     "@base-ui/react": "~1.8.0",

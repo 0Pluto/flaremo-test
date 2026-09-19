@@ -18,7 +18,7 @@ export function MemoSnapshotCard({
     <Card>
       <CardContent className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
-          <time className="text-xs text-muted-foreground tabular-nums">
+          <time className="text-xs text-muted-foreground">
             {formatMemoTime(memo.create_time, locale)}
           </time>
           {badge && (

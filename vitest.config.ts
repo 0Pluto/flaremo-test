@@ -23,6 +23,7 @@ export default defineConfig({
       // runs cost minutes and the unit gate (pnpm test) stays fast.
       provider: "v8",
       include: [
+        "apps/site/src/**",
         "apps/web/src/**",
         "apps/worker/src/**",
         "packages/*/src/**",
