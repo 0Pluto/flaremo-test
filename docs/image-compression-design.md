@@ -118,3 +118,18 @@ file → 设置关闭？──是───────────────�
 ## 10. 审计修正（2026-09-19，实现后复核）
 
 提交 `30eb21c` 后逐行审计，发现并修掉三处：`toBlob` 无超时（可卡死上传）、原图对象 URL 过早 revoke（潜在空白图）、音频侧缺回放/内存门禁与文案不准确（详见 `docs/audio-compression-research.md` §6）。图片侧的 skip 规则、2560px 长边、q0.82、`<img>` 优先解码（EXIF）经复核无需改动。另在播放器修掉一处与本功能相关的显示 bug：Ogg 流时长未知时 `duration` 为 `Infinity`，`formatClock` 会渲染成 `Infinity:NaN:NaN`（`reading-audio-provider.tsx` 现按 0 处理）。测试从 17 例增至 24 例。
+
+## 11. 三引擎真机复核（2026-09-19，第二轮）
+
+真实 Chromium / WebKit / Firefox 跑完整图片管道（fixture 含 EXIF 6 旋转的 3200×2400 JPEG）：
+
+| | Chromium | WebKit (Safari 26.6) | Firefox |
+|---|---|---|---|
+| `toDataURL('image/webp')` | `data:image/webp` | **`data:image/png`** | `data:image/webp` |
+| `toBlob(..., 'image/webp')` | `image/webp` | **`image/png`**（39 KB，对比 WebP 1.1 KB） | `image/webp` |
+| 压缩结果（3200×2400 JPEG） | 113 KB WebP | 直传原图 | 113 KB WebP |
+| EXIF 6 方向 | 2560×1920 → **1920×2560** ✅ | —（不压） | ✅ |
+
+关键结论：Safari 的**检测与实现一致**——`toDataURL` 与 `toBlob` 都回退 PNG（字节签名 `89 50 4e 47`），所以 §5 的 feature-detect 是可靠的，「原图直传」的降级不会产出更大的文件。**未出现「检测说支持、`toBlob` 却回 PNG」的错配**，此前的担忧可以划掉。
+
+大图（192 MP / 224 MP）在 Chromium 与 Firefox 均能在 200–440 ms 内缩到 2560 长边、无崩溃；iOS canvas 面积上限由 `drawScaled` 的逐级减半规避。跳过规则实测无漏：gif / svg / webp / avif / 小于 100 KB / 非图片全部原样返回，CJK 文件名（`照片 副本 (2).jpg` → `.webp`）保留正常。

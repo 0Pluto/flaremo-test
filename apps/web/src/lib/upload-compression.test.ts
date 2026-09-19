@@ -2,9 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   compressAudio,
   compressImage,
+  MAX_COMPRESSION_INPUT_BYTES,
   prepareUploadFile,
   shouldCompressAudio,
   shouldCompressImage,
+  willCompressOnUpload,
 } from "./upload-compression";
 import {
   getAudioCompressionEnabled,
@@ -612,6 +614,21 @@ describe("compressAudio", () => {
       ),
     ).toBeNull();
   });
+
+  it("does not buffer a file past the input ceiling at all", async () => {
+    const rates = stubDecode({ numberOfChannels: 1, length: 960 });
+    // Report an enormous size without allocating it.
+    const huge = new File([wavBytes({ samples: 96_000 })], "huge.wav", {
+      type: "audio/wav",
+    });
+    Object.defineProperty(huge, "size", {
+      value: MAX_COMPRESSION_INPUT_BYTES + 1,
+    });
+    expect(await compressAudio(huge)).toBeNull();
+    // Neither the decode proof nor the source decode ran: nothing was read.
+    expect(rates).toEqual([]);
+    expect(opusMock.state.encodeCalls).toBe(0);
+  });
 });
 
 describe("prepareUploadFile", () => {
@@ -635,5 +652,141 @@ describe("prepareUploadFile", () => {
     // A tiny png matches no compressor (below the size floor): identity.
     const file = new File([new Uint8Array(10)], "a.png", { type: "image/png" });
     expect(await prepareUploadFile(file)).toBe(file);
+  });
+});
+
+describe("willCompressOnUpload", () => {
+  /** Reports whether this engine can encode WebP, like a real canvas would. */
+  function stubWebpSupport(supported: boolean) {
+    vi.stubGlobal("document", {
+      createElement: () => ({
+        width: 0,
+        height: 0,
+        toDataURL: () =>
+          supported ? "data:image/webp,ok" : "data:image/png,ok",
+      }),
+    });
+  }
+
+  beforeEach(() => {
+    stubWebpSupport(true);
+  });
+
+  it("says yes for oversized images and lossless audio", () => {
+    const big = new Uint8Array(30 * 1024 * 1024); // over the 25 MiB server cap
+    expect(
+      willCompressOnUpload(
+        new File([big], "IMG_0001.jpg", { type: "image/jpeg" }),
+      ),
+    ).toBe(true);
+    expect(
+      willCompressOnUpload(
+        new File([big], "take.flac", { type: "audio/flac" }),
+      ),
+    ).toBe(true);
+  });
+
+  it("says no when the matching switch is off", () => {
+    const big = new Uint8Array(30 * 1024 * 1024);
+    setImageCompressionEnabled(false);
+    expect(
+      willCompressOnUpload(
+        new File([big], "IMG_0001.jpg", { type: "image/jpeg" }),
+      ),
+    ).toBe(false);
+    setImageCompressionEnabled(true);
+    setAudioCompressionEnabled(false);
+    expect(
+      willCompressOnUpload(
+        new File([big], "take.flac", { type: "audio/flac" }),
+      ),
+    ).toBe(false);
+  });
+
+  it("says no for types no compressor accepts", () => {
+    const big = new Uint8Array(30 * 1024 * 1024);
+    for (const file of [
+      new File([big], "clip.mp4", { type: "video/mp4" }),
+      new File([big], "song.mp3", { type: "audio/mpeg" }),
+      new File([big], "scan.pdf", { type: "application/pdf" }),
+      // Lossy audio is deliberately left alone (AUDIO §5): a second lossy
+      // generation is not worth the bytes it saves.
+      new File([big], "voice.m4a", { type: "audio/mp4" }),
+      new File([big], "already.opus", { type: "audio/opus" }),
+      new File([big], "anim.gif", { type: "image/gif" }),
+      new File([big], "vector.svg", { type: "image/svg+xml" }),
+      new File([big], "already.webp", { type: "image/webp" }),
+      new File([big], "already.avif", { type: "image/avif" }),
+    ]) {
+      expect(willCompressOnUpload(file)).toBe(false);
+    }
+  });
+
+  it("offers heic to the pipeline, which decides by capability", () => {
+    // HEIC has no skip rule: on Safari the <img> decode succeeds but WebP
+    // encoding does not, and elsewhere the decode fails — either way the file
+    // is uploaded untouched. Keeping it eligible means a future engine that
+    // handles HEIC needs no change here.
+    const heic = new File([new Uint8Array(30 * 1024 * 1024)], "shot.heic", {
+      type: "image/heic",
+    });
+    expect(willCompressOnUpload(heic)).toBe(true);
+  });
+
+  it("says no for an oversized image on a browser that cannot encode WebP", () => {
+    // Real WebKit (verified against Safari 26.6) falls back to PNG from
+    // toDataURL and toBlob alike, so an oversized photo there cannot be shrunk:
+    // refusing it up front beats a long upload the server rejects at the end.
+    stubWebpSupport(false);
+    const photo = new File([new Uint8Array(30 * 1024 * 1024)], "IMG_0001.jpg", {
+      type: "image/jpeg",
+    });
+    expect(willCompressOnUpload(photo)).toBe(false);
+    // Audio is unaffected: the Ogg path does not depend on canvas encoding.
+    expect(
+      willCompressOnUpload(
+        new File([new Uint8Array(30 * 1024 * 1024)], "take.wav", {
+          type: "audio/wav",
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("does not need a canvas to judge audio", () => {
+    // No document at all: the audio branch must not touch the DOM, or an
+    // upload would be misjudged in any context without one.
+    vi.stubGlobal("document", undefined);
+    expect(
+      willCompressOnUpload(
+        new File([new Uint8Array(30 * 1024 * 1024)], "take.flac", {
+          type: "audio/flac",
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("says no past the input ceiling, where the pipeline refuses to buffer", () => {
+    // Above the image size floor, below the input ceiling.
+    const normal = new File([new Uint8Array(200 * 1024)], "big.jpg", {
+      type: "image/jpeg",
+    });
+    expect(willCompressOnUpload(normal)).toBe(true);
+
+    const huge = new Uint8Array(MAX_COMPRESSION_INPUT_BYTES + 1);
+    expect(
+      willCompressOnUpload(new File([huge], "big.jpg", { type: "image/jpeg" })),
+    ).toBe(false);
+  });
+});
+
+describe("input size ceiling", () => {
+  it("does not buffer a file past the ceiling in the image path", async () => {
+    const hugeImage = new File([new Uint8Array(1)], "huge.jpg", {
+      type: "image/jpeg",
+    });
+    Object.defineProperty(hugeImage, "size", {
+      value: MAX_COMPRESSION_INPUT_BYTES + 1,
+    });
+    expect(await compressImage(hugeImage)).toBeNull();
   });
 });

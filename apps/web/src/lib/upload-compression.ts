@@ -1,3 +1,4 @@
+import { repageOggOpus } from "./ogg-repage";
 import {
   getAudioCompressionEnabled,
   getImageCompressionEnabled,
@@ -22,6 +23,25 @@ const WEBP_QUALITY = 0.82;
 // A 2560px encode is normally well under a second even on a slow phone; this
 // only exists so a missing toBlob callback cannot stall the upload forever.
 const WEBP_ENCODE_TIMEOUT_MS = 10_000;
+
+/**
+ * The Worker's own attachment cap (apps/worker/src/attachment-http.ts
+ * MAX_ATTACHMENT_BYTES). Duplicated rather than imported: this module is
+ * client code and the Worker constant drags the whole server module in.
+ */
+export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+
+/**
+ * Largest input we will try to transcode. The cap is about memory, not
+ * policy: the pipeline holds the whole source (and, for audio, its decoded
+ * PCM) at once, and a file admitted here can be several times its own size in
+ * decoded pixels or samples. Past this the original is uploaded untouched and
+ * the server's own cap produces the error. 64 MiB comfortably covers a
+ * one-hour 16 kHz WAV (~115 MB decoded, under the audio budget) and any phone
+ * photo, while refusing to buffer a multi-hundred-megabyte file on a mobile
+ * tab.
+ */
+export const MAX_COMPRESSION_INPUT_BYTES = 64 * 1024 * 1024;
 
 const SKIP_IMAGE_TYPES = new Set([
   "image/gif", // canvas drops animation frames
@@ -75,6 +95,19 @@ function withExtension(name: string, extension: string): string {
   return `${base}.${extension}`;
 }
 
+function concatChunks(chunks: Uint8Array[]): Uint8Array<ArrayBuffer> {
+  const total = chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0);
+  // Allocated here, so the result is always backed by a plain ArrayBuffer:
+  // BlobPart rejects the ArrayBufferLike default.
+  const joined = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    joined.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return joined;
+}
+
 export function shouldCompressImage(file: File): boolean {
   const type = file.type.toLowerCase();
   if (!type.startsWith("image/")) return false;
@@ -90,6 +123,28 @@ export function shouldCompressAudio(file: File): boolean {
     return LOSSLESS_AUDIO_EXTENSIONS.test(file.name.toLowerCase());
   }
   return LOSSLESS_AUDIO_TYPES.has(type);
+}
+
+/**
+ * Whether an upload would actually be handed to a transcoder, judging by the
+ * user's switches and the engine's capabilities. Callers use it to decide if a
+ * file above the server's cap still deserves a chance: the pipeline may bring
+ * it under.
+ *
+ * The image branch checks the WebP encoder because that check is synchronous
+ * and cheap — claiming compressibility on a browser that cannot encode WebP
+ * (Safari, verified against real WebKit) would send the user through a long
+ * upload the server then refuses. The audio capability proof is async and
+ * costs a wasm instantiation, so it is not repeated here; the server's own cap
+ * remains the backstop for the narrow case it cannot cover (a browser too old
+ * to play back the Ogg it would produce, holding a >25 MiB lossless file).
+ */
+export function willCompressOnUpload(file: File): boolean {
+  if (file.size > MAX_COMPRESSION_INPUT_BYTES) return false;
+  if (getImageCompressionEnabled() && shouldCompressImage(file)) {
+    return supportsWebpEncode();
+  }
+  return getAudioCompressionEnabled() && shouldCompressAudio(file);
 }
 
 type AudioFormat = {
@@ -442,6 +497,7 @@ function canvasToWebpBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
  */
 export async function compressImage(file: File): Promise<File | null> {
   if (!shouldCompressImage(file)) return null;
+  if (file.size > MAX_COMPRESSION_INPUT_BYTES) return null;
   if (!supportsWebpEncode()) return null;
   const source = await decodeOriented(file).catch(() => null);
   if (!source) return null;
@@ -471,6 +527,7 @@ export async function compressImage(file: File): Promise<File | null> {
  */
 export async function compressAudio(file: File): Promise<File | null> {
   if (!shouldCompressAudio(file)) return null;
+  if (file.size > MAX_COMPRESSION_INPUT_BYTES) return null;
   // Cheapest gate first: no point decoding a large file into a format this
   // browser cannot play back.
   if (!(await canDecodeOggOpus())) return null;
@@ -514,26 +571,26 @@ export async function compressAudio(file: File): Promise<File | null> {
       1,
       Math.round(contextRate * AUDIO_CHUNK_SECONDS),
     );
-    const chunks: BlobPart[] = [];
+    const chunks: Uint8Array[] = [];
     try {
       for (let offset = 0; offset < buffer.length; offset += chunkSamples) {
         const end = Math.min(offset + chunkSamples, buffer.length);
-        // Copy out: BlobPart typing aside, the copy detaches each chunk from
-        // any buffer the encoder might hand back.
         chunks.push(
-          new Uint8Array(
-            encoder.encode(
-              channelData.map((data) => data.subarray(offset, end)),
-            ),
-          ),
+          encoder.encode(channelData.map((data) => data.subarray(offset, end))),
         );
       }
-      chunks.push(new Uint8Array(encoder.flush()));
+      chunks.push(encoder.flush());
     } finally {
       encoder.free();
     }
 
-    const blob = new Blob(chunks, { type: "audio/ogg" });
+    // The muxer writes one page per 20 ms packet; merging them into ~1 s pages
+    // drops a quarter to a third of the payload and keeps WebKit from
+    // over-reporting the duration (see ogg-repage.ts). concatChunks also owns
+    // the copy out of the encoder's heap, so the chunks above stay untouched.
+    const encoded = concatChunks(chunks);
+    const repaged = repageOggOpus(encoded);
+    const blob = new Blob([repaged ?? encoded], { type: "audio/ogg" });
     if (blob.size >= file.size) return null;
     return new File([blob], withExtension(file.name, "ogg"), {
       type: "audio/ogg",
