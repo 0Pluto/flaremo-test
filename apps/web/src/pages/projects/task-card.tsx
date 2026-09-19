@@ -158,13 +158,13 @@ export function TaskCard({
               </span>
             )}
             {!projectName && !task.project_id && (
-              <Badge className="text-[0.65rem]" variant="outline">
+              <Badge className="text-xs" variant="outline">
                 {t("projects.unassigned")}
               </Badge>
             )}
             {sourceMemoId && (
               <Badge
-                className="text-[0.65rem]"
+                className="text-xs"
                 render={
                   <Link
                     params={{ memoId: sourceMemoId }}

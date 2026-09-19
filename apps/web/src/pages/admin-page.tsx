@@ -469,7 +469,7 @@ export function AdminPanel() {
               <>
                 <div className="divide-y divide-border/40">
                   {/* Table Header */}
-                  <div className="grid grid-cols-12 items-center bg-muted/40 px-3.5 py-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  <div className="grid grid-cols-12 items-center bg-muted/40 px-3.5 py-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     <div className="col-span-5 sm:col-span-5">
                       {t("admin.columnMember")}
                     </div>
@@ -506,7 +506,7 @@ export function AdminPanel() {
                                 {user.name}
                               </span>
                               {isSelf && (
-                                <span className="rounded bg-primary/10 px-1 py-0.2 text-[10px] font-normal text-primary">
+                                <span className="rounded bg-primary/10 px-1 py-0.5 text-xs font-normal text-primary">
                                   {t("admin.selfBadge")}
                                 </span>
                               )}
@@ -562,13 +562,13 @@ export function AdminPanel() {
                             readerStatus.expired ? (
                               <Badge
                                 variant="destructive"
-                                className="h-5 px-1.5 text-[10px]"
+                                className="h-5 px-1.5 text-xs"
                               >
                                 {t("admin.expired")} (
                                 {readerStatus.dateFormatted})
                               </Badge>
                             ) : (
-                              <span className="text-[11px] font-medium text-blue-600 dark:text-blue-400">
+                              <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
                                 {t("admin.daysLeft", {
                                   days: String(readerStatus.days),
                                 })}

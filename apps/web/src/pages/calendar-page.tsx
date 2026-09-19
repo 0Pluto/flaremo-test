@@ -526,7 +526,7 @@ function DayInspector({
                 {formatDayTitle(day, locale)}
               </h2>
               {isToday ? (
-                <span className="rounded-full bg-brand-500 px-2 py-0.5 text-[10px] font-semibold text-[color:var(--brand-gradient-foreground)] shadow-2xs">
+                <span className="rounded-full bg-brand-500 px-2 py-0.5 text-xs font-semibold text-[color:var(--brand-gradient-foreground)] shadow-2xs">
                   {t("calendar.todayTitle")}
                 </span>
               ) : (
@@ -564,7 +564,7 @@ function DayInspector({
           </div>
 
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span className="text-[11px]">
+            <span className="text-xs">
               {formatFullDayHeader(day, locale)}
             </span>
             <span className="tabular-nums">
@@ -660,7 +660,7 @@ function DayInspector({
                 </span>
                 {memos.length > 0 && (
                   <Link
-                    className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
                     search={{
                       q: dayFilter,
                       compose: undefined,
@@ -766,7 +766,7 @@ function DayInspector({
                   {t("calendar.filterTasks")} ({tasks.length})
                 </span>
                 {noteTasks > 0 && (
-                  <span className="text-[11px] text-muted-foreground">
+                  <span className="text-xs text-muted-foreground">
                     {t("calendar.dayNoteTasks", { count: noteTasks })}
                   </span>
                 )}
@@ -833,7 +833,7 @@ function DayInspector({
                           {task.title}
                         </span>
                         {overdue && (
-                          <span className="shrink-0 rounded-full bg-destructive/10 px-1.5 py-0.5 text-[10px] font-semibold text-destructive">
+                          <span className="shrink-0 rounded-full bg-destructive/10 px-1.5 py-0.5 text-xs font-semibold text-destructive">
                             {t("calendar.overdue")}
                           </span>
                         )}
@@ -841,7 +841,7 @@ function DayInspector({
                         {/* Reschedule Dropdown */}
                         <DropdownMenu>
                           <DropdownMenuTrigger
-                            className="rounded px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                            className="rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                             type="button"
                           >
                             {t("calendar.reschedule")}
@@ -870,7 +870,7 @@ function DayInspector({
                               {t("calendar.rescheduleNextWeek")}
                             </DropdownMenuItem>
                             <div className="border-t border-border/60 p-1.5">
-                              <span className="text-[10px] font-medium text-muted-foreground block mb-1">
+                              <span className="text-xs font-medium text-muted-foreground block mb-1">
                                 {t("calendar.reschedulePickDate")}
                               </span>
                               <div className="flex items-center gap-1">
@@ -1128,7 +1128,7 @@ function AgendaView({
                       ({formatFullDayHeader(group.key, locale)})
                     </span>
                     {group.overdue && (
-                      <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold text-destructive">
+                      <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-semibold text-destructive">
                         {t("calendar.overdue")}
                       </span>
                     )}
@@ -1136,7 +1136,7 @@ function AgendaView({
 
                   <div className="flex items-center gap-2">
                     {group.notesCount > 0 && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-brand-500/10 px-2 py-0.5 text-[10px] font-medium text-brand-600 dark:text-brand-400">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-brand-500/10 px-2 py-0.5 text-xs font-medium text-brand-600 dark:text-brand-400">
                         <span>📝</span>
                         <span className="tabular-nums">
                           {t("calendar.notesCount", {
@@ -1146,7 +1146,7 @@ function AgendaView({
                       </span>
                     )}
                     {group.tasks.length > 0 && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
                         <span className="tabular-nums">
                           {t("calendar.dayTasks", {
                             count: group.tasks.length,

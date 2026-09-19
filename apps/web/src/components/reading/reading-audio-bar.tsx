@@ -73,7 +73,7 @@ export function ReadingAudioBar({ className }: { className?: string }) {
           ))}
           <Toggle
             aria-label={t("reading.follow")}
-            className="h-6 px-2 text-[0.7rem]"
+            className="h-6 px-2 text-xs"
             onPressedChange={audio.setFollow}
             pressed={follow}
             size="sm"

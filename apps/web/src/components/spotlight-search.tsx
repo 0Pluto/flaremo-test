@@ -368,7 +368,7 @@ export function SpotlightSearch({
         </div>
 
         {/* Footer shortcuts hint */}
-        <div className="flex items-center justify-between border-t border-border/40 bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
+        <div className="flex items-center justify-between border-t border-border/40 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
             <span>
               <kbd className="rounded border bg-background px-1 py-0.5 text-[10px] font-mono">

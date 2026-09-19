@@ -182,7 +182,7 @@ export const FlareMoCalendar = memo(function FlareMoCalendar({
                 {/* Note count badge */}
                 {noteCount > 0 && (
                   <span
-                    className="inline-flex items-center gap-0.5 rounded-full bg-brand-500/10 px-1.5 py-0.5 text-[10px] font-medium text-brand-600 dark:text-brand-400"
+                    className="inline-flex items-center gap-0.5 rounded-full bg-brand-500/10 px-1.5 py-0.5 text-xs font-medium text-brand-600 dark:text-brand-400"
                     title={t("calendar.notesCount", { count: noteCount })}
                   >
                     <span className="text-[10px]">📝</span>
@@ -234,7 +234,7 @@ export const FlareMoCalendar = memo(function FlareMoCalendar({
                         <span className="tabular-nums">{taskCount}</span>
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-0.5 rounded bg-muted px-1 py-0.5 text-[10px] font-medium text-muted-foreground">
+                      <span className="inline-flex items-center gap-0.5 rounded bg-muted px-1 py-0.5 text-xs font-medium text-muted-foreground">
                         <span className="tabular-nums">
                           {t("calendar.dayTasks", { count: taskCount })}
                         </span>

@@ -256,7 +256,7 @@ function PersonalAccessTokenRow({
           </p>
           <Badge
             variant={token.enabled ? "secondary" : "outline"}
-            className="text-[10px] h-4 px-1.5"
+            className="text-xs h-5 px-1.5"
           >
             {token.enabled ? t("auth.active") : t("auth.revoked")}
           </Badge>

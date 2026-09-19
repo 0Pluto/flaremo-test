@@ -16,9 +16,11 @@ FlareMo 的视觉语言叫 Ember：界面保持安静，暖调中性色承担约
 
 ## 字体
 
-- 字体栈：Geist Variable + CJK 回退（PingFang SC / Hiragino Sans GB / Noto Sans SC / Microsoft YaHei)。新增 UI 文本不要绕过 `font-sans`。
+- 字体栈：Geist Variable + CJK 回退，**按语言域分派**——`--font-cjk` 与 `--font-cjk-serif` 在 `:root` / `:root:lang(ja)` / `:root:lang(ko)` 三处分别定义，日韩各拿自己的字形。新增 UI 文本不要绕过 `font-sans`；分享卡插件另可选 `sans` / `heading` / `serif` / `mono` 四档。
 - 笔记正文 15px / leading-7(`.memo-markdown` 已固化）；时间戳、统计数字用 `tabular-nums`。
 - 标题用 `font-semibold tracking-tight`；不要引入新字重。
+- **字号下限：12px（`text-xs`）用于一切会被翻译的文案。** 10px/11px 只允许承载纯数字、计数徽标与键盘符号（`<kbd>` 里的 `↑↓` / `↵` / `esc`）——汉字在 12px 以下笔画开始粘连，而中文是主力语言，这条是硬线（`typography.test.ts` 会扫源码拦截）。
+- **字距**：`tracking-tight` 只对拉丁语系成立。汉字字面几乎占满 em 框、两侧留白极小，负字距会让笔画多的字粘连；因此 `[dir="rtl"]` 与 `:lang(zh/ja/ko)` 各有一条归零规则。**这两条必须写在 `@layer base` 之外**——它们要覆盖 `@layer utilities` 里的 `.tracking-*`，而 CSS 分层规则中后声明的层永远胜过前一层、与特异性无关，写在 base 里会被工具类无声盖掉（历史上这两条都因此失效过，测试已加回归守卫）。
 
 ## 形状与层级
 

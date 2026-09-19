@@ -250,10 +250,7 @@
     text-rendering: optimizeLegibility;
     min-height: 100vh;
   }
-  /* RTL 排版重置：负字距会切断阿拉伯字母的连笔曲线 */
-  [dir="rtl"] :is(h1, h2, h3, h4, [class*="tracking-"]) {
-    letter-spacing: 0;
-  }
+  /* 字距重置在 @layer base 之外（见文件末尾）——写层内会被 utilities 盖掉 */
   ::selection {
     background: color-mix(in srgb, var(--signal) 28%, transparent);
   }
@@ -385,4 +382,18 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* 字距重置必须在 @layer base 之外。负字距来自 .tracking-* 工具类，而工具类
+   位于 @layer utilities；CSS 分层规则里后声明的层永远胜过前一层，与特异性
+   无关——写在 base 里的重置会被工具类无声盖掉。未分层样式优先级高于任何
+   分层样式，放这里才真正生效。 */
+[dir="rtl"] :is(h1, h2, h3, h4, [class*="tracking-"]) {
+  letter-spacing: 0;
+}
+/* 汉字是满字身方块，字面几乎占满 em 框，两侧留白本就极小，tracking-tight 的
+   -0.025em 会吃掉其中相当一部分，笔画多的字开始粘连（官网大标题最明显）。
+   :lang(zh) 按 RFC 4647 前缀匹配，能命中 zh-CN。 */
+:is(:lang(zh), :lang(ja), :lang(ko)) :is(h1, h2, h3, h4, [class*="tracking-"]) {
+  letter-spacing: 0;
 }

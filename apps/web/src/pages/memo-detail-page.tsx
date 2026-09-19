@@ -741,7 +741,7 @@ function RelationGroup({
           >
             <div className="line-clamp-2">{memo.content}</div>
             <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Badge className="text-[0.65rem]" variant="outline">
+              <Badge className="text-xs" variant="outline">
                 {t(`detail.relationType.${relation.type}`)}
               </Badge>
               {formatMemoTime(memo.display_time, locale)}

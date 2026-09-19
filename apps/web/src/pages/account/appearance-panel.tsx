@@ -108,7 +108,7 @@ export function AppearancePanel({ t }: AppearancePanelProps) {
               <div className="flex items-center gap-1.5 font-medium text-xs text-foreground">
                 <span>{item.label}</span>
               </div>
-              <p className="mt-1 text-[11px] text-muted-foreground line-clamp-1">
+              <p className="mt-1 text-xs text-muted-foreground line-clamp-1">
                 {item.description}
               </p>
             </button>
