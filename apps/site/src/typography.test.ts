@@ -123,3 +123,14 @@ describe("email/HTML surfaces", () => {
     }
   });
 });
+
+describe("site synthetic italic guard", () => {
+  it("disables synthesis for the Han locales", () => {
+    // Docs and prose render Markdown, so `*emphasis*` reaches UA `<em>`
+    // italics; Han has no true italic and the browser shears the strokes.
+    const match = css.match(
+      /:is\(:lang\(zh\), :lang\(ja\), :lang\(ko\)\)\s*\{([^}]*)\}/,
+    );
+    expect(match?.[1]).toMatch(/font-synthesis:\s*none/);
+  });
+});

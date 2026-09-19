@@ -140,10 +140,7 @@ describe("micro text sizes", () => {
    *  the same file and looking those keys up in the catalog. This is the shape
    *  that hid `account-page.tsx`'s 11px group headings from an earlier version
    *  of this guard, which only understood literal keys. */
-  const valuesOfMemberKeys = (
-    memberName: string,
-    fileText: string,
-  ): string[] =>
+  const valuesOfMemberKeys = (memberName: string, fileText: string): string[] =>
     [...fileText.matchAll(new RegExp(`\\b${memberName}:\\s*"([\\w.]+)"`, "g"))]
       .map((m) => ZH.get(m[1]))
       .filter((v): v is string => Boolean(v));
@@ -236,5 +233,34 @@ describe("micro text sizes", () => {
     const style = readFileSync(new URL("./index.css", import.meta.url), "utf8");
     // Guards against someone "fixing" the offenders by shrinking text-xs.
     expect(style).toMatch(/--text-xs:\s*0\.75rem|text-xs/);
+  });
+});
+
+/**
+ * Han has no true italic — a browser asked for one synthesizes a geometric
+ * oblique that shears the strokes. Two real paths reach it (the editor's
+ * italic button and Markdown `*emphasis*` → `<em>`, which the renderer does
+ * not map), so the guard is per-language rather than per-element: Latin keeps
+ * its genuine italic.
+ */
+describe("synthetic italic guard", () => {
+  const baseEnd = css.indexOf("\n}", css.indexOf("@layer base"));
+  const guard = css.indexOf(
+    ":is(:lang(zh), :lang(ja), :lang(ko)) {\n  font-synthesis",
+  );
+
+  it("disables synthesis for the Han locales", () => {
+    expect(guard).toBeGreaterThan(-1);
+    const block = css.slice(guard, css.indexOf("}", guard));
+    expect(block).toMatch(/font-synthesis:\s*none/);
+  });
+
+  it("lives outside @layer base so it outranks utilities", () => {
+    expect(guard).toBeGreaterThan(baseEnd);
+  });
+
+  it("does not touch Latin locales", () => {
+    // Scoping to :lang() is the point; a global rule would strip real italics.
+    expect(css).not.toMatch(/^html\s*\{[^}]*font-synthesis/m);
   });
 });

@@ -400,6 +400,12 @@
 [dir="rtl"] :is(h1, h2, h3, h4, [class*="tracking-"]) {
   letter-spacing: 0;
 }
+/* 汉字没有真正的斜体字形，浏览器只能合成几何倾斜（伪斜体），笔画被剪切。
+   官网正文与文档由 Markdown 渲染，`*强调*` 会走 UA 默认的 `<em>` 斜体；
+   逐处去掉会让英文失去强调，故在语言层禁掉合成。 */
+:is(:lang(zh), :lang(ja), :lang(ko)) {
+  font-synthesis: none;
+}
 /* 汉字是满字身方块，字面几乎占满 em 框，两侧留白本就极小，tracking-tight 的
    -0.025em 会吃掉其中相当一部分，笔画多的字开始粘连（官网大标题最明显）。
    :lang(zh) 按 RFC 4647 前缀匹配，能命中 zh-CN。 */
