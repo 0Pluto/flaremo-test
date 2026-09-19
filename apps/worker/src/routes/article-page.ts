@@ -332,10 +332,10 @@ article pre.shiki span { color: var(--shiki-light); }
   article pre.shiki span { color: var(--shiki-dark); }
 }
 article table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: .925rem; }
-article th, article td { border: 1px solid var(--border); padding: .4em .7em; text-align: left; }
+article th, article td { border: 1px solid var(--border); padding: .4em .7em; text-align: start; }
 article hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
-article ul, article ol { padding-left: 1.5em; }
-article li input[type=checkbox] { margin-right: .4em; }
+article ul, article ol { padding-inline-start: 1.5em; }
+article li input[type=checkbox] { margin-inline-end: .4em; }
 .gallery-item { margin: 1em 0; }
 .gallery-item img { max-width: 100%; height: auto; border-radius: .5rem; }
 .gallery-item figcaption { color: var(--muted); font-size: .8rem; margin-top: .3rem; }
@@ -345,6 +345,11 @@ audio { width: 100%; }
 
 function htmlLang(lang: string | null): string {
   return (lang?.trim() || "zh-CN").replace(/_/g, "-");
+}
+
+/** Arabic is the only RTL language in the supported set. */
+function isRtlLang(lang: string | null): boolean {
+  return /^ar\b/i.test(lang?.trim() ?? "");
 }
 
 export function renderArticleDocument(input: ArticleMetaInput): string {
@@ -374,7 +379,7 @@ export function renderArticleDocument(input: ArticleMetaInput): string {
   const feedUrl = `${origin}/feed.xml`;
 
   return `<!doctype html>
-<html lang="${escapeHtml(htmlLang(article.lang))}">
+<html lang="${escapeHtml(htmlLang(article.lang))}" dir="${isRtlLang(article.lang) ? "rtl" : "ltr"}">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -536,7 +541,9 @@ export function registerArticlePage(app: Hono<HonoBindings>): void {
       description: `${product} 发布的文章`,
       id: `${origin}/`,
       link: `${origin}/`,
-      language: "zh-CN",
+      // A single feed cannot vary language per item, so follow the newest
+      // article's declared language rather than always claiming Chinese.
+      language: htmlLang(rows[0]?.article.lang ?? null),
       favicon: `${origin}/brand/flaremo-mark-light-300.png`,
       copyright: `© ${new Date().getFullYear()} ${product}`,
       updated: rows[0]?.article.updatedAt
