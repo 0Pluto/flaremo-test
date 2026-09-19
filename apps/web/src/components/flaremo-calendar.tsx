@@ -202,11 +202,11 @@ export const FlareMoCalendar = memo(function FlareMoCalendar({
                       return (
                         <span
                           className={cn(
-                            "w-full truncate rounded px-1 py-0.5 text-left text-[10px] leading-tight transition-colors",
+                            "w-full truncate rounded px-1 py-0.5 text-left text-xs leading-tight transition-colors",
                             done
                               ? "bg-muted/60 text-muted-foreground line-through"
                               : overdue
-                                ? "bg-destructive/10 text-destructive font-medium"
+                                ? "bg-destructive/10 text-destructive"
                                 : "bg-muted text-foreground",
                           )}
                           key={task.id}

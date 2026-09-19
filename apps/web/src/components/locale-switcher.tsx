@@ -33,7 +33,7 @@ export function LocaleSwitcher({ className }: { className?: string }) {
             key={next}
             onClick={() => setLocale(next)}
           >
-            <span className={cn(next === locale && "font-semibold")}>
+            <span className={cn(next === locale && "text-foreground")}>
               {LOCALE_LABELS[next]}
             </span>
             {next === locale && <CheckIcon className="size-3.5 shrink-0" />}
