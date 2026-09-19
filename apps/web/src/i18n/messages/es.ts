@@ -427,9 +427,20 @@ const messages = {
   "share.unavailableDescription":
     "El enlace pudo expirar, haberse revocado o apuntar a una nota que ya no es pública.",
   "memo.visibilityLabel": "Visibilidad",
+  "memo.visibilityAndShare": "Visibilidad y compartir",
+  "memo.visibilityDialogDescription":
+    "Administra los permisos de acceso y el enlace de compartir.",
+  "visibility.privateDescription":
+    "Solo tú puedes ver y editar después de iniciar sesión",
+  "visibility.protectedDescription":
+    "Visible para los miembros de este espacio de trabajo",
+  "visibility.publicDescription": "Cualquiera que tenga el enlace puede verlo",
+  "share.publicLink": "Enlace público",
+  "share.openLink": "Abrir enlace",
+  "share.generatingLink": "Generando enlace…",
   "share.copyLink": "Copiar enlace",
   "share.copyLinkHint": "Hazla pública para compartirla",
-  "share.imageCard": "Crear tarjeta de imagen",
+  "share.imageCard": "Crear tarjeta",
   "share.imageTitle": "Crear tarjeta de imagen",
   "share.imageSubtitle": "Elige una plantilla y expórtala como imagen",
   "share.templateLabel": "Plantilla",

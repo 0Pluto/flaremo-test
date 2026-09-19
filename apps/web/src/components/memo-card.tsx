@@ -3,18 +3,15 @@ import { Link } from "@tanstack/react-router";
 import type { Editor } from "@tiptap/react";
 import {
   ArchiveIcon,
-  CheckIcon,
   Edit3Icon,
   Globe2Icon,
   ImageIcon,
-  LinkIcon,
   Loader2Icon,
   LockIcon,
   MicIcon,
   MoreHorizontalIcon,
   PinIcon,
   RotateCcwIcon,
-  ShieldIcon,
   Trash2Icon,
   UsersIcon,
 } from "lucide-react";
@@ -31,6 +28,7 @@ import {
 import { AttachmentGallery } from "@/components/attachment-gallery";
 import { LazyMemoContent } from "@/components/lazy-memo-content";
 import { MemoSearchExcerpt } from "@/components/memo-search-excerpt";
+import { MemoVisibilityDialog } from "@/components/memo-visibility-dialog";
 import { RichComposerEditor } from "@/components/rich-composer-editor-lazy";
 import { ShareImageDialog } from "@/components/share-image-dialog";
 import {
@@ -50,9 +48,6 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useI18n } from "@/i18n";
@@ -124,9 +119,6 @@ export const MemoCard = memo(function MemoCard({
   const { locale, t } = useI18n();
   const queryClient = useQueryClient();
   const id = getMemoResourceId(memo);
-  const shareUrl = share
-    ? `${globalThis.location.origin}/share/${share.token}`
-    : undefined;
   const tags = memo.payload.tags ?? extractTags(memo.content);
   const isTrashed = memo.state === "trashed";
   // Body-referenced images render inline; the gallery keeps only the rest.
@@ -214,6 +206,7 @@ export const MemoCard = memo(function MemoCard({
   const [draftContent, setDraftContent] = useState(memo.content);
   const editEditorRef = useRef<Editor | null>(null);
   const [isShareImageOpen, setIsShareImageOpen] = useState(false);
+  const [isVisibilityOpen, setIsVisibilityOpen] = useState(false);
 
   const startEditing = () => {
     setDraftContent(memo.content);
@@ -244,32 +237,6 @@ export const MemoCard = memo(function MemoCard({
       }
     } catch {
       // The mutation displays the error; the card keeps its current state.
-    }
-  };
-
-  const copyShareLink = async () => {
-    if (shareUrl && share) {
-      try {
-        await navigator.clipboard.writeText(shareUrl);
-        toast.success(t("toast.linkCopied"));
-      } catch {
-        toast.error(t("share.copyFailed"));
-      }
-      return;
-    }
-    // A public memo can lack a locally known share (promoted in an earlier
-    // session, created public from the composer, or another client). The
-    // server reuses any still-active share, so one idempotent POST yields
-    // the same token everyone else sees. If the write lands after clipboard
-    // activation expires (strict Safari), the next click copies directly.
-    try {
-      const ensuredShare = await onShare(id);
-      await navigator.clipboard.writeText(
-        `${globalThis.location.origin}/share/${ensuredShare.token}`,
-      );
-      toast.success(t("toast.linkCopied"));
-    } catch {
-      toast.error(t("share.copyFailed"));
     }
   };
 
@@ -328,7 +295,7 @@ export const MemoCard = memo(function MemoCard({
           {memo.visibility !== "private" && (
             <VisibilityBadge
               visibility={memo.visibility}
-              onPublicClick={copyShareLink}
+              onClick={() => setIsVisibilityOpen(true)}
             />
           )}
           {(canManage || canGovern) && (
@@ -345,7 +312,7 @@ export const MemoCard = memo(function MemoCard({
                   </Button>
                 }
               />
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="min-w-[140px]">
                 {isTrashed ? (
                   <DropdownMenuGroup>
                     {canGovern && (
@@ -378,53 +345,11 @@ export const MemoCard = memo(function MemoCard({
                           <PinIcon />
                           {memo.pinned ? t("memo.unpin") : t("memo.pin")}
                         </DropdownMenuItem>
-                      </DropdownMenuGroup>
-                    )}
-                    {canManage && (
-                      <DropdownMenuGroup>
-                        {/* Permission is a property of the record: switch it
-                            here, not inside a "share" flow. */}
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger>
-                            <ShieldIcon />
-                            {t("memo.visibilityLabel")}
-                          </DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent>
-                            {(
-                              [
-                                ["private", LockIcon],
-                                ["protected", UsersIcon],
-                                ["public", Globe2Icon],
-                              ] as const
-                            ).map(([value, Icon]) => (
-                              <DropdownMenuItem
-                                key={value}
-                                onClick={() => void changeVisibility(value)}
-                              >
-                                <Icon />
-                                {t(`visibility.${value}`)}
-                                {memo.visibility === value && (
-                                  <CheckIcon className="ml-auto" />
-                                )}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
-                        {/* Output is an action: a link to copy, or an image
-                            card to export — never a permission editor. */}
                         <DropdownMenuItem
-                          disabled={memo.visibility !== "public"}
-                          onClick={() => void copyShareLink()}
+                          onClick={() => setIsVisibilityOpen(true)}
                         >
-                          <LinkIcon />
-                          <span className="flex min-w-0 flex-col">
-                            <span>{t("share.copyLink")}</span>
-                            {memo.visibility !== "public" && (
-                              <span className="text-xs text-muted-foreground">
-                                {t("share.copyLinkHint")}
-                              </span>
-                            )}
-                          </span>
+                          <Globe2Icon />
+                          {t("memo.visibilityAndShare")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => setIsShareImageOpen(true)}
@@ -551,13 +476,6 @@ export const MemoCard = memo(function MemoCard({
               <AttachmentGallery attachments={galleryAttachments} />
             </div>
           )}
-          {share && shareUrl && (
-            <div className="mt-3 rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
-              <a className="font-mono hover:text-foreground" href={shareUrl}>
-                {shareUrl}
-              </a>
-            </div>
-          )}
         </div>
       )}
       {(tags.length > 0 || memo.state !== "normal") && !isEditing && (
@@ -622,6 +540,15 @@ export const MemoCard = memo(function MemoCard({
         open={isShareImageOpen}
         onOpenChange={setIsShareImageOpen}
       />
+      <MemoVisibilityDialog
+        memo={memo}
+        open={isVisibilityOpen}
+        onOpenChange={setIsVisibilityOpen}
+        onRevokeShare={onRevokeShare}
+        onShare={onShare}
+        onUpdateVisibility={changeVisibility}
+        share={share}
+      />
     </article>
   );
 });
@@ -647,25 +574,25 @@ function VoiceBadge({ memo }: { memo: Memo }) {
 }
 
 /**
- * A shared space shows one quiet icon instead of a text badge: the audience is
- * metadata you consult occasionally, not a label worth a permanent word.
+ * A shared space shows one quiet, clickable badge instead of a text label:
+ * clicking it directly opens the visibility and sharing management dialog.
  * Private notes (the common case) render nothing at all.
  */
 function VisibilityBadge({
   visibility,
-  onPublicClick,
+  onClick,
 }: {
   visibility: MemoVisibility;
-  onPublicClick?: () => void;
+  onClick?: () => void;
 }) {
   const { t } = useI18n();
   const icon =
     visibility === "public" ? (
-      <Globe2Icon />
+      <Globe2Icon className="size-3.5" />
     ) : visibility === "protected" ? (
-      <UsersIcon />
+      <UsersIcon className="size-3.5" />
     ) : (
-      <LockIcon />
+      <LockIcon className="size-3.5" />
     );
   const label =
     visibility === "public"
@@ -674,32 +601,26 @@ function VisibilityBadge({
         ? t("visibility.protected")
         : t("visibility.private");
 
-  if (visibility === "public" && onPublicClick) {
-    return (
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onPublicClick();
-        }}
-        aria-label={label}
-        className="flex size-5 items-center justify-center rounded text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-        title={t("share.copyLink")}
-      >
-        {icon}
-      </button>
-    );
-  }
+  if (visibility === "private") return null;
 
   return (
-    <span
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick?.();
+      }}
       aria-label={label}
-      className="flex size-5 items-center justify-center rounded text-muted-foreground"
-      role="img"
       title={label}
+      className={cn(
+        "flex size-6 items-center justify-center rounded-md text-muted-foreground transition-all duration-150 cursor-pointer motion-safe:hover:-translate-y-px motion-safe:active:scale-95",
+        visibility === "public"
+          ? "hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-500/15 dark:hover:text-brand-400"
+          : "hover:bg-muted hover:text-foreground",
+      )}
     >
       {icon}
-    </span>
+    </button>
   );
 }
 

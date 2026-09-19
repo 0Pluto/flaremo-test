@@ -428,9 +428,21 @@ const messages = {
   "share.unavailableDescription":
     "Le lien a peut-être expiré, été révoqué, ou pointe vers une note qui n'est plus publique.",
   "memo.visibilityLabel": "Visibilité",
+  "memo.visibilityAndShare": "Visibilité et partage",
+  "memo.visibilityDialogDescription":
+    "Gérez les autorisations d'accès et le lien de partage public.",
+  "visibility.privateDescription":
+    "Vous seul pouvez afficher et modifier après connexion",
+  "visibility.protectedDescription":
+    "Visible par les membres de cet espace de travail",
+  "visibility.publicDescription":
+    "Toute personne disposant du lien peut afficher",
+  "share.publicLink": "Lien public",
+  "share.openLink": "Ouvrir le lien",
+  "share.generatingLink": "Génération du lien…",
   "share.copyLink": "Copier le lien",
   "share.copyLinkHint": "Rendez-la publique pour la partager",
-  "share.imageCard": "Créer une image",
+  "share.imageCard": "Créer une carte",
   "share.imageTitle": "Créer une image",
   "share.imageSubtitle": "Choisissez un modèle et exportez-le en image",
   "share.templateLabel": "Modèle",

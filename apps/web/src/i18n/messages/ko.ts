@@ -419,9 +419,19 @@ const messages = {
   "share.unavailableDescription":
     "링크가 만료되었거나 취소되었거나, 노트가 더 이상 공개되지 않을 수 있습니다.",
   "memo.visibilityLabel": "공개 범위",
+  "memo.visibilityAndShare": "공개 범위 및 공유",
+  "memo.visibilityDialogDescription":
+    "이 기록의 공개 범위와 공유 링크를 관리합니다.",
+  "visibility.privateDescription": "로그인한 본인만 확인 및 수정 가능",
+  "visibility.protectedDescription":
+    "워크스페이스 멤버가 이 기록을 볼 수 있습니다",
+  "visibility.publicDescription": "링크가 있는 모든 사용자가 볼 수 있습니다",
+  "share.publicLink": "공개 링크",
+  "share.openLink": "링크 열기",
+  "share.generatingLink": "링크 생성 중…",
   "share.copyLink": "링크 복사",
   "share.copyLinkHint": "공개로 설정하면 공유할 수 있어요",
-  "share.imageCard": "이미지 카드 만들기",
+  "share.imageCard": "카드 만들기",
   "share.imageTitle": "이미지 카드 만들기",
   "share.imageSubtitle": "템플릿을 골라 이미지로 내보내세요",
   "share.templateLabel": "템플릿",

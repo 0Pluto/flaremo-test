@@ -419,9 +419,19 @@ const messages = {
   "share.unavailableDescription":
     "The link may have expired, been revoked, or point to a note that is no longer public.",
   "memo.visibilityLabel": "Visibility",
+  "memo.visibilityAndShare": "Visibility & Sharing",
+  "memo.visibilityDialogDescription":
+    "Manage access permissions and public share link.",
+  "visibility.privateDescription":
+    "Only you can view and edit after signing in",
+  "visibility.protectedDescription": "Visible to members of this workspace",
+  "visibility.publicDescription": "Anyone with the link can view",
+  "share.publicLink": "Public link",
+  "share.openLink": "Open link",
+  "share.generatingLink": "Generating link…",
   "share.copyLink": "Copy link",
   "share.copyLinkHint": "Make it public to share",
-  "share.imageCard": "Create image card",
+  "share.imageCard": "Create card",
   "share.imageTitle": "Create image card",
   "share.imageSubtitle": "Pick a template and export it as an image",
   "share.templateLabel": "Template",
