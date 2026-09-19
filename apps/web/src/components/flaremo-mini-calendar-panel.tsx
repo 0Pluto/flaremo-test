@@ -100,8 +100,10 @@ export function MiniCalendarReminders() {
 
 export function MiniCalendarPanel({
   activity,
+  onDayClick,
 }: {
   activity: MemoStatsResponse["activity"];
+  onDayClick?: (day: string) => void;
 }) {
   const { locale } = useI18n();
   const navigate = useNavigate();
@@ -131,7 +133,11 @@ export function MiniCalendarPanel({
   const { map: openTasks } = useOpenTasks(rangeStart, rangeEnd);
 
   const jump = (day: string) => {
-    void navigate({ to: `/?q=${encodeURIComponent(dayFilterQuery(day))}` });
+    if (onDayClick) {
+      onDayClick(day);
+    } else {
+      void navigate({ to: `/?q=${encodeURIComponent(dayFilterQuery(day))}` });
+    }
   };
 
   return (

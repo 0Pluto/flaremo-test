@@ -48,21 +48,7 @@ import { cn } from "@/lib/utils";
 
 export type ExplorerView = "all" | "archived" | "trashed";
 
-// One slot, two looks at time: the 12-week writing trend, or the current
-// month's schedule. Persisted so the sidebar keeps the user's choice.
 export type TimeView = "trend" | "calendar";
-
-const TIME_VIEW_STORAGE_KEY = "flaremo.explorer.timeView";
-
-function readTimeView(): TimeView {
-  try {
-    const stored = localStorage.getItem(TIME_VIEW_STORAGE_KEY);
-    if (stored === "trend" || stored === "calendar") return stored;
-  } catch {
-    // Storage can be unavailable (private mode); fall back to the default.
-  }
-  return "trend";
-}
 
 type FlareMoExplorerProps = {
   activeTag?: string;
@@ -115,15 +101,6 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
     () => buildMonthLabels(stats.activity, locale),
     [stats.activity, locale],
   );
-  const [timeView, setTimeView] = useState<TimeView>(readTimeView);
-  const selectTimeView = (view: TimeView) => {
-    setTimeView(view);
-    try {
-      localStorage.setItem(TIME_VIEW_STORAGE_KEY, view);
-    } catch {
-      // Persistence is best-effort; the in-memory choice still applies.
-    }
-  };
 
   return (
     <aside className="flex min-h-full flex-col px-3 py-4 text-sm">
@@ -140,87 +117,70 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
 
       <section className="mb-4 px-1 motion-safe:animate-fade">
         <MiniCalendarReminders />
-        <div
-          aria-label={t("explorer.timeViewLabel")}
-          className="mb-2 flex rounded-lg border border-border/60 p-0.5 text-xs"
-          role="tablist"
-        >
-          {(
-            [
-              ["trend", t("explorer.viewTrend")],
-              ["calendar", t("explorer.viewCalendar")],
-            ] as const
-          ).map(([value, label]) => (
-            <button
-              aria-selected={timeView === value}
-              className={cn(
-                "flex-1 rounded-md px-2 py-1 motion-safe:transition-colors motion-safe:duration-150",
-                timeView === value
-                  ? "bg-accent font-medium text-accent-foreground"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-              key={value}
-              role="tab"
-              type="button"
-              onClick={() => selectTimeView(value)}
+        <div className="rounded-xl border border-border/60 bg-card/40 p-2 shadow-xs">
+          <MiniCalendarPanel
+            activity={stats.activity}
+            onDayClick={onDaySelect}
+          />
+
+          <div className="mt-2.5 border-t border-border/50 px-1 pt-2">
+            <div className="mb-1.5 flex items-center justify-between text-xs text-muted-foreground">
+              <span className="font-medium text-foreground/85">
+                {streak > 0
+                  ? `🔥 ${streak} ${t("explorer.streak")}`
+                  : t("explorer.heatmapSummary", {
+                      count: stats.counts.total,
+                      days: 84,
+                    })}
+              </span>
+            </div>
+            <div
+              className="grid grid-flow-col grid-rows-7 gap-[2px]"
+              data-testid="activity-heatmap"
             >
-              {label}
-            </button>
-          ))}
-        </div>
-        <div className="min-h-[14.5rem]">
-          <div key={timeView} className="motion-safe:animate-fade">
-            {timeView === "trend" ? (
-              <>
-                <div
-                  className="grid grid-flow-col grid-rows-7 gap-1"
-                  data-testid="activity-heatmap"
-                >
-                  {stats.activity.map((day) =>
-                    onDaySelect ? (
-                      <button
-                        className={cn(
-                          "aspect-square rounded-[3px] motion-safe:transition-[opacity,transform] motion-safe:duration-150 hover:opacity-85 motion-safe:hover:scale-110",
-                          heatmapColor(day.count),
-                        )}
-                        key={day.date}
-                        title={t("explorer.heatmapDay", {
-                          count: day.count,
-                          date: day.date,
-                        })}
-                        type="button"
-                        onClick={() => onDaySelect(day.date)}
-                      />
-                    ) : (
-                      <div
-                        aria-hidden="true"
-                        className={cn(
-                          "aspect-square rounded-[3px] motion-safe:transition-[opacity,transform] motion-safe:duration-150 hover:opacity-85 motion-safe:hover:scale-110",
-                          heatmapColor(day.count),
-                        )}
-                        key={day.date}
-                        title={t("explorer.heatmapDay", {
-                          count: day.count,
-                          date: day.date,
-                        })}
-                      />
-                    ),
-                  )}
-                </div>
-                <div
-                  aria-hidden="true"
-                  className="mt-2 grid grid-cols-12 gap-1 px-1 text-xs text-muted-foreground"
-                >
-                  {monthLabels.map((month) => (
-                    <span className="whitespace-nowrap" key={month.date}>
-                      {month.label}
-                    </span>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <MiniCalendarPanel activity={stats.activity} />
-            )}
+              {stats.activity.map((day) =>
+                onDaySelect ? (
+                  <button
+                    className={cn(
+                      "h-2 w-full rounded-[1.5px] motion-safe:transition-[opacity,transform] hover:opacity-85 motion-safe:hover:scale-125",
+                      heatmapColor(day.count),
+                    )}
+                    key={day.date}
+                    title={t("explorer.heatmapDay", {
+                      count: day.count,
+                      date: day.date,
+                    })}
+                    type="button"
+                    onClick={() => onDaySelect(day.date)}
+                  />
+                ) : (
+                  <div
+                    aria-hidden="true"
+                    className={cn(
+                      "h-2 w-full rounded-[1.5px] motion-safe:transition-[opacity,transform] hover:opacity-85 motion-safe:hover:scale-125",
+                      heatmapColor(day.count),
+                    )}
+                    key={day.date}
+                    title={t("explorer.heatmapDay", {
+                      count: day.count,
+                      date: day.date,
+                    })}
+                  />
+                ),
+              )}
+            </div>
+            <div
+              aria-hidden="true"
+              className="mt-1 flex items-center justify-between px-0.5 text-[10px] text-muted-foreground/70"
+            >
+              {monthLabels
+                .filter((month) => Boolean(month.label))
+                .map((month) => (
+                  <span className="whitespace-nowrap" key={month.date}>
+                    {month.label}
+                  </span>
+                ))}
+            </div>
           </div>
         </div>
       </section>

@@ -8,7 +8,7 @@ import {
   buildMonthGrid,
   formatMonthTitle,
   type WeekStart,
-  weekdayLabels,
+  weekdayHeaders,
 } from "@/lib/calendar-date";
 import { cn } from "@/lib/utils";
 
@@ -58,12 +58,7 @@ export const FlareMoCalendar = memo(function FlareMoCalendar({
   );
 
   const weekdays = useMemo(
-    () =>
-      weekdayLabels(weekStart, (day) =>
-        new Date(2026, 8, day).toLocaleDateString(locale, {
-          weekday: "short",
-        }),
-      ),
+    () => weekdayHeaders(weekStart, locale, "short"),
     [weekStart, locale],
   );
 
@@ -279,12 +274,7 @@ export const FlareMoMiniCalendar = memo(function FlareMoMiniCalendar({
     [monthKey, weekStart],
   );
   const weekdays = useMemo(
-    () =>
-      weekdayLabels(weekStart, (day) =>
-        new Date(2026, 8, day).toLocaleDateString(locale, {
-          weekday: "narrow",
-        }),
-      ),
+    () => weekdayHeaders(weekStart, locale, "narrow"),
     [weekStart, locale],
   );
   const monthTitle = useMemo(
@@ -294,11 +284,11 @@ export const FlareMoMiniCalendar = memo(function FlareMoMiniCalendar({
 
   return (
     <div className={cn("text-xs", className)} data-testid="mini-calendar">
-      <div className="mb-1.5 flex items-center justify-between px-0.5 font-medium">
+      <div className="mb-2 flex items-center justify-between px-1 font-medium">
         <Link
           to="/calendar"
           search={{ date: undefined }}
-          className="hover:text-primary transition-colors cursor-pointer"
+          className="text-xs font-semibold text-foreground hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
         >
           <span>{monthTitle}</span>
         </Link>
@@ -307,56 +297,84 @@ export const FlareMoMiniCalendar = memo(function FlareMoMiniCalendar({
           size="xs"
           type="button"
           variant="ghost"
+          className="h-6 px-1.5 text-xs text-muted-foreground hover:text-foreground"
           onClick={() => onDayClick(today)}
         >
           {t("calendar.today")}
         </Button>
       </div>
-      <div className="grid grid-cols-7 text-muted-foreground">
+      <div className="grid grid-cols-7 mb-1 text-[11px] font-medium text-muted-foreground/80">
         {weekdays.map((label) => (
-          <span aria-hidden="true" key={label} className="text-center">
+          <span aria-hidden="true" key={label} className="text-center py-0.5">
             {label}
           </span>
         ))}
       </div>
-      <div className="mt-1 grid grid-cols-7 gap-y-0.5">
+      <div className="grid grid-cols-7 gap-y-0.5">
         {grid.map((day) => {
+          const isToday = today === day.key;
+          const isActive = activeDay === day.key;
           const noteCount = notes.get(day.key) ?? 0;
           const taskCount = tasks.get(day.key) ?? 0;
-          const heatStrength =
-            noteCount + taskCount <= 0
-              ? undefined
-              : noteCount + taskCount <= 1
-                ? "bg-primary/30"
-                : "bg-primary/60";
-          const hasSchedule = taskCount > 0;
+          const hasTask = taskCount > 0;
+          const isOverdue = hasTask && day.key < today;
+          const isTodayTask = hasTask && day.key === today;
+
+          let noteHeatClass = "";
+          if (!isToday && noteCount > 0) {
+            if (noteCount === 1)
+              noteHeatClass =
+                "bg-brand-500/15 text-brand-900 dark:text-brand-200 font-medium";
+            else if (noteCount === 2)
+              noteHeatClass =
+                "bg-brand-500/28 text-brand-950 dark:text-brand-100 font-semibold";
+            else
+              noteHeatClass =
+                "bg-brand-500/45 text-brand-950 dark:text-brand-50 font-semibold";
+          }
+
+          const hoverText = `${day.key}${
+            noteCount > 0
+              ? ` · ${t("calendar.notesCount", { count: noteCount })}`
+              : ""
+          }${taskCount > 0 ? ` · ${t("calendar.dayTasks", { count: taskCount })}` : ""}`;
+
           return (
             <button
               aria-label={t("calendar.day", { date: day.key })}
               key={`d-${day.key}`}
+              title={hoverText}
               type="button"
               onClick={() => onDayClick(day.key)}
               className={cn(
-                "flex h-7 w-full items-center justify-center rounded-[3px] motion-safe:transition-colors motion-safe:duration-150",
+                "group relative flex h-7 w-full flex-col items-center justify-center rounded-md motion-safe:transition-colors motion-safe:duration-150",
                 day.inMonth ? "" : "opacity-30",
-                activeDay === day.key ? "bg-accent" : "hover:bg-muted",
-                hasSchedule &&
-                  activeDay !== day.key &&
-                  (day.key < today
-                    ? "ring-2 ring-destructive/60 dark:ring-destructive/50"
-                    : "ring-2 ring-brand-500/70 dark:ring-brand-400/60"),
+                isActive ? "bg-accent" : "hover:bg-muted/70",
               )}
             >
               <span
                 className={cn(
-                  "flex size-5 items-center justify-center rounded-full tabular-nums",
-                  today === day.key &&
-                    "bg-brand-500 font-semibold text-[color:var(--brand-gradient-foreground)]",
-                  heatStrength,
+                  "flex size-5 items-center justify-center rounded-full text-[11px] tabular-nums transition-colors",
+                  isToday
+                    ? "bg-brand-500 font-semibold text-[color:var(--brand-gradient-foreground)] shadow-xs"
+                    : noteHeatClass,
                 )}
               >
                 {day.key.slice(-2)}
               </span>
+              {hasTask && (
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "absolute bottom-0.5 size-1 rounded-full",
+                    isOverdue
+                      ? "bg-destructive"
+                      : isTodayTask
+                        ? "bg-amber-500 dark:bg-amber-400"
+                        : "bg-muted-foreground/60",
+                  )}
+                />
+              )}
             </button>
           );
         })}

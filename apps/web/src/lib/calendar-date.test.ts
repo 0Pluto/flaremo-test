@@ -9,6 +9,7 @@ import {
   nextDay,
   prevDay,
   todayKey,
+  weekdayHeaders,
   weekdayLabels,
 } from "./calendar-date";
 
@@ -66,7 +67,7 @@ describe("buildMonthGrid", () => {
   });
 });
 
-describe("weekdayLabels", () => {
+describe("weekdayLabels / weekdayHeaders", () => {
   it("orders weekday labels by week start", () => {
     expect(weekdayLabels("sunday", (day) => `${day + 1}`)).toEqual([
       "1",
@@ -86,6 +87,15 @@ describe("weekdayLabels", () => {
       "7",
       "1",
     ]);
+  });
+
+  it("formats localized weekday headers correctly without magic month offset", () => {
+    // In zh-CN, Monday to Sunday narrow format should be 一, 二, 三, 四, 五, 六, 日
+    const zhMonday = weekdayHeaders("monday", "zh-CN", "narrow");
+    expect(zhMonday).toEqual(["一", "二", "三", "四", "五", "六", "日"]);
+
+    const zhSunday = weekdayHeaders("sunday", "zh-CN", "narrow");
+    expect(zhSunday).toEqual(["日", "一", "二", "三", "四", "五", "六"]);
   });
 });
 

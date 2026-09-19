@@ -78,6 +78,25 @@ export function weekdayLabels(
   return WEEKDAY_ORDER[weekStart].map(formatter);
 }
 
+// Fixed Sunday anchor (2024-01-07 was Sunday, day 0). Adding dayOfWeek (0-6)
+// produces the exact day of week for any locale without magic month dates.
+export function formatWeekday(
+  dayOfWeek: number,
+  locale: string,
+  format: "narrow" | "short" = "narrow",
+): string {
+  const date = new Date(2024, 0, 7 + dayOfWeek, 12, 0, 0);
+  return date.toLocaleDateString(locale, { weekday: format });
+}
+
+export function weekdayHeaders(
+  weekStart: WeekStart,
+  locale: string,
+  format: "narrow" | "short" = "narrow",
+): string[] {
+  return weekdayLabels(weekStart, (day) => formatWeekday(day, locale, format));
+}
+
 // Locale-aware titles via Intl (app locales: zh-CN/en-US/ja/fr/es/ko/ru/ar).
 // zh keeps its hand-built 「2026年9月」 form; everything else uses the native
 // calendar title from ICU data.
