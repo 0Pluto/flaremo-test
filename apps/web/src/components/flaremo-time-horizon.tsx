@@ -5,7 +5,7 @@
  * 1. 热力图态 (Heatmap Mode) ——【纯粹的克制，只展示热力与力度】：
  *    - 画布中间彻底去除所有文字说明、数字标牌与文字描述。
  *    - 纯靠方块的点阵与色彩深浅传达节奏与能量状态，极致高级、沉静。
- *    - 尺度严密对齐：年 365天微点 / 月 ~140时段微点 (2x2象限) / 周 168小时色块 / 日 24小时色块。
+ *    - 尺度严密对齐：年 365天微点 / 月 ~140时段微点 (2x2象限) / 周 168小时色块 / 日 96时段微轨 (15分钟刻度)。
  * 2. 日历图态 (Calendar Mode) ——【展示信息本身】：
  *    - 相同网格与结构，显示月份、日期、星期、整点时间与条数信息。
  * 3. 严格零 Emoji，外轴极简，信息仅在悬停时于最底线静默提示。
@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { memo, useMemo, useState } from "react";
 import type { MemoStatsResponse } from "@/api";
-import { getHourlyActivity } from "@/api";
+import { getHourlyActivity, listMemos } from "@/api";
 import { useI18n } from "@/i18n";
 import { heatmapColor } from "@/lib/activity";
 import {
@@ -90,7 +90,12 @@ const DAY_COLUMN_HOURS = [
   [18, 19, 20, 21, 22, 23],
 ] as const;
 
-const DAY_COLUMN_LABELS = ["夜间", "上午", "下午", "晚上"] as const;
+const DAY_COLUMN_LABELS = [
+  "夜间 (00-06)",
+  "上午 (06-12)",
+  "下午 (12-18)",
+  "晚上 (18-24)",
+] as const;
 
 // ============================================================================
 // Root Component
@@ -137,6 +142,15 @@ export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
     queryFn: ({ signal }) =>
       getHourlyActivity({ date: selectedDay }, tz, signal),
     staleTime: 60_000,
+    enabled: tab === "day",
+  });
+
+  // Memo query for Day view 15-minute fine-grained resolution (24 hours x 4 slots = 96 micro-slits)
+  const dayMemosQuery = useQuery({
+    queryKey: ["memos-day-slots", selectedDay],
+    queryFn: ({ signal }) =>
+      listMemos({ q: dayFilterQuery(selectedDay), page_size: 100 }, signal),
+    staleTime: 30_000,
     enabled: tab === "day",
   });
 
@@ -393,12 +407,13 @@ export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
           />
         )}
 
-        {/* DAY VIEW: 24 Hours Atomic Scale (4 Columns x 6 Hours) */}
+        {/* DAY VIEW: 24 Hours x 4 Quarter-Hour Micro-Slits (96 Slits) */}
         {tab === "day" && (
           <DayHorizonPureView
             displayMode={displayMode}
             hourlyData={dayHourlyQuery.data?.hours ?? []}
-            isLoading={dayHourlyQuery.isLoading}
+            isLoading={dayHourlyQuery.isLoading || dayMemosQuery.isLoading}
+            memos={dayMemosQuery.data?.memos ?? []}
             selectedDay={selectedDay}
             onHoverTip={setHoveredTip}
             onJumpToTimeline={jumpToTimeline}
@@ -880,11 +895,12 @@ function WeekHorizonPureView({
 }
 
 // ============================================================================
-// 4. Day Horizon View (24 Hours Atomic Scale: 4 Columns x 6 Hours)
+// 4. Day Horizon View (24 Hours x 4 Quarter-Hour Slits = 96 Micro-Slits)
 // ============================================================================
 function DayHorizonPureView({
   selectedDay,
   hourlyData,
+  memos,
   isLoading,
   displayMode,
   onJumpToTimeline,
@@ -892,11 +908,23 @@ function DayHorizonPureView({
 }: {
   selectedDay: string;
   hourlyData: Array<{ date: string; hour: number; count: number }>;
+  memos: Array<{ id: string; create_time: string }>;
   isLoading: boolean;
   displayMode: DisplayMode;
   onJumpToTimeline: (day: string) => void;
   onHoverTip: (tip: string | null) => void;
 }) {
+  // Map 96 quarter-hour slots (0 to 95) from exact memo creation timestamps
+  const slotCountMap = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const m of memos) {
+      const d = new Date(m.create_time);
+      const slot = d.getHours() * 4 + Math.floor(d.getMinutes() / 15);
+      map.set(slot, (map.get(slot) ?? 0) + 1);
+    }
+    return map;
+  }, [memos]);
+
   const hourCountMap = useMemo(() => {
     const map = new Map<number, number>();
     for (const item of hourlyData) {
@@ -905,13 +933,8 @@ function DayHorizonPureView({
     return map;
   }, [hourlyData]);
 
-  const maxCount = useMemo(
-    () => Math.max(1, ...Array.from(hourCountMap.values())),
-    [hourCountMap],
-  );
-
   return (
-    <div className="flex flex-col gap-2 py-0.5">
+    <div className="flex flex-col gap-1.5 py-0.5">
       {/* Top Axis: ONLY in Calendar mode! In Heatmap mode, strictly NO TEXT! */}
       {displayMode === "calendar" ? (
         <div className="grid grid-cols-4 gap-2 text-center text-[10px] font-medium text-muted-foreground/70">
@@ -921,7 +944,7 @@ function DayHorizonPureView({
         </div>
       ) : null}
 
-      {/* 4 Columns (Night, Morning, Afternoon, Evening) x 6 Hours each = 24 Pure Blocks */}
+      {/* 4 Columns (Night, Morning, Afternoon, Evening) x 6 Hours each = 24 Pods, 96 Micro-Slits */}
       <div className="grid grid-cols-4 gap-2">
         {DAY_COLUMN_HOURS.map((hoursCol, colIdx) => (
           <div
@@ -929,34 +952,36 @@ function DayHorizonPureView({
             key={`col-${DAY_COLUMN_LABELS[colIdx]}`}
           >
             {hoursCol.map((hour) => {
-              const count = hourCountMap.get(hour) ?? 0;
               const hourLabel = `${String(hour).padStart(2, "0")}:00`;
-              const intensity =
-                count === 0
-                  ? 0
-                  : count >= Math.ceil(maxCount * 0.75)
-                    ? 4
-                    : count >= Math.ceil(maxCount * 0.5)
-                      ? 3
-                      : count >= Math.ceil(maxCount * 0.25)
-                        ? 2
-                        : 1;
+              const hourBaseSlot = hour * 4;
+              const q0 = slotCountMap.get(hourBaseSlot) ?? 0;
+              const q1 = slotCountMap.get(hourBaseSlot + 1) ?? 0;
+              const q2 = slotCountMap.get(hourBaseSlot + 2) ?? 0;
+              const q3 = slotCountMap.get(hourBaseSlot + 3) ?? 0;
+              const memoTotal = q0 + q1 + q2 + q3;
+              const hourCount = hourCountMap.get(hour) ?? 0;
+              const total = memoTotal > 0 ? memoTotal : hourCount;
+
+              const slitColor = (qVal: number) => {
+                if (qVal > 0) return heatmapColor(qVal);
+                if (isLoading && hourCount > 0) return "bg-brand-500/30";
+                if (memoTotal === 0 && hourCount > 0)
+                  return heatmapColor(hourCount);
+                return "bg-muted/40";
+              };
 
               return (
                 <button
                   className={cn(
-                    "group relative flex h-8 w-full items-center justify-center rounded-[3px] border transition-all",
+                    "group relative flex h-8.5 w-full items-center justify-center rounded-[3px] border transition-all",
                     displayMode === "heatmap"
                       ? cn(
-                          "border-border/20",
-                          intensity > 0
-                            ? heatmapColor(intensity)
-                            : "bg-muted/40 hover:bg-muted/65",
-                          intensity > 0 && "border-transparent",
+                          "border-border/20 bg-background/20 hover:border-brand-500/40 hover:bg-brand-500/5",
+                          total > 0 && "border-brand-500/40 bg-brand-500/5",
                         )
                       : cn(
                           "border-border/30 bg-background/50 hover:border-brand-500/50 hover:bg-brand-500/5",
-                          count > 0 &&
+                          total > 0 &&
                             "border-brand-500/60 bg-brand-500/10 font-bold text-brand-600 dark:text-brand-400",
                         ),
                     isLoading && "animate-pulse",
@@ -967,17 +992,54 @@ function DayHorizonPureView({
                   onClick={() => onJumpToTimeline(selectedDay)}
                   onMouseEnter={() =>
                     onHoverTip(
-                      `${selectedDay} ${hourLabel} · ${count > 0 ? `${count} 条笔记` : "无记录"}`,
+                      `${selectedDay} ${hourLabel} · ${total > 0 ? `${total} 条笔记 (:00:${q0} :15:${q1} :30:${q2} :45:${q3})` : "无记录"}`,
                     )
                   }
                   onMouseLeave={() => onHoverTip(null)}
                 >
-                  {/* Heatmap Mode: ABSOLUTELY ZERO NUMBERS INSIDE! Calendar Mode: Hour Label */}
-                  {displayMode === "calendar" ? (
-                    <span className="text-[10px] font-mono tabular-nums text-foreground">
-                      {hourLabel}
-                    </span>
-                  ) : null}
+                  {/* Heatmap Mode: 4 Fine Micro-Slits (:00, :15, :30, :45), ABSOLUTELY ZERO NUMBERS INSIDE! */}
+                  {displayMode === "heatmap" ? (
+                    <div className="flex h-[18px] items-center gap-[3px]">
+                      <div
+                        className={cn(
+                          "h-full w-[4.5px] rounded-[1px] transition-colors",
+                          slitColor(q0),
+                        )}
+                        title=":00"
+                      />
+                      <div
+                        className={cn(
+                          "h-full w-[4.5px] rounded-[1px] transition-colors",
+                          slitColor(q1),
+                        )}
+                        title=":15"
+                      />
+                      <div
+                        className={cn(
+                          "h-full w-[4.5px] rounded-[1px] transition-colors",
+                          slitColor(q2),
+                        )}
+                        title=":30"
+                      />
+                      <div
+                        className={cn(
+                          "h-full w-[4.5px] rounded-[1px] transition-colors",
+                          slitColor(q3),
+                        )}
+                        title=":45"
+                      />
+                    </div>
+                  ) : (
+                    /* Calendar Mode: Crisp Hour Label & Count */
+                    <div className="flex items-center gap-1.5 font-mono text-[10px] tabular-nums">
+                      <span>{hourLabel}</span>
+                      {total > 0 && (
+                        <span className="text-[9px] font-bold text-brand-600 dark:text-brand-400">
+                          {total}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </button>
               );
             })}
