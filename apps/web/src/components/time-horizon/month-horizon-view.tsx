@@ -23,6 +23,7 @@ export function MonthHorizonPureView({
   isLoading: _isLoading,
   displayMode,
   hoveredDate,
+  onDrillToWeek,
   onDrillToDay,
   onHoverDate,
   onHoverTip,
@@ -37,7 +38,8 @@ export function MonthHorizonPureView({
   isLoading?: boolean;
   displayMode: DisplayMode;
   hoveredDate?: string | null;
-  onDrillToDay: (day: string) => void;
+  onDrillToWeek?: (day: string) => void;
+  onDrillToDay?: (day: string) => void;
   onHoverDate?: (day: string | null) => void;
   onHoverTip: (tip: string | null) => void;
 }) {
@@ -111,7 +113,7 @@ export function MonthHorizonPureView({
               )}
               key={cell.key}
               type="button"
-              onClick={() => onDrillToDay(cell.key)}
+              onClick={() => (onDrillToWeek ?? onDrillToDay)?.(cell.key)}
               onMouseEnter={() => {
                 onHoverDate?.(cell.key);
                 if (totalCount > 0) {

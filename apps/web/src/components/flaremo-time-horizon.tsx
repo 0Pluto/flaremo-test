@@ -148,7 +148,14 @@ export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
     setTab("month");
   };
 
-  /** Drill-down: Month / Week -> Day */
+  /** Drill-down: Month -> Week */
+  const drillToWeek = (day: string) => {
+    handleSelectDay(day);
+    setCurrentWeekBase(day);
+    setTab("week");
+  };
+
+  /** Drill-down: Week -> Day */
   const drillToDay = (day: string) => {
     handleSelectDay(day);
     setTab("day");
@@ -343,7 +350,7 @@ export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
               selectedDay={selectedDay}
               today={today}
               weekStart={weekStart}
-              onDrillToDay={drillToDay}
+              onDrillToWeek={drillToWeek}
               onHoverDate={onHoverDate}
               onHoverTip={setHoveredTip}
             />
