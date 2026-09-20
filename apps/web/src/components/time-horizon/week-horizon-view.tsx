@@ -83,7 +83,7 @@ export function WeekHorizonPureView({
       {/* 7 Columns x 24 Rows Grid (168 Pure Squares, ZERO TEXT INSIDE) */}
       <div className="flex gap-1">
         {/* Left Y-axis hour scale indicators (00, 06, 12, 18, 23) */}
-        <div className="flex w-4 shrink-0 flex-col justify-between py-0.5 text-[8px] font-mono text-muted-foreground/60 select-none">
+        <div className="flex w-4 shrink-0 flex-col justify-between py-0.5 text-[8px] font-mono text-muted-foreground/70 select-none">
           <span>00</span>
           <span>06</span>
           <span>12</span>
@@ -104,10 +104,10 @@ export function WeekHorizonPureView({
                       displayMode === "heatmap"
                         ? count > 0
                           ? heatmapColor(count)
-                          : "bg-muted/40 hover:bg-muted/70"
+                          : "bg-muted-foreground/15 hover:bg-muted-foreground/30 dark:bg-muted/30 dark:hover:bg-muted/60"
                         : count > 0
-                          ? "bg-brand-500/60 ring-1 ring-brand-500"
-                          : "bg-muted/25 hover:bg-muted/60",
+                          ? "bg-brand-500/70 ring-1 ring-brand-500"
+                          : "bg-muted-foreground/10 hover:bg-muted-foreground/25 dark:bg-muted/20 dark:hover:bg-muted/50",
                       isLoading && "animate-pulse",
                       "hover:scale-125 hover:z-10",
                     )}

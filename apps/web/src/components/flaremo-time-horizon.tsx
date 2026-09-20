@@ -301,7 +301,7 @@ export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
 
       {/* ── Unified High-Impact Canvas Container (~240px Tall) ─────────────── */}
       <div
-        className="relative flex min-h-[238px] flex-col justify-center rounded-xl border border-border/50 bg-muted/15 p-2.5 shadow-2xs"
+        className="relative flex min-h-[238px] flex-col justify-center rounded-xl border border-border/60 bg-muted/20 p-2.5 shadow-2xs dark:border-border/40 dark:bg-muted/15"
         data-testid="activity-heatmap"
       >
         {/* YEAR VIEW: 365 Days across 12 Month Dot Clusters */}

@@ -84,28 +84,29 @@ export function MonthHorizonPureView({
 
           const dotColor = (qVal: number) => {
             if (qVal > 0) return heatmapColor(qVal);
-            if (isLoading && totalCount > 0) return "bg-brand-500/30";
+            if (isLoading && totalCount > 0) return "bg-brand-500/35";
             if (qTotal === 0 && totalCount > 0) return heatmapColor(totalCount);
-            return "bg-muted/40";
+            return heatmapColor(0);
           };
 
           return (
             <button
               className={cn(
-                "group relative flex h-8.5 w-full items-center justify-center rounded-[3px] border transition-all",
-                cell.inMonth ? "opacity-100" : "opacity-15 pointer-events-none",
+                "group relative flex h-8.5 w-full items-center justify-center rounded-[4px] border transition-all",
+                cell.inMonth ? "opacity-100" : "opacity-20 pointer-events-none",
                 displayMode === "heatmap"
                   ? cn(
-                      "border-border/20 bg-background/20 hover:border-brand-500/40 hover:bg-brand-500/5",
-                      isToday && "border-brand-500/60 ring-1 ring-brand-500/30",
+                      "border-border/50 bg-background/50 hover:border-brand-500/40 hover:bg-background/80 dark:border-border/20 dark:bg-background/20 dark:hover:border-brand-500/40 dark:hover:bg-brand-500/5",
+                      isToday &&
+                        "border-brand-500/60 ring-1 ring-brand-500/30 bg-brand-500/[0.03] dark:bg-brand-500/10",
                     )
                   : cn(
-                      "border-border/30 bg-background/50 text-foreground",
+                      "border-border/60 bg-background/60 hover:border-brand-500/50 hover:bg-background dark:border-border/30 dark:bg-background/50 text-foreground",
                       isToday && "border-brand-500 bg-brand-500/10 font-bold",
                       totalCount > 0 &&
                         "font-semibold text-brand-600 dark:text-brand-400",
                     ),
-                isSelected && "ring-2 ring-brand-500 z-10 scale-105 shadow-sm",
+                isSelected && "ring-2 ring-brand-500 z-10 scale-105 shadow-xs",
                 hoveredDate === cell.key &&
                   "ring-1 ring-brand-500/70 scale-105",
                 "hover:scale-105 hover:z-10",

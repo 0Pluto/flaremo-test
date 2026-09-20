@@ -80,12 +80,12 @@ export function YearHorizonPureView({
               "group relative flex flex-col rounded-lg border p-1.5 transition-all text-left",
               displayMode === "heatmap"
                 ? cn(
-                    "border-border/20 bg-background/20 hover:border-brand-500/40 hover:bg-brand-500/5",
+                    "border-border/50 bg-background/50 hover:border-brand-500/40 hover:bg-background/80 dark:border-border/20 dark:bg-background/20 dark:hover:border-brand-500/40 dark:hover:bg-brand-500/5",
                     isCurrentMonth &&
-                      "border-brand-500/60 ring-1 ring-brand-500/30",
+                      "border-brand-500/60 ring-1 ring-brand-500/30 bg-brand-500/[0.03] dark:bg-brand-500/10",
                   )
                 : cn(
-                    "border-border/30 bg-background/40 hover:border-brand-500/50 hover:bg-brand-500/5",
+                    "border-border/60 bg-background/60 hover:border-brand-500/50 hover:bg-background dark:border-border/30 dark:bg-background/40 dark:hover:border-brand-500/50 dark:hover:bg-brand-500/5",
                     isCurrentMonth && "border-brand-500 bg-brand-500/10",
                   ),
             )}
@@ -126,7 +126,7 @@ export function YearHorizonPureView({
                   <div
                     className={cn(
                       "size-[5.5px] rounded-[1px] transition-all",
-                      count > 0 ? heatmapColor(count) : "bg-muted/40",
+                      heatmapColor(count),
                       isDayToday && "ring-1 ring-brand-500 scale-125 z-10",
                       "group-hover:opacity-95",
                     )}

@@ -67,10 +67,10 @@ export function DayHorizonPureView({
 
               const slitColor = (qVal: number) => {
                 if (qVal > 0) return heatmapColor(qVal);
-                if (isLoading && hourCount > 0) return "bg-brand-500/30";
+                if (isLoading && hourCount > 0) return "bg-brand-500/35";
                 if (memoTotal === 0 && hourCount > 0)
                   return heatmapColor(hourCount);
-                return "bg-muted/40";
+                return heatmapColor(0);
               };
 
               return (
@@ -79,11 +79,11 @@ export function DayHorizonPureView({
                     "group relative flex h-8.5 w-full items-center justify-center rounded-[3px] border transition-all",
                     displayMode === "heatmap"
                       ? cn(
-                          "border-border/20 bg-background/20 hover:border-brand-500/40 hover:bg-brand-500/5",
+                          "border-border/50 bg-background/50 hover:border-brand-500/40 hover:bg-background/80 dark:border-border/20 dark:bg-background/20 dark:hover:border-brand-500/40 dark:hover:bg-brand-500/5",
                           total > 0 && "border-brand-500/40 bg-brand-500/5",
                         )
                       : cn(
-                          "border-border/30 bg-background/50 hover:border-brand-500/50 hover:bg-brand-500/5",
+                          "border-border/60 bg-background/60 hover:border-brand-500/50 hover:bg-background dark:border-border/30 dark:bg-background/50",
                           total > 0 &&
                             "border-brand-500/60 bg-brand-500/10 font-bold text-brand-600 dark:text-brand-400",
                         ),
