@@ -1162,6 +1162,8 @@ const messages = {
   "composer.fullscreen.open": "Полноэкранный режим",
   "composer.fullscreen.close": "Выйти из полноэкранного режима (Esc)",
   "composer.fullscreen.wordCount": "{count} сл.",
+  "composer.fullscreen.readingTime": "{minutes} мин чтения",
+  "composer.fullscreen.savedLocally": "Сохранено локально",
   "composer.fullscreen.articleTitlePlaceholder":
     "Заголовок (необязательно, превращает в статью)…",
   "composer.type.label": "Тип публикации",

@@ -86,6 +86,10 @@ export type RichComposerEditorProps = {
   extensions?: AnyExtension[];
   /** CSS applied to the contenteditable body (composer box by default). */
   contentClassName?: string;
+  /** Emitted whenever the editor view undergoes a transaction/selection update. */
+  onTransaction?: (editor: Editor) => void;
+  /** Emitted when Backspace is pressed at the start of the document (pos 1). */
+  onBackspaceAtStart?: () => boolean | void;
 };
 
 /**
@@ -125,6 +129,8 @@ export function RichComposerEditor({
   inputId = "flaremo-composer-input",
   extensions,
   contentClassName = "composer-editor-content",
+  onTransaction,
+  onBackspaceAtStart,
 }: RichComposerEditorProps) {
   // Callbacks are read through refs: TipTap captures the options object once,
   // so prop closures would go stale across renders.
@@ -142,6 +148,10 @@ export function RichComposerEditor({
   const onWikiLinkTokenChangeRef = useRef(onWikiLinkTokenChange);
   onWikiLinkTokenChangeRef.current = onWikiLinkTokenChange;
   const lastWikiTokenRef = useRef<string | null>(null);
+  const onTransactionRef = useRef(onTransaction);
+  onTransactionRef.current = onTransaction;
+  const onBackspaceAtStartRef = useRef(onBackspaceAtStart);
+  onBackspaceAtStartRef.current = onBackspaceAtStart;
   // The markdown last pushed downstream. Guards the restore effect against
   // re-parsing the editor's own output (which would fight the update loop).
   const lastEmittedRef = useRef(content);
@@ -171,8 +181,18 @@ export function RichComposerEditor({
         if (
           event.key !== "Enter" &&
           event.key !== "Escape" &&
+          event.key !== "Backspace" &&
           event.keyCode !== 229
         ) {
+          return false;
+        }
+        if (event.key === "Backspace") {
+          if (event.isComposing) return false;
+          const { from, to } = view.state.selection;
+          if (from === 1 && to === 1 && onBackspaceAtStartRef.current) {
+            const handled = onBackspaceAtStartRef.current();
+            if (handled !== false) return true;
+          }
           return false;
         }
         if (event.key === "Escape") {
@@ -264,6 +284,8 @@ export function RichComposerEditor({
           onWikiLinkTokenChangeRef.current(wikiToken);
         }
       }
+
+      onTransactionRef.current?.(current);
     },
   });
 

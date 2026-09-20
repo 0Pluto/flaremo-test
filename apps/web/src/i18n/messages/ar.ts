@@ -1122,6 +1122,8 @@ const messages = {
   "composer.fullscreen.open": "ملء الشاشة",
   "composer.fullscreen.close": "الخروج من ملء الشاشة (Esc)",
   "composer.fullscreen.wordCount": "{count} كلمة",
+  "composer.fullscreen.readingTime": "قراءة في {minutes} دقيقة",
+  "composer.fullscreen.savedLocally": "تم الحفظ محليًا",
   "composer.fullscreen.articleTitlePlaceholder":
     "العنوان (اختياري، يتحول إلى مقال)…",
   "composer.type.label": "نوع النشر",

@@ -1072,6 +1072,8 @@ const messages = {
   "composer.fullscreen.open": "全屏写作",
   "composer.fullscreen.close": "收起全屏 (Esc)",
   "composer.fullscreen.wordCount": "{count} 字",
+  "composer.fullscreen.readingTime": "{minutes} 分钟阅读",
+  "composer.fullscreen.savedLocally": "已保存在本地",
   "composer.fullscreen.articleTitlePlaceholder":
     "标题（选填，填写后转为文章）…",
   "composer.type.label": "发布类型",

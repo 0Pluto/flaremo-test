@@ -1168,6 +1168,8 @@ const messages = {
   "composer.fullscreen.open": "Pantalla completa",
   "composer.fullscreen.close": "Salir de pantalla completa (Esc)",
   "composer.fullscreen.wordCount": "{count} palabras",
+  "composer.fullscreen.readingTime": "{minutes} min de lectura",
+  "composer.fullscreen.savedLocally": "Guardado localmente",
   "composer.fullscreen.articleTitlePlaceholder":
     "Título (opcional, convierte en artículo)…",
   "composer.type.label": "Tipo de publicación",

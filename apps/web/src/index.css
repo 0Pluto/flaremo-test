@@ -689,60 +689,74 @@
     @apply mt-3 text-base font-semibold;
   }
 
-  .composer-editor-content ul {
+  .composer-editor-content ul,
+  .article-editor-content ul {
     @apply my-3 list-disc ps-6;
   }
 
-  .composer-editor-content ol {
+  .composer-editor-content ol,
+  .article-editor-content ol {
     @apply my-3 list-decimal ps-6;
   }
 
-  .composer-editor-content li + li {
+  .composer-editor-content li + li,
+  .article-editor-content li + li {
     @apply mt-1;
   }
 
-  .composer-editor-content li > p {
+  .composer-editor-content li > p,
+  .article-editor-content li > p {
     @apply my-0;
   }
 
-  .composer-editor-content blockquote {
+  .composer-editor-content blockquote,
+  .article-editor-content blockquote {
     @apply my-3 rounded-e-md border-s-2 border-brand-300 bg-brand-50 py-1 pe-3 ps-4 text-muted-foreground dark:border-brand-600 dark:bg-brand-400/5;
   }
 
-  .composer-editor-content code {
+  .composer-editor-content code,
+  .article-editor-content code {
     @apply rounded-md bg-muted px-1.5 py-0.5 font-mono text-[0.85em];
   }
 
-  .composer-editor-content pre {
+  .composer-editor-content pre,
+  .article-editor-content pre {
     @apply my-3 overflow-x-auto rounded-xl border border-border/60 bg-muted p-4;
   }
 
-  .composer-editor-content pre code {
+  .composer-editor-content pre code,
+  .article-editor-content pre code {
     @apply bg-transparent p-0;
   }
 
-  .composer-editor-content img {
+  .composer-editor-content img,
+  .article-editor-content img {
     @apply my-1 h-auto max-w-full rounded-xl border border-border/60;
   }
 
   /* GFM task lists: real interactive checkboxes in the editor. */
-  .composer-editor-content ul[data-type="taskList"] {
+  .composer-editor-content ul[data-type="taskList"],
+  .article-editor-content ul[data-type="taskList"] {
     @apply my-3 list-none ps-1;
   }
 
-  .composer-editor-content ul[data-type="taskList"] li {
+  .composer-editor-content ul[data-type="taskList"] li,
+  .article-editor-content ul[data-type="taskList"] li {
     @apply flex items-start gap-2;
   }
 
-  .composer-editor-content ul[data-type="taskList"] li > label {
+  .composer-editor-content ul[data-type="taskList"] li > label,
+  .article-editor-content ul[data-type="taskList"] li > label {
     @apply mt-[5px] shrink-0 select-none;
   }
 
-  .composer-editor-content ul[data-type="taskList"] li > label input[type="checkbox"] {
+  .composer-editor-content ul[data-type="taskList"] li > label input[type="checkbox"],
+  .article-editor-content ul[data-type="taskList"] li > label input[type="checkbox"] {
     @apply size-4 accent-brand-500;
   }
 
-  .composer-editor-content ul[data-type="taskList"] li[data-checked="true"] > div {
+  .composer-editor-content ul[data-type="taskList"] li[data-checked="true"] > div,
+  .article-editor-content ul[data-type="taskList"] li[data-checked="true"] > div {
     @apply text-muted-foreground line-through;
   }
 
@@ -762,7 +776,8 @@
     content: "";
   }
 
-  .composer-editor-content p.is-editor-empty:first-child::before {
+  .composer-editor-content p.is-editor-empty:first-child::before,
+  .article-editor-content p.is-editor-empty:first-child::before {
     @apply pointer-events-none float-start h-0 text-muted-foreground;
     content: attr(data-placeholder);
   }
