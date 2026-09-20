@@ -30,7 +30,10 @@ function attachmentMarkdown(attachment: {
  * never exists before the user presses the button, so nothing else can bind
  * them and the orphan GC would collect them within its 7-day window.
  */
-export async function createArticleWithAttachments(input: MemoCaptureInput) {
+export async function createArticleWithAttachments(
+  input: MemoCaptureInput,
+  options?: { title?: string; lang?: string },
+) {
   const uploaded: Array<{
     id: string;
     filename: string;
@@ -55,12 +58,16 @@ export async function createArticleWithAttachments(input: MemoCaptureInput) {
     throw new Error("article-too-long");
   }
 
+  const title = (options?.title ?? input.title ?? "").trim();
+
   const { article } = await createArticle({
+    title,
     content,
     attachment_names: [
       ...(input.preuploadedAttachmentNames ?? []),
       ...uploaded.map((attachment) => attachment.id),
     ],
+    ...(options?.lang ? { lang: options.lang } : {}),
   });
   return article;
 }

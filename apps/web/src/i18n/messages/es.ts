@@ -1165,6 +1165,18 @@ const messages = {
   "admin.pageNext": "Siguiente",
   "composer.orderedList": "Lista numerada",
   "composer.insertDate": "Insertar fecha",
+  "composer.fullscreen.open": "Pantalla completa",
+  "composer.fullscreen.close": "Salir de pantalla completa (Esc)",
+  "composer.fullscreen.wordCount": "{count} palabras",
+  "composer.fullscreen.articleTitlePlaceholder": "Título del artículo…",
+  "composer.type.label": "Tipo de publicación",
+  "composer.type.memo": "Nota · Publicar en la cronología",
+  "composer.type.article": "Artículo · Público e indexable",
+  "composer.action.toArticleEditor": "Maquetar artículo",
+  "composer.article.offlineBlocked":
+    "Se requiere conexión de red para crear un borrador de artículo",
+  "composer.article.tooLong":
+    "El contenido del artículo supera el límite de 200 KB",
   "search.spotlightPlaceholder": "Buscar notas, tareas, acciones…",
   "search.triggerPlaceholder": "Buscar…",
   "search.viewInTimeline": 'Buscar "{query}" en la cronología',

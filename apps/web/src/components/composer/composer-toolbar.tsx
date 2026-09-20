@@ -6,6 +6,7 @@ import {
   ImageIcon,
   ListIcon,
   ListOrderedIcon,
+  Maximize2Icon,
   MicIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ export function ComposerToolbar({
   withEditor,
   onDraftChange,
   onStartVoice,
+  onExpand,
 }: {
   draft: MemoCaptureInput;
   isPending: boolean;
@@ -37,6 +39,8 @@ export function ComposerToolbar({
   onDraftChange: (draft: MemoCaptureInput) => void;
   /** Starts a session; the caller owns the controller. */
   onStartVoice: () => void;
+  /** Opens fullscreen focus canvas. */
+  onExpand?: () => void;
 }) {
   const { t } = useI18n();
   return (
@@ -161,6 +165,19 @@ export function ComposerToolbar({
           }}
         >
           <MicIcon />
+        </Button>
+      )}
+      {onExpand && (
+        <Button
+          aria-label={t("composer.fullscreen.open")}
+          disabled={isPending}
+          size="icon-sm"
+          type="button"
+          variant="ghost"
+          onClick={onExpand}
+          title={t("composer.fullscreen.open")}
+        >
+          <Maximize2Icon />
         </Button>
       )}
     </div>

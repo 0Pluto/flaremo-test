@@ -1119,6 +1119,18 @@ const messages = {
   "admin.pageNext": "التالي",
   "composer.orderedList": "قائمة مرقمة",
   "composer.insertDate": "إدراج التاريخ",
+  "composer.fullscreen.open": "ملء الشاشة",
+  "composer.fullscreen.close": "الخروج من ملء الشاشة (Esc)",
+  "composer.fullscreen.wordCount": "{count} كلمة",
+  "composer.fullscreen.articleTitlePlaceholder": "عنوان المقال…",
+  "composer.type.label": "نوع النشر",
+  "composer.type.memo": "ملاحظة · النشر في الخط الزمني",
+  "composer.type.article": "مقال · عام وقابل للفهرسة",
+  "composer.action.toArticleEditor": "تنسيق المقال",
+  "composer.article.offlineBlocked":
+    "الاتصال بالشبكة مطلوب لإنشاء مسودة المقال",
+  "composer.article.tooLong":
+    "محتوى المقال يتجاوز الحد المسموح به وهو 200 كيلوبايت",
   "search.spotlightPlaceholder": "ابحث في الملاحظات والمهام والإجراءات…",
   "search.triggerPlaceholder": "بحث في السجلات…",
   "search.viewInTimeline": 'البحث عن "{query}" في الجدول الزمني',

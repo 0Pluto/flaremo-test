@@ -1,5 +1,5 @@
 import type { Editor } from "@tiptap/react";
-import { Suspense, useRef, useState } from "react";
+import { lazy, Suspense, useRef, useState } from "react";
 import type { MemoVisibility } from "@/api";
 import { ComposerFileChips } from "@/components/composer/composer-file-chips";
 import {
@@ -18,6 +18,12 @@ import type { MemoCaptureInput } from "@/lib/local-memo-capture";
 import { extractTags } from "@/lib/memo";
 import type { TagSuggestion } from "@/lib/tag-autocomplete";
 
+const ComposerFocusCanvas = lazy(() =>
+  import("@/components/composer/composer-focus-canvas").then((module) => ({
+    default: module.ComposerFocusCanvas,
+  })),
+);
+
 type MemoComposerProps = {
   draft: MemoCaptureInput;
   isPending: boolean;
@@ -29,6 +35,8 @@ type MemoComposerProps = {
   captureAvailable?: boolean;
   onDraftChange: (draft: MemoCaptureInput) => void;
   onSubmit: (input: MemoCaptureInput) => Promise<void>;
+  /** Optional article drafting submission from fullscreen canvas. */
+  onSubmitArticle?: (input: MemoCaptureInput) => Promise<void>;
   onVisibilityChange?: (visibility: MemoVisibility) => void;
 };
 
@@ -56,10 +64,12 @@ export function MemoComposer({
   captureAvailable = false,
   onDraftChange,
   onSubmit,
+  onSubmitArticle,
   onVisibilityChange,
 }: MemoComposerProps) {
   const { t } = useI18n();
   const editorRef = useRef<Editor | null>(null);
+  const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
   const canSubmit = Boolean(draft.content.trim() || draft.files.length > 0);
   // Idle state shrinks to one line (flomo-style): unfocused and empty. Focus
   // or any content expands the editor back to full height.
@@ -205,6 +215,9 @@ export function MemoComposer({
           withEditor={withEditor}
           onDraftChange={onDraftChange}
           onStartVoice={() => void captureController.start()}
+          onExpand={
+            onSubmitArticle ? () => setIsFullscreenOpen(true) : undefined
+          }
         />
         <ComposerVisibilityMenu
           showVisibility={showVisibility}
@@ -219,6 +232,23 @@ export function MemoComposer({
           }}
         />
       </div>
+      {onSubmitArticle && isFullscreenOpen && (
+        <Suspense fallback={null}>
+          <ComposerFocusCanvas
+            open={isFullscreenOpen}
+            onOpenChange={setIsFullscreenOpen}
+            draft={draft}
+            isPending={isPending}
+            showVisibility={showVisibility}
+            tags={tags}
+            captureAvailable={captureAvailable}
+            onDraftChange={onDraftChange}
+            onSubmitMemo={onSubmit}
+            onSubmitArticle={onSubmitArticle}
+            onVisibilityChange={onVisibilityChange}
+          />
+        </Suspense>
+      )}
     </form>
   );
 }

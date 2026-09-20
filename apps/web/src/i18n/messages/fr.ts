@@ -1178,6 +1178,18 @@ const messages = {
   "admin.pageNext": "Suivant",
   "composer.orderedList": "Liste numérotée",
   "composer.insertDate": "Insérer la date",
+  "composer.fullscreen.open": "Plein écran",
+  "composer.fullscreen.close": "Quitter le plein écran (Esc)",
+  "composer.fullscreen.wordCount": "{count} mots",
+  "composer.fullscreen.articleTitlePlaceholder": "Titre de l'article…",
+  "composer.type.label": "Type de publication",
+  "composer.type.memo": "Note · Publier sur le fil",
+  "composer.type.article": "Article · Public et indexable",
+  "composer.action.toArticleEditor": "Mettre en page l'article",
+  "composer.article.offlineBlocked":
+    "Une connexion réseau est requise pour créer un brouillon d'article",
+  "composer.article.tooLong":
+    "Le contenu de l'article dépasse la limite de 200 Ko",
   "search.spotlightPlaceholder": "Rechercher des notes, tâches, actions…",
   "search.triggerPlaceholder": "Rechercher…",
   "search.viewInTimeline": "Rechercher « {query} » dans la chronologie",
