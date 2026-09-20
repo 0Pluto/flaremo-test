@@ -107,6 +107,15 @@ export function buildOrderedDataRestore(dataDump) {
   const dumpLines = dataDump.split("\n");
   const lines = ["PRAGMA defer_foreign_keys=TRUE;"];
 
+  // Migrations seed rows of their own (0020 backfills the default team). A
+  // fresh DB is therefore not empty, so clear every source-of-truth table
+  // before replaying the dump — the restore stays idempotent and replays the
+  // backed-up rows verbatim instead of colliding with migration-seeded ones.
+  // FKs are deferred above, so deletion order is safe.
+  for (const table of RESTORE_TABLES) {
+    lines.push(`DELETE FROM \`${table}\`;`);
+  }
+
   for (const table of RESTORE_TABLES) {
     lines.push(
       ...dumpLines.filter(
