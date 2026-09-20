@@ -111,13 +111,13 @@ export function MonthHorizonPureView({
               className={cn(
                 "group relative flex h-8.5 w-full items-center justify-center rounded-[5px] border transition-all select-none cursor-pointer active:scale-95",
                 activityStyle,
-                // ── 彻底解耦：中性高对比双层选中环，绝不与橙色主题色重叠 ──
+                // ── 低调克制：柔和半透微环，告别刺眼纯白 neon 效果 ──
                 isSelected &&
-                  "ring-2 ring-foreground ring-offset-2 ring-offset-background dark:ring-white dark:ring-offset-background z-20 scale-[1.04] shadow-sm",
-                // ── 今日未选中时的精致边框 ──
+                  "ring-1.5 ring-foreground/60 dark:ring-white/40 z-20 scale-[1.02] shadow-2xs",
+                // ── 今日未选中时的柔和边框 ──
                 !isSelected &&
                   isToday &&
-                  "border-foreground/50 dark:border-foreground/60 shadow-2xs font-bold",
+                  "border-foreground/40 dark:border-white/30 shadow-2xs font-bold",
                 hoveredDate === cell.key && !isSelected && "scale-105 z-10",
                 !isSelected && "hover:scale-105 hover:z-10",
               )}
@@ -157,17 +157,15 @@ export function MonthHorizonPureView({
                 </span>
               ) : null}
 
-              {/* 今日专属指示点（Today Indicator Dot） */}
+              {/* 今日专属指示微点（Today Micro-Dot, 绝不形成下划线错觉） */}
               {isToday && (
                 <span
                   aria-hidden="true"
                   className={cn(
-                    "absolute bottom-1 left-1/2 -translate-x-1/2 h-[2.5px] w-2.5 rounded-full transition-colors",
+                    "absolute bottom-1 left-1/2 -translate-x-1/2 size-1 rounded-full transition-colors",
                     totalCount >= 3
-                      ? "bg-white"
-                      : isSelected
-                        ? "bg-foreground dark:bg-white"
-                        : "bg-brand-500 dark:bg-brand-400",
+                      ? "bg-white/80"
+                      : "bg-foreground/50 dark:bg-foreground/60",
                   )}
                 />
               )}

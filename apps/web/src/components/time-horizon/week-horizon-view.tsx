@@ -51,12 +51,10 @@ export function WeekHorizonPureView({
             return (
               <button
                 className={cn(
-                  "flex flex-col items-center rounded-md py-0.5 transition-colors hover:bg-muted/50",
-                  isSelected &&
-                    "bg-foreground text-background font-bold shadow-xs",
-                  isToday &&
-                    !isSelected &&
-                    "ring-1 ring-brand-500/60 bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold",
+                  "flex flex-col items-center rounded-md py-0.5 px-0.5 transition-all cursor-pointer border border-transparent",
+                  isSelected
+                    ? "bg-muted/70 dark:bg-white/[0.08] border-border/80 dark:border-white/15 shadow-2xs"
+                    : "hover:bg-muted/40 dark:hover:bg-white/[0.04]",
                 )}
                 key={d.key}
                 type="button"
@@ -64,15 +62,31 @@ export function WeekHorizonPureView({
               >
                 {displayMode === "calendar" ? (
                   <>
-                    <span className="text-[10px] text-foreground/75 dark:text-foreground/70 font-medium">
+                    <span className="text-[10px] font-medium text-muted-foreground">
                       {weekdayStr}
                     </span>
-                    <span className="text-xs font-bold leading-tight">
+                    <span
+                      className={cn(
+                        "text-xs leading-tight transition-colors",
+                        isToday
+                          ? "font-bold text-brand-600 dark:text-brand-400"
+                          : isSelected
+                            ? "font-bold text-foreground"
+                            : "font-semibold text-foreground/85",
+                      )}
+                    >
                       {dateObj.getDate()}
                     </span>
                   </>
                 ) : (
-                  <span className="text-[10px] font-mono text-foreground/75 dark:text-foreground/70 font-medium">
+                  <span
+                    className={cn(
+                      "text-[10px] font-mono font-medium",
+                      isToday
+                        ? "text-brand-600 dark:text-brand-400 font-bold"
+                        : "text-muted-foreground",
+                    )}
+                  >
                     {weekdayStr}
                   </span>
                 )}
