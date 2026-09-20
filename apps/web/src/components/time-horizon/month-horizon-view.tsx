@@ -86,7 +86,7 @@ export function MonthHorizonPureView({
           return (
             <button
               className={cn(
-                "group relative flex h-8.5 w-full items-center justify-center rounded-[5px] border transition-all select-none",
+                "group relative flex h-8.5 w-full items-center justify-center rounded-[5px] border transition-all select-none cursor-pointer active:scale-95",
                 cell.inMonth ? "opacity-100" : "opacity-15 pointer-events-none",
                 displayMode === "heatmap"
                   ? totalCount > 0

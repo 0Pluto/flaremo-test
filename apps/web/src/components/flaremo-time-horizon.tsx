@@ -301,67 +301,81 @@ export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
 
       {/* ── Unified High-Impact Canvas Container (~240px Tall) ─────────────── */}
       <div
-        className="relative flex min-h-[238px] flex-col justify-center rounded-xl border border-border/60 bg-muted/20 p-2.5 shadow-2xs dark:border-border/40 dark:bg-muted/15"
+        className="relative flex min-h-[238px] flex-col justify-center rounded-xl border border-border/60 bg-muted/20 p-2.5 shadow-2xs dark:border-border/40 dark:bg-muted/15 overflow-hidden"
         data-testid="activity-heatmap"
       >
-        {/* YEAR VIEW: 365 Days across 12 Month Dot Clusters */}
-        {tab === "year" && (
-          <YearHorizonPureView
-            activity={stats.activity}
-            displayMode={displayMode}
-            today={today}
-            weekStart={weekStart}
-            year={currentYear}
-            onDrillToMonth={drillToMonth}
-            onHoverTip={setHoveredTip}
-          />
-        )}
+        <div
+          key={tab}
+          className={cn(
+            "w-full transition-all",
+            tab === "day"
+              ? "animate-horizon-flip"
+              : tab === "week"
+                ? "animate-horizon-zoom"
+                : tab === "month"
+                  ? "animate-horizon-zoom"
+                  : "animate-horizon-flip",
+          )}
+        >
+          {/* YEAR VIEW: 365 Days across 12 Month Dot Clusters */}
+          {tab === "year" && (
+            <YearHorizonPureView
+              activity={stats.activity}
+              displayMode={displayMode}
+              today={today}
+              weekStart={weekStart}
+              year={currentYear}
+              onDrillToMonth={drillToMonth}
+              onHoverTip={setHoveredTip}
+            />
+          )}
 
-        {/* MONTH VIEW: 7 Columns x 5~6 Rows of Solid Cohesive Heatmap Tiles */}
-        {tab === "month" && (
-          <MonthHorizonPureView
-            displayMode={displayMode}
-            hourlyData={monthHourlyQuery.data?.hours ?? []}
-            hoveredDate={hoveredDate}
-            isLoading={monthHourlyQuery.isLoading}
-            locale={locale}
-            monthKey={currentMonthKey}
-            notesCountMap={notesCountMap}
-            selectedDay={selectedDay}
-            today={today}
-            weekStart={weekStart}
-            onDrillToDay={drillToDay}
-            onHoverDate={onHoverDate}
-            onHoverTip={setHoveredTip}
-          />
-        )}
+          {/* MONTH VIEW: 7 Columns x 5~6 Rows of Solid Cohesive Heatmap Tiles */}
+          {tab === "month" && (
+            <MonthHorizonPureView
+              displayMode={displayMode}
+              hourlyData={monthHourlyQuery.data?.hours ?? []}
+              hoveredDate={hoveredDate}
+              isLoading={monthHourlyQuery.isLoading}
+              locale={locale}
+              monthKey={currentMonthKey}
+              notesCountMap={notesCountMap}
+              selectedDay={selectedDay}
+              today={today}
+              weekStart={weekStart}
+              onDrillToDay={drillToDay}
+              onHoverDate={onHoverDate}
+              onHoverTip={setHoveredTip}
+            />
+          )}
 
-        {/* WEEK VIEW: 7 Days x 24 Hours Micro-Stream (168 Squares) */}
-        {tab === "week" && (
-          <WeekHorizonPureView
-            days={weekDays}
-            displayMode={displayMode}
-            hourlyData={weekHourlyQuery.data?.hours ?? []}
-            isLoading={weekHourlyQuery.isLoading}
-            selectedDay={selectedDay}
-            today={today}
-            onDrillToDay={drillToDay}
-            onHoverTip={setHoveredTip}
-          />
-        )}
+          {/* WEEK VIEW: 7 Days x 24 Hours Micro-Stream (168 Squares) */}
+          {tab === "week" && (
+            <WeekHorizonPureView
+              days={weekDays}
+              displayMode={displayMode}
+              hourlyData={weekHourlyQuery.data?.hours ?? []}
+              isLoading={weekHourlyQuery.isLoading}
+              selectedDay={selectedDay}
+              today={today}
+              onDrillToDay={drillToDay}
+              onHoverTip={setHoveredTip}
+            />
+          )}
 
-        {/* DAY VIEW: 24-Hour Panoramic Energy Spectrum (Time Stream) */}
-        {tab === "day" && (
-          <DayHorizonPureView
-            displayMode={displayMode}
-            hourlyData={dayHourlyQuery.data?.hours ?? []}
-            isLoading={dayHourlyQuery.isLoading || dayMemosQuery.isLoading}
-            memos={dayMemosQuery.data?.memos ?? []}
-            selectedDay={selectedDay}
-            onHoverTip={setHoveredTip}
-            onJumpToTimeline={jumpToTimeline}
-          />
-        )}
+          {/* DAY VIEW: 24-Hour Panoramic Energy Spectrum (Time Stream) */}
+          {tab === "day" && (
+            <DayHorizonPureView
+              displayMode={displayMode}
+              hourlyData={dayHourlyQuery.data?.hours ?? []}
+              isLoading={dayHourlyQuery.isLoading || dayMemosQuery.isLoading}
+              memos={dayMemosQuery.data?.memos ?? []}
+              selectedDay={selectedDay}
+              onHoverTip={setHoveredTip}
+              onJumpToTimeline={jumpToTimeline}
+            />
+          )}
+        </div>
       </div>
 
       {/* ── Hidden monthLabels container for E2E Contract Parity ─────────── */}

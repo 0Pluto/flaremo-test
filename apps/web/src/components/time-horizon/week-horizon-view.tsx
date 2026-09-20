@@ -100,7 +100,7 @@ export function WeekHorizonPureView({
                 return (
                   <button
                     className={cn(
-                      "h-[7px] w-full rounded-[1.5px] transition-all",
+                      "h-[7px] w-full rounded-[1.5px] transition-all cursor-pointer active:scale-95",
                       displayMode === "heatmap"
                         ? count > 0
                           ? heatmapColor(count)
