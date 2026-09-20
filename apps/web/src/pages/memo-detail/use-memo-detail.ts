@@ -16,6 +16,7 @@ import {
 import { useI18n } from "@/i18n";
 import { errorMessage } from "@/lib/error";
 import { toggleMemoTaskLine } from "@/lib/memo-tasks";
+import { queryKeys } from "@/lib/query-keys";
 import type { MemoDetailTaskInteraction } from "./content-tab";
 
 /**
@@ -169,7 +170,7 @@ export function useMemoDetail(memoId: string) {
       }),
     onSuccess: () => {
       toast.success(t("toast.taskCreated"));
-      void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
     },
     onError: (error) =>
       toast.error(errorMessage(error, t("toast.taskCreateFailed"))),

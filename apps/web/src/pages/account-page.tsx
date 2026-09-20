@@ -32,7 +32,9 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { useClipboard } from "@/hooks/use-clipboard";
 import { useI18n } from "@/i18n";
+import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils";
 import type { AccountPanelProps } from "./account/account-panel";
 import { SettingsRow, SettingsSectionGroup } from "./account/apple-settings-ui";
@@ -77,7 +79,18 @@ export function AccountSettingsDialog({
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [tokenError, setTokenError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  // Success surfaces through the dialog's copied label (no toast); failure is
+  // reported into the token form error slot, and the flag persists until the
+  // next token is minted.
+  const {
+    copied,
+    copy: copyToken,
+    reset: resetCopied,
+  } = useClipboard({
+    successMessage: null,
+    errorMessage: null,
+    timeout: null,
+  });
 
   // Reset mobile view to master whenever the dialog opens fresh
   useEffect(() => {
@@ -100,7 +113,7 @@ export function AccountSettingsDialog({
   });
 
   const meQuery = useQuery({
-    queryKey: ["current-flaremo-user"],
+    queryKey: queryKeys.currentUser,
     queryFn: getCurrentFlareMoUser,
     retry: false,
     enabled: open,
@@ -152,7 +165,8 @@ export function AccountSettingsDialog({
     session,
     setAccountError,
     setAvatarError,
-    setCopied,
+    copyToken,
+    resetCopied,
     setCreatedToken,
     setCurrentPassword,
     setDeleteError,
@@ -224,7 +238,7 @@ export function AccountSettingsDialog({
   useEffect(() => {
     if (!open || !isTeamAdmin) return undefined;
     void queryClient.prefetchQuery({
-      queryKey: ["admin-branding"],
+      queryKey: queryKeys.adminBranding,
       queryFn: getAdminBranding,
     });
     void queryClient.prefetchQuery({
@@ -232,7 +246,7 @@ export function AccountSettingsDialog({
       queryFn: getAdminPluginSettings,
     });
     void queryClient.prefetchQuery({
-      queryKey: ["admin-users"],
+      queryKey: queryKeys.adminUsers,
       queryFn: listAdminUsers,
     });
     return undefined;
@@ -329,8 +343,12 @@ export function AccountSettingsDialog({
     tokensQuery,
     updateUsernameIsPending: updateUsernameMutation.isPending,
     username,
-    onCopyToken: handleCopyToken,
+    onCopyToken: async () => {
+      await handleCopyToken();
+    },
     onCreateToken: handleCreateToken,
+    // The credentials section narrows the promise to a boolean so its dialog
+    // only closes on a successful delete; keep that contract intact here.
     onDeleteAccount: handleDeleteAccount,
     onDeleteToken: handleDeleteToken,
     onEmailSubmit: handleEmailSubmit,
@@ -416,7 +434,7 @@ export function AccountSettingsDialog({
                       variant="secondary"
                       className="h-4 px-1.5 text-xs font-normal"
                     >
-                      {roleLabel(meQuery.data?.role)}
+                      {roleLabel(meQuery.data?.role, t)}
                     </Badge>
                   </div>
                 </div>
@@ -558,7 +576,7 @@ export function AccountSettingsDialog({
                   variant="secondary"
                   className="h-4 px-1.5 text-xs font-normal"
                 >
-                  {roleLabel(meQuery.data?.role)}
+                  {roleLabel(meQuery.data?.role, t)}
                 </Badge>
               </div>
               <p className="truncate text-xs text-muted-foreground mt-0.5">

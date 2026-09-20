@@ -295,7 +295,7 @@ type DeleteAccountSectionProps = {
   deleteError: string | null;
   deletePassword: string;
   setDeletePassword: (value: string) => void;
-  onDeleteAccount: () => Promise<void>;
+  onDeleteAccount: () => Promise<boolean>;
 
   t: (key: TranslationKey, params?: TranslationParams) => string;
 };
@@ -366,8 +366,8 @@ export function DeleteAccountSection({
               variant="destructive"
               onClick={(e) => {
                 e.preventDefault();
-                void onDeleteAccount().then(() => {
-                  if (!deleteError) setDeleteOpen(false);
+                void onDeleteAccount().then((deleted) => {
+                  if (deleted) setDeleteOpen(false);
                 });
               }}
             >

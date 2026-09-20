@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import type { TranslationKey, TranslationParams } from "@/i18n";
+import { formatDate } from "@/lib/date-format";
 import { prepareAvatarFile } from "@/lib/upload-compression";
 import { cn } from "@/lib/utils";
 import {
@@ -108,12 +109,8 @@ export function AccountProfileSection({
 
   const expiryDate = readerExpiry ? new Date(readerExpiry) : null;
   const expiryLabel =
-    expiryDate && !Number.isNaN(expiryDate.getTime())
-      ? expiryDate.toLocaleDateString(undefined, {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        })
+    expiryDate && readerExpiry && !Number.isNaN(expiryDate.getTime())
+      ? formatDate(readerExpiry)
       : null;
 
   return (

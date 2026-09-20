@@ -14,6 +14,7 @@ import {
   todayKey,
   type WeekStart,
 } from "@/lib/calendar-date";
+import { queryKeys } from "@/lib/query-keys";
 
 // Explorer-side glanceable calendar. Notes come from the activity feed the
 // heatmap already loaded (last 90 days, always covering the current month);
@@ -31,7 +32,7 @@ import {
 function useOpenTasks(rangeStart: string, rangeEnd: string) {
   const today = useMemo(() => todayKey(), []);
   const tasksQuery = useQuery({
-    queryKey: ["tasks"],
+    queryKey: queryKeys.tasks.all,
     queryFn: () => listTasks(),
   });
   return useMemo(() => {

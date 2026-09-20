@@ -104,7 +104,7 @@ issue -> branch -> PR 流程只用于：对外贡献者、维护者明确要求�
 
 - 纯文档、拼写、链接：`pnpm format:check`。
 - 部署、Wrangler、D1、R2、Access 相关文档或配置：`pnpm format:check` 和 `pnpm deploy:dry-run`。
-- API、domain service、Memos 兼容、测试夹具：改动文件对应的 vitest 用例（如 `pnpm exec vitest run apps/worker/src/api.test.ts -t "<用例名>"`）。
+- API、domain service、Memos 兼容、测试夹具：改动文件对应的 vitest 用例（如 `pnpm exec vitest run apps/worker/src/api/memo-crud.test.ts -t "<用例名>"`）。
 - UI 改动：秒级静态检查（`tsc --noEmit` + 改动文件的 vitest）+ 开发过程中目检。
 - 全量 `pnpm verify`：**只在维护者明确要求时执行**，其他任何时候（含发版）都不要跑。
 

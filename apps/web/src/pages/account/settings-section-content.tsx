@@ -34,18 +34,16 @@ function VoicePanelSkeleton() {
   );
 }
 
-/** The role badge the shell's user headers render. Note: hardcoded Chinese —
- *  reported, not fixed, because fixing it changes what users see. */
+/** The role badge the shell's user headers render. Reuses the admin.role.*
+ *  keys so every locale translates it the same way as the team page. */
 export function roleLabel(
   role: CurrentFlareMoUser["role"] | undefined,
+  t: (key: TranslationKey, params?: TranslationParams) => string,
 ): string {
-  return role === "owner"
-    ? "所有者"
-    : role === "admin"
-      ? "管理员"
-      : role === "reader"
-        ? "读者"
-        : "成员";
+  if (role === "owner") return t("admin.role.owner");
+  if (role === "admin") return t("admin.role.admin");
+  if (role === "reader") return t("admin.role.reader");
+  return t("admin.role.member");
 }
 
 type SettingsSectionContentProps = {

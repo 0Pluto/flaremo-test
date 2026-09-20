@@ -55,7 +55,7 @@ Memos 在这里的角色是**生态底座**，不是要复刻的对象：
 
 ### 兼容面的工程纪律
 
-`/api/v1/*` 的**既有字段形状与语义是第三方客户端的契约**，由 `memos-compatibility.test.ts`、`memos-transport.test.ts` 等测试锁定。第三方客户端按上游行为编写、不会阅读 FlareMo 文档，因此：
+`/api/v1/*` 的**既有字段形状与语义是第三方客户端的契约**，由 `apps/worker/src/compatibility/*.test.ts`、`apps/worker/src/transport/*.test.ts` 等测试锁定。第三方客户端按上游行为编写、不会阅读 FlareMo 文档，因此：
 
 - **只做加法，不改形状。** 新增字段不会破坏兼容（客户端忽略未知字段）；但改动既有字段的语义或类型会让第三方客户端静默出错。
 - **新能力优先落在原生面。** FlareMo 独有能力走 `/api/app/*`（如 branding、account、admin、memory、projects、tasks 已是先例）。

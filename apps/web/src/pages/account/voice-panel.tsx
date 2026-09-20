@@ -34,6 +34,7 @@ import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useI18n } from "@/i18n";
 import type { TranslationKey } from "@/i18n/key";
+import { queryKeys } from "@/lib/query-keys";
 import { SettingsRow, SettingsSectionGroup } from "./apple-settings-ui";
 
 type CredentialField =
@@ -140,7 +141,7 @@ export function VoicePanel() {
       setEnabled(value.enabled);
       setProvider(value.provider ?? "tencent");
       setModel(value.model);
-      await cache.invalidateQueries({ queryKey: ["capture-status"] });
+      await cache.invalidateQueries({ queryKey: queryKeys.captureStatus.all });
       toast.success(success);
       if (action === "save") {
         setConfigDialogOpen(false);

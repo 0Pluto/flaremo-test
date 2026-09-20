@@ -23,6 +23,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/i18n";
 import { errorMessage } from "@/lib/error";
+import { queryKeys } from "@/lib/query-keys";
 import { stripResourceName } from "@/lib/utils";
 import { PRIORITY_BADGE, STATUS_COLUMNS } from "./constants";
 import { patchTasksCache } from "./task-cache";
@@ -106,8 +107,10 @@ export function TaskFormDialog({
           }),
     onMutate: async () => {
       if (!task) return undefined;
-      await queryClient.cancelQueries({ queryKey: ["tasks"] });
-      const snapshots = queryClient.getQueriesData({ queryKey: ["tasks"] });
+      await queryClient.cancelQueries({ queryKey: queryKeys.tasks.all });
+      const snapshots = queryClient.getQueriesData({
+        queryKey: queryKeys.tasks.all,
+      });
       const patch: Partial<Task> = {
         title: title.trim(),
         notes: notes || null,
@@ -122,8 +125,9 @@ export function TaskFormDialog({
       if (status !== "done" && task.status === "done") {
         patch.completed_at = null;
       }
-      queryClient.setQueriesData({ queryKey: ["tasks"] }, (data: unknown) =>
-        patchTasksCache(data, task.id, patch),
+      queryClient.setQueriesData(
+        { queryKey: queryKeys.tasks.all },
+        (data: unknown) => patchTasksCache(data, task.id, patch),
       );
       return snapshots;
     },
@@ -131,8 +135,9 @@ export function TaskFormDialog({
       if (task) {
         // The server payload is authoritative: it lands project changes and
         // completed_at in the right cache rows after the optimistic patch.
-        queryClient.setQueriesData({ queryKey: ["tasks"] }, (data: unknown) =>
-          patchTasksCache(data, task.id, result.task),
+        queryClient.setQueriesData(
+          { queryKey: queryKeys.tasks.all },
+          (data: unknown) => patchTasksCache(data, task.id, result.task),
         );
       }
       toast.success(t(task ? "toast.taskUpdated" : "toast.taskCreated"));

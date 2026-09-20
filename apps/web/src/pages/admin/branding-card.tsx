@@ -28,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import { useI18n } from "@/i18n";
 import { normalizeHexColor } from "@/lib/brand-ramp";
 import { errorMessage } from "@/lib/error";
+import { queryKeys } from "@/lib/query-keys";
 import {
   ACCENT_SWATCH_HEX,
   AccentPicker,
@@ -148,7 +149,7 @@ export function BrandingCard() {
   const faviconInputRef = useRef<HTMLInputElement>(null);
 
   const brandingQuery = useQuery({
-    queryKey: ["admin-branding"],
+    queryKey: queryKeys.adminBranding,
     queryFn: getAdminBranding,
     retry: false,
   });
@@ -164,7 +165,7 @@ export function BrandingCard() {
       updateAdminBrandingProductName(productName.trim() || null),
     onSuccess: () => {
       toast.success(t("admin.branding.saved"));
-      void queryClient.invalidateQueries({ queryKey: ["admin-branding"] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.adminBranding });
     },
     onError: (error) =>
       toast.error(errorMessage(error, t("admin.branding.failed"))),
@@ -183,10 +184,12 @@ export function BrandingCard() {
       setAccentAttribute(accent, accentHex ?? undefined);
     },
     onSuccess: (_data, { accent, accentHex }) => {
-      queryClient.setQueryData<AdminBranding>(["admin-branding"], (current) =>
-        current
-          ? { ...current, accent, accent_hex: accentHex ?? null }
-          : current,
+      queryClient.setQueryData<AdminBranding>(
+        queryKeys.adminBranding,
+        (current) =>
+          current
+            ? { ...current, accent, accent_hex: accentHex ?? null }
+            : current,
       );
       setAccentAttribute(accent, accentHex ?? undefined);
     },
@@ -204,7 +207,7 @@ export function BrandingCard() {
     }) => uploadAdminBrandingMark(variant, file),
     onSuccess: () => {
       toast.success(t("admin.branding.markUploaded"));
-      void queryClient.invalidateQueries({ queryKey: ["admin-branding"] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.adminBranding });
     },
     onError: (error) =>
       toast.error(errorMessage(error, t("admin.branding.failed"))),
@@ -214,7 +217,7 @@ export function BrandingCard() {
     mutationFn: (file: File) => uploadAdminBrandingFavicon(file),
     onSuccess: () => {
       toast.success(t("admin.branding.faviconUploaded"));
-      void queryClient.invalidateQueries({ queryKey: ["admin-branding"] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.adminBranding });
     },
     onError: (error) =>
       toast.error(errorMessage(error, t("admin.branding.failed"))),
@@ -225,7 +228,7 @@ export function BrandingCard() {
       clearAdminBrandingMark(variant),
     onSuccess: () => {
       toast.success(t("admin.branding.markRemoved"));
-      void queryClient.invalidateQueries({ queryKey: ["admin-branding"] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.adminBranding });
     },
     onError: (error) =>
       toast.error(errorMessage(error, t("admin.branding.failed"))),
@@ -235,7 +238,7 @@ export function BrandingCard() {
     mutationFn: () => clearAdminBrandingFavicon(),
     onSuccess: () => {
       toast.success(t("admin.branding.faviconRemoved"));
-      void queryClient.invalidateQueries({ queryKey: ["admin-branding"] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.adminBranding });
     },
     onError: (error) =>
       toast.error(errorMessage(error, t("admin.branding.failed"))),

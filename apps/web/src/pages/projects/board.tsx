@@ -33,6 +33,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/i18n";
 import { errorMessage } from "@/lib/error";
+import { queryKeys } from "@/lib/query-keys";
 import { cn, stripResourceName } from "@/lib/utils";
 import { isStatusColumn, STATUS_COLUMNS } from "./constants";
 import { patchTasksCacheMulti } from "./task-cache";
@@ -205,34 +206,39 @@ function TaskBoard({
     // Per-id status/order patch reaches every ["tasks…"] cache (agenda, mini
     // calendar, search…); then the project board list is fully replaced so
     // the drop lands exactly where the pointer left it.
-    queryClient.setQueriesData({ queryKey: ["tasks"] }, (data: unknown) =>
-      patchTasksCacheMulti(data, boardPatches(nextTasks)),
+    queryClient.setQueriesData(
+      { queryKey: queryKeys.tasks.all },
+      (data: unknown) => patchTasksCacheMulti(data, boardPatches(nextTasks)),
     );
     if (selectedProject) {
-      queryClient.setQueryData(["tasks", selectedProject.id], {
+      queryClient.setQueryData(queryKeys.tasks.byProject(selectedProject.id), {
         tasks: nextTasks,
       });
     }
   };
 
   const rollbackBoard = () => {
-    queryClient.setQueriesData({ queryKey: ["tasks"] }, (data: unknown) =>
-      patchTasksCacheMulti(
-        data,
-        new Map(
-          tasks.map((task) => [
-            task.id,
-            {
-              status: task.status,
-              sort_order: task.sort_order,
-              completed_at: task.completed_at,
-            } satisfies Partial<Task>,
-          ]),
+    queryClient.setQueriesData(
+      { queryKey: queryKeys.tasks.all },
+      (data: unknown) =>
+        patchTasksCacheMulti(
+          data,
+          new Map(
+            tasks.map((task) => [
+              task.id,
+              {
+                status: task.status,
+                sort_order: task.sort_order,
+                completed_at: task.completed_at,
+              } satisfies Partial<Task>,
+            ]),
+          ),
         ),
-      ),
     );
     if (selectedProject) {
-      queryClient.setQueryData(["tasks", selectedProject.id], { tasks });
+      queryClient.setQueryData(queryKeys.tasks.byProject(selectedProject.id), {
+        tasks,
+      });
     }
   };
 

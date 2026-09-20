@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useI18n } from "@/i18n";
 import { formatDayTitle, formatFullDayHeader } from "@/lib/calendar-date";
+import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils";
 
 export function AgendaView({
@@ -26,7 +27,7 @@ export function AgendaView({
   const { locale, t } = useI18n();
   const [unscheduledOpen, setUnscheduledOpen] = useState(false);
   const tasksQuery = useQuery({
-    queryKey: ["tasks"],
+    queryKey: queryKeys.tasks.all,
     queryFn: () => listTasks(),
   });
 

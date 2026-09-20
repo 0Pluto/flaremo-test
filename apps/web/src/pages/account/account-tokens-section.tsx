@@ -25,6 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { TranslationKey, TranslationParams } from "@/i18n";
+import { formatDateTime } from "@/lib/date-format";
 import { useCloseOnSuccess } from "./account-panel-presets";
 import { SettingsSectionGroup } from "./apple-settings-ui";
 
@@ -242,12 +243,8 @@ function PersonalAccessTokenRow({
 }) {
   const [confirmingRevoke, setConfirmingRevoke] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const dateFormatter = new Intl.DateTimeFormat(locale, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
   const expiry = token.expires_at
-    ? dateFormatter.format(new Date(token.expires_at))
+    ? formatDateTime(token.expires_at, locale)
     : t("auth.never");
 
   return (

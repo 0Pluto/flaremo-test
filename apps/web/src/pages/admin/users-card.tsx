@@ -53,8 +53,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useClipboard } from "@/hooks/use-clipboard";
 import { useI18n } from "@/i18n";
 import { errorMessage } from "@/lib/error";
+import { queryKeys } from "@/lib/query-keys";
 import {
   getReaderStatus,
   readerExpiryBase,
@@ -69,19 +71,29 @@ export function AdminPanel() {
   const [resetLink, setResetLink] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [createdLink, setCreatedLink] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
   const [memberSearch, setMemberSearch] = useState("");
+  // No toast on success (the dialog's own copied label reports it) and no
+  // auto-reset (a one-time reset link must keep its "copied" state).
+  const {
+    copied,
+    copy: copyLink,
+    reset: resetCopied,
+  } = useClipboard({
+    successMessage: null,
+    timeout: null,
+    errorMessage: t("admin.resetCopyFailed"),
+  });
 
   const usersQuery = useQuery({
-    queryKey: ["admin-users"],
+    queryKey: queryKeys.adminUsers,
     queryFn: listAdminUsers,
     retry: false,
   });
   const meQuery = useQuery({
     // Same key as the account page's viewer cache so both views invalidate
     // together after a role change.
-    queryKey: ["current-flaremo-user"],
+    queryKey: queryKeys.currentUser,
     queryFn: getCurrentFlareMoUser,
   });
   // The role matrix the server enforces: only the team owner changes roles,
@@ -107,7 +119,7 @@ export function AdminPanel() {
       setName("");
       setEmail("");
       setCreatedLink(`${window.location.origin}${result.activation_path}`);
-      setCopied(false);
+      resetCopied();
       setCreateOpen(false);
     } catch (error) {
       setCreateError(errorMessage(error, t("admin.userCreateFailed")));
@@ -130,7 +142,7 @@ export function AdminPanel() {
       const result = await requestAdminPasswordReset(user.id);
       const base = window.location.origin;
       setResetLink(`${base}${result.reset_path}`);
-      setCopied(false);
+      resetCopied();
     } catch (error) {
       toast.error(errorMessage(error, t("admin.resetFailed")));
     }
@@ -169,13 +181,8 @@ export function AdminPanel() {
     }
   };
 
-  const handleCopyResetLink = async (link: string) => {
-    try {
-      await navigator.clipboard.writeText(link);
-      setCopied(true);
-    } catch {
-      toast.error(t("admin.resetCopyFailed"));
-    }
+  const handleCopyResetLink = (link: string) => {
+    void copyLink(link);
   };
 
   const allUsers = useMemo(

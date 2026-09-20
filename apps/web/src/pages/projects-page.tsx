@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/i18n";
+import { queryKeys } from "@/lib/query-keys";
 import { Board } from "./projects/board";
 import { ALL_TASKS } from "./projects/constants";
 import { ProjectFormDialog } from "./projects/project-form-dialog";
@@ -29,7 +30,10 @@ export function ProjectsPage() {
   const tasksQuery = useQuery({
     // Same key as the mini calendar's all-tasks query so the board reuses
     // that cache instead of re-fetching the same payload under ["tasks","all"].
-    queryKey: selected === ALL_TASKS ? ["tasks"] : ["tasks", selected],
+    queryKey:
+      selected === ALL_TASKS
+        ? queryKeys.tasks.all
+        : queryKeys.tasks.byProject(selected),
     queryFn: () =>
       listTasks(selected === ALL_TASKS ? {} : { project_id: selected }),
   });
@@ -46,7 +50,7 @@ export function ProjectsPage() {
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ["projects"] });
-    void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
     // The calendar aggregates dues/overdue from the same task rows; without
     // this prefix it keeps serving a stale board for the refetch interval.
     void queryClient.invalidateQueries({ queryKey: ["calendar"] });

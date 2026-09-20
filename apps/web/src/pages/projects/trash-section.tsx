@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/i18n";
 import { errorMessage } from "@/lib/error";
+import { queryKeys } from "@/lib/query-keys";
 import { cn, stripResourceName } from "@/lib/utils";
 import { COARSE_VISIBLE } from "./constants";
 
@@ -29,7 +30,7 @@ export function TrashSection({ onMutated }: { onMutated: () => void }) {
     queryFn: () => listProjects({ include_deleted: true }),
   });
   const tasksQuery = useQuery({
-    queryKey: ["tasks", "trash"],
+    queryKey: queryKeys.tasks.trash(),
     queryFn: () => listTasks({ include_deleted: true }),
   });
 

@@ -7,6 +7,8 @@ import {
   setAdminUserReader,
   updateAdminUserRole,
 } from "@/api";
+import { formatDate } from "@/lib/date-format";
+import { queryKeys } from "@/lib/query-keys";
 
 // Renewal extends from max(now, current expiry) so topping up an active
 // seat never discards the days already paid for.
@@ -15,17 +17,6 @@ export function readerExpiryBase(user: AdminUser): number {
     ? new Date(user.reader_expires_at).getTime()
     : Number.NaN;
   return Number.isNaN(current) ? Date.now() : Math.max(Date.now(), current);
-}
-
-function formatDate(iso: string): string {
-  const date = new Date(iso);
-  return Number.isNaN(date.getTime())
-    ? iso
-    : date.toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
 }
 
 export function getReaderStatus(user: AdminUser) {
@@ -53,22 +44,22 @@ export function useAdminUserMutations() {
   const createUserMutation = useMutation({
     mutationFn: createAdminUser,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers });
     },
   });
   const deleteUserMutation = useMutation({
     mutationFn: deleteAdminUser,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers });
     },
   });
   const updateRoleMutation = useMutation({
     mutationFn: ({ id, role }: { id: string; role: "admin" | "member" }) =>
       updateAdminUserRole(id, role),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers });
       void queryClient.invalidateQueries({
-        queryKey: ["current-flaremo-user"],
+        queryKey: queryKeys.currentUser,
       });
     },
   });
@@ -76,18 +67,18 @@ export function useAdminUserMutations() {
     mutationFn: ({ id, expiresAt }: { id: string; expiresAt: string | null }) =>
       setAdminUserReader(id, expiresAt),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers });
       void queryClient.invalidateQueries({
-        queryKey: ["current-flaremo-user"],
+        queryKey: queryKeys.currentUser,
       });
     },
   });
   const revokeReaderMutation = useMutation({
     mutationFn: (id: string) => revokeAdminUserReader(id),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers });
       void queryClient.invalidateQueries({
-        queryKey: ["current-flaremo-user"],
+        queryKey: queryKeys.currentUser,
       });
     },
   });

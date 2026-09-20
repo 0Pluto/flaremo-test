@@ -42,6 +42,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/i18n";
 import { buildMonthLabels, currentStreak } from "@/lib/activity";
+import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils";
 
 export type ExplorerView = "all" | "archived" | "trashed";
@@ -88,7 +89,7 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
   const { locale, t } = useI18n();
   const session = authClient.useSession();
   const captureStatus = useQuery({
-    queryKey: ["capture-status", session.data?.user.id],
+    queryKey: queryKeys.captureStatus.forUser(session.data?.user.id),
     queryFn: getCaptureStatus,
     enabled: Boolean(session.data?.user),
     staleTime: 30_000,

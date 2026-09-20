@@ -20,6 +20,7 @@ import {
   type WeekStart,
 } from "@/lib/calendar-date";
 import { errorMessage } from "@/lib/error";
+import { queryKeys } from "@/lib/query-keys";
 import { cn, stripResourceName } from "@/lib/utils";
 import { AgendaView } from "./calendar/agenda-view";
 import { DayInspector } from "./calendar/day-inspector";
@@ -39,7 +40,7 @@ export function CalendarPage({ initialDate }: { initialDate?: string }) {
 
   useEffect(() => {
     void queryClient.prefetchQuery({
-      queryKey: ["tasks"],
+      queryKey: queryKeys.tasks.all,
       queryFn: () => listTasks(),
     });
   }, [queryClient]);
@@ -54,7 +55,7 @@ export function CalendarPage({ initialDate }: { initialDate?: string }) {
 
   function invalidateCalendar() {
     void queryClient.invalidateQueries({ queryKey: ["calendar"] });
-    void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
   }
 
   return (

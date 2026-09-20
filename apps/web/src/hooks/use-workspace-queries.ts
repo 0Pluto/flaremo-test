@@ -17,6 +17,7 @@ import {
 import type { ExplorerView as ViewMode } from "@/components/flaremo-explorer";
 import { viewToMemoState } from "@/hooks/use-memo-mutations";
 import { todayKey } from "@/lib/calendar-date";
+import { queryKeys } from "@/lib/query-keys";
 
 const PAGE_SIZE = 30;
 const EMPTY_STATS: MemoStatsResponse = {
@@ -105,7 +106,7 @@ export function useWorkspaceQueries({
   // client-side from the shared ["tasks"] cache (title/notes substring match).
   const keywordSearch = isSearching && !dayFilter && !isSemanticSearch;
   const taskSearchQuery = useQuery({
-    queryKey: ["tasks"],
+    queryKey: queryKeys.tasks.all,
     queryFn: () => listTasks(),
     enabled: keywordSearch,
   });
@@ -153,13 +154,13 @@ export function useWorkspaceQueries({
     retry: false,
   });
   const currentUserQuery = useQuery({
-    queryKey: ["current-flaremo-user"],
+    queryKey: queryKeys.currentUser,
     queryFn: getCurrentFlareMoUser,
     staleTime: 60_000,
     retry: false,
   });
   const captureStatusQuery = useQuery({
-    queryKey: ["capture-status", currentUserQuery.data?.id ?? ""],
+    queryKey: queryKeys.captureStatus.forUser(currentUserQuery.data?.id ?? ""),
     queryFn: getCaptureStatus,
     staleTime: 30_000,
     retry: false,

@@ -41,6 +41,7 @@ import { CaptureTranscriptAccumulator } from "@/lib/audio-capture/transcript";
 import type { CaptureState } from "@/lib/audio-capture/types";
 import { mergeCaptureSnapshot } from "@/lib/capture-reconcile";
 import { vibrate } from "@/lib/haptics";
+import { queryKeys } from "@/lib/query-keys";
 
 const CAPTURE_KEEP_AUDIO_KEY = "capture.keepAudio";
 
@@ -67,7 +68,7 @@ export function useCaptureSession() {
   const draftId = useMemo(() => captureDraftId(userId), [userId]);
   const store = useMemo(() => new CaptureDraftStore(draftId), [draftId]);
   const status = useQuery({
-    queryKey: ["capture-status", userId],
+    queryKey: queryKeys.captureStatus.forUser(userId),
     queryFn: getCaptureStatus,
     staleTime: 30_000,
     retry: false,
@@ -75,7 +76,7 @@ export function useCaptureSession() {
   // Role-aware unavailable copy (rollout §5): the App shell already caches
   // the viewer under this key, so this rides along without a new request.
   const meQuery = useQuery({
-    queryKey: ["current-flaremo-user"],
+    queryKey: queryKeys.currentUser,
     queryFn: getCurrentFlareMoUser,
     staleTime: 60_000,
     retry: false,

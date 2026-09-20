@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useI18n } from "@/i18n";
 import { errorMessage } from "@/lib/error";
+import { queryKeys } from "@/lib/query-keys";
 import { cn, stripResourceName } from "@/lib/utils";
 import {
   ADVANCE_KEY,
@@ -84,10 +85,13 @@ export function TaskCard({
     mutationFn: (input: Parameters<typeof updateTask>[1]) =>
       updateTask(stripResourceName(task.id, "tasks"), input),
     onMutate: async (input) => {
-      await queryClient.cancelQueries({ queryKey: ["tasks"] });
-      const snapshots = queryClient.getQueriesData({ queryKey: ["tasks"] });
-      queryClient.setQueriesData({ queryKey: ["tasks"] }, (data: unknown) =>
-        patchTasksCache(data, task.id, input),
+      await queryClient.cancelQueries({ queryKey: queryKeys.tasks.all });
+      const snapshots = queryClient.getQueriesData({
+        queryKey: queryKeys.tasks.all,
+      });
+      queryClient.setQueriesData(
+        { queryKey: queryKeys.tasks.all },
+        (data: unknown) => patchTasksCache(data, task.id, input),
       );
       return snapshots;
     },
@@ -103,10 +107,13 @@ export function TaskCard({
   const deleteMutation = useMutation({
     mutationFn: () => deleteTask(stripResourceName(task.id, "tasks")),
     onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: ["tasks"] });
-      const snapshots = queryClient.getQueriesData({ queryKey: ["tasks"] });
-      queryClient.setQueriesData({ queryKey: ["tasks"] }, (data: unknown) =>
-        patchTasksCache(data, task.id, null),
+      await queryClient.cancelQueries({ queryKey: queryKeys.tasks.all });
+      const snapshots = queryClient.getQueriesData({
+        queryKey: queryKeys.tasks.all,
+      });
+      queryClient.setQueriesData(
+        { queryKey: queryKeys.tasks.all },
+        (data: unknown) => patchTasksCache(data, task.id, null),
       );
       return snapshots;
     },

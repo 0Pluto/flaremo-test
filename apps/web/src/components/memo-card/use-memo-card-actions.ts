@@ -7,6 +7,7 @@ import { useI18n } from "@/i18n";
 import { errorMessage } from "@/lib/error";
 import { getMemoResourceId } from "@/lib/memo";
 import { toggleMemoTaskLine } from "@/lib/memo-tasks";
+import { queryKeys } from "@/lib/query-keys";
 
 /** Read-view task checkboxes: toggle one source line, or raise a task from it. */
 export type MemoTaskInteraction = {
@@ -74,7 +75,7 @@ export function useMemoCardActions({
       createTask({ title, source_memo_id: memo.name }),
     onSuccess: () => {
       toast.success(t("toast.taskCreated"));
-      void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
     },
     onError: (error) =>
       toast.error(errorMessage(error, t("toast.taskCreateFailed"))),

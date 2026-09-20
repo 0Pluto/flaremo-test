@@ -462,5 +462,5 @@ D1–D8 中建议至少采纳 **D1（排序）、D2（计数口径）、D6（位
 
 **测试现状**（B0 需扩充的缺口）
 
-- 已有：`packages/domain/src/tags.test.ts`（规范化 / 提取 / 前缀 / 改写）、`apps/worker/src/api.test.ts:1250-1386`（重命名、删除、层级筛选）、`apps/web/src/lib/tag-autocomplete.test.ts`、`tag-highlight.test.ts`
+- 已有：`packages/domain/src/tags.test.ts`（规范化 / 提取 / 前缀 / 改写）、`apps/worker/src/api/app-memos.test.ts`（重命名、删除、层级筛选）、`apps/web/src/lib/tag-autocomplete.test.ts`、`tag-highlight.test.ts`
 - **缺口**：围栏代码块与行内代码的字面量隔离**零覆盖**（domain 测试中对 ``` 零命中）；「编辑正文后标签重算」**零覆盖**；前后端正则一致性**零覆盖**

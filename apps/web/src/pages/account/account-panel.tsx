@@ -68,7 +68,7 @@ export type AccountPanelProps = {
   newEmail: string;
   onEmailSubmit: () => Promise<void>;
   onPasswordSubmit: () => Promise<void>;
-  onDeleteAccount: () => Promise<void>;
+  onDeleteAccount: () => Promise<boolean>;
 
   // Personal Access Tokens
   copied: boolean;

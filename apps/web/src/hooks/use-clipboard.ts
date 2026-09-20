@@ -3,9 +3,15 @@ import { toast } from "sonner";
 import { useI18n } from "@/i18n";
 
 type UseClipboardOptions = {
-  timeout?: number;
-  successMessage?: string;
-  errorMessage?: string;
+  /**
+   * Auto-reset delay for the copied flag, in ms. Pass null to keep it until
+   * reset() is called (the one-time secret dialogs want the label to stick).
+   */
+  timeout?: number | null;
+  /** null suppresses the success toast; a string overrides its text. */
+  successMessage?: string | null;
+  /** null suppresses the error toast so the caller can surface the failure. */
+  errorMessage?: string | null;
 };
 
 export function useClipboard(options: UseClipboardOptions = {}) {
@@ -25,17 +31,28 @@ export function useClipboard(options: UseClipboardOptions = {}) {
       try {
         await navigator.clipboard.writeText(text);
         setCopied(true);
-        toast.success(successMessage ?? t("toast.linkCopied"));
+        if (successMessage !== null) {
+          toast.success(successMessage ?? t("toast.linkCopied"));
+        }
         if (timerRef.current) clearTimeout(timerRef.current);
-        timerRef.current = setTimeout(() => setCopied(false), timeout);
+        if (timeout !== null) {
+          timerRef.current = setTimeout(() => setCopied(false), timeout);
+        }
         return true;
       } catch {
-        toast.error(errorMessage ?? t("share.copyFailed"));
+        if (errorMessage !== null) {
+          toast.error(errorMessage ?? t("share.copyFailed"));
+        }
         return false;
       }
     },
     [timeout, successMessage, errorMessage, t],
   );
 
-  return { copied, copy };
+  const reset = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setCopied(false);
+  }, []);
+
+  return { copied, copy, reset };
 }

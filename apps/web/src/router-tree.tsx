@@ -20,6 +20,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { getInitialLocale, isRtlLocale, useI18n } from "@/i18n";
 import { buildMonthGrid, monthOf, todayKey } from "@/lib/calendar-date";
+import { queryKeys } from "@/lib/query-keys";
 import { AuthenticatedRoute } from "@/routes/authenticated-route";
 import { indexRoute } from "@/routes/index-route";
 import { rootRoute } from "@/routes/root-route";
@@ -428,7 +429,7 @@ const projectsRoute = createRoute({
     // Same key as the board's default all-tasks view and the mini calendar.
     warmQuery(
       context.queryClient.ensureQueryData({
-        queryKey: ["tasks"],
+        queryKey: queryKeys.tasks.all,
         queryFn: () => listTasks(),
       }),
     );

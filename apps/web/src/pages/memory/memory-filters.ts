@@ -1,4 +1,5 @@
 import type { Memory } from "@/api";
+import { formatTimestamp } from "@/lib/date-format";
 
 /** Bucket a filtered memory list into the five tab views. */
 export function groupMemories(filtered: Memory[]) {
@@ -15,6 +16,4 @@ export function groupMemories(filtered: Memory[]) {
   return { core, projects, recent, archive };
 }
 
-export function formatTimestamp(value: string) {
-  return new Date(value).toLocaleString();
-}
+export { formatTimestamp };

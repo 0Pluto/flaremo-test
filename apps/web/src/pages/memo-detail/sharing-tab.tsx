@@ -4,7 +4,6 @@ import {
   Loader2Icon,
   UnlinkIcon,
 } from "lucide-react";
-import { toast } from "sonner";
 import type { MemoContext } from "@/api";
 import {
   AlertDialog,
@@ -19,6 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { TabsContent } from "@/components/ui/tabs";
+import { useClipboard } from "@/hooks/use-clipboard";
 import { useI18n } from "@/i18n";
 
 export function SharingTab({
@@ -35,6 +35,10 @@ export function SharingTab({
   onRevoke: (share: string) => void;
 }) {
   const { t } = useI18n();
+  const { copy } = useClipboard({
+    successMessage: t("toast.copied"),
+    errorMessage: t("toast.copyFailed"),
+  });
   return (
     <TabsContent className="flex flex-col gap-3 pt-4" value="sharing">
       <div>
@@ -67,14 +71,7 @@ export function SharingTab({
               aria-label={t("common.copy")}
               size="icon-sm"
               variant="ghost"
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(url);
-                  toast.success(t("toast.copied"));
-                } catch {
-                  toast.error(t("toast.copyFailed"));
-                }
-              }}
+              onClick={() => void copy(url)}
             >
               <ClipboardIcon />
             </Button>

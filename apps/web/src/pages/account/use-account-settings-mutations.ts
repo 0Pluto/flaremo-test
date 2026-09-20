@@ -15,6 +15,7 @@ import {
 import { authClient } from "@/auth-client";
 import type { TranslationKey, TranslationParams } from "@/i18n";
 import { errorMessage } from "@/lib/error";
+import { queryKeys } from "@/lib/query-keys";
 import { MIN_PASSWORD_LENGTH } from "./account-panel-presets";
 
 /**
@@ -38,7 +39,8 @@ export function useAccountSettingsMutations({
   session,
   setAccountError,
   setAvatarError,
-  setCopied,
+  copyToken,
+  resetCopied,
   setCreatedToken,
   setCurrentPassword,
   setDeleteError,
@@ -87,7 +89,8 @@ export function useAccountSettingsMutations({
   setDeletePassword: (value: string) => void;
   setTokenError: (value: string | null) => void;
   setCreatedToken: (value: string | null) => void;
-  setCopied: (value: boolean) => void;
+  copyToken: (text: string) => Promise<boolean>;
+  resetCopied: () => void;
   setTokenName: (value: string) => void;
   setTokenExpiryDays: (value: string) => void;
 }) {
@@ -107,7 +110,7 @@ export function useAccountSettingsMutations({
     mutationFn: updateCurrentUserProfile,
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: ["current-flaremo-user"],
+        queryKey: queryKeys.currentUser,
       });
       await session.refetch();
     },
@@ -117,7 +120,7 @@ export function useAccountSettingsMutations({
     mutationFn: uploadAvatar,
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: ["current-flaremo-user"],
+        queryKey: queryKeys.currentUser,
       });
       await session.refetch();
     },
@@ -127,7 +130,7 @@ export function useAccountSettingsMutations({
     mutationFn: deleteAvatar,
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: ["current-flaremo-user"],
+        queryKey: queryKeys.currentUser,
       });
       await session.refetch();
     },
@@ -150,9 +153,9 @@ export function useAccountSettingsMutations({
     onSuccess: async () => {
       await session.refetch();
       await queryClient.invalidateQueries({
-        queryKey: ["current-flaremo-user"],
+        queryKey: queryKeys.currentUser,
       });
-      await queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers });
     },
   });
 
@@ -182,7 +185,7 @@ export function useAccountSettingsMutations({
     mutationFn: createPersonalAccessToken,
     onSuccess: async (result) => {
       setCreatedToken(result.token);
-      setCopied(false);
+      resetCopied();
       setTokenName("");
       setTokenExpiryDays("");
       await queryClient.invalidateQueries({
@@ -318,12 +321,8 @@ export function useAccountSettingsMutations({
 
   const handleCopyToken = async () => {
     if (!createdToken) return;
-    try {
-      await navigator.clipboard.writeText(createdToken);
-      setCopied(true);
-    } catch {
-      setTokenError(t("auth.copyFailed"));
-    }
+    const ok = await copyToken(createdToken);
+    if (!ok) setTokenError(t("auth.copyFailed"));
   };
 
   const handleRevokeToken = async (id: string) => {
@@ -346,11 +345,18 @@ export function useAccountSettingsMutations({
 
   const handleDeleteAccount = () => {
     setDeleteError(null);
+    // Resolve to whether deletion succeeded so the dialog can keep itself
+    // open on failure; onSuccess signs out and navigates away, so a resolved
+    // true never reaches the dialog's then-handler as a visible no-op.
     return deleteAccountMutation
       .mutateAsync(deletePassword)
-      .then(() => setDeletePassword(""))
+      .then(() => {
+        setDeletePassword("");
+        return true;
+      })
       .catch((error: unknown) => {
         setDeleteError(errorMessage(error, t("auth.deleteAccountFailed")));
+        return false;
       });
   };
 
