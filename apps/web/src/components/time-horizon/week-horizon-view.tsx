@@ -1,7 +1,5 @@
-// ============================================================================
-// 3. Week Horizon View (7 Days x 24 Hours, 168 Pure Squares)
-// ============================================================================
 import { useMemo } from "react";
+import { heatmapColor } from "@/lib/activity";
 import { buildWeekSlotCountMap } from "@/lib/time-horizon";
 import { cn } from "@/lib/utils";
 import { type DisplayMode, parseDayKey } from "./shared";
@@ -34,7 +32,7 @@ export function WeekHorizonPureView({
 
   return (
     <div className="flex flex-col gap-1.5">
-      {/* 7 Column Headers on the Top Axis (Weekday + Date) */}
+      {/* 7 Column Headers on the Top Axis (Weekday + Date, 对齐年视图当前月卡片风格) */}
       <div className="flex items-center gap-1">
         {/* Left spacer matching Y axis */}
         <div className="w-4 shrink-0" />
@@ -51,10 +49,12 @@ export function WeekHorizonPureView({
             return (
               <button
                 className={cn(
-                  "flex flex-col items-center rounded-md py-0.5 px-0.5 transition-all cursor-pointer border border-transparent",
+                  "flex flex-col items-center rounded-lg py-1 px-0.5 transition-all cursor-pointer border",
                   isSelected
-                    ? "bg-muted/70 dark:bg-white/[0.08] border-border/80 dark:border-white/15 shadow-2xs"
-                    : "hover:bg-muted/40 dark:hover:bg-white/[0.04]",
+                    ? "border-brand-500/60 ring-1 ring-brand-500/30 bg-brand-500/10 shadow-2xs"
+                    : isToday
+                      ? "border-brand-500/30 bg-brand-500/[0.04] hover:bg-brand-500/10"
+                      : "border-transparent hover:bg-muted/40 dark:hover:bg-white/[0.04]",
                 )}
                 key={d.key}
                 type="button"
@@ -62,17 +62,22 @@ export function WeekHorizonPureView({
               >
                 {displayMode === "calendar" ? (
                   <>
-                    <span className="text-[10px] font-medium text-muted-foreground">
+                    <span
+                      className={cn(
+                        "text-[10px] font-medium leading-none mb-0.5 transition-colors",
+                        isSelected || isToday
+                          ? "text-brand-600 dark:text-brand-400 font-semibold"
+                          : "text-muted-foreground",
+                      )}
+                    >
                       {weekdayStr}
                     </span>
                     <span
                       className={cn(
                         "text-xs leading-tight transition-colors",
-                        isToday
+                        isSelected || isToday
                           ? "font-bold text-brand-600 dark:text-brand-400"
-                          : isSelected
-                            ? "font-bold text-foreground"
-                            : "font-semibold text-foreground/85",
+                          : "font-semibold text-foreground/85",
                       )}
                     >
                       {dateObj.getDate()}
@@ -81,8 +86,8 @@ export function WeekHorizonPureView({
                 ) : (
                   <span
                     className={cn(
-                      "text-[10px] font-mono font-medium",
-                      isToday
+                      "text-[10px] font-mono font-medium transition-colors",
+                      isSelected || isToday
                         ? "text-brand-600 dark:text-brand-400 font-bold"
                         : "text-muted-foreground",
                     )}
@@ -96,7 +101,7 @@ export function WeekHorizonPureView({
         </div>
       </div>
 
-      {/* 7 Columns x 24 Rows Grid (168 Pure Squares, ZERO TEXT INSIDE) */}
+      {/* 7 Columns x 24 Rows Grid (168 Pure Squares, 100% 对齐年视图微点质感与深浅) */}
       <div className="flex gap-1">
         {/* Left Y-axis hour scale indicators (00, 06, 12, 18, 23) */}
         <div className="flex w-4 shrink-0 flex-col justify-between py-0.5 text-[8.5px] font-mono font-medium text-foreground/75 dark:text-foreground/70 select-none">
@@ -117,17 +122,12 @@ export function WeekHorizonPureView({
                   <button
                     className={cn(
                       "h-[7px] w-full rounded-[1.5px] transition-all cursor-pointer active:scale-95",
-                      count > 0
-                        ? count === 1
-                          ? "bg-brand-500/35 dark:bg-brand-400/40"
-                          : count === 2
-                            ? "bg-brand-500/60 dark:bg-brand-400/65"
-                            : count === 3
-                              ? "bg-brand-500/85 dark:bg-brand-400/85"
-                              : "bg-brand-500 dark:bg-brand-400 shadow-xs ring-1 ring-brand-500/80 dark:ring-brand-400/80"
-                        : "border border-black/[0.04] bg-muted-foreground/20 hover:bg-muted-foreground/35 dark:border-white/[0.06] dark:bg-white/[0.14] dark:hover:bg-white/[0.24]",
+                      heatmapColor(count),
+                      count > 0 && "hover:brightness-110",
+                      count <= 0 &&
+                        "hover:bg-muted-foreground/25 dark:hover:bg-muted/45",
                       isLoading && "animate-pulse",
-                      "hover:scale-125 hover:z-10",
+                      "hover:scale-110 hover:z-10",
                     )}
                     key={`${d.key}_${h}`}
                     type="button"

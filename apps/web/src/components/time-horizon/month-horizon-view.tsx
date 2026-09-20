@@ -94,30 +94,30 @@ export function MonthHorizonPureView({
           const dayNum = Number(cell.key.slice(8));
           const [q0, q1, q2, q3] = dayQuadrants.get(cell.key) ?? [0, 0, 0, 0];
 
-          // ── GitHub-style Activity Heat Depth Ramp (颜色深浅展示多寡) ──
+          // ── 100% 对齐年视图：统一采用相同的质感与深浅阶梯 ──
           const activityStyle =
             totalCount <= 0
-              ? "border-border/60 bg-card/60 dark:border-border/30 dark:bg-card/25 text-foreground/75 dark:text-foreground/70 hover:border-border hover:bg-card/90 dark:hover:bg-card/45"
+              ? "border-transparent bg-muted-foreground/15 dark:bg-muted/30 text-foreground/75 dark:text-foreground/70 hover:bg-muted-foreground/25 dark:hover:bg-muted/45"
               : totalCount === 1
-                ? "border-brand-500/35 bg-brand-500/20 text-brand-800 dark:border-brand-400/35 dark:bg-brand-500/25 dark:text-brand-200 font-semibold shadow-2xs hover:bg-brand-500/30 dark:hover:bg-brand-500/35"
+                ? "border-primary/20 bg-primary/35 dark:border-primary/30 dark:bg-primary/30 text-brand-900 dark:text-white font-semibold shadow-2xs hover:bg-primary/45"
                 : totalCount === 2
-                  ? "border-brand-500/55 bg-brand-500/45 text-brand-950 dark:border-brand-400/55 dark:bg-brand-500/50 dark:text-white font-bold shadow-2xs hover:bg-brand-500/55 dark:hover:bg-brand-500/60"
+                  ? "border-primary/30 bg-primary/55 dark:border-primary/40 dark:bg-primary/50 text-brand-950 dark:text-white font-bold shadow-2xs hover:bg-primary/65"
                   : totalCount <= 4
-                    ? "border-brand-600/70 bg-brand-500/75 text-white dark:border-brand-400/70 dark:bg-brand-500/80 dark:text-white font-bold shadow-xs hover:bg-brand-500/85 dark:hover:bg-brand-500/90"
-                    : "border-brand-600 bg-brand-500 text-white dark:border-brand-400 dark:bg-brand-500 dark:text-white font-bold shadow-sm hover:brightness-110";
+                    ? "border-primary/50 bg-primary/75 dark:border-primary/60 dark:bg-primary/75 text-white font-bold shadow-xs hover:bg-primary/85"
+                    : "border-primary bg-primary text-white dark:border-primary dark:bg-primary font-bold shadow-sm hover:brightness-110";
 
           return (
             <button
               className={cn(
                 "group relative flex h-8.5 w-full items-center justify-center rounded-[5px] border transition-all select-none cursor-pointer active:scale-95",
                 activityStyle,
-                // ── 低调克制：柔和半透微环，告别刺眼纯白 neon 效果 ──
+                // ── 对齐年视图选中卡片：柔和品牌色微环与微气泡底色 ──
                 isSelected &&
-                  "ring-1.5 ring-foreground/60 dark:ring-white/40 z-20 scale-[1.02] shadow-2xs",
-                // ── 今日未选中时的柔和边框 ──
+                  "border-brand-500/70 ring-1.5 ring-brand-500/35 bg-brand-500/15 dark:bg-brand-500/25 z-20 scale-[1.02] shadow-2xs",
+                // ── 今日未选中时的柔和轮廓 ──
                 !isSelected &&
                   isToday &&
-                  "border-foreground/40 dark:border-white/30 shadow-2xs font-bold",
+                  "border-brand-500/40 ring-1 ring-brand-500/20 shadow-2xs font-bold",
                 hoveredDate === cell.key && !isSelected && "scale-105 z-10",
                 !isSelected && "hover:scale-105 hover:z-10",
               )}
