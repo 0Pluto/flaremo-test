@@ -6,8 +6,8 @@ import { ShareCardDocumentView } from "./share-card-document";
 import { shareBodyText } from "./share-image-dialog";
 
 describe("shareBodyText", () => {
-  it("folds excessive newlines to a single blank line", () => {
-    const raw = "First line\n\n\n\nSecond line\n\n\nThird line";
+  it("folds excessive newlines to a single blank line and normalizes CRLF", () => {
+    const raw = "First line\r\n\r\n\r\n\r\nSecond line\r\n\r\n\r\nThird line";
     expect(shareBodyText(raw)).toBe("First line\n\nSecond line\n\nThird line");
   });
 
@@ -77,5 +77,30 @@ describe("ShareCardDocumentView", () => {
     expect(html).not.toContain("min-height:0");
     expect(html).toContain("flex-basis:auto");
     expect(html).toContain("Hello FlareMo");
+  });
+
+  it("splits paragraphs with compact margin when body has multiple paragraphs", () => {
+    const multiParaContext = {
+      ...context,
+      data: {
+        ...context.data,
+        body: "Paragraph 1\n\nParagraph 2\n\nParagraph 3",
+      },
+    };
+
+    const html = renderToStaticMarkup(
+      <ShareCardDocumentView
+        context={multiParaContext}
+        document={dummyDoc}
+        height={420}
+        mode="light"
+        width={340}
+      />,
+    );
+
+    expect(html).toContain("margin-top:8px");
+    expect(html).toContain("Paragraph 1");
+    expect(html).toContain("Paragraph 2");
+    expect(html).toContain("Paragraph 3");
   });
 });

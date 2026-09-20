@@ -272,6 +272,47 @@ function renderNode(
         ctx,
       );
       if (!content) return null;
+      const css = styleToCSS(node.style, mode, zeroTracking);
+      if (content.includes("\n\n")) {
+        const paragraphEntries = content
+          .split(/\n\n+/)
+          .filter(Boolean)
+          .reduce<{ id: string; text: string; isFirst: boolean }[]>(
+            (acc, text) => {
+              acc.push({
+                id: `p-${acc.length}-${text.slice(0, 16)}`,
+                text,
+                isFirst: acc.length === 0,
+              });
+              return acc;
+            },
+            [],
+          );
+        return (
+          <div
+            key={key}
+            style={{
+              wordBreak: "break-word",
+              minWidth: 0,
+              display: "flex",
+              flexDirection: "column",
+              ...css,
+            }}
+          >
+            {paragraphEntries.map((entry) => (
+              <div
+                key={entry.id}
+                style={{
+                  whiteSpace: "pre-wrap",
+                  marginTop: entry.isFirst ? 0 : 8,
+                }}
+              >
+                {entry.text}
+              </div>
+            ))}
+          </div>
+        );
+      }
       return (
         <div
           key={key}
@@ -279,7 +320,7 @@ function renderNode(
             whiteSpace: "pre-wrap",
             wordBreak: "break-word",
             minWidth: 0,
-            ...styleToCSS(node.style, mode, zeroTracking),
+            ...css,
           }}
         >
           {content}
