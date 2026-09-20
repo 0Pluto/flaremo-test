@@ -48,9 +48,9 @@
       ]
     },
     {
-      "name": "日历",
-      "short_name": "日历",
-      "url": "/calendar",
+      "name": "项目",
+      "short_name": "项目",
+      "url": "/projects",
       "icons": [
         {
           "src": "/brand/flaremo-app-icon-maskable-192.png",

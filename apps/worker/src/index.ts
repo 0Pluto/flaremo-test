@@ -578,9 +578,9 @@ export async function runScheduledMaintenance(
       .groupBy(tasks.userId);
     for (const row of overdueByUser) {
       await pushNotificationToUser(db, pushKeys, row.userId, {
-        title: "FlareMo 日程提醒",
-        body: `有 ${row.count} 个日程已经逾期。`,
-        url: "/calendar",
+        title: "FlareMo 任务提醒",
+        body: `有 ${row.count} 个任务已经逾期。`,
+        url: "/projects",
       }).catch(() => undefined);
     }
   }

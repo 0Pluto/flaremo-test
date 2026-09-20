@@ -22,8 +22,7 @@ export function TaskSearchResults({ tasks }: { tasks: Task[] }) {
           <li key={task.id}>
             <Link
               className="flex items-center gap-2 py-1.5 text-sm text-muted-foreground hover:text-foreground"
-              search={task.due_at ? { date: task.due_at } : undefined}
-              to={task.due_at ? "/calendar" : "/projects"}
+              to="/projects"
             >
               {task.status === "done" ? (
                 <CheckCircle2Icon className="size-3.5 shrink-0" />

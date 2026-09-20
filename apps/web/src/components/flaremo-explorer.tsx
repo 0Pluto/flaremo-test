@@ -3,7 +3,6 @@ import { Link } from "@tanstack/react-router";
 import {
   BrainIcon,
   CalendarDaysIcon,
-  CalendarIcon,
   ChevronRightIcon,
   FileTextIcon,
   FolderKanbanIcon,
@@ -172,18 +171,6 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
             <span className="min-w-0 flex-1 truncate">{t("nav.capture")}</span>
           </Link>
         )}
-        <Link
-          activeProps={{
-            className: "!bg-accent !text-accent-foreground font-medium",
-          }}
-          className="flex h-9 items-center gap-3 rounded-lg px-2.5 text-muted-foreground motion-safe:transition-[background-color,color,transform] motion-safe:duration-150 hover:bg-muted hover:text-foreground motion-safe:hover:translate-x-0.5"
-          onClick={onNavigate}
-          search={{ date: undefined }}
-          to="/calendar"
-        >
-          <CalendarIcon className="size-4 shrink-0" />
-          <span className="min-w-0 flex-1 truncate">{t("nav.calendar")}</span>
-        </Link>
         <Link
           activeProps={{
             className: "!bg-accent !text-accent-foreground font-medium",

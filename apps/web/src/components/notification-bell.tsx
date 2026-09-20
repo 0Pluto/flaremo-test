@@ -66,7 +66,7 @@ export function useNotifications() {
       return;
     }
     if (notification.type === "task_overdue") {
-      void navigate({ to: "/calendar", search: { date: undefined } });
+      void navigate({ to: "/projects" });
       return;
     }
     if (!notification.memo) return;

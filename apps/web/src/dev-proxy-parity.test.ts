@@ -49,7 +49,7 @@ describe("dev:hot worker proxy", () => {
     // endpoint while "/memory" is the SPA. A proxy key without the separator
     // would serve both from the build the dev server is meant to replace.
     const paths = proxyPaths(viteConfigSource);
-    const spaPaths = ["/articles", "/memory", "/memo/x", "/calendar"];
+    const spaPaths = ["/articles", "/memory", "/memo/x", "/projects"];
     for (const spaPath of spaPaths) {
       expect(paths.some((path) => spaPath.startsWith(path))).toBe(false);
     }

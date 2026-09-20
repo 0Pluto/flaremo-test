@@ -7,7 +7,6 @@ import {
 } from "@tanstack/react-router";
 import { lazy, Suspense } from "react";
 import {
-  getCalendarView,
   getDailyReview,
   getMemoContext,
   getRelatedMemos,
@@ -18,8 +17,8 @@ import {
 } from "@/api";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { getInitialLocale, isRtlLocale, useI18n } from "@/i18n";
-import { buildMonthGrid, monthOf, todayKey } from "@/lib/calendar-date";
+import { isRtlLocale, useI18n } from "@/i18n";
+import { todayKey } from "@/lib/calendar-date";
 import { queryKeys } from "@/lib/query-keys";
 import { AuthenticatedRoute } from "@/routes/authenticated-route";
 import { indexRoute } from "@/routes/index-route";
@@ -108,11 +107,6 @@ const MemoryPage = lazy(() =>
 const ProjectsPage = lazy(() =>
   import("@/pages/projects-page").then((module) => ({
     default: module.ProjectsPage,
-  })),
-);
-const CalendarPage = lazy(() =>
-  import("@/pages/calendar-page").then((module) => ({
-    default: module.CalendarPage,
   })),
 );
 const CapturePage = lazy(() =>
@@ -436,17 +430,6 @@ const projectsRoute = createRoute({
   },
 });
 
-function CalendarRoutePage() {
-  const { date } = calendarRoute.useSearch();
-  return (
-    <AuthenticatedRoute>
-      <Suspense fallback={<RouteLoading />}>
-        <CalendarPage initialDate={date} />
-      </Suspense>
-    </AuthenticatedRoute>
-  );
-}
-
 function CaptureRoutePage() {
   return (
     <AuthenticatedRoute>
@@ -456,35 +439,6 @@ function CaptureRoutePage() {
     </AuthenticatedRoute>
   );
 }
-
-const calendarRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/calendar",
-  component: CalendarRoutePage,
-  // Overdue reminders and search rows deep-link straight to a day panel.
-  validateSearch: (search: Record<string, unknown>) => ({
-    date:
-      typeof search.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(search.date)
-        ? search.date
-        : undefined,
-  }),
-  loader: ({ context }) => {
-    // Mirrors the page's initial month: today's cursor, week start from the
-    // stored locale, and the same tz convention the page passes. Warm data
-    // for exactly that key so first paint has the month grid.
-    const weekStart = getInitialLocale().startsWith("en") ? "sunday" : "monday";
-    const grid = buildMonthGrid(monthOf(todayKey()), weekStart);
-    const from = grid[0].key;
-    const to = grid[grid.length - 1].key;
-    const tz = new Date().getTimezoneOffset();
-    warmQuery(
-      context.queryClient.ensureQueryData({
-        queryKey: ["calendar", from, to, tz],
-        queryFn: () => getCalendarView({ from, to, tz }),
-      }),
-    );
-  },
-});
 
 const captureRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -556,7 +510,6 @@ const router = createRouter({
     randomWalkRoute,
     memoryRoute,
     projectsRoute,
-    calendarRoute,
     captureRoute,
     articlesRoute,
     articleEditRoute,
