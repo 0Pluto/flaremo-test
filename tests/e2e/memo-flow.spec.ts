@@ -241,6 +241,63 @@ test("keeps a composer draft when saving fails", async ({ page }) => {
   await expect(composer).toHaveText(content);
 });
 
+test("shows the new card optimistically before the create request answers", async ({
+  page,
+}) => {
+  const content = `Optimistic landing #opt${Date.now()}`;
+  // Hold the create response open: the card must already be on screen from
+  // the optimistic prepend, not only after the server round-trip (this is
+  // the memo-cache slot fix's behavior contract).
+  let releaseCreate: (() => void) | undefined;
+  const createAnswered = new Promise<void>((resolve) => {
+    releaseCreate = resolve;
+  });
+  await page.route("**/api/app/memos", async (route) => {
+    if (route.request().method() === "POST") {
+      await createAnswered;
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: "persisted",
+          name: "memos/persisted",
+          creator: "users/e2e_owner",
+          content,
+          visibility: "private",
+          state: "normal",
+          pinned: false,
+          payload: {},
+          create_time: "2026-09-01T00:00:00Z",
+          update_time: "2026-09-01T00:00:00Z",
+          display_time: "2026-09-01T00:00:00Z",
+          attachments: [],
+          can_manage: true,
+        }),
+      });
+      return;
+    }
+    await route.continue();
+  });
+
+  await page.goto("/");
+  const composer = page.getByRole("textbox", { name: /new note|新笔记/i });
+  await composer.fill(content);
+  await page.getByRole("button", { name: /^(save|保存|send|发送)$/i }).click();
+
+  // The optimistic insert lands without waiting for the network.
+  await expect(
+    page.locator("article").filter({ hasText: content }),
+  ).toBeVisible();
+
+  releaseCreate?.();
+  await expect(composer).toHaveText("");
+  // The card survives the settle: the invalidation swaps the optimistic id
+  // for the persisted row instead of dropping the card.
+  await expect(
+    page.locator("article").filter({ hasText: content }),
+  ).toBeVisible();
+});
+
 test("edits and shares a memo", async ({ page }) => {
   const stamp = Date.now();
   const content = `Lifecycle memo #life${stamp}`;

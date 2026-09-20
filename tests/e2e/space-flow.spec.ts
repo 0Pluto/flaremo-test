@@ -83,6 +83,81 @@ test("switching spaces scopes the timeline request and keeps the URL restorable"
   expect(requestedSpaces.at(-1)).toBe("all");
 });
 
+test("a private capture in the team space only appears in its own timeline", async ({
+  page,
+}) => {
+  // The composer's send target follows the active space, so a capture typed
+  // in the team space travels as protected and the optimistic card may show
+  // in the team timeline. This case pins the counterpart: when the wire
+  // records the memo private (the server files private into the personal
+  // corpus), the settle invalidation must move the card out of the team
+  // timeline — no stale optimistic copy may stay behind.
+  await page.route("**/api/app/memos", async (route) => {
+    if (route.request().method() === "POST") {
+      // The server files a private memo into the personal corpus even when
+      // the composer's target was the team space; simulate a server that
+      // corrects the visibility (defence-in-depth on the wire contract).
+      const body = (await route.request().postDataJSON()) as {
+        content: string;
+        visibility: string;
+      };
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: "corrected-private",
+          name: "memos/corrected-private",
+          creator: "users/local-owner",
+          content: body.content,
+          visibility: "private",
+          state: "normal",
+          pinned: false,
+          payload: {},
+          create_time: "2026-09-01T00:00:00Z",
+          update_time: "2026-09-01T00:00:00Z",
+          display_time: "2026-09-01T00:00:00Z",
+          attachments: [],
+          can_manage: true,
+        }),
+      });
+      return;
+    }
+    const params = new URL(route.request().url()).searchParams;
+    const space = params.get("space");
+    const memos =
+      space === "team"
+        ? [note("team-only", "protected")]
+        : space === "personal"
+          ? [note("personal-only", "private")]
+          : [note("team-only", "protected"), note("personal-only", "private")];
+    await route.fulfill({ json: { memos } });
+  });
+
+  const composer = page.getByRole("textbox", { name: /new note|新笔记/i });
+  await page.goto("/?space=team");
+  await expect(
+    page.locator("article").filter({ hasText: "Space note team-only" }),
+  ).toBeVisible();
+
+  await composer.fill("Private note typed in the team space");
+  await page.getByRole("button", { name: /^(send|发送)$/i }).click();
+
+  // The composer's target follows the active space (protected), so the
+  // optimistic card legitimately appears in the team timeline…
+  await expect(
+    page.locator("article").filter({
+      hasText: "Private note typed in the team space",
+    }),
+  ).toBeVisible();
+  // …and after the settle the server-filed private memo leaves the team
+  // timeline again (the inbox shows it under personal/all instead).
+  await expect(
+    page.locator("article").filter({
+      hasText: "Private note typed in the team space",
+    }),
+  ).toHaveCount(0);
+});
+
 test("the composer send target follows the active space", async ({ page }) => {
   const created: string[] = [];
   await page.route("**/api/app/memos*", async (route) => {
