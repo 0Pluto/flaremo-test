@@ -1,5 +1,5 @@
 // ============================================================================
-// 4. Day Horizon View (Centered Apple-Style Astronomical Timepiece)
+// 4. Day Horizon View (Centered Minimalist Astronomical Timepiece)
 // ============================================================================
 import { useEffect, useMemo, useState } from "react";
 import { todayKey } from "@/lib/calendar-date";
@@ -41,22 +41,13 @@ export function DayHorizonPureView({
 
   const isViewingToday = selectedDay === today;
 
-  // Live digital clock time string for today (e.g. "21:25")
-  const [currentTimeStr, setCurrentTimeStr] = useState(() => {
-    const now = new Date();
-    return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-  });
+  // Real-time ticking date for analog hands
+  const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
     if (!isViewingToday) return;
-    const updateClock = () => {
-      const now = new Date();
-      setCurrentTimeStr(
-        `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
-      );
-    };
-    const interval = setInterval(updateClock, 1000);
-    return () => clearInterval(interval);
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
   }, [isViewingToday]);
 
   // Real-time second sync for the satellite photon (0..60s continuous rotation)
@@ -81,15 +72,6 @@ export function DayHorizonPureView({
       document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [isViewingToday]);
-
-  // Total memos on this selected day
-  const totalDayNotes = useMemo(() => {
-    let sum = 0;
-    for (const count of hourCountMap.values()) {
-      sum += count;
-    }
-    return sum;
-  }, [hourCountMap]);
 
   // If viewing a historical day, find the last active hour to dock the photon
   const lastActiveHour = useMemo(() => {
@@ -144,20 +126,27 @@ export function DayHorizonPureView({
   const rOrbit = 86; // Outer orbit track for satellite
   const rTickOut = 76; // Hairline ticks outer edge
   const rTickInNormal = 68; // Hairline ticks inner edge
-  const rTickInCardinal = 63; // Cardinal ticks inner edge (longer)
-  const rCenterHub = 48; // Inner life clock plate
+  const rTickInCardinal = 63; // Cardinal ticks inner edge (slightly longer)
+  const rInnerGuide = 44; // Subtle inner concentric guide
 
-  // Hovered state details for the center hub
-  const hoveredCount =
-    hoveredHour !== null ? (hourCountMap.get(hoveredHour) ?? 0) : 0;
-  const hoveredMemos =
-    hoveredHour !== null ? (memosByHour.get(hoveredHour) ?? []) : [];
-  const hoveredSnippet = hoveredMemos[0]?.content
-    ? hoveredMemos[0].content
-        .replace(/[#*`~>-]/g, "")
-        .trim()
-        .slice(0, 24)
-    : null;
+  // ── Clock Hands Calculations (极简、纤细的双针机械动效) ──────────────────
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
+  const currentSecond = now.getSeconds();
+
+  // 24-hour dial: 00:00 at top (-90 deg), 06:00 right (0 deg), 12:00 bottom (90 deg), 18:00 left (180 deg)
+  const hourDeg = isViewingToday
+    ? ((currentHour + currentMinute / 60) / 24) * 360 - 90
+    : lastActiveHour !== null
+      ? (lastActiveHour / 24) * 360 - 90
+      : -90;
+  const hourRad = (hourDeg * Math.PI) / 180;
+
+  // Minute hand: 60-minute cycle (360 deg)
+  const minuteDeg = isViewingToday
+    ? ((currentMinute + currentSecond / 60) / 60) * 360 - 90
+    : -90;
+  const minuteRad = (minuteDeg * Math.PI) / 180;
 
   return (
     <div className="flex h-full min-h-[210px] items-center justify-center px-1 py-1 select-none">
@@ -175,15 +164,18 @@ export function DayHorizonPureView({
           )}
           aria-hidden="true"
         >
-          <title>24小时天文时计</title>
+          <title>24小时极简天文时计</title>
 
-          {/* ── 1. Center Life Hub Plate (中央生活表盘底衬) ──────────────── */}
+          {/* ── 1. Inner Concentric Guide Ring (极简微光内环，无白底硬圈) ─── */}
           <circle
             cx={cx}
             cy={cy}
-            r={rCenterHub}
-            className="fill-card/90 dark:fill-card/75 stroke-border/60 dark:stroke-border/40 shadow-xs"
-            strokeWidth="0.75"
+            r={rInnerGuide}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="0.5"
+            strokeDasharray="1.5 4"
+            className="text-foreground/15 dark:text-foreground/20"
           />
 
           {/* ── 2. Outer Celestial Orbit Track (极细天体虚线轨道) ───────── */}
@@ -234,7 +226,7 @@ export function DayHorizonPureView({
                     count > 0
                       ? "stroke-brand-500 dark:stroke-brand-400 stroke-[2px]"
                       : isCardinal
-                        ? "stroke-foreground/50 dark:stroke-foreground/55 stroke-[1.2px]"
+                        ? "stroke-foreground/45 dark:stroke-foreground/50 stroke-[1.2px]"
                         : "stroke-foreground/20 dark:stroke-foreground/25 stroke-[0.75px]",
                     isHovered &&
                       "stroke-brand-500 stroke-[2.4px] brightness-125",
@@ -289,45 +281,88 @@ export function DayHorizonPureView({
             );
           })}
 
-          {/* ── 4. Cardinal Hour Typography (00, 06, 12, 18 优雅外圈数字) ── */}
+          {/* ── 4. Cardinal Hour Typography (00, 06, 12, 18 极淡极小微刻度) ─ */}
           {displayMode === "calendar" && (
             <>
               <text
                 x={cx}
-                y="13"
+                y="14"
                 textAnchor="middle"
-                className="text-[8.5px] font-mono font-semibold fill-foreground/70 dark:fill-foreground/75 select-none"
+                className="text-[7px] font-mono fill-muted-foreground/35 dark:fill-muted-foreground/30 select-none"
               >
                 00
               </text>
               <text
-                x="197"
-                y={cy + 3}
+                x="196"
+                y={cy + 2.5}
                 textAnchor="middle"
-                className="text-[8.5px] font-mono font-semibold fill-foreground/70 dark:fill-foreground/75 select-none"
+                className="text-[7px] font-mono fill-muted-foreground/35 dark:fill-muted-foreground/30 select-none"
               >
                 06
               </text>
               <text
                 x={cx}
-                y="204"
+                y="203"
                 textAnchor="middle"
-                className="text-[8.5px] font-mono font-semibold fill-foreground/70 dark:fill-foreground/75 select-none"
+                className="text-[7px] font-mono fill-muted-foreground/35 dark:fill-muted-foreground/30 select-none"
               >
                 12
               </text>
               <text
-                x="13"
-                y={cy + 3}
+                x="14"
+                y={cy + 2.5}
                 textAnchor="middle"
-                className="text-[8.5px] font-mono font-semibold fill-foreground/70 dark:fill-foreground/75 select-none"
+                className="text-[7px] font-mono fill-muted-foreground/35 dark:fill-muted-foreground/30 select-none"
               >
                 18
               </text>
             </>
           )}
 
-          {/* ── 5. Orbital Satellite Photon (深空孤寂巡航的流光卫星微粒) ──── */}
+          {/* ── 5. Minimalist Analog Clock Hands (纤细低调时针与分针) ─────── */}
+          <g>
+            {/* Hour Hand (24-Hour Movement, length = 30px) */}
+            <line
+              x1={cx}
+              y1={cy}
+              x2={cx + 30 * Math.cos(hourRad)}
+              y2={cy + 30 * Math.sin(hourRad)}
+              strokeLinecap="round"
+              className={cn(
+                "stroke-foreground/75 dark:stroke-foreground/80 stroke-[1.8px] transition-transform duration-300",
+                !isViewingToday && "opacity-35",
+              )}
+            />
+
+            {/* Minute Hand (60-Minute Movement, length = 42px) */}
+            <line
+              x1={cx}
+              y1={cy}
+              x2={cx + 42 * Math.cos(minuteRad)}
+              y2={cy + 42 * Math.sin(minuteRad)}
+              strokeLinecap="round"
+              className={cn(
+                "stroke-foreground/45 dark:stroke-foreground/50 stroke-[1.1px] transition-transform duration-300",
+                !isViewingToday && "opacity-35",
+              )}
+            />
+
+            {/* Center Pinion Cap */}
+            <circle
+              cx={cx}
+              cy={cy}
+              r="2.6"
+              className="fill-foreground dark:fill-foreground"
+            />
+            <circle
+              cx={cx}
+              cy={cy}
+              r="0.9"
+              className="fill-background dark:fill-background"
+            />
+          </g>
+
+          {/* ── 6. Orbital Satellite Photon (外圈深空孤寂巡航的流光卫星) ──── */}
           {isViewingToday ? (
             <g
               className="animate-satellite-orbit"
@@ -360,7 +395,7 @@ export function DayHorizonPureView({
               <circle
                 cx={cx}
                 cy={cy - rOrbit}
-                r="5.5"
+                r="5"
                 className="fill-brand-500/20 dark:fill-brand-400/25 animate-pulse"
               />
 
@@ -368,13 +403,13 @@ export function DayHorizonPureView({
               <circle
                 cx={cx}
                 cy={cy - rOrbit}
-                r="2.6"
-                className="fill-brand-500 dark:fill-brand-300 filter drop-shadow-[0_0_5px_var(--brand-500)]"
+                r="2.5"
+                className="fill-brand-500 dark:fill-brand-300 filter drop-shadow-[0_0_4px_var(--brand-500)]"
               />
               <circle
                 cx={cx}
                 cy={cy - rOrbit}
-                r="1.1"
+                r="1"
                 className="fill-white dark:fill-white"
               />
             </g>
@@ -397,76 +432,17 @@ export function DayHorizonPureView({
               <circle
                 cx={cx}
                 cy={cy - rOrbit}
-                r="2.4"
-                className="fill-brand-500 dark:fill-brand-300 filter drop-shadow-[0_0_4px_var(--brand-500)]"
+                r="2.2"
+                className="fill-brand-500 dark:fill-brand-300 filter drop-shadow-[0_0_3px_var(--brand-500)]"
               />
               <circle
                 cx={cx}
                 cy={cy - rOrbit}
-                r="0.9"
+                r="0.8"
                 className="fill-white/90"
               />
             </g>
           ) : null}
-
-          {/* ── 6. Center Hub Display (中央生活与发呆时计) ─────────────────── */}
-          {hoveredHour !== null ? (
-            /* Hover State: Specific Hour Inspector */
-            <g className="transition-all duration-150">
-              <text
-                x={cx}
-                y={cy - 16}
-                textAnchor="middle"
-                className="text-[9.5px] font-mono font-medium fill-brand-600 dark:fill-brand-400 select-none"
-              >
-                {`${String(hoveredHour).padStart(2, "0")}:00`}
-              </text>
-              <text
-                x={cx}
-                y={cy + 6}
-                textAnchor="middle"
-                className="text-[19px] font-mono font-bold fill-foreground tracking-tight select-none"
-              >
-                {hoveredCount > 0 ? `${hoveredCount} 条` : "无记录"}
-              </text>
-              <text
-                x={cx}
-                y={cy + 22}
-                textAnchor="middle"
-                className="text-[9px] font-medium fill-muted-foreground select-none"
-              >
-                {hoveredSnippet ? `“${hoveredSnippet}”` : "点击查看明细"}
-              </text>
-            </g>
-          ) : (
-            /* Default State: Live Clock & Calm Day Atmosphere */
-            <g className="transition-all duration-150">
-              <text
-                x={cx}
-                y={cy - 18}
-                textAnchor="middle"
-                className="text-[9px] font-mono font-medium fill-muted-foreground uppercase tracking-widest select-none"
-              >
-                {isViewingToday ? "TODAY" : selectedDay.slice(5)}
-              </text>
-              <text
-                x={cx}
-                y={cy + 6}
-                textAnchor="middle"
-                className="text-[23px] font-mono font-bold fill-foreground tracking-tight select-none tabular-nums"
-              >
-                {isViewingToday ? currentTimeStr : `${totalDayNotes} 篇`}
-              </text>
-              <text
-                x={cx}
-                y={cy + 22}
-                textAnchor="middle"
-                className="text-[9.5px] font-medium fill-brand-600 dark:fill-brand-400 select-none"
-              >
-                {totalDayNotes > 0 ? `${totalDayNotes} 篇笔记` : "时间静静流淌"}
-              </text>
-            </g>
-          )}
         </svg>
       </button>
     </div>
