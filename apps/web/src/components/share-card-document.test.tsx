@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-
 import type { ShareCardDocument } from "@flaremo/plugins";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
@@ -33,6 +32,7 @@ describe("ShareCardDocumentView", () => {
           type: "text",
           text: "{body}",
           style: {
+            flex: 1,
             font: { size: 14 },
           },
         },
@@ -42,7 +42,7 @@ describe("ShareCardDocumentView", () => {
 
   const context = {
     data: {
-      body: "Hello FlareMo",
+      body: "Hello FlareMo\nLine 2\nLine 3\nLine 4",
       date: "2026-09-20",
       day: "20",
       stats: "",
@@ -72,6 +72,10 @@ describe("ShareCardDocumentView", () => {
     expect(html).toContain("width:340px");
     // Ensure overflow:hidden is not clipping the container
     expect(html).not.toContain("overflow:hidden");
+    // Ensure body with flex uses flex-basis: auto to prevent content overflow collapsing
+    expect(html).not.toContain("flex-basis:0");
+    expect(html).not.toContain("min-height:0");
+    expect(html).toContain("flex-basis:auto");
     expect(html).toContain("Hello FlareMo");
   });
 });

@@ -155,9 +155,8 @@ function styleToCSS(
   if (style.minHeight !== undefined) css.minHeight = style.minHeight;
   if (style.flex !== undefined) {
     css.flexGrow = style.flex;
-    css.flexShrink = 1;
-    css.flexBasis = 0;
-    css.minHeight = 0;
+    css.flexShrink = 0;
+    css.flexBasis = "auto";
   }
   if (style.align) css.alignItems = ALIGN_ITEMS[style.align];
   if (style.justify) css.justifyContent = JUSTIFY_CONTENT[style.justify];
@@ -363,8 +362,28 @@ export function ShareCardDocumentView({
   mode: "light" | "dark";
 }) {
   return (
-    <div style={{ width, minHeight: height, boxSizing: "border-box" }}>
-      {renderNode(document.root, context, mode, 0)}
+    <div
+      style={{
+        width,
+        minHeight: height,
+        display: "flex",
+        flexDirection: "column",
+        boxSizing: "border-box",
+      }}
+    >
+      {renderNode(
+        {
+          ...document.root,
+          style: {
+            minHeight: "100%",
+            flex: 1,
+            ...document.root.style,
+          },
+        },
+        context,
+        mode,
+        0,
+      )}
     </div>
   );
 }

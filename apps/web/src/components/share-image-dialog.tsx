@@ -242,9 +242,9 @@ export function ShareImageDialog({
           <DialogTitle>{t("share.imageTitle")}</DialogTitle>
           <DialogDescription>{t("share.imageSubtitle")}</DialogDescription>
         </DialogHeader>
-        <div className="flex justify-center py-2 max-h-[60vh] overflow-y-auto rounded-lg bg-muted/20 p-2 [scrollbar-width:thin]">
+        <div className="flex justify-center py-1 max-h-[60vh] overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {payload?.kind === "document" && (
-            <div ref={previewRef}>
+            <div ref={previewRef} className="rounded-lg shadow-sm">
               <ShareCardDocumentView
                 context={{
                   data: cardData,
