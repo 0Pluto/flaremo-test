@@ -4,6 +4,7 @@ import {
   createMemoSchema,
   dailyReviewQuerySchema,
   FLAREMO_API_VERSION,
+  hourlyActivityQuerySchema,
   listMemosQuerySchema,
   listNotificationsQuerySchema,
   memoSpaceSchema,
@@ -32,6 +33,7 @@ import {
   getBranding,
   getCalendarView,
   getFlaremoUserNames,
+  getHourlyActivity,
   getMembershipState,
   getMemoById,
   getMemoStats,
@@ -325,6 +327,19 @@ appApi.get("/stats", zValidator("query", memoStatsQuerySchema), async (c) => {
     return jsonError(c, error);
   }
 });
+
+appApi.get(
+  "/stats/hourly",
+  zValidator("query", hourlyActivityQuerySchema),
+  async (c) => {
+    try {
+      const { db, user } = await getRequestContext(c);
+      return c.json(await getHourlyActivity(db, user, c.req.valid("query")));
+    } catch (error) {
+      return jsonError(c, error);
+    }
+  },
+);
 
 appApi.get(
   "/calendar",

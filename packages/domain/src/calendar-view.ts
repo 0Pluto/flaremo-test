@@ -1,4 +1,4 @@
-import type { CalendarView } from "@flaremo/contracts";
+import type { CalendarView, HourlyActivityResponse } from "@flaremo/contracts";
 import type { FlareMoDb, UserRow } from "@flaremo/db";
 import { memos, tasks } from "@flaremo/db";
 import { and, asc, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
@@ -103,5 +103,60 @@ export async function getCalendarView(
     notes: noteRows,
     note_tasks: noteTaskRows,
     tasks: taskRows.map(taskToDto),
+  };
+}
+
+/**
+ * Returns the number of memos created in each local hour (0–23) for a single
+ * calendar day. All 24 slots are always present; empty hours have count 0.
+ *
+ * Timezone handling mirrors getCalendarView: `tz` is the client's
+ * Date#getTimezoneOffset() (UTC − local in minutes). UTC+8 sends −480;
+ * offsetMinutes = −(−480) = +480, so datetime(created_at, '+480 minutes')
+ * yields the local wall-clock time.
+ */
+export async function getHourlyActivity(
+  db: FlareMoDb,
+  user: UserRow,
+  query: { date: string; tz?: number },
+): Promise<HourlyActivityResponse> {
+  const { date } = query;
+  const offsetMinutes = -(query.tz ?? 0);
+  const boundShift = (query.tz ?? 0) * 60_000;
+  // Inclusive local-day bounds converted to UTC instants.
+  const startUtc = new Date(
+    new Date(`${date}T00:00:00Z`).getTime() + boundShift,
+  );
+  const endUtc = new Date(startUtc.getTime() + 24 * 60 * 60 * 1000);
+
+  const rows = await db
+    .select({
+      // Extract local hour as integer: shift the stored UTC timestamp into
+      // the client's timezone, then take characters 12–13 (\"HH\" in
+      // \"YYYY-MM-DD HH:MM:SS\").
+      hour: sql<number>`CAST(substr(datetime(${memos.createdAt}, ${`${offsetMinutes} minutes`}), 12, 2) AS INTEGER)`.mapWith(
+        Number,
+      ),
+      count: sql<number>`count(*)`.mapWith(Number),
+    })
+    .from(memos)
+    .where(
+      and(
+        eq(memos.userId, user.id),
+        inArray(memos.status, ["normal", "archived"]),
+        gte(memos.createdAt, startUtc.toISOString()),
+        lt(memos.createdAt, endUtc.toISOString()),
+      ),
+    )
+    .groupBy(
+      sql`substr(datetime(${memos.createdAt}, ${`${offsetMinutes} minutes`}), 12, 2)`,
+    );
+
+  const byHour = new Map(rows.map((r) => [r.hour, r.count]));
+  return {
+    hours: Array.from({ length: 24 }, (_, h) => ({
+      hour: h,
+      count: byHour.get(h) ?? 0,
+    })),
   };
 }

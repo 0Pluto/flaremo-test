@@ -1,6 +1,7 @@
 import type {
   DailyReviewResponse,
   DeleteTagResponse,
+  HourlyActivityResponse,
   ListMemosResponse,
   MemoDto,
   MemoStatsResponse,
@@ -93,6 +94,22 @@ export async function getMemoStats(timeZone: string, space?: MemoSpace) {
   const query = new URLSearchParams({ time_zone: timeZone });
   if (space) query.set("space", space);
   return apiRequest<MemoStatsResponse>(`/api/app/stats?${query.toString()}`);
+}
+
+/**
+ * Returns 24 hourly memo counts for the given local date.
+ * `tz` should be `new Date().getTimezoneOffset()` (UTC − local in minutes).
+ */
+export async function getHourlyActivity(
+  date: string,
+  tz: number,
+  signal?: AbortSignal,
+) {
+  const query = new URLSearchParams({ date, tz: String(tz) });
+  return apiRequest<HourlyActivityResponse>(
+    `/api/app/stats/hourly?${query.toString()}`,
+    { signal },
+  );
 }
 
 export async function getDailyReview(date: string, tzOffsetMinutes: number) {
