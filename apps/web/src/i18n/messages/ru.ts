@@ -423,6 +423,9 @@ const messages = {
   "reading.audioUnavailable":
     "Аудиофайл не загрузился; возможно, он был удалён.",
   "markdown.imageUnavailable": "Изображение недоступно",
+  "imageViewer.zoomIn": "Увеличить",
+  "imageViewer.zoomOut": "Уменьшить",
+  "imageViewer.reset": "Сбросить масштаб",
   "detail.unavailable": "Заметка недоступна",
   "detail.outgoing": "Ссылается на",
   "detail.backlinks": "На неё ссылаются",

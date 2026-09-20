@@ -419,6 +419,9 @@ const messages = {
   "reading.audioUnavailable":
     "오디오 파일을 불러오지 못했습니다. 삭제되었을 수 있습니다.",
   "markdown.imageUnavailable": "이미지를 불러올 수 없습니다",
+  "imageViewer.zoomIn": "확대",
+  "imageViewer.zoomOut": "축소",
+  "imageViewer.reset": "확대 초기화",
   "detail.unavailable": "노트를 사용할 수 없습니다",
   "detail.outgoing": "참조하는 노트",
   "detail.backlinks": "참조되는 노트",

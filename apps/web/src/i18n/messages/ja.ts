@@ -419,6 +419,9 @@ const messages = {
   "reading.audioUnavailable":
     "音声ファイルを読み込めませんでした。削除された可能性があります。",
   "markdown.imageUnavailable": "画像を読み込めません",
+  "imageViewer.zoomIn": "拡大",
+  "imageViewer.zoomOut": "縮小",
+  "imageViewer.reset": "拡大をリセット",
   "detail.unavailable": "ノートを利用できません",
   "detail.outgoing": "参照しているノート",
   "detail.backlinks": "参照されているノート",

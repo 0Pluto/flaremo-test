@@ -420,6 +420,9 @@ const messages = {
   "reading.audioUnavailable":
     "The audio file failed to load; it may have been deleted.",
   "markdown.imageUnavailable": "Image unavailable",
+  "imageViewer.zoomIn": "Zoom in",
+  "imageViewer.zoomOut": "Zoom out",
+  "imageViewer.reset": "Reset zoom",
   "detail.unavailable": "Note unavailable",
   "detail.outgoing": "References",
   "detail.backlinks": "Referenced by",

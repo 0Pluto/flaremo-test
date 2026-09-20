@@ -429,6 +429,9 @@ const messages = {
   "reading.audioUnavailable":
     "Le fichier audio n'a pas pu être chargé ; il a peut-être été supprimé.",
   "markdown.imageUnavailable": "Image indisponible",
+  "imageViewer.zoomIn": "Agrandir",
+  "imageViewer.zoomOut": "Réduire",
+  "imageViewer.reset": "Réinitialiser le zoom",
   "detail.unavailable": "Note indisponible",
   "detail.outgoing": "Références",
   "detail.backlinks": "Référencé par",
