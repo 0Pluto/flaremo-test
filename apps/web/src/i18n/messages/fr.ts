@@ -1181,7 +1181,8 @@ const messages = {
   "composer.fullscreen.open": "Plein écran",
   "composer.fullscreen.close": "Quitter le plein écran (Esc)",
   "composer.fullscreen.wordCount": "{count} mots",
-  "composer.fullscreen.articleTitlePlaceholder": "Titre de l'article…",
+  "composer.fullscreen.articleTitlePlaceholder":
+    "Titre (facultatif, converti en article)…",
   "composer.type.label": "Type de publication",
   "composer.type.memo": "Note · Publier sur le fil",
   "composer.type.article": "Article · Public et indexable",

@@ -1072,7 +1072,8 @@ const messages = {
   "composer.fullscreen.open": "全屏写作",
   "composer.fullscreen.close": "收起全屏 (Esc)",
   "composer.fullscreen.wordCount": "{count} 字",
-  "composer.fullscreen.articleTitlePlaceholder": "文章标题…",
+  "composer.fullscreen.articleTitlePlaceholder":
+    "标题（选填，填写后转为文章）…",
   "composer.type.label": "发布类型",
   "composer.type.memo": "记录 · 发到时间线",
   "composer.type.article": "文章 · 公开可收录",

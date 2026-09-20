@@ -175,6 +175,11 @@ export function ComposerToolbar({
           type="button"
           variant="ghost"
           onClick={onExpand}
+          onMouseEnter={() => {
+            void import(
+              "@/components/composer/composer-focus-canvas-lazy"
+            ).then((m) => m.loadComposerFocusCanvas());
+          }}
           title={t("composer.fullscreen.open")}
         >
           <Maximize2Icon />

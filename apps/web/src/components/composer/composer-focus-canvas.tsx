@@ -1,6 +1,26 @@
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import type { Editor } from "@tiptap/react";
-import { ArrowRightIcon, Loader2Icon, Minimize2Icon } from "lucide-react";
+import {
+  ArrowRightIcon,
+  BoldIcon,
+  CalendarPlusIcon,
+  CheckSquareIcon,
+  CodeIcon,
+  HashIcon,
+  Heading2Icon,
+  Heading3Icon,
+  ImageIcon,
+  ItalicIcon,
+  ListIcon,
+  ListOrderedIcon,
+  Loader2Icon,
+  MicIcon,
+  Minimize2Icon,
+  MinusIcon,
+  QuoteIcon,
+  StrikethroughIcon,
+  TableIcon,
+} from "lucide-react";
 import { Suspense, useRef, useState } from "react";
 import type { MemoVisibility } from "@/api";
 import { buildArticleExtensions } from "@/components/article-editor";
@@ -9,17 +29,13 @@ import {
   ComposerTagSuggestions,
   ComposerWikiSuggestions,
 } from "@/components/composer/composer-suggestion-lists";
-import { ComposerToolbar } from "@/components/composer/composer-toolbar";
 import {
   type ComposerPublishType,
   ComposerTypeMenu,
 } from "@/components/composer/composer-type-menu";
 import { ComposerVisibilityMenu } from "@/components/composer/composer-visibility-menu";
 import { VoiceCaptureBar } from "@/components/composer/voice-capture-bar";
-import {
-  buildComposerExtensions,
-  RichComposerEditor,
-} from "@/components/rich-composer-editor";
+import { RichComposerEditor } from "@/components/rich-composer-editor";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -27,6 +43,7 @@ import {
   DialogPortal,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { useComposerSuggestions } from "@/hooks/use-composer-suggestions";
 import { useComposerVoice } from "@/hooks/use-composer-voice";
 import { useInlineImageUploads } from "@/hooks/use-inline-image-uploads";
@@ -50,10 +67,11 @@ export type ComposerFocusCanvasProps = {
 };
 
 /**
- * Fullscreen Focus Canvas (专注画布):
- * A quiet, full-viewport writing overlay for the composer.
- * Keeps the memo capture path simple and distraction-free while offering
- * seamless drafting into a full article without cognitive dissonance.
+ * Fullscreen Focus Canvas (专注画布 - 自适应信纸模式):
+ * Smooth, 60fps hardware-accelerated full-viewport writing environment.
+ * Features a dedicated title header and an extensive professional writing
+ * toolbar (headings, code blocks, tables, lists, text formatting).
+ * Automatically adapts publish target based on title presence or user choice.
  */
 export function ComposerFocusCanvas({
   open,
@@ -70,9 +88,15 @@ export function ComposerFocusCanvas({
 }: ComposerFocusCanvasProps) {
   const { t } = useI18n();
   const canvasEditorRef = useRef<Editor | null>(null);
-  const [publishType, setPublishType] = useState<ComposerPublishType>(() =>
-    draft.title ? "article" : "memo",
+  const [manualType, setManualType] = useState<ComposerPublishType | null>(
+    null,
   );
+
+  // Option A (自适应信纸法):
+  // If title is entered, automatically treated as article unless user manually set type.
+  const hasTitle = Boolean(draft.title?.trim());
+  const publishType: ComposerPublishType =
+    manualType ?? (hasTitle ? "article" : "memo");
 
   const canSubmit = Boolean(draft.content.trim() || draft.files.length > 0);
   const draftRef = useRef(draft);
@@ -156,7 +180,7 @@ export function ComposerFocusCanvas({
         />
         <DialogPrimitive.Popup
           data-slot="composer-canvas-popup"
-          className="fixed inset-0 isolate z-50 flex flex-col bg-background text-foreground outline-none duration-200 ease-signal data-open:animate-in data-open:fade-in-0 data-open:slide-in-from-bottom-2 data-closed:animate-out data-closed:fade-out-0 data-closed:fill-mode-forwards"
+          className="fixed inset-0 isolate z-50 flex flex-col bg-background text-foreground outline-none will-change-transform will-change-opacity duration-200 ease-signal data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 data-closed:fill-mode-forwards"
         >
           <form
             className="flex h-full flex-col"
@@ -195,29 +219,27 @@ export function ComposerFocusCanvas({
             </div>
 
             {/* Main Canvas Area */}
-            <div className="relative mx-auto flex w-full max-w-3xl flex-1 flex-col min-h-0 overflow-y-auto px-4 sm:px-6 py-4">
-              {publishType === "article" && (
-                <div className="mb-2 shrink-0">
-                  <input
-                    type="text"
-                    value={draft.title ?? ""}
-                    onChange={(event) =>
-                      commitDraft({ title: event.target.value })
-                    }
-                    placeholder={t(
-                      "composer.fullscreen.articleTitlePlaceholder",
-                    )}
-                    disabled={isPending}
-                    className="w-full border-b border-border/40 bg-transparent px-0 pb-3 text-xl font-semibold tracking-tight placeholder:text-muted-foreground/40 focus-visible:outline-none sm:text-2xl"
-                  />
-                </div>
-              )}
+            <div className="relative mx-auto flex w-full max-w-3xl flex-1 flex-col min-h-0 overflow-y-auto px-4 sm:px-6 py-5">
+              {/* Adaptive Title Header */}
+              <div className="mb-3 shrink-0">
+                <input
+                  type="text"
+                  value={draft.title ?? ""}
+                  onChange={(event) => {
+                    commitDraft({ title: event.target.value });
+                  }}
+                  placeholder={t("composer.fullscreen.articleTitlePlaceholder")}
+                  disabled={isPending}
+                  className="w-full border-b border-border/40 bg-transparent px-0 pb-3 text-xl font-bold tracking-tight text-foreground placeholder:text-muted-foreground/30 focus-visible:outline-none sm:text-2xl"
+                />
+              </div>
+
+              {/* TipTap Fullscreen Editor */}
               <div className="flex flex-1 flex-col min-h-0">
                 <Suspense
                   fallback={<div className="flex-1 rounded-lg bg-muted/20" />}
                 >
                   <RichComposerEditor
-                    key={publishType}
                     ariaLabel={
                       publishType === "article"
                         ? t("composer.type.article")
@@ -226,11 +248,9 @@ export function ComposerFocusCanvas({
                     content={draft.content}
                     disabled={isPending}
                     editorRef={canvasEditorRef}
-                    extensions={
-                      publishType === "article"
-                        ? buildArticleExtensions(t("composer.placeholder"))
-                        : buildComposerExtensions(t("composer.placeholder"))
-                    }
+                    extensions={buildArticleExtensions(
+                      t("composer.placeholder"),
+                    )}
                     inputId="flaremo-fullscreen-composer-input"
                     onContentChange={updateContent}
                     onImageFiles={enqueueInlineUploads}
@@ -242,11 +262,7 @@ export function ComposerFocusCanvas({
                     placeholder={t("composer.placeholder")}
                     submitOnEnter={false}
                     autoFocus={true}
-                    contentClassName={
-                      publishType === "article"
-                        ? "article-editor-content flex-1 outline-none text-base leading-relaxed py-2"
-                        : "composer-editor-content flex-1 outline-none text-base leading-relaxed py-2"
-                    }
+                    contentClassName="article-editor-content flex-1 outline-none text-base leading-relaxed py-2"
                   />
                 </Suspense>
                 {voiceActive && (
@@ -281,36 +297,316 @@ export function ComposerFocusCanvas({
               </div>
             </div>
 
-            {/* Bottom Action Bar */}
+            {/* Bottom Action Bar: Professional Tools + Destination Controller */}
             <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-t border-border/40 bg-card/60 px-4 sm:px-6 py-2">
-              <ComposerToolbar
-                draft={draft}
-                isPending={isPending}
-                voiceActive={voiceActive}
-                captureAvailable={captureAvailable}
-                withEditor={withEditor}
-                onDraftChange={onDraftChange}
-                onStartVoice={() => void captureController.start()}
-              />
+              {/* Professional Writing Toolbar */}
+              <div className="flex min-w-0 items-center gap-0.5 sm:gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden py-0.5">
+                {/* Headings */}
+                <Button
+                  aria-label={t("article.toolH2")}
+                  title={t("article.toolH2")}
+                  disabled={isPending}
+                  size="icon-sm"
+                  type="button"
+                  variant="ghost"
+                  onClick={() =>
+                    withEditor((editor) => {
+                      editor.chain().focus().toggleHeading({ level: 2 }).run();
+                    })
+                  }
+                >
+                  <Heading2Icon />
+                </Button>
+                <Button
+                  aria-label={t("article.toolH3")}
+                  title={t("article.toolH3")}
+                  disabled={isPending}
+                  size="icon-sm"
+                  type="button"
+                  variant="ghost"
+                  onClick={() =>
+                    withEditor((editor) => {
+                      editor.chain().focus().toggleHeading({ level: 3 }).run();
+                    })
+                  }
+                >
+                  <Heading3Icon />
+                </Button>
+
+                <div className="h-4 w-px bg-border/60 mx-0.5" />
+
+                {/* Inline formatting */}
+                <Button
+                  aria-label={t("article.toolBold")}
+                  title={t("article.toolBold")}
+                  disabled={isPending}
+                  size="icon-sm"
+                  type="button"
+                  variant="ghost"
+                  onClick={() =>
+                    withEditor((editor) => {
+                      editor.chain().focus().toggleBold().run();
+                    })
+                  }
+                >
+                  <BoldIcon />
+                </Button>
+                <Button
+                  aria-label={t("article.toolItalic")}
+                  title={t("article.toolItalic")}
+                  disabled={isPending}
+                  size="icon-sm"
+                  type="button"
+                  variant="ghost"
+                  onClick={() =>
+                    withEditor((editor) => {
+                      editor.chain().focus().toggleItalic().run();
+                    })
+                  }
+                >
+                  <ItalicIcon />
+                </Button>
+                <Button
+                  aria-label={t("article.toolStrike")}
+                  title={t("article.toolStrike")}
+                  disabled={isPending}
+                  size="icon-sm"
+                  type="button"
+                  variant="ghost"
+                  onClick={() =>
+                    withEditor((editor) => {
+                      editor.chain().focus().toggleStrike().run();
+                    })
+                  }
+                >
+                  <StrikethroughIcon />
+                </Button>
+                <Button
+                  aria-label={t("article.toolCode")}
+                  title={t("article.toolCode")}
+                  disabled={isPending}
+                  size="icon-sm"
+                  type="button"
+                  variant="ghost"
+                  onClick={() =>
+                    withEditor((editor) => {
+                      editor.chain().focus().toggleCode().run();
+                    })
+                  }
+                >
+                  <CodeIcon />
+                </Button>
+
+                <div className="h-4 w-px bg-border/60 mx-0.5" />
+
+                {/* Blocks: Quote, Rule, Table */}
+                <Button
+                  aria-label={t("article.toolQuote")}
+                  title={t("article.toolQuote")}
+                  disabled={isPending}
+                  size="icon-sm"
+                  type="button"
+                  variant="ghost"
+                  onClick={() =>
+                    withEditor((editor) => {
+                      editor.chain().focus().toggleBlockquote().run();
+                    })
+                  }
+                >
+                  <QuoteIcon />
+                </Button>
+                <Button
+                  aria-label={t("article.toolRule")}
+                  title={t("article.toolRule")}
+                  disabled={isPending}
+                  size="icon-sm"
+                  type="button"
+                  variant="ghost"
+                  onClick={() =>
+                    withEditor((editor) => {
+                      editor.chain().focus().setHorizontalRule().run();
+                    })
+                  }
+                >
+                  <MinusIcon />
+                </Button>
+                <Button
+                  aria-label={t("article.toolTable")}
+                  title={t("article.toolTable")}
+                  disabled={isPending}
+                  size="icon-sm"
+                  type="button"
+                  variant="ghost"
+                  onClick={() =>
+                    withEditor((editor) => {
+                      editor
+                        .chain()
+                        .focus()
+                        .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+                        .run();
+                    })
+                  }
+                >
+                  <TableIcon />
+                </Button>
+
+                <div className="h-4 w-px bg-border/60 mx-0.5" />
+
+                {/* Lists */}
+                <Button
+                  aria-label={t("article.toolBulletList")}
+                  title={t("article.toolBulletList")}
+                  disabled={isPending}
+                  size="icon-sm"
+                  type="button"
+                  variant="ghost"
+                  onClick={() =>
+                    withEditor((editor) => {
+                      editor.chain().focus().toggleBulletList().run();
+                    })
+                  }
+                >
+                  <ListIcon />
+                </Button>
+                <Button
+                  aria-label={t("article.toolOrderedList")}
+                  title={t("article.toolOrderedList")}
+                  disabled={isPending}
+                  size="icon-sm"
+                  type="button"
+                  variant="ghost"
+                  onClick={() =>
+                    withEditor((editor) => {
+                      editor.chain().focus().toggleOrderedList().run();
+                    })
+                  }
+                >
+                  <ListOrderedIcon />
+                </Button>
+                <Button
+                  aria-label={t("article.toolTaskList")}
+                  title={t("article.toolTaskList")}
+                  disabled={isPending}
+                  size="icon-sm"
+                  type="button"
+                  variant="ghost"
+                  onClick={() =>
+                    withEditor((editor) => {
+                      editor.chain().focus().toggleTaskList().run();
+                    })
+                  }
+                >
+                  <CheckSquareIcon />
+                </Button>
+
+                <div className="h-4 w-px bg-border/60 mx-0.5" />
+
+                {/* Tag, Attachments, Date & Voice */}
+                <Button
+                  aria-label={t("composer.addTag")}
+                  title={t("composer.addTag")}
+                  disabled={isPending}
+                  size="icon-sm"
+                  type="button"
+                  variant="ghost"
+                  onClick={() =>
+                    withEditor((editor) => {
+                      editor
+                        .chain()
+                        .focus()
+                        .insertContentAt(editor.state.selection.to, "#")
+                        .run();
+                    })
+                  }
+                >
+                  <HashIcon />
+                </Button>
+                <Button
+                  render={
+                    <label
+                      aria-label={t("composer.addAttachment")}
+                      title={t("composer.addAttachment")}
+                      htmlFor="flaremo-canvas-attachment-input"
+                    />
+                  }
+                  disabled={isPending}
+                  size="icon-sm"
+                  variant="ghost"
+                >
+                  <ImageIcon />
+                  <Input
+                    className="hidden"
+                    id="flaremo-canvas-attachment-input"
+                    multiple
+                    type="file"
+                    disabled={isPending}
+                    onChange={(event) => {
+                      const files = Array.from(event.target.files ?? []);
+                      event.target.value = "";
+                      if (files.length === 0) return;
+                      commitDraft({
+                        files: [...draftRef.current.files, ...files],
+                      });
+                    }}
+                  />
+                </Button>
+                <Button
+                  aria-label={t("composer.insertDate")}
+                  title={t("composer.insertDate")}
+                  disabled={isPending}
+                  size="icon-sm"
+                  type="button"
+                  variant="ghost"
+                  onClick={() =>
+                    withEditor((editor) => {
+                      const today = new Date().toISOString().slice(0, 10);
+                      editor.chain().focus().insertContent(`${today} `).run();
+                    })
+                  }
+                >
+                  <CalendarPlusIcon />
+                </Button>
+                {captureAvailable && (
+                  <Button
+                    aria-label={t("composer.voice")}
+                    title={t("composer.voice")}
+                    className={voiceActive ? "text-brand-600" : undefined}
+                    disabled={isPending}
+                    size="icon-sm"
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      if (voiceActive) return;
+                      void captureController.start();
+                    }}
+                  >
+                    <MicIcon />
+                  </Button>
+                )}
+              </div>
+
+              {/* Right Side: Type Chooser & CTA Button */}
               <div className="flex shrink-0 items-center gap-2">
                 <ComposerTypeMenu
                   type={publishType}
                   disabled={isPending}
-                  onTypeChange={setPublishType}
+                  onTypeChange={(nextType) => setManualType(nextType)}
                 />
                 {publishType === "memo" && (
-                  <ComposerVisibilityMenu
-                    showVisibility={Boolean(showVisibility)}
-                    visibility={draft.visibility}
-                    isPending={isPending}
-                    isUploadingImages={isUploadingImages}
-                    canSubmit={canSubmit}
-                    voiceActive={voiceActive}
-                    onVisibilityChange={(visibility) => {
-                      commitDraft({ visibility });
-                      onVisibilityChange?.(visibility);
-                    }}
-                  />
+                  <>
+                    <ComposerVisibilityMenu
+                      showVisibility={Boolean(showVisibility)}
+                      visibility={draft.visibility}
+                      isPending={isPending}
+                      isUploadingImages={isUploadingImages}
+                      canSubmit={canSubmit}
+                      voiceActive={voiceActive}
+                      onVisibilityChange={(visibility) => {
+                        commitDraft({ visibility });
+                        onVisibilityChange?.(visibility);
+                      }}
+                    />
+                  </>
                 )}
                 {publishType === "article" && (
                   <Button

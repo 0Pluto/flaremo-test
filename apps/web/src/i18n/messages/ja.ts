@@ -1156,7 +1156,8 @@ const messages = {
   "composer.fullscreen.open": "全画面表示",
   "composer.fullscreen.close": "全画面を閉じる (Esc)",
   "composer.fullscreen.wordCount": "{count} 文字",
-  "composer.fullscreen.articleTitlePlaceholder": "記事のタイトル…",
+  "composer.fullscreen.articleTitlePlaceholder":
+    "タイトル（任意、入力で記事に変換）…",
   "composer.type.label": "公開タイプ",
   "composer.type.memo": "メモ · タイムラインに投稿",
   "composer.type.article": "記事 · 公開＆インデックス可能",

@@ -1122,7 +1122,8 @@ const messages = {
   "composer.fullscreen.open": "ملء الشاشة",
   "composer.fullscreen.close": "الخروج من ملء الشاشة (Esc)",
   "composer.fullscreen.wordCount": "{count} كلمة",
-  "composer.fullscreen.articleTitlePlaceholder": "عنوان المقال…",
+  "composer.fullscreen.articleTitlePlaceholder":
+    "العنوان (اختياري، يتحول إلى مقال)…",
   "composer.type.label": "نوع النشر",
   "composer.type.memo": "ملاحظة · النشر في الخط الزمني",
   "composer.type.article": "مقال · عام وقابل للفهرسة",

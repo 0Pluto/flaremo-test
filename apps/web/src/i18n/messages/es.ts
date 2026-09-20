@@ -1168,7 +1168,8 @@ const messages = {
   "composer.fullscreen.open": "Pantalla completa",
   "composer.fullscreen.close": "Salir de pantalla completa (Esc)",
   "composer.fullscreen.wordCount": "{count} palabras",
-  "composer.fullscreen.articleTitlePlaceholder": "Título del artículo…",
+  "composer.fullscreen.articleTitlePlaceholder":
+    "Título (opcional, convierte en artículo)…",
   "composer.type.label": "Tipo de publicación",
   "composer.type.memo": "Nota · Publicar en la cronología",
   "composer.type.article": "Artículo · Público e indexable",

@@ -1143,7 +1143,8 @@ const messages = {
   "composer.fullscreen.open": "Full screen",
   "composer.fullscreen.close": "Exit full screen (Esc)",
   "composer.fullscreen.wordCount": "{count} words",
-  "composer.fullscreen.articleTitlePlaceholder": "Article title…",
+  "composer.fullscreen.articleTitlePlaceholder":
+    "Title (optional, turns into article)…",
   "composer.type.label": "Publish type",
   "composer.type.memo": "Note · Post to timeline",
   "composer.type.article": "Article · Public & indexable",

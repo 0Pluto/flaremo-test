@@ -1148,7 +1148,8 @@ const messages = {
   "composer.fullscreen.open": "전체 화면",
   "composer.fullscreen.close": "전체 화면 닫기 (Esc)",
   "composer.fullscreen.wordCount": "{count}자",
-  "composer.fullscreen.articleTitlePlaceholder": "글 제목…",
+  "composer.fullscreen.articleTitlePlaceholder":
+    "제목 (선택사항, 입력 시 글로 변환)…",
   "composer.type.label": "발행 유형",
   "composer.type.memo": "메모 · 타임라인에 게시",
   "composer.type.article": "글 · 공개 및 색인 가능",

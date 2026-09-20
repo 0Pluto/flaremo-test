@@ -1,7 +1,8 @@
 import type { Editor } from "@tiptap/react";
-import { lazy, Suspense, useRef, useState } from "react";
+import { Suspense, useRef, useState } from "react";
 import type { MemoVisibility } from "@/api";
 import { ComposerFileChips } from "@/components/composer/composer-file-chips";
+import { ComposerFocusCanvas } from "@/components/composer/composer-focus-canvas-lazy";
 import {
   ComposerTagSuggestions,
   ComposerWikiSuggestions,
@@ -17,12 +18,6 @@ import { useI18n } from "@/i18n";
 import type { MemoCaptureInput } from "@/lib/local-memo-capture";
 import { extractTags } from "@/lib/memo";
 import type { TagSuggestion } from "@/lib/tag-autocomplete";
-
-const ComposerFocusCanvas = lazy(() =>
-  import("@/components/composer/composer-focus-canvas").then((module) => ({
-    default: module.ComposerFocusCanvas,
-  })),
-);
 
 type MemoComposerProps = {
   draft: MemoCaptureInput;
