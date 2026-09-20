@@ -69,8 +69,9 @@ FlareMo answers a simpler question: **Can you get a 24/7 online, resilient, glob
 - **Group work under projects**: Organize notes and to-dos into projects, with a kanban board (drag between status columns), priorities, manual sort order, and due dates.
 - **Personal by design, reversible deletion**: Tasks belong to a single owner; deleting moves them to a recycle bin until restored or automatically purged.
 
-### 4. Calendar
-- **Tasks are the schedule's source of truth**: The `/calendar` month view fills past days with what you wrote and future days with what's due — drag to reschedule, quick-add dated tasks, or scan the agenda list.
+### 4. Task Management & Reminders
+- **Tasks live in Projects**: The `/projects` board (drag between status columns), priorities, manual sort order, and due dates make project pages the single home for scheduling work.
+- **Time horizons at a glance**: The explorer home view pairs a mini month calendar with overdue/today reminders, so what's due never hides behind the board.
 - **Overdue reminders**: Overdue tasks raise in-app notifications, with optional browser Web Push.
 
 ### 5. Team Collaboration & 3-Tier Visibility

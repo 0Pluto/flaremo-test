@@ -4,10 +4,18 @@
  * brand-new memo, how a search scope narrows a patch, how a rollback snapshot
  * is restored — are testable without React.
  *
- * The query key convention these functions rely on is the one App.tsx
- * registers: ["memos", space, view, query, tag, untagged]. Only the tail
- * (view/query/tag/untagged) is read here, so a space-prefixed entry is treated
- * exactly like its unprefixed twin.
+ * Both functions enumerate whatever ["memos", ...] entries the cache holds.
+ * The producer is useWorkspaceQueries, whose key is
+ * ["memos", space, view, query, tag, untagged]: space defaults to "all", view
+ * to "all", query to "" and untagged to false. Prepend reads all five tail
+ * slots positionally and inserts only into plain timelines (view "all", no
+ * query/tag/untagged filter) whose space partition will contain the new memo
+ * — the server files a memo by visibility (private → personal corpus, shared
+ * → team corpus) and the mixed "all" timeline shows both, so a private
+ * capture prepends to "all"/"personal" keys but never to "team". The patch
+ * path reads view at slot 2 and the search string at slot 3, then keeps the
+ * patched row only where it still matches the state that view or search
+ * scope lists.
  */
 import type { ListMemosResponse } from "@flaremo/contracts";
 import { parseMemoSearchQuery } from "@flaremo/contracts/search-query";
@@ -28,6 +36,20 @@ const OPTIMISTIC_PREFIX = "optimistic-";
 
 const optimisticMemoId = () =>
   `${OPTIMISTIC_PREFIX}${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+/**
+ * Whether a memo with this visibility belongs in the timeline a key's space
+ * segment scopes to. Mirrors the server's create-time filing — private memos
+ * carry no team, shared visibilities join the author's organization — so an
+ * optimistic card never flashes into a space timeline that will not list it.
+ * Anything but a known space segment opts out.
+ */
+function memoLandsInSpace(space: unknown, visibility: Memo["visibility"]) {
+  if (space === undefined || space === "all") return true;
+  if (space === "personal") return visibility === "private";
+  if (space === "team") return visibility !== "private";
+  return false;
+}
 
 // Prepend the composer submission into every unfiltered timeline cache so the
 // new card appears before the server answers. Returns the optimistic id so
@@ -61,20 +83,18 @@ export function prependOptimisticMemo(
   for (const [queryKey, data] of queryClient.getQueriesData<
     InfiniteData<ListMemosResponse>
   >({ queryKey: ["memos"] })) {
-    // Only plain timelines (no view/search/tag filter, and not the "untagged"
-    // toggle) can safely show a brand-new private memo.
-    const [
-      view = "all",
-      query = undefined,
-      tag = undefined,
-      untagged = undefined,
-    ] = queryKey.slice(1) as [
+    // Only plain timelines (view "all", no query/tag filter, and not the
+    // "untagged" toggle) can safely show a brand-new memo, and only when the
+    // key's space partition is one the server will file it into.
+    const space = queryKey[1];
+    const [view = "all", query, tag, untagged] = queryKey.slice(2) as [
       ViewMode | undefined,
       string | undefined,
       string | undefined,
       boolean | undefined,
     ];
     if (view !== "all" || query || tag || untagged || !data) continue;
+    if (!memoLandsInSpace(space, optimisticMemo.visibility)) continue;
     queryClient.setQueryData<InfiniteData<ListMemosResponse>>(queryKey, {
       ...data,
       pages: data.pages.map((page, index) =>
@@ -117,8 +137,8 @@ export async function optimisticallyPatchMemo(
 
   for (const [queryKey, data] of snapshots) {
     if (!data) continue;
-    const view = queryKey[1] as ViewMode | undefined;
-    const search = typeof queryKey[2] === "string" ? queryKey[2].trim() : "";
+    const view = queryKey[2] as ViewMode | undefined;
+    const search = typeof queryKey[3] === "string" ? queryKey[3].trim() : "";
     const scope = parseMemoSearchQuery(search).scope;
     queryClient.setQueryData<InfiniteData<ListMemosResponse>>(queryKey, {
       ...data,

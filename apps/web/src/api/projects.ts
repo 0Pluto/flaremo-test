@@ -1,6 +1,5 @@
 import { apiRequest } from "./client";
 import type {
-  Calendar,
   CreateProjectRequest,
   CreateTaskRequest,
   Project,
@@ -65,7 +64,7 @@ export async function restoreProject(id: string) {
   );
 }
 
-// --- Tasks & calendar ---------------------------------------------------------
+// --- Tasks ------------------------------------------------------------------
 
 export async function listTasks(
   params: {
@@ -100,19 +99,6 @@ export async function reorderTasks(projectId: string, taskIds: string[]) {
     method: "POST",
     body: JSON.stringify({ project_id: projectId, task_ids: taskIds }),
   });
-}
-
-export async function getCalendarView(params: {
-  from: string;
-  to: string;
-  tz?: number;
-}) {
-  const query = new URLSearchParams({
-    from: params.from,
-    to: params.to,
-    tz: String(params.tz ?? 0),
-  });
-  return apiRequest<Calendar>(`/api/app/calendar?${query.toString()}`);
 }
 
 export async function createTask(input: CreateTaskRequest) {

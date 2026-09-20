@@ -140,8 +140,14 @@ export async function getFlareMoAuthHandler(env: FlareMoEnv) {
   let registrationOpen = true;
   try {
     registrationOpen = await getUserRegistrationAllowed(runtime.db);
-  } catch {
+  } catch (error) {
     // Fail open: the registration toggle read must never break sign-in.
+    // Leave a trace — a silently broken D1 binding would otherwise
+    // re-open registration without anyone noticing.
+    console.error(
+      "[auth] registration toggle read failed, failing open",
+      error,
+    );
   }
   const auth = createFlareMoAuth(env, runtime.db, {
     socialProviders: {

@@ -77,7 +77,11 @@ export async function openEmailIntegration(
       ),
       unreadable: false,
     };
-  } catch {
+  } catch (error) {
+    // Decryption failure almost always means FLAREMO_VOICE_CONFIG_KEY-style
+    // secret rotation lost the old key — surface it, the owner can't act on
+    // a silent "settings missing".
+    console.warn("[integrations] stored email credentials unreadable", error);
     return { credentials: null, unreadable: true };
   }
 }
@@ -104,9 +108,10 @@ export async function resolveEmailIntegration(
   let row: IntegrationRow | null = null;
   try {
     row = await readIntegrationConfig(db, "email");
-  } catch {
+  } catch (error) {
     // A missing/unavailable database binding must not break the send path;
-    // treat the stored config as unset.
+    // treat the stored config as unset — but leave a trace.
+    console.warn("[integrations] email config read failed", error);
   }
   const { credentials, unreadable } = await openEmailIntegration(env, row);
   if (credentials) {
@@ -190,7 +195,8 @@ async function openOauthIntegration(
       row.ciphertext,
       parseOauthPayload,
     );
-  } catch {
+  } catch (error) {
+    console.warn("[integrations] stored oauth credentials unreadable", error);
     return null;
   }
 }
@@ -214,8 +220,9 @@ export async function resolveOauthIntegration(
       const credentials = await openOauthIntegration(env, row);
       google ??= credentials?.google ?? null;
       github ??= credentials?.github ?? null;
-    } catch {
+    } catch (error) {
       // Unavailable database binding: fall back to env-only providers.
+      console.warn("[integrations] oauth config read failed", error);
     }
   }
   return { google, github, revision };

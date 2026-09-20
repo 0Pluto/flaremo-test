@@ -16,12 +16,14 @@ import {
 /**
  * Optimistic ["memos"] cache contract.
  *
- * The query key convention these functions read is
- * `["memos", view, query, tag, untagged]`: prepend/remove consume the whole
- * tail (`queryKey.slice(1)`), the patch path reads position 1 as the view and
- * position 2 as the search string. Both are exercised here per view, per
- * search scope, and per memo state, because a wrong rule silently drops or
- * resurrects rows in the timeline instead of throwing.
+ * The only producer of these keys is useWorkspaceQueries, which registers
+ * `["memos", space, view, query, tag, untagged]` — space defaults to "all",
+ * view to "all", query to "" and untagged to false. prepend reads the tail
+ * positionally (space at 1, view at 2, query at 3, tag at 4, untagged at 5)
+ * and patch reads view at 2 plus the search string at 3. Both paths are
+ * exercised per space, per view, per search scope, and per memo state,
+ * because a wrong rule silently drops or resurrects rows in the timeline
+ * instead of throwing.
  */
 
 function memo(
@@ -72,6 +74,26 @@ function captureInput(overrides: Partial<MemoCaptureInput> = {}) {
   } as MemoCaptureInput;
 }
 
+/** The exact key shape useWorkspaceQueries registers, with defaults filled. */
+function timelineKey(
+  overrides: {
+    space?: string;
+    view?: "all" | "archived" | "trashed";
+    query?: string;
+    tag?: string;
+    untagged?: boolean;
+  } = {},
+): unknown[] {
+  return [
+    "memos",
+    overrides.space ?? "all",
+    overrides.view ?? "all",
+    overrides.query ?? "",
+    overrides.tag,
+    overrides.untagged ?? false,
+  ];
+}
+
 describe("viewToMemoState", () => {
   it("maps each explorer view onto the memo state it lists", () => {
     expect(viewToMemoState("all")).toBe("normal");
@@ -83,20 +105,13 @@ describe("viewToMemoState", () => {
 describe("prependOptimisticMemo", () => {
   it("prepends the optimistic card to the first page of the plain timeline", () => {
     const queryClient = new QueryClient();
-    queryClient.setQueryData(
-      ["memos", "all", "", undefined, undefined],
-      pages([memo("a")], [memo("b")]),
-    );
+    queryClient.setQueryData(timelineKey(), pages([memo("a")], [memo("b")]));
 
     const id = prependOptimisticMemo(queryClient, captureInput());
 
-    const data = queryClient.getQueryData<InfiniteData<ListMemosResponse>>([
-      "memos",
-      "all",
-      "",
-      undefined,
-      undefined,
-    ]);
+    const data = queryClient.getQueryData<InfiniteData<ListMemosResponse>>(
+      timelineKey(),
+    );
     expect(data?.pages[0].memos.map((entry) => entry.id)).toEqual([id, "a"]);
     // Only page 0 grows; later pages keep their page tokens meaningful.
     expect(data?.pages[1].memos.map((entry) => entry.id)).toEqual(["b"]);
@@ -104,23 +119,14 @@ describe("prependOptimisticMemo", () => {
 
   it("builds a private normal-state memo carrying the capture input", () => {
     const queryClient = new QueryClient();
-    queryClient.setQueryData(
-      ["memos", "all", "", undefined, undefined],
-      pages([]),
-    );
+    queryClient.setQueryData(timelineKey(), pages([]));
 
     const id = prependOptimisticMemo(
       queryClient,
       captureInput({ tags: ["ideas"], clientId: "client-1" }),
     );
 
-    const [optimistic] = memosAt(queryClient, [
-      "memos",
-      "all",
-      "",
-      undefined,
-      undefined,
-    ]);
+    const [optimistic] = memosAt(queryClient, timelineKey());
     expect(id.startsWith("optimistic-")).toBe(true);
     expect(optimistic).toMatchObject({
       name: id,
@@ -142,51 +148,85 @@ describe("prependOptimisticMemo", () => {
 
   it("omits empty tags and a missing client id from the payload", () => {
     const queryClient = new QueryClient();
-    queryClient.setQueryData(
-      ["memos", "all", "", undefined, undefined],
-      pages([]),
-    );
+    queryClient.setQueryData(timelineKey(), pages([]));
 
     prependOptimisticMemo(queryClient, captureInput({ tags: [] }));
 
-    const [optimistic] = memosAt(queryClient, [
-      "memos",
-      "all",
-      "",
-      undefined,
-      undefined,
-    ]);
+    const [optimistic] = memosAt(queryClient, timelineKey());
     expect(optimistic.payload).toEqual({});
   });
 
   it("honours an explicit visibility", () => {
     const queryClient = new QueryClient();
-    queryClient.setQueryData(
-      ["memos", "all", "", undefined, undefined],
-      pages([]),
-    );
+    queryClient.setQueryData(timelineKey(), pages([]));
 
     prependOptimisticMemo(queryClient, captureInput({ visibility: "public" }));
 
-    const [optimistic] = memosAt(queryClient, [
-      "memos",
-      "all",
-      "",
-      undefined,
-      undefined,
-    ]);
+    const [optimistic] = memosAt(queryClient, timelineKey());
     expect(optimistic.visibility).toBe("public");
   });
 
-  it("skips every key that is not the plain timeline", () => {
+  it("prepends a private capture to the all and personal timelines, not team", () => {
+    // The server files a memo by visibility at create time: private rows
+    // carry no team id, so they surface in the mixed and personal timelines
+    // but never in the team one. The optimistic card must follow.
+    const queryClient = new QueryClient();
+    const allKey = timelineKey();
+    const personalKey = timelineKey({ space: "personal" });
+    const teamKey = timelineKey({ space: "team" });
+    for (const key of [allKey, personalKey, teamKey]) {
+      queryClient.setQueryData(key, pages([memo("a")]));
+    }
+
+    const id = prependOptimisticMemo(queryClient, captureInput());
+
+    expect(memosAt(queryClient, allKey).map((entry) => entry.id)).toEqual([
+      id,
+      "a",
+    ]);
+    expect(memosAt(queryClient, personalKey).map((entry) => entry.id)).toEqual([
+      id,
+      "a",
+    ]);
+    expect(memosAt(queryClient, teamKey).map((entry) => entry.id)).toEqual([
+      "a",
+    ]);
+  });
+
+  it("prepends a shared-visibility capture to the team timeline, not personal", () => {
+    const queryClient = new QueryClient();
+    const personalKey = timelineKey({ space: "personal" });
+    const teamKey = timelineKey({ space: "team" });
+    queryClient.setQueryData(personalKey, pages([memo("a")]));
+    queryClient.setQueryData(teamKey, pages([memo("a")]));
+
+    const id = prependOptimisticMemo(
+      queryClient,
+      captureInput({ visibility: "protected" }),
+    );
+
+    expect(memosAt(queryClient, personalKey).map((entry) => entry.id)).toEqual([
+      "a",
+    ]);
+    expect(memosAt(queryClient, teamKey).map((entry) => entry.id)).toEqual([
+      id,
+      "a",
+    ]);
+  });
+
+  it("skips every key that is not a plain timeline it can land in", () => {
     const queryClient = new QueryClient();
     const filtered: Array<[string, unknown[]]> = [
-      ["archived view", ["memos", "archived", "", undefined, undefined]],
-      ["trashed view", ["memos", "trashed", "", undefined, undefined]],
-      ["search query", ["memos", "all", "report", undefined, undefined]],
-      ["tag filter", ["memos", "all", "", "tag:work", undefined]],
-      ["untagged toggle", ["memos", "all", "", undefined, true]],
-      ["day list", ["memos", "day", "2026-09-20"]],
+      ["archived view", timelineKey({ view: "archived" })],
+      ["trashed view", timelineKey({ view: "trashed" })],
+      ["search query", timelineKey({ query: "report" })],
+      ["tag filter", timelineKey({ tag: "work" })],
+      ["untagged toggle", timelineKey({ untagged: true })],
+      // A private capture never lands in the team corpus.
+      ["team space", timelineKey({ space: "team" })],
+      // Legacy three-segment day keys have no producer any more; the unknown
+      // space segment opts them out regardless of what follows.
+      ["legacy day list", ["memos", "day", "2026-09-20"]],
     ];
     for (const [, key] of filtered) {
       queryClient.setQueryData(key, pages([memo("a")]));
@@ -203,33 +243,6 @@ describe("prependOptimisticMemo", () => {
     expect(id.startsWith("optimistic-")).toBe(true);
   });
 
-  it("skips App.tsx's space-prefixed timeline key (documented gap)", () => {
-    // App.tsx registers ["memos", space, view, query, tag, untagged] while
-    // this module reads the tail positionally as view/query/tag/untagged. A
-    // space of "all" therefore lands in the view slot and the real view ("all")
-    // in the query slot: a non-empty query, so the plain-timeline test fails
-    // and the prepend is skipped. Pinned as-is because the fix is a behaviour
-    // change, not a refactor; a caller-side or rule-side correction must
-    // update this expectation deliberately.
-    const queryClient = new QueryClient();
-    const key = ["memos", "all", "all", "", undefined, undefined];
-    queryClient.setQueryData(key, pages([memo("a")]));
-
-    prependOptimisticMemo(queryClient, captureInput());
-
-    expect(memosAt(queryClient, key).map((entry) => entry.id)).toEqual(["a"]);
-  });
-
-  it("skips the day list key (three segments, day in the query slot)", () => {
-    const queryClient = new QueryClient();
-    const key = ["memos", "day", "2026-09-20"];
-    queryClient.setQueryData(key, pages([memo("a")]));
-
-    prependOptimisticMemo(queryClient, captureInput());
-
-    expect(memosAt(queryClient, key).map((entry) => entry.id)).toEqual(["a"]);
-  });
-
   it("leaves caches without loaded data alone", async () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
@@ -237,7 +250,7 @@ describe("prependOptimisticMemo", () => {
     // A list whose first fetch failed has a cache entry with no data.
     await queryClient
       .fetchInfiniteQuery({
-        queryKey: ["memos", "all", "", undefined, undefined],
+        queryKey: timelineKey(),
         queryFn: async () => {
           throw new Error("offline");
         },
@@ -249,25 +262,18 @@ describe("prependOptimisticMemo", () => {
     expect(() =>
       prependOptimisticMemo(queryClient, captureInput()),
     ).not.toThrow();
-    expect(
-      queryClient.getQueryData(["memos", "all", "", undefined, undefined]),
-    ).toBeUndefined();
+    expect(queryClient.getQueryData(timelineKey())).toBeUndefined();
   });
 
   it("round-trips with removeOptimisticMemo", () => {
     const queryClient = new QueryClient();
-    queryClient.setQueryData(
-      ["memos", "all", "", undefined, undefined],
-      pages([memo("a")]),
-    );
+    queryClient.setQueryData(timelineKey(), pages([memo("a")]));
 
     const id = prependOptimisticMemo(queryClient, captureInput());
     removeOptimisticMemo(queryClient, id);
 
     expect(
-      memosAt(queryClient, ["memos", "all", "", undefined, undefined]).map(
-        (entry) => entry.id,
-      ),
+      memosAt(queryClient, timelineKey()).map((entry) => entry.id),
     ).toEqual(["a"]);
   });
 });
@@ -276,40 +282,31 @@ describe("removeOptimisticMemo", () => {
   it("filters the id out of every page of every memo cache", () => {
     const queryClient = new QueryClient();
     queryClient.setQueryData(
-      ["memos", "all", "", undefined, undefined],
+      timelineKey(),
       pages([memo("keep"), memo("drop")], [memo("drop")]),
     );
     queryClient.setQueryData(
-      ["memos", "archived", "", undefined, undefined],
+      timelineKey({ view: "archived" }),
       pages([memo("drop", "archived")]),
     );
 
     removeOptimisticMemo(queryClient, "drop");
 
     expect(
-      memosAt(queryClient, ["memos", "all", "", undefined, undefined]).map(
-        (entry) => entry.id,
-      ),
+      memosAt(queryClient, timelineKey()).map((entry) => entry.id),
     ).toEqual(["keep"]);
-    expect(
-      memosAt(queryClient, ["memos", "archived", "", undefined, undefined]),
-    ).toEqual([]);
+    expect(memosAt(queryClient, timelineKey({ view: "archived" }))).toEqual([]);
   });
 
   it("tolerates an unknown id and caches without data", () => {
     const queryClient = new QueryClient();
-    queryClient.setQueryData(
-      ["memos", "all", "", undefined, undefined],
-      pages([memo("a")]),
-    );
-    queryClient.setQueryData(["memos", "trashed"], undefined);
+    queryClient.setQueryData(timelineKey(), pages([memo("a")]));
+    queryClient.setQueryData(timelineKey({ view: "trashed" }), undefined);
 
     removeOptimisticMemo(queryClient, "missing");
 
     expect(
-      memosAt(queryClient, ["memos", "all", "", undefined, undefined]).map(
-        (entry) => entry.id,
-      ),
+      memosAt(queryClient, timelineKey()).map((entry) => entry.id),
     ).toEqual(["a"]);
   });
 });
@@ -318,7 +315,7 @@ describe("optimisticallyPatchMemo", () => {
   it("applies the patch and renews update_time, matching on id or name", async () => {
     const queryClient = new QueryClient();
     queryClient.setQueryData(
-      ["memos", "all"],
+      timelineKey(),
       pages([memo("a"), memo("b", "normal", { name: "memos/legacy" })]),
     );
 
@@ -327,7 +324,7 @@ describe("optimisticallyPatchMemo", () => {
       content: "renamed",
     });
 
-    const [first, second] = memosAt(queryClient, ["memos", "all"]);
+    const [first, second] = memosAt(queryClient, timelineKey());
     expect(first.pinned).toBe(true);
     expect(second.content).toBe("renamed");
     // Untouched rows keep their original stamps.
@@ -338,20 +335,25 @@ describe("optimisticallyPatchMemo", () => {
 
   it("drops the row entirely for a null patch (hard delete)", async () => {
     const queryClient = new QueryClient();
-    queryClient.setQueryData(["memos", "all"], pages([memo("a"), memo("b")]));
+    queryClient.setQueryData(timelineKey(), pages([memo("a"), memo("b")]));
 
     await optimisticallyPatchMemo(queryClient, "a", null);
 
     expect(
-      memosAt(queryClient, ["memos", "all"]).map((entry) => entry.id),
+      memosAt(queryClient, timelineKey()).map((entry) => entry.id),
     ).toEqual(["b"]);
   });
 
   it("filters the patched row by view, passing other rows through", async () => {
     const queryClient = new QueryClient();
-    for (const view of ["all", "archived", "trashed"] as const) {
+    const keys = {
+      all: timelineKey(),
+      archived: timelineKey({ view: "archived" }),
+      trashed: timelineKey({ view: "trashed" }),
+    };
+    for (const key of Object.values(keys)) {
       queryClient.setQueryData(
-        ["memos", view],
+        key,
         pages([memo("a"), memo("b", "archived"), memo("c", "trashed")]),
       );
     }
@@ -361,27 +363,64 @@ describe("optimisticallyPatchMemo", () => {
     // through untouched: the view filter decides the fate of the patched memo
     // alone, never the membership of the list.
     await optimisticallyPatchMemo(queryClient, "a", { pinned: true });
+    expect(memosAt(queryClient, keys.all).map((entry) => entry.id)).toEqual([
+      "a",
+      "b",
+      "c",
+    ]);
     expect(
-      memosAt(queryClient, ["memos", "all"]).map((entry) => entry.id),
-    ).toEqual(["a", "b", "c"]);
-    expect(
-      memosAt(queryClient, ["memos", "archived"]).map((entry) => entry.id),
+      memosAt(queryClient, keys.archived).map((entry) => entry.id),
     ).toEqual(["b", "c"]);
-    expect(
-      memosAt(queryClient, ["memos", "trashed"]).map((entry) => entry.id),
-    ).toEqual(["b", "c"]);
+    expect(memosAt(queryClient, keys.trashed).map((entry) => entry.id)).toEqual(
+      ["b", "c"],
+    );
   });
 
-  it("drops the patched row when it no longer matches the view", async () => {
+  it("drops the patched row from every view it no longer matches", async () => {
     const queryClient = new QueryClient();
-    queryClient.setQueryData(["memos", "all"], pages([memo("a"), memo("b")]));
+    const allKey = timelineKey();
+    const archivedKey = timelineKey({ view: "archived" });
+    const trashKey = timelineKey({ view: "trashed" });
+    for (const key of [allKey, archivedKey, trashKey]) {
+      queryClient.setQueryData(
+        key,
+        pages([memo("a"), memo("b", "archived"), memo("c", "trashed")]),
+      );
+    }
 
-    // Trashing the memo while the "all" view is the one on screen.
+    // Trashing "a" moves it between caches: out of the plain and archived
+    // timelines, but into — never out of — the trash view, where it is the
+    // row the user just moved.
     await optimisticallyPatchMemo(queryClient, "a", { state: "trashed" });
 
-    expect(
-      memosAt(queryClient, ["memos", "all"]).map((entry) => entry.id),
-    ).toEqual(["b"]);
+    expect(memosAt(queryClient, allKey).map((entry) => entry.id)).toEqual([
+      "b",
+      "c",
+    ]);
+    expect(memosAt(queryClient, archivedKey).map((entry) => entry.id)).toEqual([
+      "b",
+      "c",
+    ]);
+    expect(memosAt(queryClient, trashKey).map((entry) => entry.id)).toEqual([
+      "a",
+      "b",
+      "c",
+    ]);
+  });
+
+  it("drops a row restored out of the trash view", async () => {
+    const queryClient = new QueryClient();
+    const trashKey = timelineKey({ view: "trashed" });
+    queryClient.setQueryData(
+      trashKey,
+      pages([memo("a", "trashed"), memo("b", "trashed")]),
+    );
+
+    await optimisticallyPatchMemo(queryClient, "a", { state: "normal" });
+
+    expect(memosAt(queryClient, trashKey).map((entry) => entry.id)).toEqual([
+      "b",
+    ]);
   });
 
   it("skips the view filter for a key with no view segment", async () => {
@@ -416,7 +455,7 @@ describe("optimisticallyPatchMemo", () => {
 
     for (const [search, state, survives] of cases) {
       const queryClient = new QueryClient();
-      const key = ["memos", "all", search];
+      const key = timelineKey({ query: search });
       queryClient.setQueryData(key, pages([memo("a", state)]));
 
       await optimisticallyPatchMemo(queryClient, "a", { pinned: true });
@@ -428,7 +467,7 @@ describe("optimisticallyPatchMemo", () => {
 
   it("trims the search segment before deciding the scope", async () => {
     const queryClient = new QueryClient();
-    const key = ["memos", "all", "  in:archive  "];
+    const key = timelineKey({ query: "  in:archive  " });
     queryClient.setQueryData(key, pages([memo("a", "archived")]));
 
     await optimisticallyPatchMemo(queryClient, "a", { pinned: true });
@@ -436,11 +475,11 @@ describe("optimisticallyPatchMemo", () => {
     expect(memosAt(queryClient, key)).toHaveLength(1);
   });
 
-  it("ignores non-string search segments (untagged toggle in that slot)", async () => {
+  it("applies the plain view filter on an untagged-toggle key", async () => {
     const queryClient = new QueryClient();
-    // A boolean in the search position reads as "no search", so the plain
-    // view filter applies instead of a search scope.
-    const key = ["memos", "all", true];
+    // The untagged boolean sits in slot 5, far from the search slot the patch
+    // reads, so the view filter applies instead of a search scope.
+    const key = timelineKey({ untagged: true });
     queryClient.setQueryData(key, pages([memo("a"), memo("a", "trashed")]));
 
     await optimisticallyPatchMemo(queryClient, "a", { pinned: true });
@@ -452,20 +491,33 @@ describe("optimisticallyPatchMemo", () => {
     expect(survivors[0].pinned).toBe(true);
   });
 
+  it("reads a non-string search segment as no search (defensive)", async () => {
+    const queryClient = new QueryClient();
+    // No producer sends a non-string query segment; the guard keeps it from
+    // being parsed as a search string, so the plain view filter applies.
+    const key = ["memos", "all", "all", true, undefined, false];
+    queryClient.setQueryData(key, pages([memo("a"), memo("a", "trashed")]));
+
+    await optimisticallyPatchMemo(queryClient, "a", { pinned: true });
+
+    const survivors = memosAt(queryClient, key);
+    expect(survivors).toHaveLength(1);
+    expect(survivors[0].pinned).toBe(true);
+  });
+
   it("patches across pages and leaves other memo caches untouched", async () => {
     const queryClient = new QueryClient();
     queryClient.setQueryData(
-      ["memos", "all"],
+      timelineKey(),
       pages([memo("a")], [memo("a"), memo("b")]),
     );
     queryClient.setQueryData(["memo-context", "a"], { memo: memo("a") });
 
     await optimisticallyPatchMemo(queryClient, "a", { pinned: true });
 
-    const data = queryClient.getQueryData<InfiniteData<ListMemosResponse>>([
-      "memos",
-      "all",
-    ]);
+    const data = queryClient.getQueryData<InfiniteData<ListMemosResponse>>(
+      timelineKey(),
+    );
     expect(data?.pages[0].memos[0].pinned).toBe(true);
     expect(data?.pages[1].memos[0].pinned).toBe(true);
     expect(data?.pages[1].memos[1].pinned).toBe(false);
@@ -478,18 +530,17 @@ describe("optimisticallyPatchMemo", () => {
   it("returns a snapshot that restores the pre-patch cache", async () => {
     const queryClient = new QueryClient();
     const before = pages([memo("a"), memo("b")]);
-    queryClient.setQueryData(["memos", "all"], before);
+    const key = timelineKey();
+    queryClient.setQueryData(key, before);
 
     const snapshot = await optimisticallyPatchMemo(queryClient, "a", {
       state: "trashed",
     });
-    expect(
-      memosAt(queryClient, ["memos", "all"]).map((entry) => entry.id),
-    ).toEqual(["b"]);
+    expect(memosAt(queryClient, key).map((entry) => entry.id)).toEqual(["b"]);
 
     restoreMemoSnapshot(queryClient, snapshot);
 
-    expect(queryClient.getQueryData(["memos", "all"])).toEqual(before);
+    expect(queryClient.getQueryData(key)).toEqual(before);
   });
 
   it("does not resurrect a cache that had no data", async () => {
@@ -498,7 +549,7 @@ describe("optimisticallyPatchMemo", () => {
     });
     await queryClient
       .fetchInfiniteQuery({
-        queryKey: ["memos", "all"],
+        queryKey: timelineKey(),
         queryFn: async () => {
           throw new Error("offline");
         },
@@ -514,18 +565,18 @@ describe("optimisticallyPatchMemo", () => {
     // missing data is written back as missing, never as an empty list.
     expect(snapshot).toHaveLength(1);
     restoreMemoSnapshot(queryClient, snapshot);
-    expect(queryClient.getQueryData(["memos", "all"])).toBeUndefined();
+    expect(queryClient.getQueryData(timelineKey())).toBeUndefined();
   });
 });
 
 describe("restoreMemoSnapshot", () => {
   it("is a no-op without a snapshot", () => {
     const queryClient = new QueryClient();
-    queryClient.setQueryData(["memos", "all"], pages([memo("a")]));
+    queryClient.setQueryData(timelineKey(), pages([memo("a")]));
 
     expect(() => restoreMemoSnapshot(queryClient, undefined)).not.toThrow();
     expect(
-      memosAt(queryClient, ["memos", "all"]).map((entry) => entry.id),
+      memosAt(queryClient, timelineKey()).map((entry) => entry.id),
     ).toEqual(["a"]);
   });
 });

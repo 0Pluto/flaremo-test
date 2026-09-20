@@ -2,23 +2,15 @@
 
 FlareMo 使用 SemVer。每个 release 都要写清楚升级影响、Cloudflare 资源变化和 Memos 兼容面变化。
 
-## 未发布
+## v0.20.1
 
-开发体验：新增 `pnpm dev:hot`（`scripts/dev-hot.mjs`）——Vite dev server 与 `wrangler dev` 并行，前端改动走 HMR（React Fast Refresh，页面状态不丢），worker / packages 改动由 wrangler 自动重新打包；API、SSR 分享页与文章页、R2 附件、`/mcp`、feed 与 sitemap 经 Vite 代理到 Worker，浏览器只对一个源，cookie 与 origin 校验照常。前端默认端口用 **5573**（避开其他 Vite 项目的 5173），Worker 仍是 8787，均可用 `FLAREMO_DEV_WEB_PORT` / `FLAREMO_DEV_WORKER_PORT` 覆盖；首次运行缺 `apps/web/dist` 时自动补一次 `vite build`（`wrangler dev` 要求 assets 目录存在；不含 `tsc`，类型错误不会挡住启动）。`pnpm dev` 保持原样。新增守卫测试，防止 `assets.run_worker_first` 与 Vite 代理清单漂移。
-
-dev:hot 下同时接入 **React Grab**（`react-grab`，MIT）——悬停界面元素即可复制其组件名、源码行列与 CSS 选择器，粘贴给 agent 比文字描述位置精确。包体在 `main.tsx` 处以 `import.meta.env.DEV` 为门禁动态引入，生产构建经实测不含其任何代码；初始化显式 `telemetry: false`，不向 react-grab.com 发送版本检查。
-
-任务与日历版本：一次性补记 v0.20.0 之后落地的三波能力（此前未入账）。
-
-- **Projects & Tasks 基座**（2026-08-23）：侧栏一级入口「项目」——按项目归拢记录与任务；项目内提供看板（状态列拖拽）、优先级、手动排序与截止日（`due_at` 为 YYYY-MM-DD 本地日历日）。任务为 owner 私有资源，删除先入回收站（可还原，到期自动清理）。
-- **日历视图 `/calendar`**（2026-09-12）：月历以任务截止日为唯一日程事实源——过去的格子铺当日记录、未来的格子排到期任务；支持月导航、快速添加带日期任务、拖拽改期与 agenda 列表；探索页同步提供只读小月历。日聚合按查看者本地时区分格（修正此前的 UTC 帧偏差）。
-- **逾期提醒与 Web Push**（2026-09-15）：逾期任务幂等写入站内通知（铃铛直达日历/逾期收件箱）；可选浏览器 Web Push（VAPID + RFC 8291 aes128gcm，WebCrypto 端到端），未配置 VAPID 密钥时推送整体停用、站内通知不受影响。
+稳健性收口版本：修复工作区乐观更新的一处缓存键读取错位——乐观插入与乐观更新此前按错误的槽位解析时间线缓存键，主时间线的新记录只能等服务端失效后才出现，回收站/归档视图里的更新会把卡片短暂闪没；现在按真实键形（space/view/query/tag/untagged）逐槽读取并按可见性判定落位（私有记录不再被乐观插进团队时间线）。/calendar 日历页正式下线：任务管理收敛至 /projects（看板/截止日期/逾期提醒），逾期推送、通知铃、任务搜索、PWA 快捷方式全部改指 /projects，文案统一为「任务」；探索页只读小月历与逾期提醒保留；后端 `/api/app/calendar` 聚合端点保留（Memos 兼容面零变化）。地基清理：删除日历下线后的 8 语言死键（46 键/语言）、前端孤儿 `getCalendarView`、SPA 白名单死表项；README 与 PRD 的日历段落改写/补注记；长文件按职责再拆（worker 装配入口、import/export、管理端用户卡），函数体逐字搬移、消费方 import 零改动。稳健性：注册开关与集成凭证读取失败时留下错误日志（此前静默降级）；`pnpm release` 新增 tag 与全部 workspace 版本、`FLAREMO_API_VERSION` 的一致性断言，漏 bump 会在发版前置被拦截。无 API 变化、无数据变化。
 
 ### 升级影响
 
-- 含数据库 migration（0013 projects/tasks 两表、0022 通知去重索引、0023 push_subscriptions 表），`wrangler d1 migrations apply` 即可，向前兼容。
-- 需要浏览器 Web Push 时，生成 VAPID 密钥对并配置 `FLAREMO_VAPID_PUBLIC_KEY` / `FLAREMO_VAPID_PRIVATE_KEY`（见 docs/deploy.md）；不配置则 Web Push 自动停用，其余功能零变化。
-- 新增 `/api/app/projects`、`/api/app/tasks`、通知与推送订阅端点（cookie session 或 PAT 可用，详见 docs/architecture-notes.md）；Memos `/api/v1` 兼容面零变化。
+- 无 migration、无资源变化、无 API 变化，直接部署即可。
+- 依赖 /calendar 深链的自动化或收藏请改指 /projects（/calendar 路由已移除）；站内所有跳转已同步迁移。
+- 乐观更新修复会让「发送后卡片立即出现」恢复为预期行为，此前依赖失效回包的延迟不受影响。
 
 ## v0.20.0
 
