@@ -36,7 +36,17 @@ export const MONTH_SHORT_NAMES = [
   "12月",
 ] as const;
 
-// 4 Columns for 24 Hours in Day View (6 hours each)
+// 4 Time Periods for Day Horizon View (6 hours each)
+export const DAY_PERIODS = [
+  { label: "夜间", range: "00-06", hours: [0, 1, 2, 3, 4, 5] },
+  { label: "早晨", range: "06-12", hours: [6, 7, 8, 9, 10, 11] },
+  { label: "下午", range: "12-18", hours: [12, 13, 14, 15, 16, 17] },
+  { label: "晚间", range: "18-24", hours: [18, 19, 20, 21, 22, 23] },
+] as const;
+
+export const DAY_HOURS = Array.from({ length: 24 }, (_, i) => i);
+
+// Backward-compat aliases if needed
 export const DAY_COLUMN_HOURS = [
   [0, 1, 2, 3, 4, 5],
   [6, 7, 8, 9, 10, 11],

@@ -5,7 +5,7 @@
  * 1. 热力图态 (Heatmap Mode) ——【纯粹的克制，只展示热力与力度】：
  *    - 画布中间彻底去除所有文字说明、数字标牌与文字描述。
  *    - 纯靠方块的点阵与色彩深浅传达节奏与能量状态，极致高级、沉静。
- *    - 尺度严密对齐：年 365天微点 / 月 ~140时段微点 (2x2象限) / 周 168小时色块 / 日 96时段微轨 (15分钟刻度)。
+ *    - 尺度层层递进：年 365天微点 / 月 30天饱满热力毯 / 周 168小时横条矩阵 / 日 24小时全景时间能量流。
  * 2. 日历图态 (Calendar Mode) ——【展示信息本身】：
  *    - 相同网格与结构，显示月份、日期、星期、整点时间与条数信息。
  * 3. 严格零 Emoji，外轴极简，信息仅在悬停时于最底线静默提示。
@@ -317,7 +317,7 @@ export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
           />
         )}
 
-        {/* MONTH VIEW: ~140 Micro-Dots (7 Columns x 5~6 Rows x 4 Quadrants) */}
+        {/* MONTH VIEW: 7 Columns x 5~6 Rows of Solid Cohesive Heatmap Tiles */}
         {tab === "month" && (
           <MonthHorizonPureView
             displayMode={displayMode}
@@ -350,7 +350,7 @@ export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
           />
         )}
 
-        {/* DAY VIEW: 24 Hours x 4 Quarter-Hour Micro-Slits (96 Slits) */}
+        {/* DAY VIEW: 24-Hour Panoramic Energy Spectrum (Time Stream) */}
         {tab === "day" && (
           <DayHorizonPureView
             displayMode={displayMode}
