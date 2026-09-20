@@ -1,11 +1,14 @@
 // ============================================================================
-// 4. Day Horizon View (24-Hour Panoramic Energy Spectrum · Time Stream)
+// 4. Day Horizon View (12 + 12 AM/PM Cohesive Time Strip Flow)
 // ============================================================================
 import { useMemo } from "react";
 import { heatmapColor } from "@/lib/activity";
 import { buildHourCountMap } from "@/lib/time-horizon";
 import { cn } from "@/lib/utils";
-import { DAY_HOURS, DAY_PERIODS, type DisplayMode } from "./shared";
+import type { DisplayMode } from "./shared";
+
+const AM_HOURS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] as const;
+const PM_HOURS = [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23] as const;
 
 export function DayHorizonPureView({
   selectedDay,
@@ -29,77 +32,68 @@ export function DayHorizonPureView({
     [hourlyData],
   );
 
-  // Peak note count in a single hour to scale waveform heights proportionally
-  const maxHourCount = useMemo(() => {
-    let max = 1;
-    for (const h of DAY_HOURS) {
-      const c = hourCountMap.get(h) ?? 0;
-      if (c > max) max = c;
-    }
-    return max;
-  }, [hourCountMap]);
+  const amTotal = useMemo(
+    () =>
+      AM_HOURS.reduce<number>((sum, h) => sum + (hourCountMap.get(h) ?? 0), 0),
+    [hourCountMap],
+  );
 
-  return (
-    <div className="flex h-full flex-col justify-between gap-2 py-0.5 select-none">
-      {/* ── Top Row: 4 Time-of-Day Period Capsules (Night, Morning, Afternoon, Evening) ── */}
-      <div className="grid grid-cols-4 gap-1.5">
-        {DAY_PERIODS.map((p) => {
-          const periodCount = p.hours.reduce<number>(
-            (sum, h) => sum + (hourCountMap.get(h) ?? 0),
-            0,
-          );
-          return (
-            <div
-              className={cn(
-                "flex items-center justify-between rounded-md border px-2 py-1 transition-all",
-                periodCount > 0
-                  ? "border-brand-500/35 bg-brand-500/10 text-brand-600 dark:text-brand-400 font-semibold"
-                  : "border-border/40 bg-background/40 text-muted-foreground/70",
-              )}
-              key={p.label}
-            >
-              <div className="flex items-center gap-1">
-                <span className="text-[10px] font-medium leading-none">
-                  {p.label}
-                </span>
-                <span className="text-[8px] font-mono text-muted-foreground/60 leading-none">
-                  {p.range}
-                </span>
-              </div>
-              {displayMode === "calendar" && periodCount > 0 ? (
-                <span className="text-[10px] font-mono font-bold tabular-nums">
-                  {periodCount}
-                </span>
-              ) : periodCount > 0 ? (
-                <span className="size-1.5 rounded-full bg-brand-500 animate-pulse" />
-              ) : null}
-            </div>
-          );
-        })}
+  const pmTotal = useMemo(
+    () =>
+      PM_HOURS.reduce<number>((sum, h) => sum + (hourCountMap.get(h) ?? 0), 0),
+    [hourCountMap],
+  );
+
+  const renderHourColumn = (
+    hours: readonly number[],
+    title: string,
+    timeRange: string,
+    periodTotal: number,
+  ) => (
+    <div className="flex flex-1 flex-col gap-1">
+      {/* Column Header */}
+      <div className="flex items-center justify-between px-1 text-[10px]">
+        <div className="flex items-center gap-1">
+          <span className="font-medium text-muted-foreground">{title}</span>
+          <span className="font-mono text-[9px] text-muted-foreground/60">
+            {timeRange}
+          </span>
+        </div>
+        {displayMode === "calendar" && periodTotal > 0 ? (
+          <span className="font-mono font-bold text-brand-600 dark:text-brand-400 tabular-nums text-[9px]">
+            {periodTotal} 条
+          </span>
+        ) : periodTotal > 0 ? (
+          <span className="size-1.5 rounded-full bg-brand-500" />
+        ) : null}
       </div>
 
-      {/* ── Middle Stage: 24-Hour Continuous Energy Waveform Stream (~130px tall) ── */}
-      <div
-        className={cn(
-          "relative flex flex-1 items-end justify-between gap-[3px] rounded-lg border border-border/40 bg-background/30 p-2 min-h-[130px]",
-          isLoading && "animate-pulse",
-        )}
-      >
-        {DAY_HOURS.map((h) => {
+      {/* 12 Horizontal Hour Strips */}
+      <div className="flex flex-col gap-[2px]">
+        {hours.map((h) => {
           const count = hourCountMap.get(h) ?? 0;
           const hourLabel = `${String(h).padStart(2, "0")}:00`;
-          const heightPercent =
-            count > 0
-              ? Math.min(
-                  100,
-                  Math.max(28, Math.round((count / maxHourCount) * 100)),
-                )
-              : 8; // Baseline pill height percentage
 
           return (
             <button
-              className="group relative flex h-full flex-1 flex-col items-center justify-end rounded-[2px] transition-all hover:scale-105 hover:z-10"
-              key={`hour-stream-${h}`}
+              className={cn(
+                "group relative flex h-[13px] w-full items-center justify-between rounded-[3px] border px-1.5 transition-all text-left select-none",
+                displayMode === "heatmap"
+                  ? count > 0
+                    ? cn(
+                        heatmapColor(count),
+                        "border-primary/25 hover:brightness-105 shadow-2xs",
+                      )
+                    : "border-border/30 bg-muted-foreground/10 hover:border-border/50 hover:bg-muted-foreground/20 dark:border-border/20 dark:bg-muted/20 dark:hover:bg-muted/30"
+                  : cn(
+                      "border-border/40 bg-background/50 hover:border-brand-500/50 hover:bg-background dark:border-border/25 dark:bg-background/40",
+                      count > 0 &&
+                        "border-brand-500/40 bg-brand-500/10 font-bold text-brand-600 dark:text-brand-400",
+                    ),
+                isLoading && "animate-pulse",
+                "hover:scale-[1.02] hover:z-10",
+              )}
+              key={`day-hour-${h}`}
               type="button"
               onClick={() => onJumpToTimeline(selectedDay)}
               onMouseEnter={() =>
@@ -109,38 +103,37 @@ export function DayHorizonPureView({
               }
               onMouseLeave={() => onHoverTip(null)}
             >
-              {/* Optional count pip on top of active bar in calendar mode */}
-              {displayMode === "calendar" && count > 0 && (
-                <span className="mb-0.5 text-[8px] font-mono font-bold text-brand-600 dark:text-brand-400 tabular-nums">
-                  {count}
-                </span>
-              )}
-
-              {/* Dynamic Energy Bar Column */}
-              <div
-                className={cn(
-                  "w-full rounded-[2.5px] transition-all duration-300",
-                  count > 0
-                    ? cn(heatmapColor(count), "shadow-xs")
-                    : "bg-muted-foreground/15 dark:bg-muted/30 group-hover:bg-muted-foreground/30",
-                )}
-                style={{ height: `${heightPercent}%` }}
-              />
+              {/* In calendar mode, show hour timestamp and note count */}
+              {displayMode === "calendar" ? (
+                <>
+                  <span
+                    className={cn(
+                      "text-[9px] font-mono tabular-nums leading-none",
+                      count > 0
+                        ? "font-bold text-brand-600 dark:text-brand-400"
+                        : "text-muted-foreground/75",
+                    )}
+                  >
+                    {hourLabel}
+                  </span>
+                  {count > 0 && (
+                    <span className="text-[8px] font-mono font-bold text-brand-600 dark:text-brand-400 tabular-nums leading-none">
+                      {count}
+                    </span>
+                  )}
+                </>
+              ) : null}
             </button>
           );
         })}
       </div>
+    </div>
+  );
 
-      {/* ── Bottom Scale: Clean 24-Hour Time Axis Ticks ── */}
-      <div className="flex items-center justify-between px-1 text-[9px] font-mono text-muted-foreground/70 select-none">
-        <span>00:00</span>
-        <span>04:00</span>
-        <span>08:00</span>
-        <span>12:00</span>
-        <span>16:00</span>
-        <span>20:00</span>
-        <span>23:59</span>
-      </div>
+  return (
+    <div className="flex gap-2.5 px-0.5 py-0.5">
+      {renderHourColumn(AM_HOURS, "上午", "00 - 12", amTotal)}
+      {renderHourColumn(PM_HOURS, "下午", "12 - 24", pmTotal)}
     </div>
   );
 }
