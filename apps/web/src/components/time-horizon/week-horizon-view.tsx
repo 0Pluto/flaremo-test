@@ -2,7 +2,6 @@
 // 3. Week Horizon View (7 Days x 24 Hours, 168 Pure Squares)
 // ============================================================================
 import { useMemo } from "react";
-import { heatmapColor } from "@/lib/activity";
 import { buildWeekSlotCountMap } from "@/lib/time-horizon";
 import { cn } from "@/lib/utils";
 import { type DisplayMode, parseDayKey } from "./shared";
@@ -53,10 +52,11 @@ export function WeekHorizonPureView({
               <button
                 className={cn(
                   "flex flex-col items-center rounded-md py-0.5 transition-colors hover:bg-muted/50",
-                  isSelected && "bg-brand-500 text-white font-bold",
+                  isSelected &&
+                    "bg-foreground text-background font-bold shadow-xs",
                   isToday &&
                     !isSelected &&
-                    "bg-brand-500/15 text-brand-600 dark:text-brand-400 font-bold",
+                    "ring-1 ring-brand-500/60 bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold",
                 )}
                 key={d.key}
                 type="button"
@@ -103,13 +103,15 @@ export function WeekHorizonPureView({
                   <button
                     className={cn(
                       "h-[7px] w-full rounded-[1.5px] transition-all cursor-pointer active:scale-95",
-                      displayMode === "heatmap"
-                        ? count > 0
-                          ? heatmapColor(count)
-                          : "border border-black/[0.04] bg-muted-foreground/20 hover:bg-muted-foreground/35 dark:border-white/[0.06] dark:bg-white/[0.14] dark:hover:bg-white/[0.24]"
-                        : count > 0
-                          ? "bg-brand-500 dark:bg-brand-400 shadow-xs ring-1 ring-brand-500/80 dark:ring-brand-400/80"
-                          : "border border-black/[0.04] bg-muted-foreground/20 hover:bg-muted-foreground/35 dark:border-white/[0.06] dark:bg-white/[0.14] dark:hover:bg-white/[0.24]",
+                      count > 0
+                        ? count === 1
+                          ? "bg-brand-500/35 dark:bg-brand-400/40"
+                          : count === 2
+                            ? "bg-brand-500/60 dark:bg-brand-400/65"
+                            : count === 3
+                              ? "bg-brand-500/85 dark:bg-brand-400/85"
+                              : "bg-brand-500 dark:bg-brand-400 shadow-xs ring-1 ring-brand-500/80 dark:ring-brand-400/80"
+                        : "border border-black/[0.04] bg-muted-foreground/20 hover:bg-muted-foreground/35 dark:border-white/[0.06] dark:bg-white/[0.14] dark:hover:bg-white/[0.24]",
                       isLoading && "animate-pulse",
                       "hover:scale-125 hover:z-10",
                     )}
