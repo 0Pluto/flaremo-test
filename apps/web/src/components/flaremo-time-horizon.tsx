@@ -850,7 +850,7 @@ function WeekMicroStreamView({
 }
 
 // ============================================================================
-// 4. Day Quarter-Dot View (24 Hours x 4 Quarter-Hours = 96 Micro-Dots)
+// 4. Day Micro-Rhythm View (4 Periods x 6 Hours = 96 Micro-Slits)
 // ============================================================================
 function DayQuarterDotView({
   selectedDay,
@@ -878,17 +878,30 @@ function DayQuarterDotView({
 
   return (
     <div className="flex flex-col gap-2 py-0.5">
-      {/* 4 Time periods (Night, Morning, Afternoon, Evening) */}
+      {/* Top Axis: Hour offsets within each 6-hour period */}
+      <div className="flex items-center gap-2">
+        <div className="w-9 shrink-0" />
+        <div className="grid flex-1 grid-cols-6 gap-1.5 text-center text-[9px] font-mono text-muted-foreground/60">
+          {["+0h", "+1h", "+2h", "+3h", "+4h", "+5h"].map((h) => (
+            <span key={h}>{h}</span>
+          ))}
+        </div>
+      </div>
+
+      {/* 4 Period Rows */}
       {DAY_PERIODS.map((period) => (
         <div className="flex items-center gap-2" key={period.label}>
-          {/* Left Axis: Period label */}
-          <div className="w-8 shrink-0 text-left">
-            <span className="text-[10px] font-medium text-muted-foreground/70">
+          {/* Left Axis: Period label + start hour */}
+          <div className="flex w-9 shrink-0 flex-col text-left">
+            <span className="text-[10px] font-medium text-muted-foreground">
               {period.label}
+            </span>
+            <span className="text-[8px] font-mono text-muted-foreground/50">
+              {String(period.hours[0]).padStart(2, "0")}:00
             </span>
           </div>
 
-          {/* 6 Hours in this period, each split into 4 Quarter-Hour Micro-Bars (24 Dots/row) */}
+          {/* 6 Hours in this period */}
           <div className="grid flex-1 grid-cols-6 gap-1.5">
             {period.hours.map((hour) => {
               const hourBaseSlot = hour * 4;
@@ -901,9 +914,9 @@ function DayQuarterDotView({
               return (
                 <button
                   className={cn(
-                    "group relative flex h-9 flex-col justify-between rounded-md border p-1 transition-all",
+                    "group relative flex h-10 w-full items-center justify-center rounded-md border transition-all",
                     "border-border/30 bg-background/50 hover:border-brand-500/50 hover:bg-brand-500/5",
-                    hourTotal > 0 && "border-brand-500/40 bg-brand-500/5",
+                    hourTotal > 0 && "border-brand-500/40 bg-brand-500/10",
                     "hover:scale-[1.05] hover:z-10",
                   )}
                   key={`hour-${hour}`}
@@ -916,36 +929,31 @@ function DayQuarterDotView({
                   }
                   onMouseLeave={() => onHoverTip(null)}
                 >
-                  {/* Axis Hour label inside in Calendar mode, or top mini-stamp in Heatmap */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-mono tabular-nums text-muted-foreground/80">
+                  {/* Heatmap Mode: ABSOLUTELY ZERO NUMBERS INSIDE! Pure 4 micro-slits */}
+                  {displayMode === "heatmap" ? (
+                    <div className="flex h-5 items-center gap-[2px]">
+                      {[
+                        { id: "q0", count: q0, label: ":00" },
+                        { id: "q1", count: q1, label: ":15" },
+                        { id: "q2", count: q2, label: ":30" },
+                        { id: "q3", count: q3, label: ":45" },
+                      ].map((q) => (
+                        <div
+                          className={cn(
+                            "h-full w-[3.5px] rounded-[1px] transition-all",
+                            q.count > 0 ? heatmapColor(q.count) : "bg-muted/40",
+                          )}
+                          key={`bar-${hour}-${q.id}`}
+                          title={q.label}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    /* Calendar Mode: Crisp Hour Number */
+                    <span className="text-[11px] font-mono tabular-nums text-foreground">
                       {String(hour).padStart(2, "0")}
                     </span>
-                    {displayMode === "calendar" && hourTotal > 0 ? (
-                      <span className="text-[8px] font-mono text-brand-600 dark:text-brand-400">
-                        {hourTotal}
-                      </span>
-                    ) : null}
-                  </div>
-
-                  {/* 4 Quarter-Hour Micro-Bars (00m, 15m, 30m, 45m) */}
-                  <div className="grid grid-cols-4 gap-[1.5px]">
-                    {[
-                      { id: "q0", count: q0, label: ":00" },
-                      { id: "q1", count: q1, label: ":15" },
-                      { id: "q2", count: q2, label: ":30" },
-                      { id: "q3", count: q3, label: ":45" },
-                    ].map((q) => (
-                      <div
-                        className={cn(
-                          "h-[7px] w-full rounded-[1px] transition-all",
-                          q.count > 0 ? heatmapColor(q.count) : "bg-muted/40",
-                        )}
-                        key={`bar-${hour}-${q.id}`}
-                        title={q.label}
-                      />
-                    ))}
-                  </div>
+                  )}
                 </button>
               );
             })}
