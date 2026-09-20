@@ -125,6 +125,21 @@ export async function linkMemory(
           and(eq(memoryItems.id, related.id), eq(memoryItems.userId, user.id)),
         );
     }
+    if (input.relationType === "contradicts" && actor.type === "agent") {
+      // A contradiction is the agent's dispute channel: it queues the source
+      // memory for user review without ever touching the disputed memory
+      // itself — even a locked or confirmed one stays untouched and recallable.
+      await db
+        .update(memoryItems)
+        .set({
+          needsReview: true,
+          reviewReason: "contradicts",
+          updatedAt: new Date().toISOString(),
+        })
+        .where(
+          and(eq(memoryItems.id, memory.id), eq(memoryItems.userId, user.id)),
+        );
+    }
     const inserted = await db
       .insert(memoryRelations)
       .values({

@@ -107,17 +107,22 @@ export async function recallMemories(
     filters.push(inArray(memoryItems.kind, input.kinds));
   }
 
-  const rows = await db
-    .select()
-    .from(memoryItems)
-    .where(and(...filters))
-    .limit(MEMORY_RECALL_CANDIDATE_LIMIT);
+  // FTS recall fetches matched rows directly instead of intersecting with a
+  // capped window over the table: an unordered `limit` window once hid every
+  // memory past the first 50 inserted rows from recall entirely.
+  const recallByFts = async () => {
+    const withText = buildFtsCondition(input.query);
+    if (!withText) return [];
+    return db
+      .select()
+      .from(memoryItems)
+      .where(and(...filters, withText))
+      .orderBy(desc(memoryItems.updatedAt), desc(memoryItems.id))
+      .limit(MEMORY_RECALL_CANDIDATE_LIMIT);
+  };
 
-  // Semantic recall takes priority when a provider and index are available
-  // and the query has meaning; otherwise fall back to FTS5. A semantic miss
-  // must not silently recall unrelated memories by authority alone.
-  let candidates = rows;
   let matchedBy: "fts" | "semantic" = "fts";
+  let candidates: MemoryItemRow[];
   if (deps) {
     try {
       const [queryVector] = await deps.provider.embed([input.query]);
@@ -127,9 +132,26 @@ export async function recallMemories(
           MEMORY_RECALL_CANDIDATE_LIMIT,
           deps.namespace,
         );
-        const matchedIds = new Set(matches.map((match) => match.id));
-        candidates = rows.filter((row) => matchedIds.has(row.id));
+        // Fetch matched rows by id so recall covers the whole index, not
+        // just a window over the table. A semantic miss must not silently
+        // recall unrelated memories by authority alone.
+        candidates = matches.length
+          ? await db
+              .select()
+              .from(memoryItems)
+              .where(
+                and(
+                  ...filters,
+                  inArray(
+                    memoryItems.id,
+                    matches.map((match) => match.id),
+                  ),
+                ),
+              )
+          : [];
         matchedBy = "semantic";
+      } else {
+        candidates = await recallByFts();
       }
     } catch (error) {
       // Semantic recall is degradable: fall back to the FTS path on any
@@ -142,23 +164,10 @@ export async function recallMemories(
         }),
       );
       matchedBy = "fts";
+      candidates = await recallByFts();
     }
   } else {
-    const withText = buildFtsCondition(input.query);
-    if (withText) {
-      const matchedIds = new Set(
-        (
-          await db
-            .select({ id: memoryItems.id })
-            .from(memoryItems)
-            .where(and(...filters, withText))
-            .limit(MEMORY_RECALL_CANDIDATE_LIMIT)
-        ).map((row) => row.id),
-      );
-      // A query that matches nothing via FTS should not silently recall by
-      // authority alone; return the empty set rather than unrelated memories.
-      candidates = rows.filter((row) => matchedIds.has(row.id));
-    }
+    candidates = await recallByFts();
   }
 
   candidates.sort((a, b) => rankMemory(b) - rankMemory(a));

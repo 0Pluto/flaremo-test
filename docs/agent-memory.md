@@ -79,7 +79,7 @@ locked > confirmed > observed > inferred
 ```
 
 - Agent 只能以 `observed` / `inferred` 写入，**永远不能 lock 或 confirm** 一条记忆。
-- Agent 不能覆盖用户 `confirmed` / `locked` 的记忆；遇到矛盾时应改用 `memory_link` 提出 `contradicts` 关系，或让用户处理。
+- Agent 不能覆盖用户 `confirmed` / `locked` 的记忆；遇到矛盾时用 `memory_link` 提出 `contradicts` 关系——**发起主张的记忆进入 Review 队列**（`needs_review`），被质疑的记忆原样不动、照常召回，由用户在界面裁决。
 - Agent 从不硬删除；`memory_forget` 只会归档或标记替代，历史保留。只有用户能在 UI 里物理删除。
 - 写入门禁会拒绝凭据（`Authorization` / `cookie` / `memos_pat_` / 私钥 / 密码），并做 SHA-256 指纹精确去重。
 
