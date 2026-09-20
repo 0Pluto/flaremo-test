@@ -97,15 +97,18 @@ export async function getMemoStats(timeZone: string, space?: MemoSpace) {
 }
 
 /**
- * Returns 24 hourly memo counts for the given local date.
+ * Returns hourly memo counts for the given local date or date range.
  * `tz` should be `new Date().getTimezoneOffset()` (UTC − local in minutes).
  */
 export async function getHourlyActivity(
-  date: string,
+  params: { date?: string; from?: string; to?: string },
   tz: number,
   signal?: AbortSignal,
 ) {
-  const query = new URLSearchParams({ date, tz: String(tz) });
+  const query = new URLSearchParams({ tz: String(tz) });
+  if (params.date) query.set("date", params.date);
+  if (params.from) query.set("from", params.from);
+  if (params.to) query.set("to", params.to);
   return apiRequest<HourlyActivityResponse>(
     `/api/app/stats/hourly?${query.toString()}`,
     { signal },

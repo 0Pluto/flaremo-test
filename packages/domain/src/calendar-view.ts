@@ -118,22 +118,28 @@ export async function getCalendarView(
 export async function getHourlyActivity(
   db: FlareMoDb,
   user: UserRow,
-  query: { date: string; tz?: number },
+  query: { date?: string; from?: string; to?: string; tz?: number },
 ): Promise<HourlyActivityResponse> {
-  const { date } = query;
+  const fromDate = query.from ?? query.date;
+  const toDate = query.to ?? query.date;
+  if (!fromDate || !toDate) {
+    return { hours: [] };
+  }
   const offsetMinutes = -(query.tz ?? 0);
   const boundShift = (query.tz ?? 0) * 60_000;
   // Inclusive local-day bounds converted to UTC instants.
   const startUtc = new Date(
-    new Date(`${date}T00:00:00Z`).getTime() + boundShift,
+    new Date(`${fromDate}T00:00:00Z`).getTime() + boundShift,
   );
-  const endUtc = new Date(startUtc.getTime() + 24 * 60 * 60 * 1000);
+  const endUtc = new Date(
+    new Date(`${toDate}T00:00:00Z`).getTime() +
+      24 * 60 * 60 * 1000 +
+      boundShift,
+  );
 
   const rows = await db
     .select({
-      // Extract local hour as integer: shift the stored UTC timestamp into
-      // the client's timezone, then take characters 12–13 (\"HH\" in
-      // \"YYYY-MM-DD HH:MM:SS\").
+      date: sql<string>`substr(datetime(${memos.createdAt}, ${`${offsetMinutes} minutes`}), 1, 10)`,
       hour: sql<number>`CAST(substr(datetime(${memos.createdAt}, ${`${offsetMinutes} minutes`}), 12, 2) AS INTEGER)`.mapWith(
         Number,
       ),
@@ -149,14 +155,30 @@ export async function getHourlyActivity(
       ),
     )
     .groupBy(
-      sql`substr(datetime(${memos.createdAt}, ${`${offsetMinutes} minutes`}), 12, 2)`,
+      sql`substr(datetime(${memos.createdAt}, ${`${offsetMinutes} minutes`}), 1, 13)`,
     );
 
-  const byHour = new Map(rows.map((r) => [r.hour, r.count]));
+  const byDateHour = new Map<string, number>();
+  for (const r of rows) {
+    byDateHour.set(`${r.date}_${r.hour}`, r.count);
+  }
+
+  const result: Array<{ date: string; hour: number; count: number }> = [];
+  const cur = new Date(`${fromDate}T12:00:00Z`);
+  const end = new Date(`${toDate}T12:00:00Z`);
+  while (cur.getTime() <= end.getTime()) {
+    const dStr = cur.toISOString().slice(0, 10);
+    for (let h = 0; h < 24; h++) {
+      result.push({
+        date: dStr,
+        hour: h,
+        count: byDateHour.get(`${dStr}_${h}`) ?? 0,
+      });
+    }
+    cur.setUTCDate(cur.getUTCDate() + 1);
+  }
+
   return {
-    hours: Array.from({ length: 24 }, (_, h) => ({
-      hour: h,
-      count: byHour.get(h) ?? 0,
-    })),
+    hours: result,
   };
 }

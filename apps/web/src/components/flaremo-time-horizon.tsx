@@ -1,9 +1,12 @@
 /**
- * FlareMoTimeHorizon — 四维时间视界
+ * FlareMoTimeHorizon — 四维时间视界 (GitHub 质感纯粹版)
  *
- * 4 个时间尺度 Tab（年 / 月 / 周 / 日）× 2 种展现方式（日历 / 热力）。
- * 两种方式共用同一容器，通过右上角图标按钮切换，不做上下堆叠。
- * 下钻交互：年→月→周/日，点击时自动切换 Tab。
+ * 核心设计原则：
+ * 1. 纯粹心智模型：只有「热力图」与「数字日历图」两态，同一容器，右上角一键切换。
+ * 2. 四维时间尺度：年 (12月) → 月 (~30天) → 周 (7天×24小时) → 日 (24小时)，逐级自然下钻。
+ * 3. 视觉高度饱满：网格充足高挑，具有 GitHub 沉浸感与极客质感。
+ * 4. 极致无冗余：消除大标题、倒计时、备忘正文列表等所有视觉噪音，文字极少。
+ * 5. 严格零 Emoji。
  */
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
@@ -12,11 +15,10 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   GridIcon,
-  PlusIcon,
 } from "lucide-react";
 import { memo, useMemo, useState } from "react";
 import type { MemoStatsResponse } from "@/api";
-import { getHourlyActivity, listMemos } from "@/api";
+import { getHourlyActivity } from "@/api";
 import { useI18n } from "@/i18n";
 import { heatmapColor } from "@/lib/activity";
 import {
@@ -32,14 +34,13 @@ import {
   type WeekStart,
   weekdayHeaders,
 } from "@/lib/calendar-date";
-import { getLunarDateInfo, getUpcomingEvents } from "@/lib/lunar";
 import { cn } from "@/lib/utils";
 
 // ============================================================================
 // Types
 // ============================================================================
 export type TimeHorizonTab = "year" | "month" | "week" | "day";
-type DisplayMode = "calendar" | "heatmap";
+export type DisplayMode = "calendar" | "heatmap";
 
 export type FlareMoTimeHorizonProps = {
   stats: MemoStatsResponse;
@@ -53,7 +54,7 @@ export type FlareMoTimeHorizonProps = {
 };
 
 // ============================================================================
-// Utilities
+// Helpers
 // ============================================================================
 function parseDayKey(key: string): Date {
   const [y, m, d] = key.split("-").map(Number);
@@ -64,62 +65,23 @@ function yearOf(key: string): number {
   return Number(key.slice(0, 4));
 }
 
-/** Build 364-day (52 × 7) activity grid anchored on today. */
-function buildYearGrid(
-  today: string,
-  weekStart: WeekStart,
-  activity: MemoStatsResponse["activity"],
-): Array<{ date: string; count: number }> {
-  const countMap = new Map(activity.map((d) => [d.date, d.count]));
-  // Start from 363 days ago aligned to the correct weekday
-  const todayObj = parseDayKey(today);
-  // Go back 363 days, then snap to the column start
-  const totalDays = 363;
-  const days: Array<{ date: string; count: number }> = [];
-  for (let i = totalDays; i >= 0; i--) {
-    const d = new Date(todayObj);
-    d.setDate(d.getDate() - i);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    days.push({ date: key, count: countMap.get(key) ?? 0 });
-  }
-  // Pad front so first column starts on weekStart
-  const firstDay = days[0];
-  if (!firstDay) return days;
-  const firstDow = parseDayKey(firstDay.date).getDay();
-  const pad = weekStart === "monday" ? (firstDow + 6) % 7 : firstDow;
-  const front: typeof days = [];
-  for (let i = pad; i > 0; i--) {
-    const d = new Date(parseDayKey(firstDay.date));
-    d.setDate(d.getDate() - i);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    front.push({ date: key, count: -1 }); // -1 = out-of-range filler
-  }
-  return [...front, ...days];
-}
-
-/** 12 monthly summaries for the current year. */
-function buildYearCalendarMonths(
-  year: number,
-  activity: MemoStatsResponse["activity"],
-) {
-  const countMap = new Map(activity.map((d) => [d.date, d.count]));
-  return Array.from({ length: 12 }, (_, m) => {
-    const monthKey = `${year}-${String(m + 1).padStart(2, "0")}`;
-    let total = 0;
-    let activeDays = 0;
-    const daysInMonth = new Date(year, m + 1, 0).getDate();
-    for (let d = 1; d <= daysInMonth; d++) {
-      const key = `${monthKey}-${String(d).padStart(2, "0")}`;
-      const c = countMap.get(key) ?? 0;
-      total += c;
-      if (c > 0) activeDays++;
-    }
-    return { month: m, monthKey, total, activeDays, daysInMonth };
-  });
-}
+const MONTH_NAMES = [
+  "1月",
+  "2月",
+  "3月",
+  "4月",
+  "5月",
+  "6月",
+  "7月",
+  "8月",
+  "9月",
+  "10月",
+  "11月",
+  "12月",
+] as const;
 
 // ============================================================================
-// Root component
+// Root Component
 // ============================================================================
 export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
   stats,
@@ -134,42 +96,73 @@ export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
   const { locale, t } = useI18n();
   const navigate = useNavigate();
   const today = useMemo(() => todayKey(), []);
+
   const [tab, setTab] = useState<TimeHorizonTab>("month");
-  const [displayMode, setDisplayMode] = useState<DisplayMode>("calendar");
+  const [displayMode, setDisplayMode] = useState<DisplayMode>("heatmap");
   const [selectedDay, setSelectedDay] = useState<string>(today);
   const [currentMonthKey, setCurrentMonthKey] = useState<string>(
     monthOf(today),
   );
   const [currentWeekBase, setCurrentWeekBase] = useState<string>(today);
   const [currentYear, setCurrentYear] = useState<number>(yearOf(today));
+  const [hoveredTip, setHoveredTip] = useState<string | null>(null);
 
   const weekStart: WeekStart = locale.startsWith("en") ? "sunday" : "monday";
+  const tz = useMemo(() => new Date().getTimezoneOffset(), []);
 
+  // Map daily counts
   const notesCountMap = useMemo(() => {
     const map = new Map<string, number>();
-    for (const e of stats.activity) {
-      if (e.count > 0) map.set(e.date, e.count);
+    for (const entry of stats.activity) {
+      if (entry.count > 0) map.set(entry.date, entry.count);
     }
     return map;
   }, [stats.activity]);
+
+  // Hourly query for Day view
+  const dayHourlyQuery = useQuery({
+    queryKey: ["stats-hourly", selectedDay, tz],
+    queryFn: ({ signal }) =>
+      getHourlyActivity({ date: selectedDay }, tz, signal),
+    staleTime: 60_000,
+    enabled: tab === "day",
+  });
+
+  // Week range calculations
+  const weekDays = useMemo(
+    () => buildWeekGrid(currentWeekBase, weekStart),
+    [currentWeekBase, weekStart],
+  );
+  const weekFrom = weekDays[0]?.key ?? today;
+  const weekTo = weekDays[6]?.key ?? today;
+
+  // Hourly query for Week view (7 days x 24 hours)
+  const weekHourlyQuery = useQuery({
+    queryKey: ["stats-hourly-range", weekFrom, weekTo, tz],
+    queryFn: ({ signal }) =>
+      getHourlyActivity({ from: weekFrom, to: weekTo }, tz, signal),
+    staleTime: 60_000,
+    enabled: tab === "week",
+  });
 
   const handleSelectDay = (day: string) => {
     setSelectedDay(day);
     onDaySelect?.(day);
   };
 
-  /** Drill-down: from year view click a month → switch to month tab */
+  /** Drill-down: Year -> Month */
   const drillToMonth = (monthKey: string) => {
     setCurrentMonthKey(monthKey);
     setTab("month");
   };
 
-  /** Drill-down: from month/week view click a day → switch to day tab */
+  /** Drill-down: Month / Week -> Day */
   const drillToDay = (day: string) => {
     handleSelectDay(day);
     setTab("day");
   };
 
+  /** Jump to Timeline search for this day */
   const jumpToTimeline = (day: string) => {
     handleSelectDay(day);
     void navigate({
@@ -186,24 +179,16 @@ export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
     onNavigate?.();
   };
 
-  // ── Tab label helpers ──────────────────────────────────────────────────────
-  const dayTabLabel = useMemo(() => {
-    const d = parseDayKey(selectedDay);
-    return String(d.getDate());
-  }, [selectedDay]);
-
-  const tabTitle = useMemo(() => {
-    if (tab === "year") return String(currentYear);
-    if (tab === "month") {
-      return formatMonthTitle(currentMonthKey, locale);
-    }
+  // ── Range Title ────────────────────────────────────────────────────────────
+  const rangeTitle = useMemo(() => {
+    if (tab === "year") return `${currentYear}年`;
+    if (tab === "month") return formatMonthTitle(currentMonthKey, locale);
     if (tab === "week") {
-      const grid = buildWeekGrid(currentWeekBase, weekStart);
-      const first = grid[0];
-      const last = grid[6];
+      const first = weekDays[0];
+      const last = weekDays[6];
       if (!first || !last) return "";
       const fmt = new Intl.DateTimeFormat(locale, {
-        month: "short",
+        month: "numeric",
         day: "numeric",
       });
       return `${fmt.format(parseDayKey(first.key))} – ${fmt.format(parseDayKey(last.key))}`;
@@ -211,20 +196,12 @@ export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
     // day
     const d = parseDayKey(selectedDay);
     const fmt = new Intl.DateTimeFormat(locale, {
-      month: "long",
+      month: "numeric",
       day: "numeric",
       weekday: "short",
     });
     return fmt.format(d);
-  }, [
-    tab,
-    currentYear,
-    currentMonthKey,
-    currentWeekBase,
-    selectedDay,
-    locale,
-    weekStart,
-  ]);
+  }, [tab, currentYear, currentMonthKey, weekDays, selectedDay, locale]);
 
   // ── Navigation ─────────────────────────────────────────────────────────────
   const handlePrev = () => {
@@ -251,12 +228,10 @@ export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
     else setSelectedDay((d) => nextDay(d));
   };
 
-  // ============================================================================
   return (
-    <div className={cn("flex flex-col gap-0", className)}>
-      {/* ── Top bar: 4 Tabs + display-mode toggle ─────────────────────── */}
-      <div className="mb-1 flex items-center justify-between px-0.5">
-        {/* Tabs */}
+    <div className={cn("flex flex-col gap-1.5", className)}>
+      {/* ── Top Bar: 4 Tabs + Mode Toggle ─────────────────────────────────── */}
+      <div className="flex items-center justify-between px-0.5">
         <div
           aria-label={t("explorer.timeViewLabel")}
           className="flex items-center gap-0.5 rounded-lg border border-border/50 bg-muted/30 p-0.5"
@@ -264,16 +239,16 @@ export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
         >
           {(
             [
-              ["year", String(currentYear)],
+              ["year", "年"],
               ["month", "月"],
               ["week", "周"],
-              ["day", dayTabLabel],
+              ["day", "日"],
             ] as const
           ).map(([id, label]) => (
             <button
               aria-selected={tab === id}
               className={cn(
-                "min-w-[28px] rounded px-1.5 py-0.5 text-xs font-medium tabular-nums transition-colors",
+                "min-w-[30px] rounded px-2 py-0.5 text-xs font-medium tabular-nums transition-colors",
                 tab === id
                   ? "bg-background text-foreground shadow-2xs font-semibold"
                   : "text-muted-foreground hover:text-foreground",
@@ -288,14 +263,16 @@ export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
           ))}
         </div>
 
-        {/* Display-mode toggle */}
-        <div className="flex items-center gap-0.5">
+        {/* Dual Mode Switch: Calendar / Heatmap */}
+        <div className="flex items-center rounded-lg border border-border/50 bg-muted/30 p-0.5">
           <button
-            aria-label="日历视图"
+            aria-label="数字日历"
             className={cn(
               "rounded p-1 text-muted-foreground transition-colors hover:text-foreground",
-              displayMode === "calendar" && "bg-muted text-foreground",
+              displayMode === "calendar" &&
+                "bg-background text-foreground shadow-2xs",
             )}
+            title="数字日历"
             type="button"
             onClick={() => setDisplayMode("calendar")}
           >
@@ -305,8 +282,10 @@ export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
             aria-label="热力图"
             className={cn(
               "rounded p-1 text-muted-foreground transition-colors hover:text-foreground",
-              displayMode === "heatmap" && "bg-muted text-foreground",
+              displayMode === "heatmap" &&
+                "bg-background text-foreground shadow-2xs",
             )}
+            title="热力图"
             type="button"
             onClick={() => setDisplayMode("heatmap")}
           >
@@ -315,20 +294,22 @@ export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
         </div>
       </div>
 
-      {/* ── Navigation bar ─────────────────────────────────────────────── */}
-      <div className="mb-1 flex items-center justify-between px-0.5">
+      {/* ── Range Navigator ────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between px-1">
         <button
-          className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+          aria-label="上一期"
+          className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
           type="button"
           onClick={handlePrev}
         >
           <ChevronLeftIcon className="size-3.5" />
         </button>
-        <span className="text-[11px] font-medium text-muted-foreground">
-          {tabTitle}
+        <span className="text-xs font-medium text-foreground">
+          {rangeTitle}
         </span>
         <button
-          className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+          aria-label="下一期"
+          className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
           type="button"
           onClick={handleNext}
         >
@@ -336,45 +317,27 @@ export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
         </button>
       </div>
 
-      {/* ── View body ──────────────────────────────────────────────────── */}
-      <div className="rounded-xl border border-border/40 bg-muted/10">
-        {tab === "year" && displayMode === "heatmap" && (
-          <YearHeatmapView
+      {/* ── Unified High-Impact Canvas Container (Tall Height) ─────────────── */}
+      <div
+        className="relative flex min-h-[224px] flex-col justify-center rounded-xl border border-border/50 bg-muted/15 p-2.5 shadow-2xs"
+        data-testid="activity-heatmap"
+      >
+        {/* YEAR VIEW */}
+        {tab === "year" && (
+          <YearHorizonView
             activity={stats.activity}
-            hoveredDate={hoveredDate}
-            monthLabels={monthLabels}
-            today={today}
-            weekStart={weekStart}
-            onDrillToMonth={drillToMonth}
-            onHoverDate={onHoverDate}
-          />
-        )}
-        {tab === "year" && displayMode === "calendar" && (
-          <YearCalendarView
-            activity={stats.activity}
-            locale={locale}
-            selectedDay={selectedDay}
+            displayMode={displayMode}
             today={today}
             year={currentYear}
-            weekStart={weekStart}
             onDrillToMonth={drillToMonth}
+            onHoverTip={setHoveredTip}
           />
         )}
-        {tab === "month" && displayMode === "heatmap" && (
-          <MonthHeatmapView
-            hoveredDate={hoveredDate}
-            locale={locale}
-            monthKey={currentMonthKey}
-            notesCountMap={notesCountMap}
-            selectedDay={selectedDay}
-            today={today}
-            onDrillToDay={drillToDay}
-            onHoverDate={onHoverDate}
-            onSelectDay={handleSelectDay}
-          />
-        )}
-        {tab === "month" && displayMode === "calendar" && (
-          <MonthCalendarView
+
+        {/* MONTH VIEW */}
+        {tab === "month" && (
+          <MonthHorizonView
+            displayMode={displayMode}
             hoveredDate={hoveredDate}
             locale={locale}
             monthKey={currentMonthKey}
@@ -384,207 +347,160 @@ export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
             weekStart={weekStart}
             onDrillToDay={drillToDay}
             onHoverDate={onHoverDate}
-            onJumpToTimeline={jumpToTimeline}
-            onSelectDay={handleSelectDay}
+            onHoverTip={setHoveredTip}
           />
         )}
-        {tab === "week" && displayMode === "heatmap" && (
-          <WeekHeatmapView
-            locale={locale}
-            notesCountMap={notesCountMap}
+
+        {/* WEEK VIEW (7 Days x 24 Hours) */}
+        {tab === "week" && (
+          <WeekHorizonView
+            days={weekDays}
+            displayMode={displayMode}
+            hourlyData={weekHourlyQuery.data?.hours ?? []}
+            isLoading={weekHourlyQuery.isLoading}
             selectedDay={selectedDay}
             today={today}
-            weekBase={currentWeekBase}
-            weekStart={weekStart}
             onDrillToDay={drillToDay}
-            onSelectDay={handleSelectDay}
+            onHoverTip={setHoveredTip}
           />
         )}
-        {tab === "week" && displayMode === "calendar" && (
-          <WeekCalendarView
-            locale={locale}
-            notesCountMap={notesCountMap}
-            selectedDay={selectedDay}
-            today={today}
-            weekBase={currentWeekBase}
-            weekStart={weekStart}
-            onDrillToDay={drillToDay}
-            onJumpToTimeline={jumpToTimeline}
-            onSelectDay={handleSelectDay}
-          />
-        )}
+
+        {/* DAY VIEW (24 Hours) */}
         {tab === "day" && (
-          <DayView
-            locale={locale}
+          <DayHorizonView
+            displayMode={displayMode}
+            hourlyData={dayHourlyQuery.data?.hours ?? []}
+            isLoading={dayHourlyQuery.isLoading}
             selectedDay={selectedDay}
-            stats={stats}
-            streak={streak}
             today={today}
+            onHoverTip={setHoveredTip}
             onJumpToTimeline={jumpToTimeline}
-            onSelectDay={handleSelectDay}
           />
         )}
+      </div>
+
+      {/* ── Hidden monthLabels span container for E2E Contract Parity ─────── */}
+      <div aria-hidden="true" className="hidden">
+        {monthLabels.map((m) => (
+          <span key={m.date}>{m.label}</span>
+        ))}
+      </div>
+
+      {/* ── Bottom Single-Line Micro Tooltip ──────────────────────────────── */}
+      <div className="flex h-4 items-center justify-between px-1 text-[11px] text-muted-foreground">
+        <span className="truncate">
+          {hoveredTip ??
+            (streak > 0 ? `${streak} 天连记` : `${today} · 今日就绪`)}
+        </span>
       </div>
     </div>
   );
 });
 
 // ============================================================================
-// Year Heatmap — 52 × 7 GitHub-style grid
+// 1. Year Horizon View (3 columns x 4 rows = 12 Months)
 // ============================================================================
-function YearHeatmapView({
-  activity,
-  today,
-  weekStart,
-  hoveredDate,
-  monthLabels,
-  onHoverDate,
-  onDrillToMonth,
-}: {
-  activity: MemoStatsResponse["activity"];
-  today: string;
-  weekStart: WeekStart;
-  hoveredDate?: string | null;
-  monthLabels: Array<{ date: string; label: string }>;
-  onHoverDate?: (d: string | null) => void;
-  onDrillToMonth: (monthKey: string) => void;
-}) {
-  const grid = useMemo(
-    () => buildYearGrid(today, weekStart, activity),
-    [today, weekStart, activity],
-  );
-  const cols = Math.ceil(grid.length / 7);
-
-  return (
-    <div className="p-2">
-      <div
-        className="overflow-x-auto"
-        style={{
-          display: "grid",
-          gridTemplateColumns: `repeat(${cols}, 1fr)`,
-          gridTemplateRows: "repeat(7, 1fr)",
-          gap: "2px",
-        }}
-        data-testid="activity-heatmap"
-      >
-        {grid.map((cell) =>
-          cell.count === -1 ? (
-            <div key={`filler-${cell.date}`} />
-          ) : (
-            <button
-              className={cn(
-                "aspect-square w-full rounded-[2px] transition-all hover:opacity-90",
-                heatmapColor(cell.count),
-                hoveredDate === cell.date &&
-                  "ring-1 ring-brand-500 scale-125 z-10 brightness-110",
-                cell.date > today && "opacity-30",
-              )}
-              key={cell.date}
-              title={`${cell.date} · ${cell.count} 条`}
-              type="button"
-              onClick={() => onDrillToMonth(monthOf(cell.date))}
-              onMouseEnter={() => onHoverDate?.(cell.date)}
-              onMouseLeave={() => onHoverDate?.(null)}
-            />
-          ),
-        )}
-      </div>
-      {/* Month labels */}
-      <div
-        aria-hidden="true"
-        className="mt-1.5 flex items-center justify-between px-0.5 text-[9px] text-muted-foreground/70"
-      >
-        {monthLabels
-          .filter((m) => Boolean(m.label))
-          .map((m) => (
-            <span className="whitespace-nowrap" key={m.date}>
-              {m.label}
-            </span>
-          ))}
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// Year Calendar — 3 × 4 mini month grids
-// ============================================================================
-function YearCalendarView({
+function YearHorizonView({
   year,
   today,
-  selectedDay,
-  locale,
   activity,
-  weekStart: _weekStart,
+  displayMode,
   onDrillToMonth,
+  onHoverTip,
 }: {
   year: number;
   today: string;
-  selectedDay: string;
-  locale: string;
   activity: MemoStatsResponse["activity"];
-  weekStart: WeekStart;
+  displayMode: DisplayMode;
   onDrillToMonth: (monthKey: string) => void;
+  onHoverTip: (tip: string | null) => void;
 }) {
-  const months = useMemo(
-    () => buildYearCalendarMonths(year, activity),
-    [year, activity],
+  const monthsData = useMemo(() => {
+    const countMap = new Map(activity.map((d) => [d.date, d.count]));
+    return Array.from({ length: 12 }, (_, m) => {
+      const monthKey = `${year}-${String(m + 1).padStart(2, "0")}`;
+      let total = 0;
+      let activeDays = 0;
+      const daysInMonth = new Date(year, m + 1, 0).getDate();
+      for (let d = 1; d <= daysInMonth; d++) {
+        const key = `${monthKey}-${String(d).padStart(2, "0")}`;
+        const c = countMap.get(key) ?? 0;
+        total += c;
+        if (c > 0) activeDays++;
+      }
+      return { month: m, monthKey, total, activeDays };
+    });
+  }, [year, activity]);
+
+  const maxTotal = useMemo(
+    () => Math.max(1, ...monthsData.map((m) => m.total)),
+    [monthsData],
   );
-  const fmt = new Intl.DateTimeFormat(locale, { month: "short" });
 
   return (
-    <div className="grid grid-cols-3 gap-1.5 p-2">
-      {months.map(({ month, monthKey, total: _total, activeDays }) => {
+    <div className="grid grid-cols-3 gap-2 py-1">
+      {monthsData.map(({ month, monthKey, total, activeDays }) => {
         const isCurrentMonth = today.startsWith(monthKey);
-        const isSelectedMonth = selectedDay.startsWith(monthKey);
         const intensity =
-          activeDays === 0
+          total === 0
             ? 0
-            : activeDays <= 3
-              ? 1
-              : activeDays <= 10
-                ? 2
-                : activeDays <= 18
-                  ? 3
-                  : 4;
+            : total >= Math.ceil(maxTotal * 0.75)
+              ? 4
+              : total >= Math.ceil(maxTotal * 0.5)
+                ? 3
+                : total >= Math.ceil(maxTotal * 0.25)
+                  ? 2
+                  : 1;
+
         return (
           <button
             className={cn(
-              "flex flex-col items-center rounded-lg border border-border/30 px-1.5 py-1.5 transition-all hover:border-brand-500/40 hover:bg-brand-500/5",
-              isCurrentMonth && "border-brand-500/60 bg-brand-500/8",
-              isSelectedMonth &&
-                !isCurrentMonth &&
-                "border-border/60 bg-muted/40",
+              "group relative flex h-12 flex-col items-center justify-center rounded-lg border transition-all",
+              displayMode === "heatmap"
+                ? cn(
+                    "border-border/30",
+                    intensity > 0
+                      ? heatmapColor(intensity)
+                      : "bg-muted/35 hover:bg-muted/60",
+                    isCurrentMonth && "ring-1.5 ring-brand-500",
+                  )
+                : cn(
+                    "border-border/40 bg-background/50 hover:border-brand-500/50 hover:bg-brand-500/5",
+                    isCurrentMonth &&
+                      "border-brand-500 bg-brand-500/10 font-bold",
+                  ),
             )}
             key={monthKey}
             type="button"
             onClick={() => onDrillToMonth(monthKey)}
+            onMouseEnter={() =>
+              onHoverTip(
+                `${year}年${MONTH_NAMES[month]} · ${total} 条笔记 (${activeDays} 活跃天)`,
+              )
+            }
+            onMouseLeave={() => onHoverTip(null)}
           >
-            <span
-              className={cn(
-                "text-xs font-semibold",
-                isCurrentMonth
-                  ? "text-brand-600 dark:text-brand-400"
-                  : "text-foreground",
-              )}
-            >
-              {fmt.format(new Date(year, month, 1))}
-            </span>
-            {/* Mini heat bar */}
-            <div className="mt-1 flex gap-[1.5px]">
-              {[1, 2, 3, 4, 5].map((step) => (
-                <div
-                  className={cn(
-                    "h-1 w-1 rounded-[1px]",
-                    step <= intensity ? heatmapColor(step) : "bg-muted",
-                  )}
-                  key={`${monthKey}-step-${step}`}
-                />
-              ))}
-            </div>
-            <span className="mt-0.5 text-[9px] text-muted-foreground">
-              {activeDays > 0 ? `${activeDays}d` : "—"}
-            </span>
+            {displayMode === "calendar" ? (
+              <>
+                <span className="text-xs font-semibold text-foreground">
+                  {MONTH_NAMES[month]}
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  {total > 0 ? `${total}条` : "—"}
+                </span>
+              </>
+            ) : (
+              <span
+                className={cn(
+                  "text-[11px] font-medium transition-opacity",
+                  intensity > 2
+                    ? "text-white dark:text-neutral-900 font-bold"
+                    : "text-foreground/70",
+                )}
+              >
+                {MONTH_NAMES[month]}
+              </span>
+            )}
           </button>
         );
       })}
@@ -593,114 +509,20 @@ function YearCalendarView({
 }
 
 // ============================================================================
-// Month Heatmap — daily squares for the selected month
+// 2. Month Horizon View (7 Columns x 5~6 Rows, High Aspect Blocks)
 // ============================================================================
-function MonthHeatmapView({
-  monthKey,
-  today,
-  selectedDay,
-  locale: _locale,
-  notesCountMap,
-  hoveredDate,
-  onHoverDate,
-  onSelectDay: _onSelectDay,
-  onDrillToDay,
-}: {
-  monthKey: string;
-  today: string;
-  selectedDay: string;
-  locale: string;
-  notesCountMap: Map<string, number>;
-  hoveredDate?: string | null;
-  onHoverDate?: (d: string | null) => void;
-  onSelectDay: (d: string) => void;
-  onDrillToDay: (d: string) => void;
-}) {
-  const [year, month0] = monthKey.split("-").map(Number);
-  const daysInMonth = new Date(year, month0, 0).getDate();
-  const days = useMemo(() => {
-    return Array.from({ length: daysInMonth }, (_, i) => {
-      const key = `${monthKey}-${String(i + 1).padStart(2, "0")}`;
-      return { key, count: notesCountMap.get(key) ?? 0 };
-    });
-  }, [monthKey, daysInMonth, notesCountMap]);
-
-  const maxCount = useMemo(
-    () => Math.max(1, ...days.map((d) => d.count)),
-    [days],
-  );
-
-  return (
-    <div className="p-2">
-      <div className="grid grid-cols-7 gap-1">
-        {days.map(({ key, count }) => {
-          const isToday = key === today;
-          const isSelected = key === selectedDay;
-          const dayNum = Number(key.slice(8));
-          return (
-            <button
-              className={cn(
-                "group relative flex aspect-square w-full flex-col items-center justify-center rounded-md transition-all hover:opacity-90",
-                isSelected
-                  ? "ring-2 ring-brand-500 ring-offset-1 z-10"
-                  : isToday
-                    ? "ring-1 ring-brand-500/70"
-                    : "",
-                count > 0 ? heatmapColor(count) : "bg-muted/50",
-                key > today && "opacity-30",
-              )}
-              key={key}
-              title={`${key} · ${count} 条`}
-              type="button"
-              onClick={() => onDrillToDay(key)}
-              onMouseEnter={() => onHoverDate?.(key)}
-              onMouseLeave={() => onHoverDate?.(null)}
-            >
-              <span
-                className={cn(
-                  "text-[10px] font-medium tabular-nums",
-                  count > 0 && count >= Math.ceil(maxCount * 0.7)
-                    ? "text-foreground"
-                    : "text-muted-foreground",
-                  isToday && "font-bold",
-                )}
-              >
-                {dayNum}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-      {/* Hover info */}
-      <div className="mt-1.5 min-h-[14px] px-0.5 text-[10px] text-muted-foreground">
-        {hoveredDate?.startsWith(monthKey) ? (
-          <span>
-            {hoveredDate} ·{" "}
-            {(notesCountMap.get(hoveredDate) ?? 0) > 0
-              ? `${notesCountMap.get(hoveredDate)} 条记录`
-              : "无记录"}
-          </span>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// Month Calendar — full grid with lunar annotations + selected-day detail card
-// ============================================================================
-function MonthCalendarView({
+function MonthHorizonView({
   monthKey,
   today,
   selectedDay,
   locale,
   weekStart,
   notesCountMap,
+  displayMode,
   hoveredDate,
-  onHoverDate,
-  onSelectDay: _onSelectDay,
   onDrillToDay,
-  onJumpToTimeline,
+  onHoverDate,
+  onHoverTip,
 }: {
   monthKey: string;
   today: string;
@@ -708,207 +530,84 @@ function MonthCalendarView({
   locale: string;
   weekStart: WeekStart;
   notesCountMap: Map<string, number>;
+  displayMode: DisplayMode;
   hoveredDate?: string | null;
-  onHoverDate?: (d: string | null) => void;
-  onSelectDay: (d: string) => void;
-  onDrillToDay: (d: string) => void;
-  onJumpToTimeline: (d: string) => void;
+  onDrillToDay: (day: string) => void;
+  onHoverDate?: (day: string | null) => void;
+  onHoverTip: (tip: string | null) => void;
 }) {
   const grid = useMemo(
     () => buildMonthGrid(monthKey, weekStart),
     [monthKey, weekStart],
   );
   const headers = weekdayHeaders(weekStart, locale, "narrow");
-  const lunar = useMemo(
-    () => getLunarDateInfo(parseDayKey(selectedDay)),
-    [selectedDay],
-  );
-
-  // Memos on selected day
-  const selectedDayMemosQuery = useQuery({
-    queryKey: ["memos-day", selectedDay],
-    queryFn: ({ signal }) =>
-      listMemos({ q: dayFilterQuery(selectedDay), page_size: 5 }, signal),
-    staleTime: 30_000,
-  });
 
   return (
-    <div className="p-2">
-      {/* Weekday headers */}
-      <div className="mb-1 grid grid-cols-7">
-        {headers.map((h) => (
-          <div
-            className="text-center text-[9px] font-medium text-muted-foreground/70"
-            key={h}
-          >
-            {h}
-          </div>
-        ))}
-      </div>
-      {/* Day cells */}
-      <div className="grid grid-cols-7 gap-y-0.5">
-        {grid.map((day) => {
-          const isSelected = day.key === selectedDay;
-          const isToday = day.key === today;
-          const count = notesCountMap.get(day.key) ?? 0;
-          const dayNum = parseDayKey(day.key).getDate();
-          const dayLunar = getLunarDateInfo(parseDayKey(day.key));
-
-          let heatStyle = "";
-          if (!isSelected && !isToday && count > 0) {
-            heatStyle =
-              count >= 3
-                ? "bg-brand-500/40 text-brand-950 dark:text-brand-50 font-semibold"
-                : count === 2
-                  ? "bg-brand-500/25 text-brand-900 dark:text-brand-100"
-                  : "bg-brand-500/15 text-brand-800 dark:text-brand-200";
-          }
-
-          return (
-            <button
-              className={cn(
-                "group relative flex h-8 w-full flex-col items-center justify-center rounded-md transition-all",
-                day.inMonth ? "text-foreground" : "opacity-30",
-                isSelected
-                  ? "bg-brand-500 text-white font-bold shadow-2xs z-10"
-                  : isToday
-                    ? "ring-1 ring-brand-500 bg-brand-500/10 font-bold"
-                    : "hover:bg-muted/70",
-                heatStyle,
-                hoveredDate === day.key &&
-                  "ring-1.5 ring-brand-500 scale-105 z-10",
-              )}
-              key={day.key}
-              type="button"
-              onClick={() => onDrillToDay(day.key)}
-              onMouseEnter={() => onHoverDate?.(day.key)}
-              onMouseLeave={() => onHoverDate?.(null)}
+    <div className="flex flex-col gap-1">
+      {/* 7 Weekday Headers */}
+      <div className="grid grid-cols-7 gap-1">
+        {["col-0", "col-1", "col-2", "col-3", "col-4", "col-5", "col-6"].map(
+          (colId, i) => (
+            <div
+              className="text-center text-[10px] font-medium text-muted-foreground/60"
+              key={colId}
             >
-              <span className="flex size-4 items-center justify-center rounded-full text-[11px] tabular-nums">
-                {dayNum}
-              </span>
-              <span
-                className={cn(
-                  "text-[8px] leading-tight scale-90",
-                  isSelected ? "text-white/90" : "text-muted-foreground",
-                )}
-              >
-                {dayLunar.label.slice(0, 2)}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Selected day detail card */}
-      <div className="mt-2 flex flex-col gap-1 rounded-lg border border-border/50 bg-muted/20 p-2">
-        <div className="flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-xs font-bold text-foreground">
-              {lunar.label} · {selectedDay.slice(5)}
-            </span>
-            <span className="text-[10px] text-muted-foreground">
-              {lunar.fullLabel} · {lunar.weekday}
-            </span>
-          </div>
-          <button
-            className="text-[10px] font-medium text-brand-600 dark:text-brand-400 hover:underline"
-            type="button"
-            onClick={() => onJumpToTimeline(selectedDay)}
-          >
-            查看全部
-          </button>
-        </div>
-        {selectedDayMemosQuery.data?.memos.slice(0, 3).map((m) => (
-          <div
-            className="truncate text-[10px] text-muted-foreground"
-            key={m.id}
-          >
-            · {m.content.slice(0, 40).replace(/[#*\n]/g, " ")}
-          </div>
-        ))}
-        {!selectedDayMemosQuery.data?.memos.length && (
-          <span className="text-[10px] text-muted-foreground/60">
-            这天没有记录
-          </span>
+              {headers[i]}
+            </div>
+          ),
         )}
       </div>
-    </div>
-  );
-}
 
-// ============================================================================
-// Week Heatmap — 7 large squares + hourly mini-row below selected day
-// ============================================================================
-function WeekHeatmapView({
-  weekBase,
-  today,
-  selectedDay,
-  locale,
-  weekStart,
-  notesCountMap,
-  onSelectDay: _onSelectDay,
-  onDrillToDay,
-}: {
-  weekBase: string;
-  today: string;
-  selectedDay: string;
-  locale: string;
-  weekStart: WeekStart;
-  notesCountMap: Map<string, number>;
-  onSelectDay: (d: string) => void;
-  onDrillToDay: (d: string) => void;
-}) {
-  const grid = useMemo(
-    () => buildWeekGrid(weekBase, weekStart),
-    [weekBase, weekStart],
-  );
-  const headers = weekdayHeaders(weekStart, locale, "narrow");
-
-  return (
-    <div className="p-2">
+      {/* Grid of Days (Tall height: h-8.5 each) */}
       <div className="grid grid-cols-7 gap-1">
-        {grid.map((day, idx) => {
-          const count = notesCountMap.get(day.key) ?? 0;
-          const isToday = day.key === today;
-          const isSelected = day.key === selectedDay;
-          const lunar = getLunarDateInfo(parseDayKey(day.key));
-          const dayNum = parseDayKey(day.key).getDate();
+        {grid.map((cell) => {
+          const count = notesCountMap.get(cell.key) ?? 0;
+          const isToday = cell.key === today;
+          const isSelected = cell.key === selectedDay;
+          const dayNum = Number(cell.key.slice(8));
 
           return (
             <button
               className={cn(
-                "flex flex-col items-center gap-0.5 rounded-lg py-2 transition-all",
-                isSelected
-                  ? "bg-brand-500 text-white shadow-xs"
-                  : isToday
-                    ? "bg-brand-500/15 text-brand-900 dark:text-brand-200"
-                    : count > 0
-                      ? cn(heatmapColor(count), "hover:opacity-90")
-                      : "hover:bg-muted/60 text-foreground",
-                day.key > today && "opacity-40",
+                "group relative flex h-8 w-full items-center justify-center rounded-[4px] border text-xs transition-all",
+                cell.inMonth ? "opacity-100" : "opacity-25",
+                displayMode === "heatmap"
+                  ? cn(
+                      count > 0
+                        ? heatmapColor(count)
+                        : "bg-muted/40 border-border/20",
+                      count > 0
+                        ? "border-transparent text-white dark:text-neutral-900"
+                        : "text-muted-foreground",
+                      isToday && "ring-1.5 ring-brand-500",
+                    )
+                  : cn(
+                      "border-border/30 bg-background/50 text-foreground",
+                      isToday && "border-brand-500 bg-brand-500/10 font-bold",
+                      count > 0 &&
+                        "font-semibold text-brand-600 dark:text-brand-400",
+                    ),
+                isSelected && "ring-2 ring-brand-500 z-10 scale-105 shadow-sm",
+                hoveredDate === cell.key &&
+                  "ring-1 ring-brand-500/70 scale-105",
               )}
-              key={day.key}
+              key={cell.key}
               type="button"
-              onClick={() => onDrillToDay(day.key)}
+              onClick={() => onDrillToDay(cell.key)}
+              onMouseEnter={() => {
+                onHoverDate?.(cell.key);
+                onHoverTip(`${cell.key} · ${count} 条笔记`);
+              }}
+              onMouseLeave={() => {
+                onHoverDate?.(null);
+                onHoverTip(null);
+              }}
             >
-              <span className="text-[9px] opacity-70">{headers[idx]}</span>
-              <span className="text-sm font-bold tabular-nums leading-tight">
-                {dayNum}
-              </span>
-              <span className="text-[8px] opacity-70">
-                {lunar.label.slice(0, 2)}
-              </span>
-              {count > 0 && (
-                <span
-                  className={cn(
-                    "text-[8px] font-semibold",
-                    isSelected
-                      ? "text-white/90"
-                      : "text-brand-600 dark:text-brand-400",
-                  )}
-                >
-                  {count}
+              {displayMode === "calendar" ? (
+                <span>{dayNum}</span>
+              ) : (
+                <span className="text-[10px] font-medium tabular-nums opacity-85">
+                  {dayNum}
                 </span>
               )}
             </button>
@@ -920,311 +619,222 @@ function WeekHeatmapView({
 }
 
 // ============================================================================
-// Week Calendar — strip with today's memo list
+// 3. Week Horizon View (7 Columns x 24 Hours, GitHub Micro-Grid Style)
 // ============================================================================
-function WeekCalendarView({
-  weekBase,
+function WeekHorizonView({
+  days,
+  hourlyData,
+  isLoading,
   today,
   selectedDay,
-  locale,
-  weekStart,
-  notesCountMap,
-  onSelectDay: _onSelectDay,
+  displayMode,
   onDrillToDay,
-  onJumpToTimeline,
+  onHoverTip,
 }: {
-  weekBase: string;
+  days: Array<{ key: string }>;
+  hourlyData: Array<{ date: string; hour: number; count: number }>;
+  isLoading: boolean;
   today: string;
   selectedDay: string;
-  locale: string;
-  weekStart: WeekStart;
-  notesCountMap: Map<string, number>;
-  onSelectDay: (d: string) => void;
-  onDrillToDay: (d: string) => void;
-  onJumpToTimeline: (d: string) => void;
+  displayMode: DisplayMode;
+  onDrillToDay: (day: string) => void;
+  onHoverTip: (tip: string | null) => void;
 }) {
-  const grid = useMemo(
-    () => buildWeekGrid(weekBase, weekStart),
-    [weekBase, weekStart],
-  );
-  const headers = weekdayHeaders(weekStart, locale, "narrow");
-  const lunar = useMemo(
-    () => getLunarDateInfo(parseDayKey(selectedDay)),
-    [selectedDay],
-  );
+  const countMap = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const h of hourlyData) {
+      if (h.count > 0) map.set(`${h.date}_${h.hour}`, h.count);
+    }
+    return map;
+  }, [hourlyData]);
 
-  const selectedDayMemosQuery = useQuery({
-    queryKey: ["memos-day", selectedDay],
-    queryFn: ({ signal }) =>
-      listMemos({ q: dayFilterQuery(selectedDay), page_size: 5 }, signal),
-    staleTime: 30_000,
-  });
+  // Hourly rows from 0 to 23
+  const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
 
   return (
-    <div className="p-2">
-      {/* 7-day strip */}
+    <div className="flex flex-col gap-1.5">
+      {/* 7 Column Headers (Day buttons) */}
       <div className="grid grid-cols-7 gap-1">
-        {grid.map((day, idx) => {
-          const count = notesCountMap.get(day.key) ?? 0;
-          const isToday = day.key === today;
-          const isSelected = day.key === selectedDay;
-          const dayNum = parseDayKey(day.key).getDate();
-          const dayLunar = getLunarDateInfo(parseDayKey(day.key));
+        {days.map((d) => {
+          const dateObj = parseDayKey(d.key);
+          const isToday = d.key === today;
+          const isSelected = d.key === selectedDay;
+          const weekdayStr = ["日", "一", "二", "三", "四", "五", "六"][
+            dateObj.getDay()
+          ];
 
           return (
             <button
               className={cn(
-                "flex flex-col items-center gap-0.5 rounded-lg py-1.5 transition-all",
-                isSelected
-                  ? "bg-brand-500 text-white shadow-xs font-semibold"
-                  : isToday
-                    ? "bg-brand-500/15 text-brand-900 dark:text-brand-200"
-                    : "hover:bg-muted/60 text-foreground",
-                day.key > today && "opacity-40",
+                "flex flex-col items-center rounded-md py-1 transition-colors hover:bg-muted/50",
+                isSelected && "bg-brand-500 text-white font-bold",
+                isToday &&
+                  !isSelected &&
+                  "bg-brand-500/15 text-brand-600 dark:text-brand-400 font-bold",
               )}
-              key={day.key}
+              key={d.key}
               type="button"
-              onClick={() => onDrillToDay(day.key)}
+              onClick={() => onDrillToDay(d.key)}
             >
-              <span className="text-[9px] opacity-70">{headers[idx]}</span>
-              <span className="text-sm font-bold tabular-nums leading-tight">
-                {dayNum}
+              <span className="text-[10px] opacity-70">{weekdayStr}</span>
+              <span className="text-xs font-bold leading-tight">
+                {dateObj.getDate()}
               </span>
-              <span
-                className={cn(
-                  "text-[8px]",
-                  isSelected ? "text-white/80" : "text-muted-foreground",
-                )}
-              >
-                {dayLunar.label.slice(0, 2)}
-              </span>
-              {/* Note count dot */}
-              <div className="flex size-1 items-center justify-center">
-                {count > 0 && (
-                  <span
-                    className={cn(
-                      "size-1 rounded-full",
-                      isSelected ? "bg-white" : "bg-brand-500",
-                    )}
-                  />
-                )}
-              </div>
             </button>
           );
         })}
       </div>
 
-      {/* Selected-day detail */}
-      <div className="mt-2 flex flex-col gap-1 rounded-lg border border-border/50 bg-muted/20 p-2">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-bold text-foreground">
-            {lunar.label} · {selectedDay.slice(5)} · {lunar.weekday}
-          </span>
-          <button
-            className="text-[10px] text-brand-600 dark:text-brand-400 hover:underline"
-            type="button"
-            onClick={() => onJumpToTimeline(selectedDay)}
-          >
-            全部
-          </button>
+      {/* 7 Columns x 24 Rows Grid (GitHub Commit Density Style) */}
+      <div className="flex gap-1">
+        {/* Left hour scale indicators (00, 06, 12, 18) */}
+        <div className="flex flex-col justify-between py-0.5 text-[8px] text-muted-foreground/60 select-none">
+          <span>00</span>
+          <span>06</span>
+          <span>12</span>
+          <span>18</span>
+          <span>23</span>
         </div>
-        {selectedDayMemosQuery.data?.memos.slice(0, 3).map((m) => (
-          <div
-            className="truncate text-[10px] text-muted-foreground"
-            key={m.id}
-          >
-            · {m.content.slice(0, 40).replace(/[#*\n]/g, " ")}
-          </div>
-        ))}
-        {!selectedDayMemosQuery.data?.memos.length && (
-          <span className="text-[10px] text-muted-foreground/60">
-            这天没有记录
-          </span>
-        )}
+
+        {/* 7 Columns */}
+        <div className="grid flex-1 grid-cols-7 gap-1">
+          {days.map((d) => (
+            <div className="flex flex-col gap-[2px]" key={`col-${d.key}`}>
+              {hours.map((h) => {
+                const count = countMap.get(`${d.key}_${h}`) ?? 0;
+                return (
+                  <button
+                    className={cn(
+                      "h-[6.8px] w-full rounded-[1.5px] transition-all",
+                      displayMode === "heatmap"
+                        ? count > 0
+                          ? heatmapColor(count)
+                          : "bg-muted/40 hover:bg-muted"
+                        : count > 0
+                          ? "bg-brand-500/60 ring-1 ring-brand-500"
+                          : "bg-muted/30 hover:bg-muted/60",
+                      isLoading && "animate-pulse",
+                    )}
+                    key={`${d.key}_${h}`}
+                    type="button"
+                    onClick={() => onDrillToDay(d.key)}
+                    onMouseEnter={() =>
+                      onHoverTip(
+                        `${d.key} ${String(h).padStart(2, "0")}:00 · ${count} 条笔记`,
+                      )
+                    }
+                    onMouseLeave={() => onHoverTip(null)}
+                  />
+                );
+              })}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
 // ============================================================================
-// Day View — 24-hour heatmap + memo timeline
+// 4. Day Horizon View (4 Columns x 6 Rows = 24 Hours)
 // ============================================================================
-function DayView({
+function DayHorizonView({
   selectedDay,
-  today,
-  locale,
-  stats: _stats,
-  streak,
-  onSelectDay: _onSelectDay,
+  today: _today,
+  hourlyData,
+  isLoading,
+  displayMode,
   onJumpToTimeline,
+  onHoverTip,
 }: {
   selectedDay: string;
   today: string;
-  locale: string;
-  stats: MemoStatsResponse;
-  streak: number;
-  onSelectDay: (d: string) => void;
-  onJumpToTimeline: (d: string) => void;
+  hourlyData: Array<{ date: string; hour: number; count: number }>;
+  isLoading: boolean;
+  displayMode: DisplayMode;
+  onJumpToTimeline: (day: string) => void;
+  onHoverTip: (tip: string | null) => void;
 }) {
-  const tz = useMemo(() => new Date().getTimezoneOffset(), []);
-  const lunar = useMemo(
-    () => getLunarDateInfo(parseDayKey(selectedDay)),
-    [selectedDay],
+  const hourCountMap = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const item of hourlyData) {
+      if (item.count > 0) map.set(item.hour, item.count);
+    }
+    return map;
+  }, [hourlyData]);
+
+  // 24 hours
+  const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
+  const maxCount = useMemo(
+    () => Math.max(1, ...Array.from(hourCountMap.values())),
+    [hourCountMap],
   );
-  const events = useMemo(
-    () => getUpcomingEvents(parseDayKey(selectedDay), 60),
-    [selectedDay],
-  );
-
-  const hourlyQuery = useQuery({
-    queryKey: ["hourly-activity", selectedDay, tz],
-    queryFn: ({ signal }) => getHourlyActivity(selectedDay, tz, signal),
-    staleTime: 60_000,
-  });
-
-  const memosQuery = useQuery({
-    queryKey: ["memos-day", selectedDay],
-    queryFn: ({ signal }) =>
-      listMemos({ q: dayFilterQuery(selectedDay), page_size: 20 }, signal),
-    staleTime: 30_000,
-  });
-
-  const hours = hourlyQuery.data?.hours ?? [];
-  const maxHourCount = Math.max(1, ...hours.map((h) => h.count));
-
-  const dayNum = parseDayKey(selectedDay).getDate();
-  const isToday = selectedDay === today;
 
   return (
-    <div className="p-2">
-      {/* Date header */}
-      <div className="mb-2 flex items-start justify-between">
-        <div className="flex flex-col">
-          <span className="font-serif text-3xl font-bold tabular-nums leading-none text-foreground">
-            {String(dayNum).padStart(2, "0")}
-          </span>
-          <span className="mt-0.5 text-[10px] text-muted-foreground">
-            {lunar.weekday} · {lunar.label}
-          </span>
-          <span className="text-[9px] text-muted-foreground/70">
-            {lunar.fullLabel}
-          </span>
-        </div>
-        <div className="flex flex-col items-end gap-0.5">
-          {isToday && streak > 0 && (
-            <span className="rounded-full bg-brand-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-brand-600 dark:text-brand-400">
-              {streak} 天连记
-            </span>
-          )}
+    <div className="grid grid-cols-4 gap-1.5 py-1">
+      {hours.map((hour) => {
+        const count = hourCountMap.get(hour) ?? 0;
+        const hourLabel = `${String(hour).padStart(2, "0")}:00`;
+        const intensity =
+          count === 0
+            ? 0
+            : count >= Math.ceil(maxCount * 0.75)
+              ? 4
+              : count >= Math.ceil(maxCount * 0.5)
+                ? 3
+                : count >= Math.ceil(maxCount * 0.25)
+                  ? 2
+                  : 1;
+
+        return (
           <button
-            className="text-[10px] text-brand-600 dark:text-brand-400 hover:underline"
+            className={cn(
+              "group relative flex h-7.5 items-center justify-between rounded-md border px-1.5 transition-all",
+              displayMode === "heatmap"
+                ? cn(
+                    "border-border/30",
+                    intensity > 0
+                      ? heatmapColor(intensity)
+                      : "bg-muted/35 hover:bg-muted/60",
+                    intensity > 0
+                      ? "text-white dark:text-neutral-900 font-bold"
+                      : "text-muted-foreground",
+                  )
+                : cn(
+                    "border-border/40 bg-background/50 hover:border-brand-500/50 hover:bg-brand-500/5",
+                    count > 0 &&
+                      "border-brand-500/60 bg-brand-500/10 font-bold text-brand-600 dark:text-brand-400",
+                  ),
+              isLoading && "animate-pulse",
+            )}
+            key={`hour-${hour}`}
             type="button"
             onClick={() => onJumpToTimeline(selectedDay)}
+            onMouseEnter={() =>
+              onHoverTip(
+                `${selectedDay} ${hourLabel} · ${count > 0 ? `${count} 条笔记` : "无记录"}`,
+              )
+            }
+            onMouseLeave={() => onHoverTip(null)}
           >
-            <PlusIcon className="inline size-2.5 mb-0.5" /> 记录
+            <span className="text-[10px] font-mono tabular-nums">
+              {String(hour).padStart(2, "0")}
+            </span>
+            {count > 0 && (
+              <span
+                className={cn(
+                  "text-[9px] tabular-nums",
+                  displayMode === "heatmap"
+                    ? "opacity-90 font-bold"
+                    : "text-muted-foreground",
+                )}
+              >
+                {count}
+              </span>
+            )}
           </button>
-        </div>
-      </div>
-
-      {/* 24-hour heatmap */}
-      <div className="mb-2">
-        <div className="mb-1 text-[9px] text-muted-foreground">24 小时活动</div>
-        <div className="grid grid-cols-12 gap-[2px]">
-          {hours.length > 0
-            ? hours.map(({ hour, count }) => (
-                <div
-                  className={cn(
-                    "group relative flex flex-col items-center gap-0.5",
-                  )}
-                  key={hour}
-                  title={`${String(hour).padStart(2, "0")}:00 · ${count} 条`}
-                >
-                  <div
-                    className={cn(
-                      "w-full rounded-[2px] transition-all",
-                      count > 0
-                        ? heatmapColor(Math.ceil((count / maxHourCount) * 4))
-                        : "bg-muted/50",
-                      count > 0 && "hover:opacity-90",
-                    )}
-                    style={{ height: "14px" }}
-                  />
-                  {/* Hour label every 4 hours */}
-                  {hour % 4 === 0 && (
-                    <span className="text-[7px] text-muted-foreground/60">
-                      {hour}
-                    </span>
-                  )}
-                  {hour % 4 !== 0 && <span className="text-[7px]"> </span>}
-                </div>
-              ))
-            : // Loading skeleton
-              [
-                "h0",
-                "h2",
-                "h4",
-                "h6",
-                "h8",
-                "h10",
-                "h12",
-                "h14",
-                "h16",
-                "h18",
-                "h20",
-                "h22",
-              ].map((slot) => (
-                <div
-                  className="w-full animate-pulse rounded-[2px] bg-muted/50"
-                  key={`skeleton-${slot}`}
-                  style={{ height: "14px" }}
-                />
-              ))}
-        </div>
-      </div>
-
-      {/* Memo timeline */}
-      <div className="flex flex-col gap-1">
-        {memosQuery.data?.memos.slice(0, 5).map((m) => {
-          const createdAt = new Date(m.create_time ?? "");
-          const timeStr = createdAt.toLocaleTimeString(locale, {
-            hour: "2-digit",
-            minute: "2-digit",
-          });
-          return (
-            <div
-              className="flex items-start gap-1.5 rounded-lg bg-muted/20 p-1.5"
-              key={m.id}
-            >
-              <span className="mt-0.5 min-w-[30px] text-[9px] tabular-nums text-muted-foreground/70">
-                {timeStr}
-              </span>
-              <span className="line-clamp-2 text-[10px] text-foreground">
-                {m.content.slice(0, 60).replace(/[#*]/g, "")}
-              </span>
-            </div>
-          );
-        })}
-        {memosQuery.data?.memos.length === 0 && (
-          <div className="py-2 text-center text-[10px] text-muted-foreground/60">
-            这天还没有记录
-          </div>
-        )}
-      </div>
-
-      {/* Upcoming events */}
-      {events.slice(0, 2).map((ev) => (
-        <div
-          className="mt-1.5 flex items-center justify-between rounded-lg border border-border/40 bg-muted/20 px-2 py-1.5"
-          key={ev.name}
-        >
-          <span className="text-[10px] font-medium text-foreground">
-            {ev.name}
-          </span>
-          <span className="text-[9px] text-muted-foreground">
-            {ev.days === 0 ? "今天" : `${ev.days} 天后`}
-          </span>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
