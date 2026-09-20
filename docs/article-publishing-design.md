@@ -104,6 +104,8 @@
 
 `/articles`（列表：草稿/已发布）→ 右上「写文章」按钮调 `POST /api/app/articles` 即建草稿行并跳 `/articles/<uuid>/edit`（**无独立 `/articles/new` 路由**）：标题输入 + 全屏 TipTap（§2.2 扩展集，图片上传复用现有 `image-insert` 编排并绑 `articleId`）+ 2s debounce 自动保存 + 发布对话框（自定义 slug / SEO description / 公开确认；封面 `coverAttachmentId` 字段与 SSR og:image 已就绪，**编辑器 UI 未做**）。
 
+> 2026-09-20 增补：发布入口已定稿第二形态——主页 composer「全屏写作」统一入口，全屏内选类型（记录/文章），文章路径经 `attachment_names` 认领预上传附件。详见 `docs/composer-fullscreen-article-design.md`。
+
 ### 3.4 发布链路（worker）
 
 `apps/worker/src/routes/article-page.ts`，复刻 share-page 基建（企业实例的 `run_worker_first` 是**路径白名单**——`flaremo-cloud/deployments/enterprise-kosx/wrangler.jsonc`，新顶级路径必须显式加入；本轮已补 `/article/*`、`/sitemap.xml`、`/sitemap-articles.xml`、`/feed.xml` 并 curl 实测）：
