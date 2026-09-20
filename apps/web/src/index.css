@@ -539,6 +539,10 @@
     @apply mt-3;
   }
 
+  .memo-markdown p + p {
+    @apply mt-1;
+  }
+
   .memo-markdown h1 {
     @apply text-xl font-semibold tracking-tight;
   }
@@ -678,7 +682,7 @@
   }
 
   .composer-editor-content p + p {
-    @apply mt-3;
+    @apply mt-1;
   }
 
   .composer-editor-content h1 {

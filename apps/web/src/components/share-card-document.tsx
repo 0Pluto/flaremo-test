@@ -152,6 +152,7 @@ function styleToCSS(
   if (style.gap !== undefined) css.gap = style.gap;
   if (style.width !== undefined) css.width = style.width;
   if (style.height !== undefined) css.height = style.height;
+  if (style.minHeight !== undefined) css.minHeight = style.minHeight;
   if (style.flex !== undefined) {
     css.flexGrow = style.flex;
     css.flexShrink = 1;
@@ -362,7 +363,7 @@ export function ShareCardDocumentView({
   mode: "light" | "dark";
 }) {
   return (
-    <div style={{ width, height, overflow: "hidden" }}>
+    <div style={{ width, minHeight: height, boxSizing: "border-box" }}>
       {renderNode(document.root, context, mode, 0)}
     </div>
   );

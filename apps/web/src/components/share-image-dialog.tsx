@@ -47,7 +47,7 @@ type ShareImageDialogProps = {
 };
 
 /** Card-image body: markdown flattened to the text a picture should carry. */
-function shareBodyText(content: string) {
+export function shareBodyText(content: string) {
   return content
     .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
     .replace(/^- \[[ xX]\] /gm, "☐ ")
@@ -56,6 +56,7 @@ function shareBodyText(content: string) {
     .replace(/\*([^*]+)\*/g, "$1")
     .replace(/`([^`]+)`/g, "$1")
     .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
 
@@ -241,7 +242,7 @@ export function ShareImageDialog({
           <DialogTitle>{t("share.imageTitle")}</DialogTitle>
           <DialogDescription>{t("share.imageSubtitle")}</DialogDescription>
         </DialogHeader>
-        <div className="flex justify-center py-2">
+        <div className="flex justify-center py-2 max-h-[60vh] overflow-y-auto rounded-lg bg-muted/20 p-2 [scrollbar-width:thin]">
           {payload?.kind === "document" && (
             <div ref={previewRef}>
               <ShareCardDocumentView
