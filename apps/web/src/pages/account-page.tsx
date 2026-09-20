@@ -1,31 +1,21 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+/**
+ * The settings dialog shell: the modal's frame (mobile master/detail and the
+ * desktop split view), the queries its header and detail panes read, and the
+ * two exported entry points. The nav table lives in `account/settings-nav`,
+ * the section bodies in `account/settings-section-content`, and the server
+ * writes in `account/use-account-settings-mutations`.
+ */
+
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
-  ArrowDownUpIcon,
-  BellRingIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  FileUpIcon,
-  GaugeIcon,
   LogOutIcon,
-  type LucideIcon,
-  MicIcon,
-  PaintbrushIcon,
-  PuzzleIcon,
-  SunMoonIcon,
-  UsersIcon,
-  WebhookIcon,
   XIcon,
 } from "lucide-react";
-import { lazy, type ReactNode, Suspense, useEffect, useState } from "react";
-import { toast } from "sonner";
+import { useEffect, useState } from "react";
 import {
-  changeEmail,
-  createExportTask,
-  createPersonalAccessToken,
-  deleteAccount,
-  deleteAvatar,
-  deletePersonalAccessToken,
   getAdminBranding,
   getAdminPluginSettings,
   getAppInfo,
@@ -36,72 +26,23 @@ import {
   listAdminUsers,
   listDataTasks,
   listPersonalAccessTokens,
-  revokePersonalAccessToken,
-  updateCurrentUserProfile,
-  uploadAvatar,
 } from "@/api";
 import { authClient } from "@/auth-client";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/i18n";
-import { errorMessage } from "@/lib/error";
 import { cn } from "@/lib/utils";
-import { AccountPanel, MIN_PASSWORD_LENGTH } from "./account/account-panel";
-import { AppearancePanel } from "./account/appearance-panel";
+import type { AccountPanelProps } from "./account/account-panel";
 import { SettingsRow, SettingsSectionGroup } from "./account/apple-settings-ui";
+import type { SettingsSection } from "./account/settings-nav";
+import { settingsNavGroups } from "./account/settings-nav";
 import {
-  EmailSettingsCard,
-  OauthSettingsCard,
-} from "./account/integrations-card";
-import { PushPanel } from "./account/push-panel";
-import { TransferPanel } from "./account/transfer-panel";
-import { UploadsPanel } from "./account/uploads-panel";
-import { UsagePanel } from "./account/usage-panel";
-import { PluginsCard } from "./admin/plugins-card";
-import { AdminPanel, BrandingCard } from "./admin-page";
-
-const VoicePanel = lazy(() =>
-  import("./account/voice-panel").then((module) => ({
-    default: module.VoicePanel,
-  })),
-);
-
-type SettingsSection =
-  | "account"
-  | "appearance"
-  | "uploads"
-  | "push"
-  | "voice"
-  | "usage"
-  | "transfer"
-  | "team"
-  | "branding"
-  | "plugins"
-  | "integrations";
-
-type NavItem = {
-  id: SettingsSection;
-  icon: LucideIcon;
-  iconBg: string;
-  label: string;
-};
-
-type NavGroup = {
-  titleKey?: "settings.group.preferences" | "settings.group.admin";
-  items: NavItem[];
-};
-
-function VoicePanelSkeleton() {
-  return (
-    <div className="flex flex-col gap-3 p-4">
-      <Skeleton className="h-12 w-full rounded-xl" />
-      <Skeleton className="h-28 w-full rounded-xl" />
-    </div>
-  );
-}
+  roleLabel,
+  SettingsSectionContent,
+} from "./account/settings-section-content";
+import { useAccountSettingsMutations } from "./account/use-account-settings-mutations";
 
 export function AccountSettingsDialog({
   open,
@@ -111,7 +52,6 @@ export function AccountSettingsDialog({
   onClose: () => void;
 }) {
   const { locale, t } = useI18n();
-  const navigate = useNavigate({ from: "/account" });
   const queryClient = useQueryClient();
   const session = authClient.useSession();
   const [section, setSection] = useState<SettingsSection>("account");
@@ -152,15 +92,6 @@ export function AccountSettingsDialog({
     }
   }, [session.data?.user.username]);
 
-  const deleteAccountMutation = useMutation({
-    mutationFn: deleteAccount,
-    onSuccess: async () => {
-      queryClient.clear();
-      await authClient.signOut().catch(() => undefined);
-      await navigate({ replace: true, to: "/login" });
-    },
-  });
-
   const tokensQuery = useQuery({
     queryKey: ["personal-access-tokens"],
     queryFn: listPersonalAccessTokens,
@@ -183,34 +114,64 @@ export function AccountSettingsDialog({
     }
   }, [meQuery.data?.name, session.data?.user.name]);
 
-  const updateProfileMutation = useMutation({
-    mutationFn: updateCurrentUserProfile,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["current-flaremo-user"],
-      });
-      await session.refetch();
-    },
-  });
+  const {
+    changeEmailMutation,
+    changePasswordMutation,
+    createTokenMutation,
+    deleteAccountMutation,
+    deleteAvatarMutation,
+    deleteTokenMutation,
+    retryExportMutation,
+    revokeTokenMutation,
+    updateProfileMutation,
+    updateUsernameMutation,
+    uploadAvatarMutation,
 
-  const uploadAvatarMutation = useMutation({
-    mutationFn: uploadAvatar,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["current-flaremo-user"],
-      });
-      await session.refetch();
-    },
-  });
-
-  const deleteAvatarMutation = useMutation({
-    mutationFn: deleteAvatar,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["current-flaremo-user"],
-      });
-      await session.refetch();
-    },
+    handleAvatarDelete,
+    handleAvatarUpload,
+    handleAvatarUrlSubmit,
+    handleCopyToken,
+    handleCreateToken,
+    handleDeleteAccount,
+    handleDeleteToken,
+    handleEmailSubmit,
+    handleNameSubmit,
+    handlePasswordSubmit,
+    handleRevokeToken,
+    handleSignOut,
+    handleUsernameSubmit,
+  } = useAccountSettingsMutations({
+    createdToken,
+    currentPassword,
+    deletePassword,
+    emailCurrentPassword,
+    name,
+    newEmail,
+    newPassword,
+    newPasswordConfirmation,
+    session,
+    setAccountError,
+    setAvatarError,
+    setCopied,
+    setCreatedToken,
+    setCurrentPassword,
+    setDeleteError,
+    setDeletePassword,
+    setEmailCurrentPassword,
+    setEmailError,
+    setEmailVerificationPending,
+    setNameError,
+    setNewEmail,
+    setNewPassword,
+    setNewPasswordConfirmation,
+    setPasswordError,
+    setTokenError,
+    setTokenExpiryDays,
+    setTokenName,
+    t,
+    tokenExpiryDays,
+    tokenName,
+    username,
   });
 
   const showVoiceSettings = meQuery.data?.can_manage_voice_service === true;
@@ -256,237 +217,6 @@ export function AccountSettingsDialog({
     },
   });
 
-  const retryExportMutation = useMutation({
-    mutationFn: createExportTask,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["data-tasks"] });
-    },
-    onError: (error) =>
-      toast.error(errorMessage(error, t("transfer.retryFailed"))),
-  });
-
-  const updateUsernameMutation = useMutation({
-    mutationFn: async (nextUsername: string) => {
-      const result = await authClient.updateUser({ username: nextUsername });
-      if (result.error) throw result.error;
-    },
-    onSuccess: async () => {
-      await session.refetch();
-      await queryClient.invalidateQueries({
-        queryKey: ["current-flaremo-user"],
-      });
-      await queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-    },
-  });
-
-  const changePasswordMutation = useMutation({
-    mutationFn: async (input: {
-      currentPassword: string;
-      newPassword: string;
-    }) => {
-      const result = await authClient.changePassword({
-        currentPassword: input.currentPassword,
-        newPassword: input.newPassword,
-        revokeOtherSessions: true,
-      });
-      if (result.error) throw result.error;
-    },
-  });
-
-  const changeEmailMutation = useMutation({
-    mutationFn: changeEmail,
-    onSuccess: async (result) => {
-      setEmailVerificationPending(result.verification_sent === true);
-      await session.refetch();
-    },
-  });
-
-  const createTokenMutation = useMutation({
-    mutationFn: createPersonalAccessToken,
-    onSuccess: async (result) => {
-      setCreatedToken(result.token);
-      setCopied(false);
-      setTokenName("");
-      setTokenExpiryDays("");
-      await queryClient.invalidateQueries({
-        queryKey: ["personal-access-tokens"],
-      });
-    },
-  });
-
-  const revokeTokenMutation = useMutation({
-    mutationFn: revokePersonalAccessToken,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["personal-access-tokens"],
-      });
-    },
-  });
-
-  const deleteTokenMutation = useMutation({
-    mutationFn: deletePersonalAccessToken,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["personal-access-tokens"],
-      });
-    },
-  });
-
-  const handleNameSubmit = async () => {
-    setNameError(null);
-    try {
-      await updateProfileMutation.mutateAsync({ name: name.trim() });
-    } catch (error) {
-      setNameError(errorMessage(error, t("auth.nameUpdateFailed")));
-    }
-  };
-
-  const handleAvatarUpload = async (file: File) => {
-    setAvatarError(null);
-    try {
-      await uploadAvatarMutation.mutateAsync(file);
-    } catch (error) {
-      setAvatarError(errorMessage(error, t("auth.avatarUpdateFailed")));
-    }
-  };
-
-  const handleAvatarUrlSubmit = async (url: string) => {
-    setAvatarError(null);
-    try {
-      await updateProfileMutation.mutateAsync({ avatar_url: url.trim() });
-    } catch (error) {
-      setAvatarError(errorMessage(error, t("auth.avatarUpdateFailed")));
-    }
-  };
-
-  const handleAvatarDelete = async () => {
-    setAvatarError(null);
-    try {
-      await deleteAvatarMutation.mutateAsync();
-    } catch (error) {
-      setAvatarError(errorMessage(error, t("auth.avatarUpdateFailed")));
-    }
-  };
-
-  const handleUsernameSubmit = async () => {
-    setAccountError(null);
-    try {
-      await updateUsernameMutation.mutateAsync(username.trim());
-    } catch (error) {
-      setAccountError(errorMessage(error, t("auth.usernameUpdateFailed")));
-    }
-  };
-
-  const handlePasswordSubmit = async () => {
-    if (newPassword.length < MIN_PASSWORD_LENGTH) {
-      setPasswordError(t("auth.passwordLength"));
-      return;
-    }
-    if (newPassword !== newPasswordConfirmation) {
-      setPasswordError(t("auth.passwordMismatch"));
-      return;
-    }
-    setPasswordError(null);
-    try {
-      await changePasswordMutation.mutateAsync({
-        currentPassword,
-        newPassword,
-      });
-      setCurrentPassword("");
-      setNewPassword("");
-      setNewPasswordConfirmation("");
-    } catch (error) {
-      setPasswordError(errorMessage(error, t("auth.passwordUpdateFailed")));
-    }
-  };
-
-  const handleEmailSubmit = async () => {
-    setEmailError(null);
-    setEmailVerificationPending(false);
-    try {
-      await changeEmailMutation.mutateAsync({
-        current_password: emailCurrentPassword,
-        new_email: newEmail.trim(),
-      });
-      setNewEmail("");
-      setEmailCurrentPassword("");
-    } catch (error) {
-      setEmailError(errorMessage(error, t("auth.emailUpdateFailed")));
-    }
-  };
-
-  const handleCreateToken = async () => {
-    const normalizedDays = tokenExpiryDays.trim();
-    const expiresInDays = Number(normalizedDays);
-    if (
-      !tokenName.trim() ||
-      (normalizedDays &&
-        (!Number.isInteger(expiresInDays) ||
-          expiresInDays < 1 ||
-          expiresInDays > 365))
-    ) {
-      setTokenError(t("auth.tokenValidation"));
-      return;
-    }
-    setTokenError(null);
-    try {
-      await createTokenMutation.mutateAsync({
-        expires_in_days: normalizedDays ? expiresInDays : null,
-        name: tokenName.trim(),
-      });
-    } catch (error) {
-      setTokenError(errorMessage(error, t("auth.tokenCreateFailed")));
-    }
-  };
-
-  const handleCopyToken = async () => {
-    if (!createdToken) return;
-    try {
-      await navigator.clipboard.writeText(createdToken);
-      setCopied(true);
-    } catch {
-      setTokenError(t("auth.copyFailed"));
-    }
-  };
-
-  const handleRevokeToken = async (id: string) => {
-    setTokenError(null);
-    try {
-      await revokeTokenMutation.mutateAsync(id);
-    } catch (error) {
-      setTokenError(errorMessage(error, t("auth.tokenRevokeFailed")));
-    }
-  };
-
-  const handleDeleteToken = async (id: string) => {
-    setTokenError(null);
-    try {
-      await deleteTokenMutation.mutateAsync(id);
-    } catch (error) {
-      setTokenError(errorMessage(error, t("auth.tokenDeleteFailed")));
-    }
-  };
-
-  const handleDeleteAccount = () => {
-    setDeleteError(null);
-    return deleteAccountMutation
-      .mutateAsync(deletePassword)
-      .then(() => setDeletePassword(""))
-      .catch((error: unknown) => {
-        setDeleteError(errorMessage(error, t("auth.deleteAccountFailed")));
-      });
-  };
-
-  const handleSignOut = async () => {
-    try {
-      await authClient.signOut();
-    } catch {
-      // Ignore offline sign out failure
-    }
-    queryClient.clear();
-    await navigate({ replace: true, to: "/login" });
-  };
-
   const isTeamAdmin =
     meQuery.data?.role === "owner" || meQuery.data?.role === "admin";
   const isInstanceOwner = meQuery.data?.is_instance_owner === true;
@@ -519,229 +249,96 @@ export function AccountSettingsDialog({
     return undefined;
   }, [meQuery.data?.can_manage_voice_service, open, queryClient]);
 
-  const navGroups: NavGroup[] = [
-    {
-      titleKey: "settings.group.preferences",
-      items: [
-        {
-          icon: SunMoonIcon,
-          iconBg: "bg-muted text-muted-foreground",
-          id: "appearance",
-          label: t("settings.nav.appearance"),
-        },
-        {
-          icon: FileUpIcon,
-          iconBg: "bg-muted text-muted-foreground",
-          id: "uploads",
-          label: t("settings.nav.uploads"),
-        },
-        {
-          icon: BellRingIcon,
-          iconBg: "bg-muted text-muted-foreground",
-          id: "push",
-          label: t("settings.nav.push"),
-        },
-        ...(showVoiceSettings
-          ? [
-              {
-                icon: MicIcon,
-                iconBg: "bg-muted text-muted-foreground",
-                id: "voice" as const,
-                label: t("settings.nav.voice"),
-              },
-            ]
-          : []),
-        {
-          icon: GaugeIcon,
-          iconBg: "bg-muted text-muted-foreground",
-          id: "usage",
-          label: t("auth.tab.usage"),
-        },
-        {
-          icon: ArrowDownUpIcon,
-          iconBg: "bg-muted text-muted-foreground",
-          id: "transfer",
-          label: t("settings.nav.transfer"),
-        },
-      ],
-    },
-    ...(isTeamAdmin
-      ? [
-          {
-            titleKey: "settings.group.admin" as const,
-            items: [
-              {
-                icon: UsersIcon,
-                iconBg: "bg-muted text-muted-foreground",
-                id: "team" as const,
-                label: t("auth.tab.admin"),
-              },
-              ...(isInstanceOwner
-                ? [
-                    {
-                      icon: PaintbrushIcon,
-                      iconBg: "bg-muted text-muted-foreground",
-                      id: "branding" as const,
-                      label: t("auth.tab.branding"),
-                    },
-                    {
-                      icon: PuzzleIcon,
-                      iconBg: "bg-muted text-muted-foreground",
-                      id: "plugins" as const,
-                      label: t("auth.tab.plugins"),
-                    },
-                    {
-                      icon: WebhookIcon,
-                      iconBg: "bg-muted text-muted-foreground",
-                      id: "integrations" as const,
-                      label: t("settings.nav.integrations"),
-                    },
-                  ]
-                : []),
-            ],
-          },
-        ]
-      : []),
-  ];
+  const navGroups = settingsNavGroups({
+    t,
+    showVoiceSettings,
+    isTeamAdmin,
+    isInstanceOwner,
+  });
 
   const allItems = navGroups.flatMap((group) => group.items);
   const activeSection = allItems.find((item) => item.id === section);
   const activeLabel = activeSection?.label ?? t("settings.group.account");
 
-  const contentBySection: Record<SettingsSection, ReactNode> = {
-    account: (
-      <AccountPanel
-        currentAvatarUrl={
-          meQuery.data?.avatar_url ?? session.data?.user.image ?? null
-        }
-        currentName={
-          meQuery.data?.name ??
-          session.data?.user.name ??
-          session.data?.user.username ??
-          ""
-        }
-        name={name}
-        setName={setName}
-        onNameSubmit={handleNameSubmit}
-        updateNameIsPending={updateProfileMutation.isPending}
-        nameError={nameError}
-        avatarError={avatarError}
-        avatarIsPending={
-          uploadAvatarMutation.isPending ||
-          deleteAvatarMutation.isPending ||
-          updateProfileMutation.isPending
-        }
-        onAvatarUpload={handleAvatarUpload}
-        onAvatarUrlSubmit={handleAvatarUrlSubmit}
-        onAvatarDelete={handleAvatarDelete}
-        accountError={accountError}
-        changeEmailIsPending={changeEmailMutation.isPending}
-        changePasswordIsPending={changePasswordMutation.isPending}
-        copied={copied}
-        createTokenIsPending={createTokenMutation.isPending}
-        createdToken={createdToken}
-        currentEmail={session.data?.user.email ?? ""}
-        currentPassword={currentPassword}
-        currentUsername={session.data?.user.username ?? ""}
-        deleteAccountIsPending={deleteAccountMutation.isPending}
-        deleteError={deleteError}
-        deletePassword={deletePassword}
-        deletingTokenId={
-          deleteTokenMutation.isPending
-            ? deleteTokenMutation.variables
-            : undefined
-        }
-        emailCurrentPassword={emailCurrentPassword}
-        emailError={emailError}
-        emailProviderDisabled={appInfoQuery.data?.email_provider === "none"}
-        emailVerificationPending={emailVerificationPending}
-        isOwner={isInstanceOwner}
-        locale={locale}
-        newEmail={newEmail}
-        newPassword={newPassword}
-        newPasswordConfirmation={newPasswordConfirmation}
-        passwordError={passwordError}
-        readerExpiry={
-          meQuery.data?.role === "reader"
-            ? (meQuery.data.reader_expires_at ?? null)
-            : null
-        }
-        revokingTokenId={
-          revokeTokenMutation.isPending
-            ? revokeTokenMutation.variables
-            : undefined
-        }
-        setCurrentPassword={setCurrentPassword}
-        setDeletePassword={setDeletePassword}
-        setEmailCurrentPassword={setEmailCurrentPassword}
-        setNewEmail={setNewEmail}
-        setNewPassword={setNewPassword}
-        setNewPasswordConfirmation={setNewPasswordConfirmation}
-        setTokenExpiryDays={setTokenExpiryDays}
-        setTokenName={setTokenName}
-        setUsername={setUsername}
-        t={t}
-        tokenError={tokenError}
-        tokenExpiryDays={tokenExpiryDays}
-        tokenName={tokenName}
-        tokensQuery={tokensQuery}
-        updateUsernameIsPending={updateUsernameMutation.isPending}
-        username={username}
-        onCopyToken={handleCopyToken}
-        onCreateToken={handleCreateToken}
-        onDeleteAccount={handleDeleteAccount}
-        onDeleteToken={handleDeleteToken}
-        onEmailSubmit={handleEmailSubmit}
-        onHideCreatedToken={() => setCreatedToken(null)}
-        onPasswordSubmit={handlePasswordSubmit}
-        onRevokeToken={handleRevokeToken}
-        onUsernameSubmit={handleUsernameSubmit}
-      />
-    ),
-    appearance: <AppearancePanel t={t} />,
-    uploads: <UploadsPanel />,
-    push: <PushPanel />,
-    voice: showVoiceSettings ? (
-      <Suspense fallback={<VoicePanelSkeleton />}>
-        <VoicePanel key={session.data?.user.id} />
-      </Suspense>
-    ) : null,
-    usage: (
-      <UsagePanel
-        t={t}
-        vectorUsageQuery={vectorUsageQuery}
-        cfUsageQuery={cfUsageQuery}
-      />
-    ),
-    transfer: (
-      <TransferPanel
-        dataTasksQuery={dataTasksQuery}
-        createExportIsPending={retryExportMutation.isPending}
-        retryExportIsPending={retryExportMutation.isPending}
-        t={t}
-        onCreateExport={() => retryExportMutation.mutate()}
-        onRetryExport={() => retryExportMutation.mutate()}
-      />
-    ),
-    team: isTeamAdmin ? <AdminPanel /> : null,
-    branding: isInstanceOwner ? <BrandingCard /> : null,
-    plugins: isInstanceOwner ? <PluginsCard /> : null,
-    integrations: isInstanceOwner ? (
-      <div className="flex flex-col gap-5">
-        <EmailSettingsCard />
-        <OauthSettingsCard />
-      </div>
-    ) : null,
+  const accountPanel: AccountPanelProps = {
+    currentAvatarUrl:
+      meQuery.data?.avatar_url ?? session.data?.user.image ?? null,
+    currentName:
+      meQuery.data?.name ??
+      session.data?.user.name ??
+      session.data?.user.username ??
+      "",
+    name,
+    setName,
+    onNameSubmit: handleNameSubmit,
+    updateNameIsPending: updateProfileMutation.isPending,
+    nameError,
+    avatarError,
+    avatarIsPending:
+      uploadAvatarMutation.isPending ||
+      deleteAvatarMutation.isPending ||
+      updateProfileMutation.isPending,
+    onAvatarUpload: handleAvatarUpload,
+    onAvatarUrlSubmit: handleAvatarUrlSubmit,
+    onAvatarDelete: handleAvatarDelete,
+    accountError,
+    changeEmailIsPending: changeEmailMutation.isPending,
+    changePasswordIsPending: changePasswordMutation.isPending,
+    copied,
+    createTokenIsPending: createTokenMutation.isPending,
+    createdToken,
+    currentEmail: session.data?.user.email ?? "",
+    currentPassword,
+    currentUsername: session.data?.user.username ?? "",
+    deleteAccountIsPending: deleteAccountMutation.isPending,
+    deleteError,
+    deletePassword,
+    deletingTokenId: deleteTokenMutation.isPending
+      ? deleteTokenMutation.variables
+      : undefined,
+    emailCurrentPassword,
+    emailError,
+    emailProviderDisabled: appInfoQuery.data?.email_provider === "none",
+    emailVerificationPending,
+    isOwner: isInstanceOwner,
+    locale,
+    newEmail,
+    newPassword,
+    newPasswordConfirmation,
+    passwordError,
+    readerExpiry:
+      meQuery.data?.role === "reader"
+        ? (meQuery.data.reader_expires_at ?? null)
+        : null,
+    revokingTokenId: revokeTokenMutation.isPending
+      ? revokeTokenMutation.variables
+      : undefined,
+    setCurrentPassword,
+    setDeletePassword,
+    setEmailCurrentPassword,
+    setNewEmail,
+    setNewPassword,
+    setNewPasswordConfirmation,
+    setTokenExpiryDays,
+    setTokenName,
+    setUsername,
+    t,
+    tokenError,
+    tokenExpiryDays,
+    tokenName,
+    tokensQuery,
+    updateUsernameIsPending: updateUsernameMutation.isPending,
+    username,
+    onCopyToken: handleCopyToken,
+    onCreateToken: handleCreateToken,
+    onDeleteAccount: handleDeleteAccount,
+    onDeleteToken: handleDeleteToken,
+    onEmailSubmit: handleEmailSubmit,
+    onHideCreatedToken: () => setCreatedToken(null),
+    onPasswordSubmit: handlePasswordSubmit,
+    onRevokeToken: handleRevokeToken,
+    onUsernameSubmit: handleUsernameSubmit,
   };
-
-  const roleLabel =
-    meQuery.data?.role === "owner"
-      ? "所有者"
-      : meQuery.data?.role === "admin"
-        ? "管理员"
-        : meQuery.data?.role === "reader"
-          ? "读者"
-          : "成员";
 
   return (
     <Dialog
@@ -819,7 +416,7 @@ export function AccountSettingsDialog({
                       variant="secondary"
                       className="h-4 px-1.5 text-xs font-normal"
                     >
-                      {roleLabel}
+                      {roleLabel(meQuery.data?.role)}
                     </Badge>
                   </div>
                 </div>
@@ -900,7 +497,21 @@ export function AccountSettingsDialog({
               className="flex flex-col gap-4 motion-safe:animate-fade"
               key={section}
             >
-              {contentBySection[section]}
+              <SettingsSectionContent
+                accountPanel={accountPanel}
+                cfUsageQuery={cfUsageQuery}
+                dataTasksQuery={dataTasksQuery}
+                isInstanceOwner={isInstanceOwner}
+                isTeamAdmin={isTeamAdmin}
+                onCreateExport={() => retryExportMutation.mutate()}
+                onRetryExport={() => retryExportMutation.mutate()}
+                retryExportIsPending={retryExportMutation.isPending}
+                section={section}
+                showVoiceSettings={showVoiceSettings}
+                t={t}
+                vectorUsageQuery={vectorUsageQuery}
+                voiceUserId={session.data?.user.id}
+              />
             </div>
           </div>
         </div>
@@ -947,7 +558,7 @@ export function AccountSettingsDialog({
                   variant="secondary"
                   className="h-4 px-1.5 text-xs font-normal"
                 >
-                  {roleLabel}
+                  {roleLabel(meQuery.data?.role)}
                 </Badge>
               </div>
               <p className="truncate text-xs text-muted-foreground mt-0.5">
@@ -1035,7 +646,21 @@ export function AccountSettingsDialog({
                 className="flex flex-col gap-4 motion-safe:animate-fade"
                 key={section}
               >
-                {contentBySection[section]}
+                <SettingsSectionContent
+                  accountPanel={accountPanel}
+                  cfUsageQuery={cfUsageQuery}
+                  dataTasksQuery={dataTasksQuery}
+                  isInstanceOwner={isInstanceOwner}
+                  isTeamAdmin={isTeamAdmin}
+                  onCreateExport={() => retryExportMutation.mutate()}
+                  onRetryExport={() => retryExportMutation.mutate()}
+                  retryExportIsPending={retryExportMutation.isPending}
+                  section={section}
+                  showVoiceSettings={showVoiceSettings}
+                  t={t}
+                  vectorUsageQuery={vectorUsageQuery}
+                  voiceUserId={session.data?.user.id}
+                />
               </div>
             </div>
           </div>
