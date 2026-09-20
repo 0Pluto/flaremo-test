@@ -85,8 +85,9 @@ export function YearHorizonPureView({
                       "border-brand-500/60 ring-1 ring-brand-500/30 bg-brand-500/[0.03] dark:bg-brand-500/10",
                   )
                 : cn(
-                    "border-border/60 bg-background/60 hover:border-brand-500/50 hover:bg-background dark:border-border/30 dark:bg-background/40 dark:hover:border-brand-500/50 dark:hover:bg-brand-500/5",
-                    isCurrentMonth && "border-brand-500 bg-brand-500/10",
+                    "border-border/70 bg-card/75 hover:border-brand-500/50 hover:bg-card dark:border-border/40 dark:bg-card/45 dark:hover:border-brand-500/50 dark:hover:bg-brand-500/5",
+                    isCurrentMonth &&
+                      "border-brand-500 bg-brand-500/10 ring-1 ring-brand-500/30",
                   ),
             )}
             key={m.monthKey}
@@ -102,7 +103,7 @@ export function YearHorizonPureView({
             {/* Top axis: ONLY in Calendar mode! In Heatmap mode, strictly NO TEXT! */}
             {displayMode === "calendar" ? (
               <div className="mb-1 flex items-center justify-between">
-                <span className="text-[10px] font-mono font-medium text-muted-foreground">
+                <span className="text-[10px] font-mono font-medium text-foreground/80 dark:text-foreground/75">
                   {m.label}
                 </span>
                 {m.total > 0 && (

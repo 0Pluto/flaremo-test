@@ -65,8 +65,8 @@ export function MonthHorizonPureView({
               className={cn(
                 "text-center text-[10px] font-medium font-mono transition-opacity",
                 displayMode === "calendar"
-                  ? "text-muted-foreground/75"
-                  : "text-muted-foreground/45",
+                  ? "text-foreground/75 dark:text-foreground/70 font-semibold"
+                  : "text-foreground/60 dark:text-foreground/50",
               )}
               key={colId}
             >
@@ -96,11 +96,11 @@ export function MonthHorizonPureView({
                         heatmapColor(totalCount),
                         "border-primary/25 hover:brightness-105 shadow-2xs",
                       )
-                    : "border-border/40 bg-muted-foreground/10 hover:border-border/60 hover:bg-muted-foreground/15 dark:border-border/20 dark:bg-muted/20 dark:hover:bg-muted/30"
+                    : "border-border/60 bg-muted-foreground/15 hover:border-border/80 hover:bg-muted-foreground/25 dark:border-border/40 dark:bg-white/[0.08] dark:hover:bg-white/[0.16]"
                   : cn(
-                      "border-border/50 bg-background/60 hover:border-brand-500/50 hover:bg-background dark:border-border/30 dark:bg-background/50 text-foreground",
+                      "border-border/60 bg-card/75 hover:border-brand-500/50 hover:bg-card dark:border-border/40 dark:bg-card/45 text-foreground",
                       totalCount > 0 &&
-                        "border-brand-500/40 bg-brand-500/10 font-bold text-brand-600 dark:text-brand-400",
+                        "border-brand-500/60 bg-brand-500/15 font-bold text-brand-600 dark:text-brand-400 dark:bg-brand-500/25 dark:border-brand-400/50 shadow-2xs",
                     ),
                 isToday &&
                   "border-brand-500 ring-2 ring-brand-500/50 scale-[1.03] z-10",
@@ -137,7 +137,7 @@ export function MonthHorizonPureView({
                       "text-[11px] font-mono tabular-nums",
                       totalCount > 0
                         ? "font-bold text-brand-600 dark:text-brand-400"
-                        : "text-foreground/80",
+                        : "text-foreground/85 font-medium",
                     )}
                   >
                     {dayNum}

@@ -64,13 +64,15 @@ export function WeekHorizonPureView({
               >
                 {displayMode === "calendar" ? (
                   <>
-                    <span className="text-[10px] opacity-70">{weekdayStr}</span>
+                    <span className="text-[10px] text-foreground/75 dark:text-foreground/70 font-medium">
+                      {weekdayStr}
+                    </span>
                     <span className="text-xs font-bold leading-tight">
                       {dateObj.getDate()}
                     </span>
                   </>
                 ) : (
-                  <span className="text-[10px] font-mono opacity-70">
+                  <span className="text-[10px] font-mono text-foreground/75 dark:text-foreground/70 font-medium">
                     {weekdayStr}
                   </span>
                 )}
@@ -83,7 +85,7 @@ export function WeekHorizonPureView({
       {/* 7 Columns x 24 Rows Grid (168 Pure Squares, ZERO TEXT INSIDE) */}
       <div className="flex gap-1">
         {/* Left Y-axis hour scale indicators (00, 06, 12, 18, 23) */}
-        <div className="flex w-4 shrink-0 flex-col justify-between py-0.5 text-[8px] font-mono text-muted-foreground/70 select-none">
+        <div className="flex w-4 shrink-0 flex-col justify-between py-0.5 text-[8.5px] font-mono font-medium text-foreground/75 dark:text-foreground/70 select-none">
           <span>00</span>
           <span>06</span>
           <span>12</span>
@@ -104,10 +106,10 @@ export function WeekHorizonPureView({
                       displayMode === "heatmap"
                         ? count > 0
                           ? heatmapColor(count)
-                          : "bg-muted-foreground/15 hover:bg-muted-foreground/30 dark:bg-muted/30 dark:hover:bg-muted/60"
+                          : "border border-black/[0.04] bg-muted-foreground/20 hover:bg-muted-foreground/35 dark:border-white/[0.06] dark:bg-white/[0.14] dark:hover:bg-white/[0.24]"
                         : count > 0
-                          ? "bg-brand-500/70 ring-1 ring-brand-500"
-                          : "bg-muted-foreground/10 hover:bg-muted-foreground/25 dark:bg-muted/20 dark:hover:bg-muted/50",
+                          ? "bg-brand-500 dark:bg-brand-400 shadow-xs ring-1 ring-brand-500/80 dark:ring-brand-400/80"
+                          : "border border-black/[0.04] bg-muted-foreground/20 hover:bg-muted-foreground/35 dark:border-white/[0.06] dark:bg-white/[0.14] dark:hover:bg-white/[0.24]",
                       isLoading && "animate-pulse",
                       "hover:scale-125 hover:z-10",
                     )}

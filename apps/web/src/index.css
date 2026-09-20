@@ -114,6 +114,7 @@
     --animate-horizon-flip: flaremo-horizon-flip 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
     --animate-horizon-zoom: flaremo-horizon-zoom 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
     --animate-calendar-page-turn: flaremo-calendar-page-turn 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    --animate-satellite-orbit: flaremo-satellite-orbit 60s linear infinite;
 }
 
 :root {
@@ -921,6 +922,27 @@
   100% {
     opacity: 1;
     transform: perspective(500px) rotateY(0deg) rotateX(0deg) scale(1);
+  }
+}
+
+@keyframes flaremo-satellite-orbit {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-satellite-orbit {
+  transform-box: view-box;
+  transform-origin: 58px 58px;
+  animation: flaremo-satellite-orbit 60s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-satellite-orbit {
+    animation: none;
   }
 }
 

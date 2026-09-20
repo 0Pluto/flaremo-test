@@ -12,12 +12,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import {
-  CalendarDaysIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  GridIcon,
-} from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { memo, useMemo, useState } from "react";
 import { getHourlyActivity, listMemos } from "@/api";
 import { useI18n } from "@/i18n";
@@ -75,7 +70,7 @@ export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
   const today = useMemo(() => todayKey(), []);
 
   const [tab, setTab] = useState<TimeHorizonTab>("month");
-  const [displayMode, setDisplayMode] = useState<DisplayMode>("heatmap");
+  const displayMode: DisplayMode = "calendar";
   const [selectedDay, setSelectedDay] = useState<string>(today);
   const [currentMonthKey, setCurrentMonthKey] = useState<string>(
     monthOf(today),
@@ -217,13 +212,28 @@ export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
     else setSelectedDay((d) => nextDay(d));
   };
 
+  const isAwayFromToday = useMemo(() => {
+    if (tab === "day") return selectedDay !== today;
+    if (tab === "month") return currentMonthKey !== monthOf(today);
+    if (tab === "week") return !weekDays.some((d) => d.key === today);
+    if (tab === "year") return currentYear !== yearOf(today);
+    return false;
+  }, [tab, selectedDay, today, currentMonthKey, weekDays, currentYear]);
+
+  const handleJumpToday = () => {
+    setSelectedDay(today);
+    setCurrentMonthKey(monthOf(today));
+    setCurrentWeekBase(today);
+    setCurrentYear(yearOf(today));
+  };
+
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
-      {/* ── Top Bar: 4 Tabs + Mode Toggle ─────────────────────────────────── */}
+      {/* ── Top Bar: 4 Tabs + Quick Today Jump ────────────────────────────── */}
       <div className="flex items-center justify-between px-0.5">
         <div
           aria-label={t("explorer.timeViewLabel")}
-          className="flex items-center gap-0.5 rounded-lg border border-border/50 bg-muted/30 p-0.5"
+          className="flex items-center gap-0.5 rounded-lg border border-border/60 bg-muted/40 p-0.5 dark:border-border/40 dark:bg-muted/30"
           role="tablist"
         >
           {(
@@ -237,7 +247,7 @@ export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
             <button
               aria-selected={tab === id}
               className={cn(
-                "min-w-[30px] rounded px-2 py-0.5 text-xs font-medium tabular-nums transition-colors",
+                "min-w-[30px] rounded px-2 py-0.5 text-xs font-medium tabular-nums transition-colors cursor-pointer",
                 tab === id
                   ? "bg-background text-foreground shadow-2xs font-semibold"
                   : "text-muted-foreground hover:text-foreground",
@@ -252,53 +262,35 @@ export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
           ))}
         </div>
 
-        {/* Dual Mode Switch: Calendar (Information) / Heatmap (Pure Heat) */}
-        <div className="flex items-center rounded-lg border border-border/50 bg-muted/30 p-0.5">
+        {/* Quick Return to Today when navigated away */}
+        {isAwayFromToday ? (
           <button
-            aria-label="数字日历"
-            className={cn(
-              "rounded p-1 text-muted-foreground transition-colors hover:text-foreground",
-              displayMode === "calendar" &&
-                "bg-background text-foreground shadow-2xs",
-            )}
-            title="数字日历 (展示信息)"
+            aria-label="回到今日"
+            className="rounded-md border border-border/60 bg-background/80 px-2 py-0.5 text-[11px] font-medium text-foreground/80 shadow-2xs transition-colors hover:border-brand-500/50 hover:bg-background hover:text-brand-600 dark:border-border/40 dark:bg-muted/30 dark:hover:text-brand-400 cursor-pointer"
             type="button"
-            onClick={() => setDisplayMode("calendar")}
+            onClick={handleJumpToday}
           >
-            <CalendarDaysIcon className="size-3.5" />
+            今日
           </button>
-          <button
-            aria-label="热力图"
-            className={cn(
-              "rounded p-1 text-muted-foreground transition-colors hover:text-foreground",
-              displayMode === "heatmap" &&
-                "bg-background text-foreground shadow-2xs",
-            )}
-            title="热力图 (纯粹力度)"
-            type="button"
-            onClick={() => setDisplayMode("heatmap")}
-          >
-            <GridIcon className="size-3.5" />
-          </button>
-        </div>
+        ) : null}
       </div>
 
       {/* ── Range Navigator ────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-1">
         <button
           aria-label="上一期"
-          className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+          className="rounded p-1 text-foreground/70 hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
           type="button"
           onClick={handlePrev}
         >
           <ChevronLeftIcon className="size-3.5" />
         </button>
-        <span className="text-xs font-medium text-foreground">
+        <span className="text-xs font-semibold text-foreground">
           {rangeTitle}
         </span>
         <button
           aria-label="下一期"
-          className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+          className="rounded p-1 text-foreground/70 hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
           type="button"
           onClick={handleNext}
         >
@@ -308,7 +300,7 @@ export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
 
       {/* ── Unified High-Impact Canvas Container (~240px Tall) ─────────────── */}
       <div
-        className="relative flex min-h-[238px] flex-col justify-center rounded-xl border border-border/60 bg-muted/20 p-2.5 shadow-2xs dark:border-border/40 dark:bg-muted/15 overflow-hidden"
+        className="relative flex min-h-[238px] flex-col justify-center rounded-xl border border-border/70 bg-muted/30 p-2.5 shadow-2xs dark:border-border/50 dark:bg-muted/20 overflow-hidden"
         data-testid="activity-heatmap"
       >
         <div
@@ -378,6 +370,7 @@ export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
               isLoading={dayHourlyQuery.isLoading || dayMemosQuery.isLoading}
               memos={dayMemosQuery.data?.memos ?? []}
               selectedDay={selectedDay}
+              today={today}
               onHoverTip={setHoveredTip}
               onJumpToTimeline={jumpToTimeline}
             />

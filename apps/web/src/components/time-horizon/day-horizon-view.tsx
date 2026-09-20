@@ -1,8 +1,9 @@
 // ============================================================================
 // 4. Day Horizon View (Option 2: Dual-Axis Timepiece - Linear Spine + Orbital Dial)
 // ============================================================================
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { heatmapColor } from "@/lib/activity";
+import { todayKey } from "@/lib/calendar-date";
 import { buildHourCountMap } from "@/lib/time-horizon";
 import { cn } from "@/lib/utils";
 import { DAY_HOURS, type DisplayMode } from "./shared";
@@ -15,18 +16,20 @@ type MemoItem = {
 
 export function DayHorizonPureView({
   selectedDay,
+  today = todayKey(),
   hourlyData,
   memos = [],
   isLoading,
-  displayMode,
+  displayMode = "calendar",
   onJumpToTimeline,
   onHoverTip,
 }: {
   selectedDay: string;
+  today?: string;
   hourlyData: Array<{ date: string; hour: number; count: number }>;
   memos?: MemoItem[];
   isLoading: boolean;
-  displayMode: DisplayMode;
+  displayMode?: DisplayMode;
   onJumpToTimeline: (day: string) => void;
   onHoverTip: (tip: string | null) => void;
 }) {
@@ -36,6 +39,40 @@ export function DayHorizonPureView({
   );
 
   const [hoveredHour, setHoveredHour] = useState<number | null>(null);
+
+  const isViewingToday = selectedDay === today;
+
+  // Real-time second sync for the satellite photon (0..60s offset)
+  const [secondOffset, setSecondOffset] = useState(() => {
+    const d = new Date();
+    return d.getSeconds() + d.getMilliseconds() / 1000;
+  });
+
+  useEffect(() => {
+    if (!isViewingToday) return;
+    const syncTime = () => {
+      const d = new Date();
+      setSecondOffset(d.getSeconds() + d.getMilliseconds() / 1000);
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        syncTime();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [isViewingToday]);
+
+  // If viewing a historical day, find the last active hour to dock the photon
+  const lastActiveHour = useMemo(() => {
+    if (isViewingToday) return null;
+    for (let h = 23; h >= 0; h--) {
+      if ((hourCountMap.get(h) ?? 0) > 0) return h;
+    }
+    return null;
+  }, [isViewingToday, hourCountMap]);
 
   // Group memos by their local hour for informative hover tips
   const memosByHour = useMemo(() => {
@@ -83,11 +120,11 @@ export function DayHorizonPureView({
   return (
     <div className="flex h-full min-h-[196px] items-center justify-center px-1 py-1 select-none">
       <div className="flex items-center justify-center gap-3 sm:gap-5 w-full max-w-[210px]">
-        {/* ── Left Side: The Linear Spine (周视图单列的无缝切出, 24 根堆叠横条) ── */}
+        {/* ── Left Side: The Linear Spine (周视图单列的无缝切出, 24 根高对比度堆叠横条) ── */}
         <div className="flex items-stretch gap-1.5 shrink-0">
           {/* Y-axis Hour Scale (Calendar Mode Only - Zero Text in Heatmap Mode) */}
           {displayMode === "calendar" ? (
-            <div className="flex w-3.5 shrink-0 flex-col justify-between py-0.5 text-[8px] font-mono text-muted-foreground/70 select-none">
+            <div className="flex w-3.5 shrink-0 flex-col justify-between py-0.5 text-[8.5px] font-mono font-medium text-foreground/75 dark:text-foreground/70 select-none">
               <span>00</span>
               <span>06</span>
               <span>12</span>
@@ -118,10 +155,10 @@ export function DayHorizonPureView({
                             heatmapColor(count),
                             "hover:brightness-110 shadow-2xs",
                           )
-                        : "bg-muted-foreground/15 dark:bg-muted/30 hover:bg-muted-foreground/35"
+                        : "border border-black/[0.04] bg-muted-foreground/20 hover:bg-muted-foreground/35 dark:border-white/[0.06] dark:bg-white/[0.14] dark:hover:bg-white/[0.24]"
                       : count > 0
-                        ? "bg-brand-500/75 ring-1 ring-brand-500 hover:brightness-110"
-                        : "bg-muted-foreground/10 dark:bg-muted/20 hover:bg-muted-foreground/30",
+                        ? "bg-brand-500 dark:bg-brand-400 shadow-xs ring-1 ring-brand-500/80 dark:ring-brand-400/80 brightness-105 hover:brightness-115"
+                        : "border border-black/[0.04] bg-muted-foreground/20 hover:bg-muted-foreground/35 dark:border-white/[0.06] dark:bg-white/[0.14] dark:hover:bg-white/[0.24]",
                     isHovered &&
                       "ring-1.5 ring-brand-500 scale-x-110 scale-y-115 z-10 brightness-110 shadow-xs",
                     "hover:scale-x-110 hover:scale-y-115 hover:z-10",
@@ -136,7 +173,7 @@ export function DayHorizonPureView({
           </div>
         </div>
 
-        {/* ── Right Side: The Orbital Solar Dial (24小时微型环形日晷 / 昼夜天色盘) ── */}
+        {/* ── Right Side: The Orbital Solar Dial (24小时微型环形日晷 + 卫星微粒) ── */}
         <button
           type="button"
           className="flex flex-1 items-center justify-center p-1 cursor-pointer transition-transform hover:scale-105"
@@ -148,38 +185,44 @@ export function DayHorizonPureView({
             className="w-[110px] h-[110px] select-none"
             aria-hidden="true"
           >
-            <title>24小时日晷</title>
+            <title>24小时日晷时计</title>
 
-            {/* Outer subtle orbital track */}
+            {/* Outer orbital track (crisp celestial dashed line) */}
             <circle
               cx={cx}
               cy={cy}
               r={R}
               fill="none"
               stroke="currentColor"
-              strokeWidth="0.75"
-              strokeDasharray="1.5 4"
-              className="text-border/60 dark:text-border/30"
+              strokeWidth="1"
+              strokeDasharray="2 3.5"
+              className="text-foreground/28 dark:text-foreground/35"
             />
 
-            {/* Inner subtle concentric guide ring */}
+            {/* Inner concentric guide ring */}
             <circle
               cx={cx}
               cy={cy}
               r={25}
               fill="none"
               stroke="currentColor"
-              strokeWidth="0.5"
-              strokeDasharray="1 5"
-              className="text-border/40 dark:text-border/20"
+              strokeWidth="0.75"
+              strokeDasharray="1.5 4"
+              className="text-foreground/18 dark:text-foreground/22"
             />
 
             {/* Center hub point */}
             <circle
               cx={cx}
               cy={cy}
-              r="2"
-              className="fill-brand-500/60 dark:fill-brand-400/60"
+              r="2.2"
+              className="fill-brand-500 dark:fill-brand-400"
+            />
+            <circle
+              cx={cx}
+              cy={cy}
+              r="0.8"
+              className="fill-background dark:fill-background"
             />
 
             {/* 24 Hour Nodes around the orbital circle */}
@@ -201,8 +244,8 @@ export function DayHorizonPureView({
                 : count > 0
                   ? 3.5
                   : isCardinal
-                    ? 2
-                    : 1.4;
+                    ? 2.2
+                    : 1.5;
 
               return (
                 <g key={`dial-dot-${h}`}>
@@ -214,8 +257,8 @@ export function DayHorizonPureView({
                       r="7"
                       fill="none"
                       stroke="var(--brand-500)"
-                      strokeWidth="1"
-                      className="animate-pulse opacity-75"
+                      strokeWidth="1.2"
+                      className="animate-pulse opacity-85"
                     />
                   )}
 
@@ -227,11 +270,11 @@ export function DayHorizonPureView({
                     className={cn(
                       "transition-all duration-150",
                       count > 0
-                        ? "fill-brand-500 dark:fill-brand-400"
+                        ? "fill-brand-500 dark:fill-brand-400 filter drop-shadow-[0_0_3px_var(--brand-500)]"
                         : isCardinal
-                          ? "fill-muted-foreground/45 dark:fill-muted/60"
-                          : "fill-muted-foreground/25 dark:fill-muted/35",
-                      isHovered && "fill-brand-500 brightness-110",
+                          ? "fill-foreground/60 dark:fill-foreground/65"
+                          : "fill-foreground/30 dark:fill-foreground/38",
+                      isHovered && "fill-brand-500 brightness-125 scale-110",
                     )}
                   />
 
@@ -250,6 +293,83 @@ export function DayHorizonPureView({
               );
             })}
 
+            {/* ── Dynamic Orbital Satellite Photon (轨道卫星流光微粒) ── */}
+            {isViewingToday ? (
+              <g
+                className="animate-satellite-orbit"
+                style={{
+                  animationDelay: `-${secondOffset}s`,
+                  transformOrigin: "58px 58px",
+                }}
+              >
+                {/* 1. Stardust Wake (3 Tapering Trailing Particles along R=44) */}
+                <circle
+                  cx={cx + R * Math.sin((-13 * Math.PI) / 180)}
+                  cy={cy - R * Math.cos((-13 * Math.PI) / 180)}
+                  r="0.8"
+                  className="fill-brand-500/25 dark:fill-brand-400/30"
+                />
+                <circle
+                  cx={cx + R * Math.sin((-8 * Math.PI) / 180)}
+                  cy={cy - R * Math.cos((-8 * Math.PI) / 180)}
+                  r="1.2"
+                  className="fill-brand-500/50 dark:fill-brand-400/60"
+                />
+                <circle
+                  cx={cx + R * Math.sin((-3.5 * Math.PI) / 180)}
+                  cy={cy - R * Math.cos((-3.5 * Math.PI) / 180)}
+                  r="1.7"
+                  className="fill-brand-500/80 dark:fill-brand-400/90"
+                />
+
+                {/* 2. Luminous Halo Aura */}
+                <circle
+                  cx={cx}
+                  cy={cy - R}
+                  r="4.5"
+                  className="fill-brand-500/20 dark:fill-brand-400/25 animate-pulse"
+                />
+
+                {/* 3. Core Photon: High-energy brilliant particle */}
+                <circle
+                  cx={cx}
+                  cy={cy - R}
+                  r="2.2"
+                  className="fill-brand-500 dark:fill-brand-300 filter drop-shadow-[0_0_4px_var(--brand-500)]"
+                />
+                <circle
+                  cx={cx}
+                  cy={cy - R}
+                  r="0.9"
+                  className="fill-white dark:fill-white"
+                />
+              </g>
+            ) : lastActiveHour !== null ? (
+              /* Docked Photon for Historical Days (Resting at last active note hour) */
+              <g
+                style={{
+                  transform: `rotate(${lastActiveHour * 15}deg)`,
+                  transformOrigin: "58px 58px",
+                }}
+              >
+                {/* Stationed Beacon Halo */}
+                <circle
+                  cx={cx}
+                  cy={cy - R}
+                  r="4"
+                  className="fill-brand-500/20 dark:fill-brand-400/25"
+                />
+                {/* Stationed Photon */}
+                <circle
+                  cx={cx}
+                  cy={cy - R}
+                  r="2"
+                  className="fill-brand-500 dark:fill-brand-300 filter drop-shadow-[0_0_3px_var(--brand-500)]"
+                />
+                <circle cx={cx} cy={cy - R} r="0.8" className="fill-white/90" />
+              </g>
+            ) : null}
+
             {/* Cardinal Markers in Calendar Mode Only (Zero Text in Heatmap Mode) */}
             {displayMode === "calendar" && (
               <>
@@ -257,7 +377,7 @@ export function DayHorizonPureView({
                   x={cx}
                   y="8"
                   textAnchor="middle"
-                  className="text-[7px] font-mono fill-muted-foreground/70 select-none"
+                  className="text-[7.5px] font-mono font-medium fill-foreground/75 dark:fill-foreground/80 select-none"
                 >
                   00
                 </text>
@@ -265,7 +385,7 @@ export function DayHorizonPureView({
                   x="111"
                   y={cy + 2.5}
                   textAnchor="start"
-                  className="text-[7px] font-mono fill-muted-foreground/70 select-none"
+                  className="text-[7.5px] font-mono font-medium fill-foreground/75 dark:fill-foreground/80 select-none"
                 >
                   06
                 </text>
@@ -273,7 +393,7 @@ export function DayHorizonPureView({
                   x={cx}
                   y="113"
                   textAnchor="middle"
-                  className="text-[7px] font-mono fill-muted-foreground/70 select-none"
+                  className="text-[7.5px] font-mono font-medium fill-foreground/75 dark:fill-foreground/80 select-none"
                 >
                   12
                 </text>
@@ -281,7 +401,7 @@ export function DayHorizonPureView({
                   x="5"
                   y={cy + 2.5}
                   textAnchor="end"
-                  className="text-[7px] font-mono fill-muted-foreground/70 select-none"
+                  className="text-[7.5px] font-mono font-medium fill-foreground/75 dark:fill-foreground/80 select-none"
                 >
                   18
                 </text>
