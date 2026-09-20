@@ -5,7 +5,7 @@
  * 1. 热力图态 (Heatmap Mode) ——【纯粹的克制，只展示热力与力度】：
  *    - 画布中间彻底去除所有文字说明、数字标牌与文字描述。
  *    - 纯靠方块的点阵与色彩深浅传达节奏与能量状态，极致高级、沉静。
- *    - 尺度严密对齐：年 365天微点 / 月 30天色块 / 周 168小时色块 / 日 24小时色块。
+ *    - 尺度严密对齐：年 365天微点 / 月 ~140时段微点 (2x2象限) / 周 168小时色块 / 日 24小时色块。
  * 2. 日历图态 (Calendar Mode) ——【展示信息本身】：
  *    - 相同网格与结构，显示月份、日期、星期、整点时间与条数信息。
  * 3. 严格零 Emoji，外轴极简，信息仅在悬停时于最底线静默提示。
@@ -138,6 +138,20 @@ export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
       getHourlyActivity({ date: selectedDay }, tz, signal),
     staleTime: 60_000,
     enabled: tab === "day",
+  });
+
+  // Month range calculations for hourly query (1st to last of current month)
+  const [monthYear, monthMonth] = currentMonthKey.split("-").map(Number);
+  const daysInMonth = new Date(monthYear, monthMonth, 0).getDate();
+  const monthFrom = `${currentMonthKey}-01`;
+  const monthTo = `${currentMonthKey}-${String(daysInMonth).padStart(2, "0")}`;
+
+  const monthHourlyQuery = useQuery({
+    queryKey: ["stats-hourly-month", monthFrom, monthTo, tz],
+    queryFn: ({ signal }) =>
+      getHourlyActivity({ from: monthFrom, to: monthTo }, tz, signal),
+    staleTime: 60_000,
+    enabled: tab === "month",
   });
 
   // Week range calculations (7 days x 24 hours)
@@ -346,11 +360,13 @@ export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
           />
         )}
 
-        {/* MONTH VIEW: 30/31 Day Squares (7 Columns x 5~6 Rows) */}
+        {/* MONTH VIEW: ~140 Micro-Dots (7 Columns x 5~6 Rows x 4 Quadrants) */}
         {tab === "month" && (
           <MonthHorizonPureView
             displayMode={displayMode}
+            hourlyData={monthHourlyQuery.data?.hours ?? []}
             hoveredDate={hoveredDate}
+            isLoading={monthHourlyQuery.isLoading}
             locale={locale}
             monthKey={currentMonthKey}
             notesCountMap={notesCountMap}
@@ -548,7 +564,7 @@ function YearHorizonPureView({
 }
 
 // ============================================================================
-// 2. Month Horizon View (7 Columns x 5~6 Rows, Pure Color Blocks)
+// 2. Month Horizon View (30 Days x 4 Quadrants = ~120-140 Micro-Dots)
 // ============================================================================
 function MonthHorizonPureView({
   monthKey,
@@ -557,6 +573,8 @@ function MonthHorizonPureView({
   locale,
   weekStart,
   notesCountMap,
+  hourlyData,
+  isLoading,
   displayMode,
   hoveredDate,
   onDrillToDay,
@@ -569,6 +587,8 @@ function MonthHorizonPureView({
   locale: string;
   weekStart: WeekStart;
   notesCountMap: Map<string, number>;
+  hourlyData: Array<{ date: string; hour: number; count: number }>;
+  isLoading: boolean;
   displayMode: DisplayMode;
   hoveredDate?: string | null;
   onDrillToDay: (day: string) => void;
@@ -580,6 +600,22 @@ function MonthHorizonPureView({
     [monthKey, weekStart],
   );
   const headers = weekdayHeaders(weekStart, locale, "narrow");
+
+  // Map 4 daily quadrants from hourly records:
+  // q0: 00-06h (深夜), q1: 06-12h (上午), q2: 12-18h (下午), q3: 18-24h (晚上)
+  const dayQuadrants = useMemo(() => {
+    const qMap = new Map<string, [number, number, number, number]>();
+    for (const h of hourlyData) {
+      if (!qMap.has(h.date)) qMap.set(h.date, [0, 0, 0, 0]);
+      const current = qMap.get(h.date);
+      if (!current) continue;
+      const qIdx = Math.floor(h.hour / 6);
+      if (qIdx >= 0 && qIdx < 4) {
+        current[qIdx] += h.count;
+      }
+    }
+    return qMap;
+  }, [hourlyData]);
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -599,31 +635,37 @@ function MonthHorizonPureView({
         </div>
       ) : null}
 
-      {/* Grid of Days (35~42 Tall Blocks, h-8.5 each) */}
+      {/* Grid of Days (~30 Days, each packed with 4 Quadrant Micro-Dots in Heatmap mode) */}
       <div className="grid grid-cols-7 gap-1">
         {grid.map((cell) => {
-          const count = notesCountMap.get(cell.key) ?? 0;
+          const totalCount = notesCountMap.get(cell.key) ?? 0;
           const isToday = cell.key === today;
           const isSelected = cell.key === selectedDay;
           const dayNum = Number(cell.key.slice(8));
+          const [q0, q1, q2, q3] = dayQuadrants.get(cell.key) ?? [0, 0, 0, 0];
+          const qTotal = q0 + q1 + q2 + q3;
+
+          const dotColor = (qVal: number) => {
+            if (qVal > 0) return heatmapColor(qVal);
+            if (isLoading && totalCount > 0) return "bg-brand-500/30";
+            if (qTotal === 0 && totalCount > 0) return heatmapColor(totalCount);
+            return "bg-muted/40";
+          };
 
           return (
             <button
               className={cn(
-                "group relative flex h-8.5 w-full items-center justify-center rounded-[3px] border text-xs transition-all",
+                "group relative flex h-8.5 w-full items-center justify-center rounded-[3px] border transition-all",
                 cell.inMonth ? "opacity-100" : "opacity-15 pointer-events-none",
                 displayMode === "heatmap"
                   ? cn(
-                      count > 0
-                        ? heatmapColor(count)
-                        : "bg-muted/40 border-border/20",
-                      count > 0 && "border-transparent",
-                      isToday && "ring-1.5 ring-brand-500",
+                      "border-border/20 bg-background/20 hover:border-brand-500/40 hover:bg-brand-500/5",
+                      isToday && "border-brand-500/60 ring-1 ring-brand-500/30",
                     )
                   : cn(
                       "border-border/30 bg-background/50 text-foreground",
                       isToday && "border-brand-500 bg-brand-500/10 font-bold",
-                      count > 0 &&
+                      totalCount > 0 &&
                         "font-semibold text-brand-600 dark:text-brand-400",
                     ),
                 isSelected && "ring-2 ring-brand-500 z-10 scale-105 shadow-sm",
@@ -636,17 +678,69 @@ function MonthHorizonPureView({
               onClick={() => onDrillToDay(cell.key)}
               onMouseEnter={() => {
                 onHoverDate?.(cell.key);
-                onHoverTip(`${cell.key} · ${count} 条笔记`);
+                if (totalCount > 0) {
+                  onHoverTip(
+                    `${cell.key} · ${totalCount} 条笔记 (早:${q1} 午:${q2} 晚:${q3} 夜:${q0})`,
+                  );
+                } else {
+                  onHoverTip(`${cell.key} · 无记录`);
+                }
               }}
               onMouseLeave={() => {
                 onHoverDate?.(null);
                 onHoverTip(null);
               }}
             >
-              {/* Heatmap Mode: ABSOLUTELY ZERO NUMBERS INSIDE! Calendar Mode: Day Number */}
-              {displayMode === "calendar" ? (
-                <span className="font-mono tabular-nums">{dayNum}</span>
-              ) : null}
+              {/* Heatmap Mode: 2x2 Quadrant Micro-Dots Matrix (~140 Dots across the month!) */}
+              {displayMode === "heatmap" ? (
+                <div
+                  className={cn(
+                    "grid grid-cols-2 gap-[2.5px]",
+                    isLoading && "animate-pulse",
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "size-[5px] rounded-[1px] transition-colors",
+                      dotColor(q1),
+                    )}
+                    title="上午 (06-12)"
+                  />
+                  <div
+                    className={cn(
+                      "size-[5px] rounded-[1px] transition-colors",
+                      dotColor(q2),
+                    )}
+                    title="下午 (12-18)"
+                  />
+                  <div
+                    className={cn(
+                      "size-[5px] rounded-[1px] transition-colors",
+                      dotColor(q0),
+                    )}
+                    title="深夜 (00-06)"
+                  />
+                  <div
+                    className={cn(
+                      "size-[5px] rounded-[1px] transition-colors",
+                      dotColor(q3),
+                    )}
+                    title="晚上 (18-24)"
+                  />
+                </div>
+              ) : (
+                /* Calendar Mode: Crisp Day Number */
+                <span
+                  className={cn(
+                    "text-[11px] font-mono tabular-nums",
+                    totalCount > 0
+                      ? "font-bold text-brand-600 dark:text-brand-400"
+                      : "text-foreground",
+                  )}
+                >
+                  {dayNum}
+                </span>
+              )}
             </button>
           );
         })}
