@@ -44,7 +44,7 @@
         payload.tags: string[]           （写进 memos.payload，长期驻留）
                     │
                     ▼
-        memo_tags 表 (memo_id, tag, user_id)    packages/db/src/schema.ts:384-404
+        memo_tags 表 (memo_id, tag, user_id)    packages/db/src/schema/memos.ts:127-147
                     │
         ┌───────────┼────────────┬──────────────┐
         ▼           ▼            ▼              ▼

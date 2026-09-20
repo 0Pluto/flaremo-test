@@ -1,14 +1,14 @@
 import {
-  applyFlaremoMigrations,
   createDb,
   memosNotifications,
   memosWebhookDeliveries,
 } from "@flaremo/db";
 import { dispatchMemosWebhookOutbox } from "@flaremo/domain";
-import { Miniflare } from "miniflare";
+import type { Miniflare } from "miniflare";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import app from "./index";
 import { buildMemosRefreshCookie } from "./memos-native-auth";
+import { createTestRuntime } from "./test-support/runtime";
 
 let mf: Miniflare;
 let env: Env;
@@ -26,7 +26,11 @@ const TEST_PASSWORD = "transport-test-password-never-production-123";
 
 describe("Memos native auth and transport boundaries", () => {
   beforeEach(async () => {
-    ({ mf, env } = await createTestRuntime());
+    ({ runtime: mf, env } = await createTestRuntime({
+      name: "flaremo-transport",
+      authSecret: TEST_AUTH_SECRET,
+      bootstrapSecret: TEST_BOOTSTRAP_SECRET,
+    }));
     ({
       accessToken,
       opaqueSessionToken,
@@ -1428,35 +1432,6 @@ function concat(...values: Uint8Array[]) {
     offset += value.length;
   }
   return output;
-}
-
-async function createTestRuntime() {
-  const runtime = new Miniflare({
-    script: "export default { fetch() { return new Response('ok') } }",
-    modules: true,
-    compatibilityDate: "2026-07-10",
-    compatibilityFlags: ["nodejs_compat"],
-    d1Databases: { DB: `flaremo-transport-${crypto.randomUUID()}` },
-    r2Buckets: {
-      ATTACHMENTS: `flaremo-transport-attachments-${crypto.randomUUID()}`,
-    },
-  });
-  const db = await runtime.getD1Database("DB");
-  await applyFlaremoMigrations(db);
-  mf = runtime;
-  env = {
-    DB: db,
-    ATTACHMENTS: await runtime.getR2Bucket("ATTACHMENTS"),
-    ASSETS: {
-      fetch: async () => new Response("asset", { status: 200 }),
-    } as Fetcher,
-    FLAREMO_SINGLE_USER_EMAIL: "owner@example.com",
-    FLAREMO_SINGLE_USER_NAME: "Owner",
-    FLAREMO_PUBLIC_URL: "http://flaremo.test",
-    BETTER_AUTH_SECRET: TEST_AUTH_SECRET,
-    FLAREMO_BOOTSTRAP_SECRET: TEST_BOOTSTRAP_SECRET,
-  } as Env;
-  return { mf, env };
 }
 
 async function signTestJwt(

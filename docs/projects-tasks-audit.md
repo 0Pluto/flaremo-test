@@ -53,7 +53,7 @@
 |---|---|---|---|---|
 | 3.1 | P1 | **tasks/projects 没有回收站，与 memo 不对称**：memo 有 trashed 状态 + 30 天 TTL + cron 清理；task/project 删除是即时硬删，project 硬删会**级联永久销毁全部任务与活动记录**（UI 有确认框和警告文案，但误删无法挽回） | `packages/domain/src/projects.ts:153-165`、`tasks.ts:315-325`、对比 `memo-hard-delete.ts` | 对齐 memo 基线：软删 + TTL 回收站；或至少 project 删除加输入确认 |
 | 3.2 | P1 | **用户自助导出 bundle 不含 projects/tasks**：`import-export.ts` 只导 memos + memory 七表；管理员灾备清单反而覆盖。自托管用户自助备份会丢任务数据 | `packages/domain/src/import-export.ts:36-51`、`scripts/persistence-manifest.mjs:45-46` | 导出纳入 projects/tasks/task_activity |
-| 3.3 | P2 | **`task_activity` 自称 append-only audit trail，但删除动作不进 trail**：hardDeleteTask 不追加 activity 直接靠 FK cascade 把记录带走；`"deleted"` 是死枚举值 | `schema.ts:1171-1174` 注释、`contracts/projects.ts:15`、`tasks.ts:315-325` | 删除前补写 activity，或删掉死枚举并修正注释 |
+| 3.3 | P2 | **`task_activity` 自称 append-only audit trail，但删除动作不进 trail**：hardDeleteTask 不追加 activity 直接靠 FK cascade 把记录带走；`"deleted"` 是死枚举值 | `packages/db/src/schema/tasks.ts:86-91` 注释、`contracts/projects.ts:15`、`tasks.ts:315-325` | 删除前补写 activity，或删掉死枚举并修正注释 |
 | 3.4 | P2 | **reorder 活动写 `task_id=null`，无任何读路径**，等于写了读不到的数据 | `tasks.ts:303-306` | 给 activity 加端点或砍掉这类写入 |
 | 3.5 | OK | 账号自助注销、成员移除均已覆盖 projects/tasks 的清理（v0.14.0 起） | `users.ts:503-505`、`CHANGELOG.md:187-190` | — |
 
@@ -158,7 +158,7 @@
 |---|---|
 | 3.1 无回收站、删项目级联硬销 | 软删对齐 memo：projects/tasks 加 nullable `deleted_at`；全部读路径（projects 列表、tasks 列表、`calendar-view.ts`、`review.ts:377`、`index.ts:462` 逾期聚合、`countTasksByProjects`）统一加 `isNull(deletedAt)`；删除 = 写 `deleted_at`（project 删除 = 项目与其全部任务一起打标，**不再物理 cascade**）；复用 memo trash purge cron 做 30 天硬清；UI 在 /projects 侧栏加「回收站」折叠区（归档区同款交互），支持恢复。activity 表 FK 保持 cascade 不动——软删期间 trail 仍在，硬清时随行销毁 |
 | 3.2 导出不含任务 | `import-export.ts` 纳入 projects / tasks / task_activity 三表，bundle version 3→4，导入复用 memory 的 id remap 机制 |
-| 3.3+3.4 审计尾巴 | 删掉 `"deleted"` 死枚举（`contracts/projects.ts:15`）；`schema.ts:1171-1174` 注释改为"trail 与任务同生命周期"；reorder 的 `task_id=null` 行保留不删（未来 activity 读路径的地基），不新建读端点（克制） |
+| 3.3+3.4 审计尾巴 | 删掉 `"deleted"` 死枚举（`contracts/projects.ts:15`）；`packages/db/src/schema/tasks.ts:86-91` 注释改为"trail 与任务同生命周期"；reorder 的 `task_id=null` 行保留不删（未来 activity 读路径的地基），不新建读端点（克制） |
 | 4.1 due_at 不校验 | contract 收紧为 `regex ^\d{4}-\d{2}-\d{2}$`（产品语义 = 日期粒度，与 UI `type="date"` 输出一致）；实施前跑一次存量扫描（唯一写入口是 date input，预计脏数据为 0）；PAT/agent 文档同步注明格式 |
 | 4.2 日历 `to` 边界 | `lte(tasks.dueAt, to)` 改 `lt(tasks.dueAt, nextDay(to))`（`lib/calendar-date.ts` 已有日运算 helper），并补"带时间值也不漏"的回归测试（防御性，虽 4.1 收紧后理论上不再出现） |
 | 4.3 两套"一天" | 采纳 date-only 规范后**自动消解**：notes 是"时刻分桶"所以需要 tz 偏移，tasks 是"本地日语义"所以不需要——在 `calendar-view.ts` 补注释写明这个不对称是语义差异而非 bug，防后人再报 |

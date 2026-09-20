@@ -14,10 +14,9 @@ import { toast } from "sonner";
 import {
   type Attachment,
   bindMemoAttachments,
-  createMemo,
+  type createMemo,
   getCaptureStatus,
   getCurrentFlareMoUser,
-  updateMemo,
   uploadAttachment,
 } from "@/api";
 import { authClient } from "@/auth-client";
@@ -66,6 +65,11 @@ import {
 } from "@/lib/audio-capture/microphone";
 import { CaptureTranscriptAccumulator } from "@/lib/audio-capture/transcript";
 import type { CaptureState } from "@/lib/audio-capture/types";
+import {
+  createOrReconcileCaptureMemo,
+  mergeCaptureSnapshot,
+} from "@/lib/capture-reconcile";
+import { formatDuration } from "@/lib/format-duration";
 import { vibrate } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
 
@@ -995,73 +999,6 @@ export function CapturePage() {
   );
 }
 
-function mergeCaptureSnapshot(
-  value: LocalCapture,
-  text: string,
-  startedAt: number | null,
-  stoppedAt: number | null,
-  gap: boolean,
-): LocalCapture {
-  if (!startedAt) return value;
-  return {
-    ...value,
-    text,
-    startedAt,
-    duration: Math.max(
-      0,
-      Math.floor(((stoppedAt ?? Date.now()) - startedAt) / 1000),
-    ),
-    gap,
-  };
-}
-
-async function createOrReconcileCaptureMemo(
-  input: Parameters<typeof createMemo>[0],
-  previousInput: Parameters<typeof createMemo>[0] | null,
-) {
-  const memo = await createMemo(input);
-  if (captureMemoMatchesInput(memo, input)) return memo;
-
-  // A create response can be lost after D1 commits. A retry then returns the
-  // row for the same client_id. Reconcile only when that row still matches
-  // the exact previous attempt, so another tab's edit is never overwritten.
-  if (
-    memo.payload.client_id !== input.payload?.client_id ||
-    !previousInput ||
-    !captureMemoMatchesInput(memo, previousInput)
-  ) {
-    throw new Error("Capture memo changed after its initial save");
-  }
-  const desiredTags = normalizedCaptureTags(input);
-  return updateMemo(memo.id, {
-    content: input.content,
-    visibility: input.visibility,
-    payload: {
-      ...memo.payload,
-      ...input.payload,
-      tags: desiredTags,
-    },
-  });
-}
-
-function captureMemoMatchesInput(
-  memo: Awaited<ReturnType<typeof createMemo>>,
-  input: Parameters<typeof createMemo>[0],
-) {
-  const desiredTags = normalizedCaptureTags(input);
-  const currentTags = Array.from(new Set(memo.payload.tags ?? [])).sort();
-  return (
-    memo.content === input.content &&
-    memo.visibility === input.visibility &&
-    desiredTags.length === currentTags.length &&
-    desiredTags.every((tag, index) => tag === currentTags[index])
-  );
-}
-
-function normalizedCaptureTags(input: Parameters<typeof createMemo>[0]) {
-  return Array.from(new Set(input.payload?.tags ?? [])).sort();
-}
-
 function DiscardButton({
   onDiscard,
   disabled = false,
@@ -1098,13 +1035,4 @@ function DiscardButton({
       </AlertDialogContent>
     </AlertDialog>
   );
-}
-function formatDuration(totalSeconds: number) {
-  return [
-    Math.floor(totalSeconds / 3600),
-    Math.floor((totalSeconds % 3600) / 60),
-    Math.floor(totalSeconds % 60),
-  ]
-    .map((value) => String(value).padStart(2, "0"))
-    .join(":");
 }

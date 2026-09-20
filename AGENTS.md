@@ -67,7 +67,7 @@ pnpm deploy:dry-run
 
 ## 修改规则
 
-- 改数据库结构时，先改 `packages/db/src/schema.ts`，再运行 `pnpm db:generate`。
+- 改数据库结构时，先改 `packages/db/src/schema/` 下的对应模块（`schema.ts` 只是 barrel），再运行 `pnpm db:generate`。
 - 生成的 SQL migration 必须提交到 `migrations/`。
 - 自动部署会先迁移再发布 Worker；migration 必须向后兼容上一正式版本，破坏性收缩要拆到后续 release。
 - 业务访问数据必须通过 Drizzle 和 domain services，不要在路由里堆散装 SQL。

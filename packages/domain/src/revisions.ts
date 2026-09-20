@@ -3,7 +3,8 @@ import { memoRevisions } from "@flaremo/db";
 import { and, desc, eq, lt } from "drizzle-orm";
 import { ForbiddenError, NotFoundError } from "./errors";
 import { parseResourceName } from "./ids";
-import { getMemoById, updateMemo } from "./memos";
+import { getMemoById } from "./memos-read";
+import { updateMemo } from "./memos-write";
 import { canGovernMemo } from "./team-permissions";
 
 /**

@@ -24,6 +24,12 @@ export function prevDay(key: string): string {
   return isoDay(date);
 }
 
+export function addDays(fromKey: string, days: number): string {
+  const date = new Date(`${fromKey}T12:00:00`);
+  date.setDate(date.getDate() + days);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
 export function addMonths(months: number, fromKey: string): string {
   const date = new Date(`${fromKey}T12:00:00`);
   date.setDate(1);
@@ -141,6 +147,22 @@ export function formatDayTitle(dayKey: string, locale: string): string {
   }
   return date.toLocaleDateString(locale, {
     month: "short",
+    day: "numeric",
+  });
+}
+
+// Long-form day header ("2026年9月20日 星期日" / "Sunday, September 20, 2026"),
+// used under the day panel title and in the agenda's day headings.
+export function formatFullDayHeader(dayKey: string, locale: string): string {
+  const date = new Date(`${dayKey}T12:00:00`);
+  if (locale.startsWith("zh")) {
+    const weekday = ["日", "一", "二", "三", "四", "五", "六"][date.getDay()];
+    return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 星期${weekday}`;
+  }
+  return date.toLocaleDateString(locale, {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
     day: "numeric",
   });
 }

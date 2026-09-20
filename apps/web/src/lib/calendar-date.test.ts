@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  addDays,
   addMonths,
   buildMonthGrid,
   buildWeekGrid,
   dayFilterFromQuery,
   dayFilterQuery,
+  formatFullDayHeader,
   isoDay,
   monthOf,
   nextDay,
@@ -29,6 +31,34 @@ describe("nextDay / prevDay", () => {
   it("crosses month boundaries", () => {
     expect(nextDay("2026-08-31")).toBe("2026-09-01");
     expect(prevDay("2026-09-01")).toBe("2026-08-31");
+  });
+});
+
+describe("addDays", () => {
+  it("steps forward and backward across month and year boundaries", () => {
+    expect(addDays("2026-09-20", 0)).toBe("2026-09-20");
+    expect(addDays("2026-09-20", 7)).toBe("2026-09-27");
+    expect(addDays("2026-09-28", 7)).toBe("2026-10-05");
+    expect(addDays("2026-01-01", -1)).toBe("2025-12-31");
+  });
+
+  it("rolls over short months and the year boundary", () => {
+    expect(addDays("2026-02-28", 1)).toBe("2026-03-01");
+    expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
+  });
+});
+
+describe("formatFullDayHeader", () => {
+  it("assembles the zh header from explicit date parts", () => {
+    expect(formatFullDayHeader("2026-09-20", "zh-CN")).toBe(
+      "2026年9月20日 星期日",
+    );
+  });
+
+  it("uses the locale's long date elsewhere", () => {
+    expect(formatFullDayHeader("2026-09-20", "en-US")).toBe(
+      "Sunday, September 20, 2026",
+    );
   });
 });
 
