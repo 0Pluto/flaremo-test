@@ -8,6 +8,7 @@ import {
   type WeekStart,
   weekdayHeaders,
 } from "@/lib/calendar-date";
+import { buildDayQuadrants } from "@/lib/time-horizon";
 import { cn } from "@/lib/utils";
 import type { DisplayMode } from "./shared";
 
@@ -18,7 +19,7 @@ export function MonthHorizonPureView({
   locale,
   weekStart,
   notesCountMap,
-  hourlyData: _hourlyData,
+  hourlyData,
   isLoading: _isLoading,
   displayMode,
   hoveredDate,
@@ -45,6 +46,12 @@ export function MonthHorizonPureView({
     [monthKey, weekStart],
   );
   const headers = weekdayHeaders(weekStart, locale, "narrow");
+
+  // Map daily quadrants (night, morning, afternoon, evening) for the hover stacked-stripes preview
+  const dayQuadrants = useMemo(
+    () => buildDayQuadrants(hourlyData ?? []),
+    [hourlyData],
+  );
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -74,6 +81,7 @@ export function MonthHorizonPureView({
           const isToday = cell.key === today;
           const isSelected = cell.key === selectedDay;
           const dayNum = Number(cell.key.slice(8));
+          const [q0, q1, q2, q3] = dayQuadrants.get(cell.key) ?? [0, 0, 0, 0];
 
           return (
             <button
@@ -107,7 +115,9 @@ export function MonthHorizonPureView({
               onMouseEnter={() => {
                 onHoverDate?.(cell.key);
                 if (totalCount > 0) {
-                  onHoverTip(`${cell.key} · ${totalCount} 条笔记`);
+                  onHoverTip(
+                    `${cell.key} · ${totalCount} 条笔记 (早:${q1} 午:${q2} 晚:${q3} 夜:${q0})`,
+                  );
                 } else {
                   onHoverTip(`${cell.key} · 无记录`);
                 }
@@ -119,7 +129,7 @@ export function MonthHorizonPureView({
             >
               {/* Calendar Mode: Crisp Day Number & Count Indicator */}
               {displayMode === "calendar" ? (
-                <div className="flex flex-col items-center justify-center leading-none">
+                <div className="flex flex-col items-center justify-center leading-none transition-opacity group-hover:opacity-0">
                   <span
                     className={cn(
                       "text-[11px] font-mono tabular-nums",
@@ -137,6 +147,46 @@ export function MonthHorizonPureView({
                   )}
                 </div>
               ) : null}
+
+              {/* Hover Stacked Micro-Stripes: Previews the single vertical column of Day view! */}
+              <div className="absolute inset-0 flex flex-col justify-center gap-[1.5px] p-1.5 opacity-0 group-hover:opacity-100 transition-opacity bg-background/95 dark:bg-background/95 rounded-[4px] shadow-xs pointer-events-none">
+                <div
+                  className={cn(
+                    "h-[2px] w-full rounded-[0.5px] transition-colors",
+                    q0 > 0
+                      ? "bg-primary"
+                      : "bg-muted-foreground/20 dark:bg-muted/40",
+                  )}
+                  title="夜间 (00-06)"
+                />
+                <div
+                  className={cn(
+                    "h-[2px] w-full rounded-[0.5px] transition-colors",
+                    q1 > 0
+                      ? "bg-primary"
+                      : "bg-muted-foreground/20 dark:bg-muted/40",
+                  )}
+                  title="早晨 (06-12)"
+                />
+                <div
+                  className={cn(
+                    "h-[2px] w-full rounded-[0.5px] transition-colors",
+                    q2 > 0
+                      ? "bg-primary"
+                      : "bg-muted-foreground/20 dark:bg-muted/40",
+                  )}
+                  title="下午 (12-18)"
+                />
+                <div
+                  className={cn(
+                    "h-[2px] w-full rounded-[0.5px] transition-colors",
+                    q3 > 0
+                      ? "bg-primary"
+                      : "bg-muted-foreground/20 dark:bg-muted/40",
+                  )}
+                  title="晚间 (18-24)"
+                />
+              </div>
             </button>
           );
         })}
