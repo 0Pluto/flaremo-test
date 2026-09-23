@@ -12,7 +12,9 @@ FlareMo 除了记录「你写过什么」（Memo），还提供一套独立的 *
 
 ## 推荐接入：CLI + Skills（最佳实践）
 
-接入原则（设计规范 [memory-ledger-design.md](./memory-ledger-design.md) §八）：**REST 是唯一基底，CLI 与 Skill 是对外的主路径**。两者都随 FlareMo 仓库分发、随开源仓库发布：
+接入原则（设计规范 [memory-ledger-design.md](./memory-ledger-design.md) §八）：**REST 是唯一基底，CLI 与 Skill 是对外的主路径**。两者都随 FlareMo 仓库分发、随开源仓库发布。
+
+> **分层接入体系**：本文描述的是 L2（CLI + Skill）最佳实践；跨 Harness 的四级接入体系（L1 Remote MCP 兼容底线 → L3 Hooks 自动化 → L4 原生 Memory Provider）、Adapter Contract 与 Event≠Memory 管道见 [harness-adapter-spec.md](./harness-adapter-spec.md)。
 
 - **CLI**：仓库根 `bin/flaremo`，`package.json` 已注册 `bin` 字段。克隆仓库后安装：
 
