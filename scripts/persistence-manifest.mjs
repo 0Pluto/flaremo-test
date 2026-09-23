@@ -43,6 +43,9 @@ export const RESTORE_TABLES = [
   "memory_revisions",
   "memory_relations",
   "memory_resource_links",
+  "memory_evidence",
+  "memory_events",
+  "memory_rejections",
   "usage_counters",
   "projects",
   "tasks",
@@ -83,7 +86,10 @@ export const POST_RESTORE_DERIVED_SQL = [
     "UPDATE `memory_items`",
     "SET `embedding_status` = 'pending', `embedding_version` = NULL,",
     "    `embedded_at` = NULL, `embedding_error` = NULL",
-    "WHERE `status` = 'active';",
+    // Inferred proposals are deliberately excluded from the vector index so an
+    // unconfirmed guess can never drive an agent; recovery must not resurrect
+    // them as indexable work either.
+    "WHERE `status` = 'active' AND `verification` != 'inferred';",
   ].join(" "),
   [
     "INSERT INTO `embedding_tasks`",
@@ -99,7 +105,7 @@ export const POST_RESTORE_DERIVED_SQL = [
     " `attempts`, `next_attempt_at`, `lease_until`, `last_error`, `created_at`, `updated_at`)",
     "SELECT 'restore:memory:' || `id`, `user_id`, 'memory', `id`, 'reindex', 'pending',",
     `       0, ${restoreNow}, NULL, NULL, ${restoreNow}, ${restoreNow}`,
-    "FROM `memory_items` WHERE `status` = 'active';",
+    "FROM `memory_items` WHERE `status` = 'active' AND `verification` != 'inferred';",
   ].join(" "),
 ];
 
