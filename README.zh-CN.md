@@ -45,7 +45,7 @@ FlareMo 回答了一个更简单的问题：**仅凭一个免费的 Cloudflare �
 
 - **真正的 Serverless**：代码与静态前端直接部署在离你最近的 Cloudflare Workers 边缘节点，毫秒级响应。
 - **开箱即用的企业级持久化**：Cloudflare D1 承载笔记与元数据，Cloudflare R2 存储媒体附件，自带多地域副本。
-- **AI 原生第二大脑**：内置 MCP 端点与 Agent Memory 记忆中枢，AI Agent（Claude、Cursor、Codex、ChatGPT）可以读取并更新你的长期偏好与记忆范围。
+- **AI 原生第二大脑**：Agent Memory 记忆中枢自带 CLI 与跨 Agent Skill，AI Agent（Claude、Cursor、Codex、ChatGPT、ZCode）可以读取并更新你的长期偏好与记忆范围；同时保留 MCP 端点。
 - **一人安静，多人强大**：默认是私密加密的单人 sanctuary；开启团队模式后，即刻变身为具备角色与三级可见性的协作工作台。
 - **简约不简单**：界面安静，每个控件都各有其位——没有抢眼装饰，也没有缺失的功能。
 
@@ -60,10 +60,10 @@ FlareMo 回答了一个更简单的问题：**仅凭一个免费的 Cloudflare �
 - **灵感激活**：内置**每日回顾**（那年今日）、**随机漫步**（在标签与反向链接图中游走，附明信片式总结）和相关笔记推荐。
 - **版本回溯**：完整的版本差异对比，一键还原历史版本。
 
-### 2. AI 长期记忆与原生 MCP
-- **Agent Memory**：通过 `/memory/mcp`，AI Agent 可以记录并更新跨会话的长期记忆（偏好、项目决策、约束、教训）。
+### 2. AI 长期记忆（CLI + Skills）
+- **Agent Memory**：自带 `flaremo` CLI 与 `flaremo-memory` Skill——AI Agent 通过同一 REST 基底记录并更新跨会话的长期记忆（偏好、项目决策、约束、教训）。
 - **人机协同**：在 `/memory` 界面审阅、确认、锁定或纠正 AI 沉淀的记忆。
-- **开放生态**：提供标准 `/mcp` 端点（Streamable HTTP MCP），支持以编程方式查询与追加笔记。
+- **开放生态**：推荐路径是 CLI + Skills；同时提供 `/memory/mcp`（Streamable HTTP MCP）与 `/mcp` 端点，兼容既有 MCP 客户端。
 
 ### 3. 项目与任务
 - **按项目归拢工作**：把笔记与待办收进项目统一管理，看板支持跨状态列拖拽，配优先级、手动排序与截止日。

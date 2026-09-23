@@ -45,7 +45,7 @@ FlareMo answers a simpler question: **Can you get a 24/7 online, resilient, glob
 
 - **Truly Serverless**: Both code and static assets run on Cloudflare Workers edge nodes near you with millisecond latency.
 - **Enterprise-grade durability out of the box**: Cloudflare D1 handles notes and metadata; Cloudflare R2 stores media attachments with multi-region replication.
-- **AI-Native Second Brain**: Built-in MCP endpoints and Agent Memory hub allow AI agents (Claude, Cursor, Codex, ChatGPT) to read and update your long-term preferences and memory scopes.
+- **AI-Native Second Brain**: Agent Memory hub ships a CLI and a cross-agent skill so AI agents (Claude, Cursor, Codex, ChatGPT, ZCode) can read and update your long-term preferences and memory scopes; MCP endpoints are also available.
 - **Quiet for one, powerful for many**: Default is an encrypted, private single-user sanctuary. Enable team mode, and it instantly transforms into a collaborative workspace with roles and three-tier visibility.
 - **Minimal, not simplistic**: The interface stays quiet and every control earns its place — nothing decorative shouting for attention, nothing useful missing.
 
@@ -60,10 +60,10 @@ FlareMo answers a simpler question: **Can you get a 24/7 online, resilient, glob
 - **Thought activation**: Built-in **Daily Review** (on this day), **Random Walk** (wandering through tag and backlink graphs with postcard summaries), and related note recommendations.
 - **Revision history**: Full version diffs and one-click historical restore.
 
-### 2. AI Long-term Memory & Native MCP
-- **Agent Memory**: Through `/memory/mcp`, AI agents can record and update cross-session long-term memory (preferences, project decisions, constraints, lessons).
+### 2. AI Long-term Memory (CLI + Skills)
+- **Agent Memory**: Ships `flaremo` CLI and the `flaremo-memory` skill — agents record and update cross-session long-term memory (preferences, project decisions, constraints, lessons) through a shared REST base.
 - **Human in the loop**: Review, verify, lock, or correct AI-recorded memories at `/memory`.
-- **Open ecosystem**: Standard `/mcp` (Streamable HTTP MCP) endpoint to query and append notes programmatically.
+- **Open ecosystem**: CLI + Skills are the recommended path; `/memory/mcp` (Streamable HTTP MCP) and `/mcp` endpoints are available for existing MCP clients.
 
 ### 3. Projects & Tasks
 - **Group work under projects**: Organize notes and to-dos into projects, with a kanban board (drag between status columns), priorities, manual sort order, and due dates.

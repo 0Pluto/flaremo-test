@@ -45,7 +45,7 @@ FlareMo répond à une question plus simple : **Peut-on obtenir une base de conn
 
 - **Véritablement Serverless** : Le code et les fichiers statiques s'exécutent sur les nœuds edge Cloudflare les plus proches de vous, avec une latence en millisecondes.
 - **Durabilité de classe entreprise dès l'installation** : Cloudflare D1 gère les notes et les métadonnées ; Cloudflare R2 stocke les pièces jointes avec réplication multi-régions.
-- **Second cerveau pensé pour l'IA** : Endpoints MCP intégrés et hub « Agent Memory » permettant à vos agents IA (Claude, Cursor, Codex, ChatGPT) de lire et mettre à jour vos préférences et votre mémoire à long terme.
+- **Second cerveau pensé pour l'IA** : le hub « Agent Memory » embarque un CLI et un skill multi-agents permettant à vos agents IA (Claude, Cursor, Codex, ChatGPT, ZCode) de lire et mettre à jour vos préférences et votre mémoire à long terme ; des endpoints MCP restent également disponibles.
 - **Discret pour un seul, puissant pour une équipe** : Par défaut, un sanctuaire personnel chiffré et privé. Activez le mode équipe, et il se transforme instantanément en espace de travail collaboratif avec rôles et visibilité à trois niveaux.
 - **Minimal, pas simplifié** : L'interface reste silencieuse et chaque commande mérite sa place — rien de décoratif qui crie, rien d'utile qui manque.
 
@@ -60,10 +60,10 @@ FlareMo répond à une question plus simple : **Peut-on obtenir une base de conn
 - **Activation de la pensée** : **Revue quotidienne** (ce jour-là dans l'histoire), **Balade aléatoire** (dérive dans les graphes d'étiquettes et de liens retour, avec résumés en carte postale) et suggestions de notes connexes.
 - **Historique des versions** : Diff complet des versions et restauration historique en un clic.
 
-### 2. Mémoire IA à long terme & MCP natif
-- **Agent Memory** : Via le point de terminaison `/memory/mcp`, vos agents IA enregistrent et mettent à jour une mémoire à long terme transversale aux sessions (préférences, décisions de projet, contraintes, leçons).
+### 2. Mémoire IA à long terme (CLI + Skills)
+- **Agent Memory** : Livré avec le CLI `flaremo` et le skill `flaremo-memory` — vos agents IA enregistrent et mettent à jour une mémoire à long terme transversale aux sessions (préférences, décisions de projet, contraintes, leçons) sur une base REST commune.
 - **Contrôle humain** : Consultez, vérifiez, verrouillez ou corrigez les souvenirs enregistrés par l'IA sur la page `/memory`.
-- **Écosystème ouvert** : Endpoint standard `/mcp` (Streamable HTTP MCP) pour interroger et alimenter vos notes par programmation.
+- **Écosystème ouvert** : La voie recommandée est CLI + Skills ; les endpoints `/memory/mcp` (Streamable HTTP MCP) et `/mcp` restent disponibles pour les clients MCP existants.
 
 ### 3. Projets et tâches
 - **Rassemblez le travail par projet** : Notes et tâches organisées en projets, avec tableau kanban (glisser entre les colonnes de statut), priorités, tri manuel et échéances.
