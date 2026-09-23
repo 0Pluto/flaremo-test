@@ -35,13 +35,14 @@ curl "$FLAREMO_URL/memory/mcp" \
   --data '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
 ```
 
-## 六个工具
+## 七个工具
 
 | 工具 | 作用 | 调用时机 |
 | --- | --- | --- |
 | `memory_bootstrap` | 恢复全局 + 项目的 core 记忆、重要决策/约束、近期教训 | 进入新项目或重要会话时调用一次，不要每轮都调 |
-| `memory_recall` | 按自然语言查询召回相关记忆 | 任务涉及历史决策、偏好、约束、过往失败时 |
-| `memory_remember` | 存一条原子长期事实 | 发现跨 session 有价值的稳定结论时 |
+| `memory_recall` | 混合召回：事实键精确命中、全文、语义、关系四路融合，返回命中路径 | 任务涉及历史决策、偏好、约束、过往失败时 |
+| `memory_remember` | 存一条原子长期事实（支持 `fact_key` 版本断代与证据链） | 发现跨 session 有价值的稳定结论时 |
+| `memory_compile` | 编译当前情境的完整锦囊（确定性、受字符预算约束、铁律硬包含） | 需要和别的 Agent 拿到同一份投影时；优先于自行拼装 bootstrap 结果 |
 | `memory_checkpoint` | 把一段完成的工作提炼为 1 条 episodic 摘要 + 若干原子记忆 | 完成重要功能、设计、调研、决策后 |
 | `memory_link` | 建记忆间或记忆到资源的关系（`supersedes`/`contradicts`/`supports` 等） | 发现新旧记忆矛盾、替代、支撑关系时 |
 | `memory_forget` | 归档或替代一条已不正确的记忆 | 发现记忆已错、已过时、已无关时 |
@@ -87,8 +88,9 @@ locked > confirmed > observed > inferred
 
 这些是刻意后置、不是缺陷，设计上已预留扩展位：
 
-- **语义召回依赖 embedding 基础设施**：memory 向量通过 embedding outbox 索引到 `VECTORIZE_MEMORIES` 的 per-user namespace（`namespace = 记忆所属用户`，见 `packages/domain/src/embedding-outbox.ts`）；`memory_recall` 在 provider 和 index 可用时优先语义召回，provider / index 缺失或报错时自动降级回 FTS5 关键词召回。与 memo 语义搜索共用同一套基础设施，见 [语义搜索](./semantic-search.md)。
-- **不自动固化**：Agent 需要主动调用 `remember` / `checkpoint`；P0 不会在会话结束后自动调 LLM 提炼。
+- **混合召回**：`memory_recall` 并行走四路——`fact_key` 精确命中（命中即置顶）、全文索引、`VECTORIZE_MEMORIES` 语义检索、关系 1-hop 展开——再按 RRF 融合排序；每条结果带上它命中了哪些路径。语义那一路依赖 embedding 基础设施（provider 或 index 不可用时该路自动缺席，其余三路照常工作），memory 向量按 `namespace = 记忆所属用户` 隔离，与 memo 语义搜索共用同一套基础设施，见 [语义搜索](./semantic-search.md)。
+- **自动固化是离线提炼，不是对话中调用**：Agent 主动 `remember` / `checkpoint` 仍是主路径；「Dreaming」只在每日维护窗口里把已有材料提炼成 💡 猜想送进审核箱，**永不直接进锦囊**、**永不自动替代人类资产**，且受每日产出上限与驳回负样本约束。
+- **生命周期有维护任务兜底**：💡 猜想 N 天（默认 14）未被处理会自动归档；已替代 / 已归档 / 已过有效期或 `expires_at` 的条目，其向量由每日维护任务回收，避免它们长期占用召回候选池。
 - **`source_agent` 是字符串**：用于来源标注和按 agent scope 隔离，不是注册的身份系统。
 - **单用户**：所有查询都带 `user_id`，多用户协作不在当前范围。
 
