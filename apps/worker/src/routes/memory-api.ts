@@ -11,6 +11,7 @@ import {
   confirmMemory,
   createMemory,
   createMemoryInputToWrite,
+  getLatestCompileArchive,
   getMemory,
   getMemoryLineage,
   hardDeleteMemory,
@@ -96,6 +97,29 @@ memoryApi.get(
     }
   },
 );
+
+// Lens (§五.4): the deterministic recompute *and* the last actual injection
+// read back from the archive. When the two differ, the archive wins — it is
+// what an agent really carried, the preview is only a re-derivation.
+memoryApi.get("/lens", zValidator("query", compileInputSchema), async (c) => {
+  try {
+    const { db, user } = await getBrowserRequestContext(c);
+    const input = c.req.valid("query");
+    const [latestArchive, compiled] = await Promise.all([
+      getLatestCompileArchive(db, user.id, input),
+      compileCoreMemory(db, user, input),
+    ]);
+    return c.json({
+      latest_archive: latestArchive,
+      preview: compiled,
+      matches_archive: latestArchive
+        ? latestArchive.payload === compiled.system_prompt_payload
+        : null,
+    });
+  } catch (error) {
+    return jsonError(c, error);
+  }
+});
 
 memoryApi.post("/", zValidator("json", createMemorySchema), async (c) => {
   try {

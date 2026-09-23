@@ -13,7 +13,11 @@ import {
   sql,
 } from "drizzle-orm";
 import { memoryEvidenceToDto } from "./dto";
-import { buildFtsCondition, memoryLivenessCondition } from "./shared";
+import {
+  buildFtsCondition,
+  memoryLivenessCondition,
+  searchFtsRanked,
+} from "./shared";
 
 export const MEMORY_DEFAULT_RECALL_LIMIT = 8;
 export const MEMORY_MAX_RECALL_LIMIT = 50;
@@ -162,21 +166,46 @@ export async function recallMemories(
     }
   }
 
-  // --- Path B: SQLite FTS5 (Keyword search) ---
+  // --- Path B: SQLite FTS5 (Keyword search, bm25 relevance order) ---
   const ftsRankMap = new Map<string, number>();
-  const withText = buildFtsCondition(input.query);
-  if (withText) {
+  const ftsRanked = await searchFtsRanked(
+    db,
+    input.query,
+    MEMORY_RECALL_CANDIDATE_LIMIT,
+  );
+  if (ftsRanked.length > 0) {
+    const ftsIdOrder = ftsRanked.map((hit) => hit.memoryId);
     const ftsRows = await db
       .select()
       .from(memoryItems)
-      .where(and(...filters, withText))
-      .orderBy(desc(memoryItems.updatedAt), desc(memoryItems.id))
-      .limit(MEMORY_RECALL_CANDIDATE_LIMIT);
-
-    ftsRows.forEach((row, idx) => {
-      ftsRankMap.set(row.id, idx + 1);
-      addMatch(row, "keyword");
+      .where(and(...filters, inArray(memoryItems.id, ftsIdOrder)));
+    // Position in the bm25-ordered candidate list is the RRF rank; the rows
+    // themselves are re-filtered through the same liveness/scope filters.
+    const rankById = new Map(ftsRanked.map((hit) => [hit.memoryId, hit.rank]));
+    ftsRows.forEach((row) => {
+      const rank = rankById.get(row.id);
+      if (rank !== undefined) {
+        ftsRankMap.set(row.id, rank);
+        addMatch(row, "keyword");
+      }
     });
+  } else {
+    // Short / token-less queries: trigram FTS cannot help, fall back to a
+    // LIKE filter whose ordering (recency) doubles as the RRF rank.
+    const withText = buildFtsCondition(input.query);
+    if (withText) {
+      const ftsRows = await db
+        .select()
+        .from(memoryItems)
+        .where(and(...filters, withText))
+        .orderBy(desc(memoryItems.updatedAt), desc(memoryItems.id))
+        .limit(MEMORY_RECALL_CANDIDATE_LIMIT);
+
+      ftsRows.forEach((row, idx) => {
+        ftsRankMap.set(row.id, idx + 1);
+        addMatch(row, "keyword");
+      });
+    }
   }
 
   // --- Path C: Semantic Search (Cloudflare Vectorize) ---
@@ -308,10 +337,13 @@ export async function recallMemories(
     // Apply authority multiplier
     score *= authorityMultiplier[row.verification] ?? 1.0;
 
-    // Decay ONLY for episodic memories; semantic facts NEVER decay (§VI.6)
+    // Decay ONLY for episodic memories; semantic facts NEVER decay (§VI.6).
+    // The clock is `asOf`, not wall time: a time-travel query scores facts by
+    // the same timeline its liveness filter uses.
     if (row.type === "episodic") {
+      const referenceTime = Date.parse(asOfTime) || Date.now();
       const ageDays =
-        (Date.now() - new Date(row.updatedAt).getTime()) / 86_400_000;
+        (referenceTime - new Date(row.updatedAt).getTime()) / 86_400_000;
       const decay = Math.max(0.5, 1 - ageDays / 365);
       score *= decay;
     }
@@ -340,6 +372,24 @@ export async function recallMemories(
     MEMORY_MAX_RECALL_LIMIT,
   );
   const selected = scoredCandidates.slice(0, limit);
+
+  // Access bookkeeping feeds the dormancy sink (§IV.5.4): "90 天未被召回"
+  // needs to know when a memory was last answered, so every successful
+  // recall stamps the rows it returned.
+  if (selected.length > 0) {
+    await db
+      .update(memoryItems)
+      .set({
+        lastAccessedAt: nowIso,
+        accessCount: sql`${memoryItems.accessCount} + 1`,
+      })
+      .where(
+        inArray(
+          memoryItems.id,
+          selected.map((s) => s.row.id),
+        ),
+      );
+  }
 
   // Load evidence for selected candidates (§VI.1)
   const selectedIds = selected.map((s) => s.row.id);

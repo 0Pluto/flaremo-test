@@ -9,11 +9,90 @@ import {
   memoryItems,
   memoryRevisions,
 } from "@flaremo/db";
-import { and, eq, isNull, lte, or, type SQL, sql } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  isNotNull,
+  isNull,
+  like,
+  lte,
+  or,
+  type SQL,
+  sql,
+} from "drizzle-orm";
 import { ForbiddenError, NotFoundError, ValidationError } from "../errors";
 import { createResourceId } from "../ids";
 
 export const MEMORY_MAX_CONTENT_LENGTH = 4_000;
+
+/**
+ * Canonical spelling of a fact key: keys like `Project.Database`,
+ * `project.database ` and `project_database` describe the same slot and must
+ * not split a version chain. Lowercase, whitespace/underscores become dashes,
+ * and only letters, digits, dots, dashes and CJK survive.
+ */
+export function normalizeFactKey(raw: string): string {
+  return raw
+    .trim()
+    .toLowerCase()
+    .replace(/[\\/\s_]+/g, "-")
+    .replace(/[^a-z0-9.\p{Script=Han}-]+/gu, "")
+    .replace(/\.{2,}/g, ".")
+    .replace(/^[.-]+|[.-]+$/g, "");
+}
+
+/**
+ * Propose a fact key for a write that arrived without one (§VI.3 key
+ * governance). Deliberately conservative:
+ *
+ * - Episodic entries stay keyless — no key, no supersession, only their own
+ *   revision history.
+ * - A key is only proposed when the primary topic tag matches the tail of an
+ *   *existing* key family in the same scope (`flaremo.database` etc.):
+ *   established families are reused so `project.database` / `project.db`
+ *   variants converge, but a brand-new family is never coined from a bare tag,
+ *   because two true facts sharing a topic must not silently land on one key.
+ */
+export async function suggestFactKey(
+  db: FlareMoDb,
+  user: UserRow,
+  input: {
+    scopeType: MemoryItemRow["scopeType"];
+    scopeKey: string | null;
+    tags?: string[] | null;
+    type: MemoryItemRow["type"];
+  },
+): Promise<string | null> {
+  if (input.type === "episodic") return null;
+  const primaryTag = input.tags?.[0];
+  const slug = primaryTag ? normalizeFactKey(primaryTag) : "";
+  if (!slug) return null;
+
+  const scopeFilter = input.scopeKey
+    ? eq(memoryItems.scopeKey, input.scopeKey)
+    : isNull(memoryItems.scopeKey);
+  const familyRows = await db
+    .select({ factKey: memoryItems.factKey })
+    .from(memoryItems)
+    .where(
+      and(
+        eq(memoryItems.userId, user.id),
+        eq(memoryItems.scopeType, input.scopeType),
+        scopeFilter,
+        isNotNull(memoryItems.factKey),
+        like(memoryItems.factKey, `%${slug}`),
+      ),
+    )
+    .orderBy(desc(memoryItems.updatedAt))
+    .limit(20);
+
+  for (const row of familyRows) {
+    const key = row.factKey ?? "";
+    if (key.split(".").pop() === slug) return key;
+  }
+  return null;
+}
 
 /**
  * The actor behind a memory mutation. Browser sessions are the owner; PATs
@@ -322,6 +401,39 @@ export function buildFtsCondition(content: string) {
   return sql`${memoryItems.id} IN (
     SELECT memory_id FROM memory_fts WHERE memory_fts MATCH ${match}
   )`;
+}
+
+/**
+ * Keyword candidates ordered by FTS5 relevance (bm25 via the built-in `rank`
+ * column), not by recency. The RRF keyword channel feeds ranks into the
+ * fusion formula, so ordering by `updatedAt` would silently turn the keyword
+ * path into a "most recent wins" channel (§VI.6). Returns null when the
+ * query has no usable trigram tokens; the caller then falls back.
+ */
+export async function searchFtsRanked(
+  db: FlareMoDb,
+  query: string,
+  limit: number,
+): Promise<Array<{ memoryId: string; rank: number }>> {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+  const tokens = trimmed.match(/[\p{L}\p{N}_-]+/gu) ?? [];
+  const trigrams = tokens.filter((token) => [...token].length >= 3);
+  if (trigrams.length === 0) return [];
+
+  const match = trigrams
+    .map((token) => `"${token.replaceAll('"', '""')}"`)
+    .join(" OR ");
+  const rows = await db.all<{ memory_id: string }>(sql`
+    SELECT memory_id FROM memory_fts
+    WHERE memory_fts MATCH ${match}
+    ORDER BY rank
+    LIMIT ${limit}
+  `);
+  return rows.map((row, index) => ({
+    memoryId: row.memory_id,
+    rank: index + 1,
+  }));
 }
 
 function escapeLike(value: string) {

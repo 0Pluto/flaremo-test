@@ -1,7 +1,12 @@
-import type { CompiledMemoryDto, CompileInput } from "@flaremo/contracts";
+import type {
+  CompiledMemoryDto,
+  CompileInput,
+  MemoryCompileArchiveDto,
+} from "@flaremo/contracts";
 import type { FlareMoDb, MemoryItemRow, UserRow } from "@flaremo/db";
-import { memoryItems } from "@flaremo/db";
+import { memoryCompileArchives, memoryItems } from "@flaremo/db";
 import { and, desc, eq, or, type SQL, sql } from "drizzle-orm";
+import { createResourceId } from "../ids";
 import { memoryToDto } from "./dto";
 import { memoryLivenessCondition } from "./shared";
 
@@ -9,6 +14,7 @@ export async function compileCoreMemory(
   db: FlareMoDb,
   user: UserRow,
   input: CompileInput,
+  options: { persist?: boolean; agent?: string | null } = {},
 ): Promise<CompiledMemoryDto> {
   const maxChars = input.max_chars ?? 6_000;
   const nowIso = new Date().toISOString();
@@ -203,7 +209,7 @@ export async function compileCoreMemory(
     return a.id.localeCompare(b.id);
   });
 
-  return {
+  const compiled: CompiledMemoryDto = {
     system_prompt_payload: payload,
     character_count: charCount,
     estimated_tokens: estimatedTokens,
@@ -212,4 +218,77 @@ export async function compileCoreMemory(
     has_overflow: truncated.length > 0,
     pinned_overflow: pinnedOverflow,
   };
+
+  // Every *actual* injection is an audit record (§VI.7). The web lens preview
+  // deliberately does not pass `persist`, so previews are not mistaken for
+  // injections when reading "上次实际注入".
+  if (options.persist) {
+    await db.insert(memoryCompileArchives).values({
+      id: createResourceId("memories"),
+      userId: user.id,
+      agent: options.agent ?? null,
+      projectKey: input.project_key ?? null,
+      workspaceKey: input.workspace_key ?? null,
+      payload: compiled.system_prompt_payload,
+      characterCount: compiled.character_count,
+      hasOverflow: compiled.has_overflow,
+      pinnedOverflow: compiled.pinned_overflow,
+      includedIds: compiled.included_items.map((item) => item.id),
+      truncatedIds: compiled.truncated_items.map((item) => item.id),
+      excludedIds: input.exclude_ids ?? [],
+      createdAt: nowIso,
+    });
+  }
+
+  return compiled;
+}
+
+/** Shape an archive row for the lens API (§五.4: 以存档为准). */
+export function memoryCompileArchiveToDto(
+  row: typeof memoryCompileArchives.$inferSelect,
+): MemoryCompileArchiveDto {
+  return {
+    id: row.id,
+    agent: row.agent,
+    project_key: row.projectKey,
+    workspace_key: row.workspaceKey,
+    payload: row.payload,
+    character_count: row.characterCount,
+    has_overflow: row.hasOverflow,
+    pinned_overflow: row.pinnedOverflow,
+    included_ids: Array.isArray(row.includedIds) ? row.includedIds : [],
+    truncated_ids: Array.isArray(row.truncatedIds) ? row.truncatedIds : [],
+    excluded_ids: Array.isArray(row.excludedIds) ? row.excludedIds : [],
+    created_at: row.createdAt,
+  };
+}
+
+/**
+ * The most recent actual injection matching the lens scope. Scope matching is
+ * exact: an archive compiled for another project or agent is not evidence of
+ * what the current context received.
+ */
+export async function getLatestCompileArchive(
+  db: FlareMoDb,
+  userId: string,
+  input: CompileInput,
+) {
+  const filters = [eq(memoryCompileArchives.userId, userId)];
+  if (input.agent) {
+    filters.push(eq(memoryCompileArchives.agent, input.agent));
+  }
+  if (input.project_key) {
+    filters.push(eq(memoryCompileArchives.projectKey, input.project_key));
+  }
+  if (input.workspace_key) {
+    filters.push(eq(memoryCompileArchives.workspaceKey, input.workspace_key));
+  }
+  const row = await db
+    .select()
+    .from(memoryCompileArchives)
+    .where(and(...filters))
+    .orderBy(desc(memoryCompileArchives.createdAt))
+    .limit(1)
+    .get();
+  return row ? memoryCompileArchiveToDto(row) : null;
 }

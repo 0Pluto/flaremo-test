@@ -9,6 +9,7 @@ import {
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { QuotaExceededError } from "./errors";
 import type { PlanLimits, PlanLimitValue, UserPlanLimits } from "./limits";
+import { sinkDormantObservedMemories } from "./memory/maintenance";
 import type { UsageMetric } from "./usage";
 import { currentMonthKey } from "./usage";
 
@@ -242,9 +243,16 @@ export async function assertMemoryCountQuota(
   const limit = userLimits?.maxMemoryItemsPerUser ?? null;
   if (limit === null) return;
   const used = await countUserMemories(db, userId);
-  if (used + additionalCount > limit) {
+  if (used + additionalCount <= limit) return;
+
+  // Over the cap, the ledger first sinks its own AI assets (§VI.12): dormant
+  // observations archive before a write is refused — a quota rejection after
+  // cleanup is explicit, never a silent drop.
+  await sinkDormantObservedMemories(db, new Date(), 100);
+  const afterSink = await countUserMemories(db, userId);
+  if (afterSink + additionalCount > limit) {
     throw new QuotaExceededError(
-      `Memory count quota exceeded (${limit} memories per user)`,
+      `Memory count quota exceeded (${limit} memories per user); dormant AI observations were archived first and more space is needed`,
     );
   }
 }

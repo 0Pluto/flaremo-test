@@ -95,7 +95,9 @@ export const memoryItems = sqliteTable(
     // while this timestamp keeps "rejected, and when" auditable.
     rejectedAt: text("rejected_at"),
     // Normalized content + type + kind + scope hash, used to reject exact
-    // duplicates without an embedding index.
+    // duplicates without an embedding index. The unique index below only
+    // guards *active* rows: an archived or rejected judgment must not block
+    // re-establishing the same fact later.
     fingerprint: text("fingerprint").notNull(),
     accessCount: integer("access_count").notNull().default(0),
     lastAccessedAt: text("last_accessed_at"),
@@ -135,10 +137,9 @@ export const memoryItems = sqliteTable(
       table.kind,
     ),
     index("memory_items_user_tier_idx").on(table.userId, table.tier),
-    uniqueIndex("memory_items_user_fingerprint_idx").on(
-      table.userId,
-      table.fingerprint,
-    ),
+    uniqueIndex("memory_items_user_fingerprint_idx")
+      .on(table.userId, table.fingerprint)
+      .where(sql`${table.status} = 'active'`),
     uniqueIndex("memory_items_user_fact_key_active_idx")
       .on(table.userId, table.factKey)
       .where(
@@ -277,6 +278,12 @@ export const memoryEvidence = sqliteTable(
     observedAt: text("observed_at"),
     excerpt: text("excerpt"),
     excerptHash: text("excerpt_hash"),
+    // Evidence staleness (§VI.1): the daily sweep re-hashes memo-backed
+    // evidence; `stale_at` marks a changed source, `missing_at` a vanished
+    // one. Neither is ever cleared automatically — only re-taking evidence
+    // or retiring the memory clears them.
+    staleAt: text("stale_at"),
+    missingAt: text("missing_at"),
     metadata: text("metadata", { mode: "json" })
       .$type<Record<string, unknown>>()
       .notNull()
@@ -354,6 +361,47 @@ export const memoryRejections = sqliteTable(
       table.factKey,
     ),
     index("memory_rejections_user_created_idx").on(
+      table.userId,
+      table.createdAt,
+    ),
+  ],
+);
+
+// Injection archive (§VI.7): every *actual* injection to an agent is recorded
+// with the exact rendered payload, so the lens can show "上次实际注入" from the
+// archive rather than a re-derivation, and erasure can scrub retired content
+// out of past payloads. The web lens preview deliberately does NOT archive.
+export const memoryCompileArchives = sqliteTable(
+  "memory_compile_archives",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    agent: text("agent"),
+    projectKey: text("project_key"),
+    workspaceKey: text("workspace_key"),
+    payload: text("payload").notNull(),
+    characterCount: integer("character_count").notNull(),
+    hasOverflow: integer("has_overflow", { mode: "boolean" }).notNull(),
+    pinnedOverflow: integer("pinned_overflow", { mode: "boolean" }).notNull(),
+    includedIds: text("included_ids", { mode: "json" })
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    truncatedIds: text("truncated_ids", { mode: "json" })
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    // Items the user unticked for this injection only ("勾掉 = 仅本次排除").
+    excludedIds: text("excluded_ids", { mode: "json" })
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    index("memory_compile_archives_user_created_idx").on(
       table.userId,
       table.createdAt,
     ),

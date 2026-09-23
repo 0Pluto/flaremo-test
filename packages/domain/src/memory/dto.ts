@@ -111,6 +111,8 @@ export function memoryEvidenceToDto(
     observed_at: row.observedAt ?? null,
     excerpt: row.excerpt ?? null,
     excerpt_hash: row.excerptHash ?? null,
+    stale_at: row.staleAt ?? null,
+    missing_at: row.missingAt ?? null,
     metadata: (row.metadata as Record<string, unknown>) ?? {},
     created_at: row.createdAt,
   };

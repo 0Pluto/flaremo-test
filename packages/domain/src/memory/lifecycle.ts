@@ -4,6 +4,7 @@ import type {
 } from "@flaremo/contracts";
 import type { FlareMoDb, MemoryItemRow, UserRow } from "@flaremo/db";
 import {
+  memoryCompileArchives,
   memoryEvents,
   memoryEvidence,
   memoryItems,
@@ -14,13 +15,15 @@ import {
 } from "@flaremo/db";
 import { and, eq, or, sql } from "drizzle-orm";
 import { insertEmbeddingTask } from "../embedding-outbox";
-import { ConflictError, ForbiddenError } from "../errors";
+import { ConflictError, ForbiddenError, ValidationError } from "../errors";
 import { createResourceId } from "../ids";
 import { memoryToDto } from "./dto";
 import {
   appendMemoryEvent,
   appendRevision,
   assertAgentCanMutate,
+  assertMemoryContentLength,
+  assertNoSecrets,
   computeFingerprint,
   type MemoryActor,
   normalizeMemoryContent,
@@ -30,6 +33,61 @@ import {
 export type ForgetMemoryInput = {
   reason: MemoryForgetReason;
 };
+
+/**
+ * The single definition of promoting a proposal into the fact-key slot.
+ *
+ * An inferred proposal never occupies the key (the partial unique index
+ * excludes it), so the first human affirmation that makes it confirmed or
+ * locked must retire the previously active version *in the same
+ * transaction* — confirming alone would collide with
+ * `memory_items_user_fact_key_active_idx` and surface a raw SQLite error.
+ * Mirrors the matrix in write.ts createMemory (§VI.4).
+ */
+async function retireActiveFactForKey(
+  db: FlareMoDb,
+  user: UserRow,
+  factKey: string,
+  successorId: string,
+  successorValidFrom: string | null,
+  now: string,
+) {
+  const activeConflict = await db
+    .select()
+    .from(memoryItems)
+    .where(
+      and(
+        eq(memoryItems.userId, user.id),
+        eq(memoryItems.factKey, factKey),
+        eq(memoryItems.status, "active"),
+        sql`${memoryItems.id} != ${successorId}`,
+      ),
+    )
+    .get();
+  if (!activeConflict) return null;
+
+  await appendRevision(db, user, activeConflict, "user");
+  const validTo = successorValidFrom ?? now;
+  const retireStatement = db
+    .update(memoryItems)
+    .set({
+      status: "superseded" as const,
+      supersededById: successorId,
+      supersededAt: now,
+      validTo,
+      updatedAt: now,
+    })
+    .where(eq(memoryItems.id, activeConflict.id));
+
+  return {
+    retireStatement,
+    activeConflict,
+    // A successor dated in the future leaves the retired version legitimately
+    // effective until that date: its vector must stay searchable until then,
+    // and the daily maintenance sweep reclaims it afterwards (§VI.4, §九.18).
+    dropVector: validTo <= now,
+  };
+}
 
 async function setVerification(
   db: FlareMoDb,
@@ -47,7 +105,25 @@ async function setVerification(
   const existing = await requireMemory(db, user, id);
   await appendRevision(db, user, existing, "user");
   const now = new Date().toISOString();
-  await db
+
+  const wasInferred = existing.verification === "inferred";
+  const becomesHuman =
+    verification === "confirmed" || verification === "locked";
+
+  let retired: Awaited<ReturnType<typeof retireActiveFactForKey>> = null;
+  const supersededEvent: Promise<unknown> = Promise.resolve();
+  if (wasInferred && becomesHuman && existing.factKey) {
+    retired = await retireActiveFactForKey(
+      db,
+      user,
+      existing.factKey,
+      id,
+      existing.validFrom,
+      now,
+    );
+  }
+
+  const confirmStatement = db
     .update(memoryItems)
     .set({
       verification,
@@ -56,6 +132,55 @@ async function setVerification(
       updatedAt: now,
     })
     .where(and(eq(memoryItems.id, id), eq(memoryItems.userId, user.id)));
+
+  // Retirement and promotion are one unit of work: a crash between them must
+  // not leave the key with two live versions or with none.
+  if (retired) {
+    await db.batch([retired.retireStatement, confirmStatement]);
+    if (retired.dropVector) {
+      await insertEmbeddingTask(db, {
+        userId: user.id,
+        resourceType: "memory",
+        resourceId: retired.activeConflict.id,
+        operation: "delete",
+        createdAt: now,
+      });
+    }
+    await appendMemoryEvent(
+      db,
+      user.id,
+      retired.activeConflict.id,
+      "superseded",
+      "user",
+      null,
+      {
+        superseded_by_id: id,
+      },
+    );
+    await db.insert(memoryRelations).values({
+      id: createResourceId("memories"),
+      userId: user.id,
+      memoryId: id,
+      relatedMemoryId: retired.activeConflict.id,
+      type: "supersedes",
+      createdAt: now,
+    });
+  } else {
+    await db.batch([confirmStatement]);
+  }
+
+  // Inferred proposals never enter the vector index at creation; the first
+  // human affirmation is what makes their vector exist. Without this, a
+  // confirmed proposal stays invisible to semantic recall forever.
+  if (wasInferred && becomesHuman) {
+    await insertEmbeddingTask(db, {
+      userId: user.id,
+      resourceType: "memory",
+      resourceId: id,
+      operation: "index",
+      createdAt: now,
+    });
+  }
 
   await appendMemoryEvent(
     db,
@@ -202,10 +327,16 @@ export async function restoreMemory(
 
   const now = new Date().toISOString();
   await appendRevision(db, user, existing, "user");
+  // A restored conjecture goes back to the review inbox rather than sitting
+  // active-but-unreviewable: rejected/untouched proposals must stay awaiting
+  // a human decision until someone confirms them.
+  const restoredNeedsReview = existing.verification === "inferred";
   await db
     .update(memoryItems)
     .set({
       status: "active",
+      needsReview: restoredNeedsReview,
+      reviewReason: restoredNeedsReview ? "inferred" : null,
       updatedAt: now,
     })
     .where(and(eq(memoryItems.id, id), eq(memoryItems.userId, user.id)));
@@ -232,9 +363,11 @@ export async function hardDeleteMemory(
   if (actor.type !== "user") {
     throw new ForbiddenError("Only the user may hard-delete a memory.");
   }
-  await requireMemory(db, user, id);
+  const existing = await requireMemory(db, user, id);
 
-  // Cascade deletions (§VI.9): evidence, revisions, events, relations, links
+  // Cascade deletions (§VI.9): evidence, revisions, events, relations, links.
+  // Negative-sample rows carry the rejected text verbatim, so erasure must
+  // sweep them too — "任何可查询面不得残留正文" (§VI.3 invariant 6).
   await db.delete(memoryEvidence).where(eq(memoryEvidence.memoryId, id));
   await db.delete(memoryEvents).where(eq(memoryEvents.memoryId, id));
   await db.delete(memoryRevisions).where(eq(memoryRevisions.memoryId, id));
@@ -249,6 +382,35 @@ export async function hardDeleteMemory(
         eq(memoryRelations.relatedMemoryId, id),
       ),
     );
+  if (existing.fingerprint) {
+    await db
+      .delete(memoryRejections)
+      .where(
+        and(
+          eq(memoryRejections.userId, user.id),
+          eq(memoryRejections.fingerprint, existing.fingerprint),
+        ),
+      );
+  }
+
+  // Injection archives must not leak erased content either: payloads that
+  // carried this item keep their structure but the text becomes an "[erased]"
+  // placeholder (§VI.9 — the archive still shows *that something was injected*,
+  // not what).
+  const archives = await db
+    .select()
+    .from(memoryCompileArchives)
+    .where(eq(memoryCompileArchives.userId, user.id));
+  for (const archive of archives) {
+    if (!archive.payload.includes(existing.content)) continue;
+    const scrubbed = archive.payload
+      .split(existing.content)
+      .join("[已抹除 / erased]");
+    await db
+      .update(memoryCompileArchives)
+      .set({ payload: scrubbed })
+      .where(eq(memoryCompileArchives.id, archive.id));
+  }
 
   await db
     .delete(memoryItems)
@@ -342,29 +504,31 @@ export async function resolveProposal(
 
   if (input.action === "reject") {
     await appendRevision(db, user, proposal, "user");
-    await db
-      .update(memoryItems)
-      .set({
-        status: "archived",
-        needsReview: false,
-        reviewReason: "rejected",
-        rejectedAt: now,
-        updatedAt: now,
-      })
-      .where(eq(memoryItems.id, proposalId));
-
-    // 2. Insert into memory_rejections for negative feedback guard (§IV.5, §VI.8)
-    await db.insert(memoryRejections).values({
-      id: createResourceId("memories"),
-      userId: user.id,
-      scopeType: proposal.scopeType,
-      scopeKey: proposal.scopeKey,
-      factKey: proposal.factKey,
-      rejectedContent: proposal.content,
-      fingerprint: proposal.fingerprint,
-      reason: input.rejection_reason ?? null,
-      createdAt: now,
-    });
+    // Archival and the negative-sample record are one unit of work: the guard
+    // against re-proposing must not depend on the archive step succeeding.
+    await db.batch([
+      db
+        .update(memoryItems)
+        .set({
+          status: "archived",
+          needsReview: false,
+          reviewReason: "rejected",
+          rejectedAt: now,
+          updatedAt: now,
+        })
+        .where(eq(memoryItems.id, proposalId)),
+      db.insert(memoryRejections).values({
+        id: createResourceId("memories"),
+        userId: user.id,
+        scopeType: proposal.scopeType,
+        scopeKey: proposal.scopeKey,
+        factKey: proposal.factKey,
+        rejectedContent: proposal.content,
+        fingerprint: proposal.fingerprint,
+        reason: input.rejection_reason ?? null,
+        createdAt: now,
+      }),
+    ]);
 
     await appendMemoryEvent(db, user.id, proposalId, "archived", "user", null, {
       rejection_reason: input.rejection_reason,
@@ -382,6 +546,13 @@ export async function resolveProposal(
   let fingerprint = proposal.fingerprint;
   if (input.action === "modify" && input.modified_content) {
     content = normalizeMemoryContent(input.modified_content);
+    if (!content) {
+      throw new ValidationError("Memory content cannot be empty.");
+    }
+    // The modified text is a fresh write: it passes the same gates as every
+    // other content path, not only the ones create/update guard.
+    assertMemoryContentLength(content);
+    assertNoSecrets(content);
     fingerprint = await computeFingerprint(
       user,
       content,
@@ -391,6 +562,9 @@ export async function resolveProposal(
       proposal.scopeKey,
     );
   }
+
+  // Snapshot the proposal before its content is overwritten by the ruling.
+  await appendRevision(db, user, proposal, "user");
 
   // Supersede previous active fact if proposal has fact_key (§VI.4 matrix)
   if (proposal.factKey) {
@@ -411,16 +585,33 @@ export async function resolveProposal(
       await appendRevision(db, user, existingActive, "user");
       // valid_to = proposal.valid_from
       const newValidFrom = proposal.validFrom ?? now;
-      await db
-        .update(memoryItems)
-        .set({
-          status: "superseded",
-          supersededById: proposalId,
-          supersededAt: now,
-          validTo: newValidFrom,
-          updatedAt: now,
-        })
-        .where(eq(memoryItems.id, existingActive.id));
+
+      // Retirement of the old version and confirmation of the new one are one
+      // transaction: a crash between the two must not leave the key with two
+      // live versions (or none). Same contract createMemory already upholds.
+      await db.batch([
+        db
+          .update(memoryItems)
+          .set({
+            status: "superseded",
+            supersededById: proposalId,
+            supersededAt: now,
+            validTo: newValidFrom,
+            updatedAt: now,
+          })
+          .where(eq(memoryItems.id, existingActive.id)),
+        db
+          .update(memoryItems)
+          .set({
+            content,
+            fingerprint,
+            verification: "confirmed",
+            needsReview: false,
+            reviewReason: null,
+            updatedAt: now,
+          })
+          .where(eq(memoryItems.id, proposalId)),
+      ]);
 
       await appendMemoryEvent(
         db,
@@ -442,30 +633,46 @@ export async function resolveProposal(
         createdAt: now,
       });
 
-      // Cleanup vector of superseded memory
-      await insertEmbeddingTask(db, {
-        userId: user.id,
-        resourceType: "memory",
-        resourceId: existingActive.id,
-        operation: "delete",
-        createdAt: now,
-      });
+      // The retired version stays searchable until its validity window has
+      // actually ended: a future-dated proposal keeps the current rule live
+      // until that date (§VI.4, §九.18). The maintenance sweep reclaims the
+      // vector once valid_to arrives.
+      if (newValidFrom <= now) {
+        await insertEmbeddingTask(db, {
+          userId: user.id,
+          resourceType: "memory",
+          resourceId: existingActive.id,
+          operation: "delete",
+          createdAt: now,
+        });
+      }
+    } else {
+      await db
+        .update(memoryItems)
+        .set({
+          content,
+          fingerprint,
+          verification: "confirmed",
+          needsReview: false,
+          reviewReason: null,
+          updatedAt: now,
+        })
+        .where(eq(memoryItems.id, proposalId));
     }
+  } else {
+    // Upgrade proposal to confirmed
+    await db
+      .update(memoryItems)
+      .set({
+        content,
+        fingerprint,
+        verification: "confirmed",
+        needsReview: false,
+        reviewReason: null,
+        updatedAt: now,
+      })
+      .where(eq(memoryItems.id, proposalId));
   }
-
-  // Upgrade proposal to confirmed
-  await appendRevision(db, user, proposal, "user");
-  await db
-    .update(memoryItems)
-    .set({
-      content,
-      fingerprint,
-      verification: "confirmed",
-      needsReview: false,
-      reviewReason: null,
-      updatedAt: now,
-    })
-    .where(eq(memoryItems.id, proposalId));
 
   await appendMemoryEvent(db, user.id, proposalId, "confirmed", "user", null);
 

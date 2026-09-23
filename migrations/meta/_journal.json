@@ -218,6 +218,13 @@
       "when": 1789800000000,
       "tag": "0030_memory_ledger_v2",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "6",
+      "when": 1789886400000,
+      "tag": "0031_memory_ledger_followup",
+      "breakpoints": true
     }
   ]
 }

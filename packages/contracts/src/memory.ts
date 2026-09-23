@@ -134,6 +134,10 @@ export const memoryEvidenceDtoSchema = z.object({
   observed_at: z.string().nullable(),
   excerpt: z.string().nullable(),
   excerpt_hash: z.string().nullable(),
+  // Evidence staleness (§VI.1): source content changed / source vanished.
+  // Both are set only by the daily sweep; neither auto-clears.
+  stale_at: z.string().nullable().optional(),
+  missing_at: z.string().nullable().optional(),
   metadata: z.record(z.string(), z.unknown()),
   created_at: z.string(),
 });
@@ -251,6 +255,22 @@ export const compiledMemoryDtoSchema = z.object({
   // True when pinned rules alone exceeded the budget: the projection is complete
   // in authority but the caller must warn the user that nothing else fit.
   pinned_overflow: z.boolean().default(false),
+});
+
+// Injection archive (§VI.7): the audit record of one actual agent injection.
+export const memoryCompileArchiveDtoSchema = z.object({
+  id: z.string(),
+  agent: z.string().nullable(),
+  project_key: z.string().nullable(),
+  workspace_key: z.string().nullable(),
+  payload: z.string(),
+  character_count: z.number().int(),
+  has_overflow: z.boolean(),
+  pinned_overflow: z.boolean(),
+  included_ids: z.array(z.string()),
+  truncated_ids: z.array(z.string()),
+  excluded_ids: z.array(z.string()),
+  created_at: z.string(),
 });
 
 // --- Export / import --------------------------------------------------------
@@ -568,6 +588,9 @@ export type MemoryRecallItem = z.infer<typeof memoryRecallItemSchema>;
 export type MemoryRecallResponse = z.infer<typeof memoryRecallResponseSchema>;
 export type MemoryLineageDto = z.infer<typeof memoryLineageDtoSchema>;
 export type CompiledMemoryDto = z.infer<typeof compiledMemoryDtoSchema>;
+export type MemoryCompileArchiveDto = z.infer<
+  typeof memoryCompileArchiveDtoSchema
+>;
 
 export type ExportMemory = z.infer<typeof exportMemorySchema>;
 export type ImportMemory = z.infer<typeof importMemorySchema>;

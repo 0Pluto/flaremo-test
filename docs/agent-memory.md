@@ -88,9 +88,12 @@ locked > confirmed > observed > inferred
 
 这些是刻意后置、不是缺陷，设计上已预留扩展位：
 
-- **混合召回**：`memory_recall` 并行走四路——`fact_key` 精确命中（命中即置顶）、全文索引、`VECTORIZE_MEMORIES` 语义检索、关系 1-hop 展开——再按 RRF 融合排序；每条结果带上它命中了哪些路径。语义那一路依赖 embedding 基础设施（provider 或 index 不可用时该路自动缺席，其余三路照常工作），memory 向量按 `namespace = 记忆所属用户` 隔离，与 memo 语义搜索共用同一套基础设施，见 [语义搜索](./semantic-search.md)。
-- **自动固化是离线提炼，不是对话中调用**：Agent 主动 `remember` / `checkpoint` 仍是主路径；「Dreaming」只在每日维护窗口里把已有材料提炼成 💡 猜想送进审核箱，**永不直接进锦囊**、**永不自动替代人类资产**，且受每日产出上限与驳回负样本约束。
-- **生命周期有维护任务兜底**：💡 猜想 N 天（默认 14）未被处理会自动归档；已替代 / 已归档 / 已过有效期或 `expires_at` 的条目，其向量由每日维护任务回收，避免它们长期占用召回候选池。
+- **混合召回**：`memory_recall` 并行走四路——`fact_key` 精确命中（命中即置顶）、全文索引（FTS5 bm25 相关度序）、`VECTORIZE_MEMORIES` 语义检索、关系 1-hop 展开——再按 RRF 融合排序；每条结果带上它命中了哪些路径。语义那一路依赖 embedding 基础设施（provider 或 index 不可用时该路自动缺席，其余三路照常工作），memory 向量按 `namespace = 记忆所属用户` 隔离，与 memo 语义搜索共用同一套基础设施，见 [语义搜索](./semantic-search.md)。
+- **自动固化是离线提炼，不是对话中调用**：Agent 主动 `remember` / `checkpoint` 仍是主路径；「Dreaming」由每日维护窗口驱动——把扫描窗口内的新 memo 与 checkpoint 提炼成 💡 猜想送进审核箱（Workers AI 提炼，`FLAREMO_MEMORY_DREAMING=off` 可关），**永不直接进锦囊**、**永不自动替代人类资产**，且受每日提案配额（默认 5，`FLAREMO_MEMORY_PROPOSAL_DAILY_LIMIT`）、近 30 天驳回 fact_key 的提示词护栏与指纹去重约束。每周一另有冲突巡检：抽样人类资产查内部矛盾，发现一律提案、绝不改动。
+- **生命周期有维护任务兜底**：💡 猜想 N 天（默认 14）未被处理会自动归档；👀 记忆 90 天未被召回自动沉底（人类资产永不沉底；召回会记录访问时间）；已替代 / 已归档 / 已过有效期或 `expires_at` 的条目，其向量由每日维护任务回收（未来生效的替代会留向量到生效日）；修订超 50 版折叠为里程碑快照；配额触顶先沉底清理、仍不足才明确拒绝。
+- **证据有失效检测**：memo 来源的依据由每日维护比对——来源改了标【依据已变更】、来源没了标【依据缺失】并把该条送回审核箱，由人类重新取证或退役。
+- **事实键有治理**：调用方给的键统一归一化（`Project.Database` → `project.database`）；未给键时优先复用同族既有键（主话题匹配既有键尾段），族不存在则保持无键，绝不由裸话题凭空铸键。
+- **注入留档**：Agent 的 `memory_compile` 每次实际注入自动存档；Web `/memory/lens` 端点同时返回重算预览与最近一次实际注入，两者不一致时以存档为准。CLI（`flaremo lens` / `recall` / `remember` / `checkpoint` / `status` / `seed`，退出码 0/1/3，断网降级本地快照）见 `skills/flaremo-memory/SKILL.md`。
 - **`source_agent` 是字符串**：用于来源标注和按 agent scope 隔离，不是注册的身份系统。
 - **单用户**：所有查询都带 `user_id`，多用户协作不在当前范围。
 

@@ -349,6 +349,87 @@ async function main() {
       break;
     }
 
+    case "seed": {
+      // Cold-start seeding (§VI.2): a fresh project has no memories, so scan
+      // the local README / AGENTS convention files and push a handful of
+      // candidate notes into the review inbox. Everything lands as 💡 — the
+      // human confirms or rejects each one. Content is deterministic
+      // (heading + leading sentence), and each candidate carries an
+      // idempotency key derived from file identity so a re-run never spawns
+      // duplicates.
+      const sourceFiles = ["AGENTS.md", "README.md", "CLAUDE.md"].map((name) =>
+        join(process.cwd(), name),
+      );
+      const candidates = [];
+      for (const file of sourceFiles) {
+        if (!fs.existsSync(file)) continue;
+        const text = fs.readFileSync(file, "utf-8");
+        const lines = text.split("\n");
+        let section = null;
+        let sectionBody = "";
+        const flush = () => {
+          if (!section) return;
+          const sentence = sectionBody
+            .split(/(?<=[。！?！？.!?])\s*/)
+            .map((part) => part.trim())
+            .find((part) => part.length >= 12 && part.length <= 300);
+          if (sentence) {
+            const slug = section
+              .toLowerCase()
+              .replace(/[^a-z0-9\u4e00-\u9fff]+/g, "-")
+              .replace(/^-+|-+$/g, "")
+              .slice(0, 40);
+            candidates.push({
+              content: sentence.trim(),
+              fact_key: slug ? `${process.cwd().split("/").pop().toLowerCase()}.${slug}` : undefined,
+              tags: [section.toLowerCase()],
+              file,
+            });
+          }
+          section = null;
+          sectionBody = "";
+        };
+        for (const line of lines) {
+          const heading = line.match(/^#{2,3}\s+(.{1,60})\s*$/);
+          if (heading) {
+            flush();
+            section = heading[1].trim();
+            continue;
+          }
+          if (section && line.trim() && !line.startsWith("#")) {
+            sectionBody += ` ${line.trim()}`;
+          }
+        }
+        flush();
+        if (candidates.length >= 5) break;
+      }
+
+      const picked = candidates.slice(0, 5);
+      if (picked.length === 0) {
+        console.log("未在 README.md / AGENTS.md / CLAUDE.md 中找到可提议的小节。");
+        return;
+      }
+
+      let seeded = 0;
+      for (const candidate of picked) {
+        const result = await callMcp("memory_remember", {
+          content: candidate.content,
+          fact_key: candidate.fact_key,
+          tags: candidate.tags,
+          type: "semantic",
+          kind: "fact",
+          scope_type: "project",
+          scope_key: projectKey,
+          verification: "inferred",
+          source_agent: agent,
+          idempotency_key: `seed:${candidate.file}:${candidate.content.length}:${candidate.content.slice(0, 40)}`,
+        }, command);
+        if (result?.memory || result?.duplicate) seeded += 1;
+      }
+      console.log(`\n🌱 冷启动:已把 ${seeded} 条候选便签递交到【待我确认】(去 Web 里逐条定夺)。\n`);
+      break;
+    }
+
     default:
       console.error(`未知命令: ${command}`);
       printHelp();
@@ -366,6 +447,7 @@ FlareMo Memory Ledger CLI
   flaremo checkpoint "本次战报摘要" [--item "原子结论"]
   flaremo lens [--scope <project>]
   flaremo status
+  flaremo seed                # 冷启动：扫描 README/AGENTS 递交候选便签
 
 选项:
   --project, --scope  当前项目标识 (默认工作目录)

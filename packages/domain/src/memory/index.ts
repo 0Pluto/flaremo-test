@@ -6,11 +6,24 @@ export {
   createMemoryInputToWrite,
   rememberInputToWrite,
 } from "./adapters";
-export { compileCoreMemory } from "./compiler";
 export {
+  compileCoreMemory,
+  getLatestCompileArchive,
+  memoryCompileArchiveToDto,
+} from "./compiler";
+export {
+  collectDreamingSources,
+  DAILY_PROPOSAL_QUOTA_DEFAULT,
+  type DreamingCandidate,
+  type DreamingConflict,
+  type DreamingExtractor,
+  type DreamingSource,
   extractAndProposeDreamingFact,
   isRejectedRecently,
   listRecentRejections,
+  proposeDreamingConflicts,
+  remainingProposalQuota,
+  runDreamingCycle,
 } from "./consolidation";
 export {
   memoryEventToDto,
@@ -40,10 +53,16 @@ export {
   linkMemory,
 } from "./link";
 export {
+  checkEvidenceStaleness,
   expireStaleInferredProposals,
+  foldOldRevisions,
   INFERRED_PROPOSAL_TTL_DAYS,
+  OBSERVED_DORMANCY_DAYS,
+  pruneCompileArchives,
+  REVISION_FOLD_THRESHOLD,
   reclaimStaleMemoryVectors,
   runMemoryLedgerMaintenance,
+  sinkDormantObservedMemories,
 } from "./maintenance";
 export {
   createMemoryFromMemo,
@@ -76,5 +95,7 @@ export {
   type MemoryActor,
   type MemoryEvidenceInput,
   type MemoryWriteInput,
+  normalizeFactKey,
+  suggestFactKey,
 } from "./shared";
 export { createMemory, updateMemory } from "./write";

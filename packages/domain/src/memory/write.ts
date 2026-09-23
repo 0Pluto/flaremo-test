@@ -17,10 +17,12 @@ import {
   insertMemoryEvidence,
   type MemoryActor,
   type MemoryWriteInput,
+  normalizeFactKey,
   normalizeMemoryContent,
   requireMemory,
   resolveConfidenceForActor,
   resolveVerificationForActor,
+  suggestFactKey,
 } from "./shared";
 
 export async function createMemory(
@@ -64,6 +66,9 @@ export async function createMemory(
     input.scopeKey,
   );
 
+  // Dedupe against live facts only. Archived or rejected rows hold stale
+  // judgments: re-writing the same content after a rejection must be able to
+  // become the active fact again, not bounce off a tombstone.
   const existing = await db
     .select()
     .from(memoryItems)
@@ -71,7 +76,7 @@ export async function createMemory(
       and(
         eq(memoryItems.userId, user.id),
         eq(memoryItems.fingerprint, fingerprint),
-        sql`${memoryItems.status} != 'deleted'`,
+        eq(memoryItems.status, "active"),
       ),
     )
     .get();
@@ -83,19 +88,32 @@ export async function createMemory(
   const validFrom = input.validFrom ?? now;
   const newId = createResourceId("memories");
 
+  // Key governance (§VI.3): caller-supplied keys are normalized so
+  // `Project.Database` and `project.database` cannot fork a version chain;
+  // absent keys reuse an established same-family key instead of coining one.
+  const normalizedKey = input.factKey ? normalizeFactKey(input.factKey) : "";
+  const factKey =
+    normalizedKey ||
+    (await suggestFactKey(db, user, {
+      scopeType: input.scopeType,
+      scopeKey: input.scopeKey,
+      tags: input.tags,
+      type: input.type,
+    }));
+
   let targetVerification = resolveVerificationForActor(actor, input);
   let reviewReason: string | null = null;
   let supersededExistingId: string | null = null;
 
   // Fact key & Supersession Matrix (Design §VI.4)
-  if (input.factKey) {
+  if (factKey) {
     const existingFact = await db
       .select()
       .from(memoryItems)
       .where(
         and(
           eq(memoryItems.userId, user.id),
-          eq(memoryItems.factKey, input.factKey),
+          eq(memoryItems.factKey, factKey),
           eq(memoryItems.status, "active"),
         ),
       )
@@ -153,7 +171,7 @@ export async function createMemory(
     kind: input.kind,
     scopeType: input.scopeType,
     scopeKey: input.scopeKey,
-    factKey: input.factKey ?? null,
+    factKey: factKey ?? null,
     tags: input.tags ?? [],
     tier: input.tier,
     verification: targetVerification,
@@ -281,7 +299,7 @@ export async function createMemory(
         createdAt: now,
       });
     }
-  } else if (reviewReason === "supersede_proposal" && input.factKey) {
+  } else if (reviewReason === "supersede_proposal" && factKey) {
     // When proposal is created against human asset, link relation as contradicts/proposed
     const existingFact = await db
       .select()
@@ -289,7 +307,7 @@ export async function createMemory(
       .where(
         and(
           eq(memoryItems.userId, user.id),
-          eq(memoryItems.factKey, input.factKey),
+          eq(memoryItems.factKey, factKey),
           eq(memoryItems.status, "active"),
         ),
       )
@@ -336,7 +354,7 @@ export async function createMemory(
         : "created",
     actor.type,
     actor.type === "agent" ? actor.name : null,
-    { fact_key: input.factKey },
+    { fact_key: factKey ?? null },
   );
 
   // Inferred proposals do not enter vector index until confirmed (§VI.8)
@@ -383,19 +401,25 @@ export async function updateMemory(
 
   if (input.fact_key !== undefined) {
     if (input.fact_key !== existing.factKey && input.fact_key !== null) {
+      // Keys are stored canonical: an edit to `Project.Database` must land on
+      // the same slot as `project.database` (§VI.3 key governance).
+      const normalizedKey = normalizeFactKey(input.fact_key) || null;
+      input.fact_key = normalizedKey;
       // Check collision
-      const clash = await db
-        .select()
-        .from(memoryItems)
-        .where(
-          and(
-            eq(memoryItems.userId, user.id),
-            eq(memoryItems.factKey, input.fact_key),
-            eq(memoryItems.status, "active"),
-            sql`${memoryItems.id} != ${id}`,
-          ),
-        )
-        .get();
+      const clash = normalizedKey
+        ? await db
+            .select()
+            .from(memoryItems)
+            .where(
+              and(
+                eq(memoryItems.userId, user.id),
+                eq(memoryItems.factKey, normalizedKey),
+                eq(memoryItems.status, "active"),
+                sql`${memoryItems.id} != ${id}`,
+              ),
+            )
+            .get()
+        : undefined;
       if (clash) {
         throw new ConflictError(
           "Another active memory already exists with this fact key.",
@@ -437,7 +461,9 @@ export async function updateMemory(
   const now = new Date().toISOString();
   // A user edit is an affirmation: it upgrades observed/inferred to confirmed,
   // while a locked memory stays locked (§IV.2).
-  if (actor.type === "user" && existing.verification !== "locked") {
+  const userAffirms =
+    actor.type === "user" && existing.verification !== "locked";
+  if (userAffirms) {
     next.verification = "confirmed";
     next.needsReview = false;
     next.reviewReason = null;
@@ -451,28 +477,128 @@ export async function updateMemory(
     actor.type === "agent" ? actor.name : null,
   );
 
-  await db
-    .update(memoryItems)
-    .set({
-      content: next.content,
-      type: next.type,
-      kind: next.kind,
-      scopeType: next.scopeType,
-      scopeKey: next.scopeKey,
-      factKey: next.factKey,
-      tags: next.tags,
-      tier: next.tier,
-      verification: next.verification,
-      importance: next.importance,
-      needsReview: next.needsReview,
-      reviewReason: next.reviewReason,
-      validFrom: next.validFrom,
-      validTo: next.validTo,
-      expiresAt: next.expiresAt,
-      fingerprint: next.fingerprint,
-      updatedAt: now,
-    })
-    .where(and(eq(memoryItems.id, id), eq(memoryItems.userId, user.id)));
+  const statements: Array<Parameters<FlareMoDb["batch"]>[0][number]> = [];
+
+  // Promoting an inferred proposal out of the key slot must retire the active
+  // version under the same key in the same transaction — otherwise the update
+  // collides with memory_items_user_fact_key_active_idx (§VI.4 matrix).
+  if (userAffirms && existing.verification === "inferred" && next.factKey) {
+    const activeConflict = await db
+      .select()
+      .from(memoryItems)
+      .where(
+        and(
+          eq(memoryItems.userId, user.id),
+          eq(memoryItems.factKey, next.factKey),
+          eq(memoryItems.status, "active"),
+          sql`${memoryItems.id} != ${id}`,
+        ),
+      )
+      .get();
+    if (activeConflict) {
+      await appendRevision(db, user, activeConflict, "user");
+      const validTo = next.validFrom ?? activeConflict.validFrom ?? now;
+      statements.push(
+        db
+          .update(memoryItems)
+          .set({
+            status: "superseded" as const,
+            supersededById: id,
+            supersededAt: now,
+            validTo,
+            updatedAt: now,
+          })
+          .where(eq(memoryItems.id, activeConflict.id)),
+      );
+    }
+  }
+
+  statements.push(
+    db
+      .update(memoryItems)
+      .set({
+        content: next.content,
+        type: next.type,
+        kind: next.kind,
+        scopeType: next.scopeType,
+        scopeKey: next.scopeKey,
+        factKey: next.factKey,
+        tags: next.tags,
+        tier: next.tier,
+        verification: next.verification,
+        importance: next.importance,
+        needsReview: next.needsReview,
+        reviewReason: next.reviewReason,
+        validFrom: next.validFrom,
+        validTo: next.validTo,
+        expiresAt: next.expiresAt,
+        fingerprint: next.fingerprint,
+        updatedAt: now,
+      })
+      .where(and(eq(memoryItems.id, id), eq(memoryItems.userId, user.id))),
+  );
+
+  try {
+    await db.batch(statements as never);
+  } catch (error) {
+    // A concurrent writer may have claimed the same active fact key between
+    // the clash check and this write; translate the storage error instead of
+    // surfacing raw SQLite text.
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes("memory_items_user_fact_key_active_idx")) {
+      throw new ConflictError(
+        "Another active memory already exists with this fact key.",
+      );
+    }
+    throw error;
+  }
+
+  // An edited conjecture's affirmation retires a competing fact: record the
+  // chain and drop the retired version's vector once its window has closed.
+  if (userAffirms && existing.verification === "inferred" && next.factKey) {
+    const retired = await db
+      .select()
+      .from(memoryItems)
+      .where(
+        and(
+          eq(memoryItems.userId, user.id),
+          eq(memoryItems.factKey, next.factKey),
+          eq(memoryItems.status, "superseded"),
+          eq(memoryItems.supersededById, id),
+        ),
+      )
+      .get();
+    if (retired) {
+      await appendMemoryEvent(
+        db,
+        user.id,
+        retired.id,
+        "superseded",
+        "user",
+        null,
+        {
+          superseded_by_id: id,
+        },
+      );
+      await db.insert(memoryRelations).values({
+        id: createResourceId("memories"),
+        userId: user.id,
+        memoryId: id,
+        relatedMemoryId: retired.id,
+        type: "supersedes",
+        createdAt: now,
+      });
+      if (retired.validTo && retired.validTo <= now) {
+        await insertEmbeddingTask(db, {
+          userId: user.id,
+          resourceType: "memory",
+          resourceId: retired.id,
+          operation: "delete",
+          createdAt: now,
+        });
+      }
+    }
+  }
 
   if (
     actor.type === "user" &&
@@ -480,6 +606,23 @@ export async function updateMemory(
     existing.verification !== "locked"
   ) {
     await appendMemoryEvent(db, user.id, id, "confirmed", "user", null);
+  }
+
+  // An inferred proposal has no vector; the edit that affirms it is what
+  // makes it enter semantic recall. A content edit already queued a reindex,
+  // so only the metadata-only edit path needs the explicit index task.
+  if (
+    actor.type === "user" &&
+    existing.verification === "inferred" &&
+    input.content === undefined
+  ) {
+    await insertEmbeddingTask(db, {
+      userId: user.id,
+      resourceType: "memory",
+      resourceId: existing.id,
+      operation: "index",
+      createdAt: now,
+    });
   }
 
   if (input.content !== undefined) {

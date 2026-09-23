@@ -46,6 +46,7 @@ export const RESTORE_TABLES = [
   "memory_evidence",
   "memory_events",
   "memory_rejections",
+  "memory_compile_archives",
   "usage_counters",
   "projects",
   "tasks",

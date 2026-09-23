@@ -606,7 +606,12 @@ async function callMemoryTool(
     }
     case "memory_compile": {
       const input = compileInputSchema.parse(args);
-      return compileCoreMemory(db, user, input);
+      // An agent compile is an actual injection: it is archived so the lens
+      // can show "上次实际注入" from the record (§VI.7).
+      return compileCoreMemory(db, user, input, {
+        persist: true,
+        agent: input.agent,
+      });
     }
     case "memory_checkpoint": {
       const input = checkpointInputSchema.parse(args);
