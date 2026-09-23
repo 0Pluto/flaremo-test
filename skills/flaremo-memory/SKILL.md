@@ -98,6 +98,7 @@ flaremo checkpoint "完成 Memory Ledger v2 契约与领域模型升级" \
 | `flaremo remember "<content>"` | `[--key <fact_key>] [--tags <t1,t2>] [--scope-type project]` | 写入明确事实，自动维护版本断代 |
 | `flaremo checkpoint "<summary>"` | `[--item "<atomic_fact>"]...` | 任务收工时沉淀战报与原子依据 |
 | `flaremo status` | — | 查看当前生效的便签列表 |
+| `flaremo seed` | — | 冷启动：扫描本地 `README.md` / `AGENTS.md` / `CLAUDE.md`，提炼至多 5 条候选便签递交【待我确认】（幂等，重复运行不产生重复提案） |
 
 ### 退出码说明
 - **0 (Success)**：命令执行成功，且记忆服务可达（实时数据）。

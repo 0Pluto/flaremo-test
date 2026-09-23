@@ -526,6 +526,7 @@ flaremo remember "内容" [--key …] [--topic …]
 flaremo checkpoint "本次干了什么"
 flaremo status                # 看当前生效便签（按情境）
 flaremo lens [--scope …]      # 打印即将注入的锦囊（人用）
+flaremo seed                  # 冷启动：扫描 README/AGENTS 递交候选便签
 ```
 
 **退出码契约**：`0` 成功；`3` = **记忆服务不可达**。必须显式区分“没有约束”与“取不到约束”——静默返回空会让 Agent 以为世上没有任何规矩，然后照着幻觉蛮干。
