@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   index,
   integer,
@@ -9,9 +10,9 @@ import { users } from "./auth";
 
 // Agent Memory keeps AI-contributed long-term knowledge separate from the
 // user's memo timeline. Each memory is an atomic conclusion (see
-// docs/product-requirements.md and the Agent Memory design); long-form content
+// docs/product-requirements.md and the Agent Memory Ledger design); long-form content
 // belongs in a memo, and a memory's `content` only stores the conclusion.
-// D1 remains the single source of truth: FTS and any future embedding index
+// D1 remains the single source of truth: FTS, relations, and any future embedding index
 // are derived and rebuildable from these rows.
 export const memoryItems = sqliteTable(
   "memory_items",
@@ -47,6 +48,13 @@ export const memoryItems = sqliteTable(
       .notNull()
       .default("global"),
     scopeKey: text("scope_key"),
+    // Deterministic fact key for versioning & supersession (1-to-1)
+    factKey: text("fact_key"),
+    // Non-hierarchical topic tags for navigation (many-to-many)
+    tags: text("tags", { mode: "json" })
+      .$type<string[]>()
+      .notNull()
+      .default([]),
     tier: text("tier", { enum: ["core", "normal"] })
       .notNull()
       .default("normal"),
@@ -72,8 +80,20 @@ export const memoryItems = sqliteTable(
     sourceAgent: text("source_agent"),
     sourceSession: text("source_session"),
     sourceRef: text("source_ref"),
+    // Bi-temporal validity
+    observedAt: text("observed_at"),
     validFrom: text("valid_from"),
     validTo: text("valid_to"),
+    expiresAt: text("expires_at"),
+    supersededById: text("superseded_by_id"),
+    supersededAt: text("superseded_at"),
+    // Caller-supplied retry key: a repeat write returns the first row instead of
+    // creating a twin. The unique index below is the final idempotency boundary.
+    idempotencyKey: text("idempotency_key"),
+    // Set when a user rejects a proposal. Rejection is terminal for the review
+    // inbox: `verification` moves off `inferred` so the card cannot reappear,
+    // while this timestamp keeps "rejected, and when" auditable.
+    rejectedAt: text("rejected_at"),
     // Normalized content + type + kind + scope hash, used to reject exact
     // duplicates without an embedding index.
     fingerprint: text("fingerprint").notNull(),
@@ -103,6 +123,12 @@ export const memoryItems = sqliteTable(
       table.scopeKey,
       table.status,
     ),
+    index("memory_items_user_scope_fact_key_idx").on(
+      table.userId,
+      table.scopeType,
+      table.scopeKey,
+      table.factKey,
+    ),
     index("memory_items_user_type_kind_idx").on(
       table.userId,
       table.type,
@@ -113,6 +139,14 @@ export const memoryItems = sqliteTable(
       table.userId,
       table.fingerprint,
     ),
+    uniqueIndex("memory_items_user_fact_key_active_idx")
+      .on(table.userId, table.factKey)
+      .where(
+        sql`${table.status} = 'active' AND ${table.verification} != 'inferred' AND ${table.factKey} IS NOT NULL`,
+      ),
+    uniqueIndex("memory_items_user_idempotency_idx")
+      .on(table.userId, table.idempotencyKey)
+      .where(sql`${table.idempotencyKey} IS NOT NULL`),
   ],
 );
 
@@ -216,6 +250,112 @@ export const memoryResourceLinks = sqliteTable(
     index("memory_resource_links_resource_idx").on(
       table.resourceType,
       table.resourceRef,
+    ),
+  ],
+);
+
+export const memoryEvidence = sqliteTable(
+  "memory_evidence",
+  {
+    id: text("id").primaryKey(),
+    memoryId: text("memory_id")
+      .notNull()
+      .references(() => memoryItems.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    sourceType: text("source_type", {
+      enum: ["memo", "session", "github", "url", "document", "manual", "other"],
+    }).notNull(),
+    sourceId: text("source_id").notNull(),
+    sourceRevision: text("source_revision"),
+    relationType: text("relation_type", {
+      enum: ["derived_from", "evidence_for", "contradicts", "references"],
+    })
+      .notNull()
+      .default("derived_from"),
+    observedAt: text("observed_at"),
+    excerpt: text("excerpt"),
+    excerptHash: text("excerpt_hash"),
+    metadata: text("metadata", { mode: "json" })
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    index("memory_evidence_memory_idx").on(table.memoryId),
+    index("memory_evidence_source_idx").on(table.sourceType, table.sourceId),
+    index("memory_evidence_user_idx").on(table.userId),
+  ],
+);
+
+export const memoryEvents = sqliteTable(
+  "memory_events",
+  {
+    id: text("id").primaryKey(),
+    memoryId: text("memory_id")
+      .notNull()
+      .references(() => memoryItems.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    eventType: text("event_type", {
+      enum: [
+        "created",
+        "confirmed",
+        "locked",
+        "unlocked",
+        "challenged",
+        "superseded",
+        "archived",
+        "restored",
+      ],
+    }).notNull(),
+    actorType: text("actor_type", { enum: ["user", "agent"] }).notNull(),
+    actorName: text("actor_name"),
+    metadata: text("metadata", { mode: "json" })
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    index("memory_events_memory_created_idx").on(
+      table.memoryId,
+      table.createdAt,
+    ),
+    index("memory_events_user_created_idx").on(table.userId, table.createdAt),
+  ],
+);
+
+export const memoryRejections = sqliteTable(
+  "memory_rejections",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    scopeType: text("scope_type", {
+      enum: ["global", "workspace", "project", "agent"],
+    }).notNull(),
+    scopeKey: text("scope_key"),
+    factKey: text("fact_key"),
+    rejectedContent: text("rejected_content").notNull(),
+    fingerprint: text("fingerprint").notNull(),
+    reason: text("reason"),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    index("memory_rejections_user_scope_fact_idx").on(
+      table.userId,
+      table.scopeType,
+      table.scopeKey,
+      table.factKey,
+    ),
+    index("memory_rejections_user_created_idx").on(
+      table.userId,
+      table.createdAt,
     ),
   ],
 );

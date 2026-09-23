@@ -3,6 +3,8 @@ import type { FlareMoDb, UserRow } from "@flaremo/db";
 import {
   attachments,
   memoRelations,
+  memoryEvents,
+  memoryEvidence,
   memoryItems,
   memoryRelations,
   memoryResourceLinks,
@@ -280,6 +282,8 @@ export async function importData(
         kind: memory.kind,
         scopeType: memory.scope_type,
         scopeKey: memory.scope_key,
+        factKey: memory.fact_key ?? null,
+        tags: Array.isArray(memory.tags) ? memory.tags : [],
         tier: memory.tier,
         verification: memory.verification,
         status: memory.status,
@@ -293,6 +297,11 @@ export async function importData(
         sourceRef: memory.source_ref,
         validFrom: memory.valid_from,
         validTo: memory.valid_to,
+        observedAt: memory.observed_at ?? null,
+        expiresAt: memory.expires_at ?? null,
+        supersededById: memory.superseded_by_id ?? null,
+        supersededAt: memory.superseded_at ?? null,
+        rejectedAt: memory.rejected_at ?? null,
         // The canonical fingerprint is rebuilt from content on the next write;
         // an import-scoped placeholder keeps the per-user unique index intact
         // without trusting the exported (derived) value.
@@ -312,6 +321,8 @@ export async function importData(
           kind: memory.kind,
           scopeType: memory.scope_type,
           scopeKey: memory.scope_key,
+          factKey: memory.fact_key ?? null,
+          tags: Array.isArray(memory.tags) ? memory.tags : [],
           tier: memory.tier,
           verification: memory.verification,
           status: memory.status,
@@ -324,6 +335,11 @@ export async function importData(
           sourceRef: memory.source_ref,
           validFrom: memory.valid_from,
           validTo: memory.valid_to,
+          observedAt: memory.observed_at ?? null,
+          expiresAt: memory.expires_at ?? null,
+          supersededById: memory.superseded_by_id ?? null,
+          supersededAt: memory.superseded_at ?? null,
+          rejectedAt: memory.rejected_at ?? null,
           updatedAt,
         },
       });
@@ -507,6 +523,46 @@ export async function importData(
         relationType: link.relation_type,
         metadata: link.metadata,
         createdAt: link.created_at ?? now,
+      })
+      .onConflictDoNothing();
+  }
+
+  for (const evidence of bundle.memory_evidence) {
+    const memoryId = memoryIdMap.get(evidence.memory_id);
+    if (!memoryId) continue;
+    await db
+      .insert(memoryEvidence)
+      .values({
+        id: createResourceId("memories"),
+        memoryId,
+        userId: user.id,
+        sourceType: evidence.source_type,
+        sourceId: evidence.source_id,
+        sourceRevision: evidence.source_revision ?? null,
+        relationType: evidence.relation_type,
+        observedAt: evidence.observed_at ?? null,
+        excerpt: evidence.excerpt ?? null,
+        excerptHash: evidence.excerpt_hash ?? null,
+        metadata: evidence.metadata ?? {},
+        createdAt: evidence.created_at ?? now,
+      })
+      .onConflictDoNothing();
+  }
+
+  for (const event of bundle.memory_events) {
+    const memoryId = memoryIdMap.get(event.memory_id);
+    if (!memoryId) continue;
+    await db
+      .insert(memoryEvents)
+      .values({
+        id: createResourceId("memories"),
+        memoryId,
+        userId: user.id,
+        eventType: event.event_type,
+        actorType: event.actor_type,
+        actorName: event.actor_name ?? null,
+        metadata: event.metadata ?? {},
+        createdAt: event.created_at ?? now,
       })
       .onConflictDoNothing();
   }

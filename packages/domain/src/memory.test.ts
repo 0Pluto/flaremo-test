@@ -18,6 +18,7 @@ import {
   createMemory,
   createMemoryFromMemo,
   forgetMemory,
+  getMemoryLineage,
   hardDeleteMemory,
   linkMemory,
   listMemories,
@@ -619,7 +620,7 @@ describe("memory domain services", () => {
     });
 
     const bundle = await exportData(db, user);
-    expect(bundle.version).toBe(4);
+    expect(bundle.version).toBe(5);
     expect(bundle.memories).toHaveLength(1);
     expect(bundle.memories[0]?.name).toBe(created.memory.id);
 
@@ -638,5 +639,14 @@ describe("memory domain services", () => {
     expect(restored[0]?.id).toBe(created.memory.id);
     expect(restored[0]?.content).toBe("FlareMo 必须保持 Cloudflare Native");
     expect(restored[0]?.verification).toBe("confirmed");
+
+    // v5 carries the ledger's evidence chain and lifecycle trail. A round-trip
+    // that dropped them would silently erase why a fact exists and how it
+    // evolved, which is the product's central promise.
+    const lineage = await getMemoryLineage(db, user, created.memory.id);
+    expect(lineage.events.length).toBeGreaterThan(0);
+    expect(
+      lineage.events.some((event) => event.event_type === "confirmed"),
+    ).toBe(true);
   });
 });

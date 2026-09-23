@@ -1,6 +1,15 @@
+import type {
+  MemoryEvidenceRelationType,
+  MemoryEvidenceSourceType,
+} from "@flaremo/contracts";
 import type { FlareMoDb, MemoryItemRow, UserRow } from "@flaremo/db";
-import { memoryItems, memoryRevisions } from "@flaremo/db";
-import { and, eq, sql } from "drizzle-orm";
+import {
+  memoryEvents,
+  memoryEvidence,
+  memoryItems,
+  memoryRevisions,
+} from "@flaremo/db";
+import { and, eq, isNull, lte, or, type SQL, sql } from "drizzle-orm";
 import { ForbiddenError, NotFoundError, ValidationError } from "../errors";
 import { createResourceId } from "../ids";
 
@@ -14,8 +23,25 @@ export const MEMORY_MAX_CONTENT_LENGTH = 4_000;
  */
 export type MemoryActor = { type: "user" } | { type: "agent"; name: string };
 
+export type MemoryEvidenceInput = {
+  sourceType?: string;
+  source_type?: string;
+  sourceId?: string;
+  source_id?: string;
+  sourceRevision?: string | null;
+  source_revision?: string | null;
+  relationType?: string;
+  relation_type?: string;
+  observedAt?: string | null;
+  observed_at?: string | null;
+  excerpt?: string | null;
+  metadata?: Record<string, unknown>;
+};
+
 export type MemoryWriteInput = {
   content: string;
+  factKey?: string | null;
+  tags?: string[];
   type: MemoryItemRow["type"];
   kind: MemoryItemRow["kind"];
   scopeType: MemoryItemRow["scopeType"];
@@ -27,6 +53,12 @@ export type MemoryWriteInput = {
   sourceAgent?: string | null;
   sourceSession?: string | null;
   sourceRef?: string | null;
+  validFrom?: string | null;
+  validTo?: string | null;
+  observedAt?: string | null;
+  expiresAt?: string | null;
+  idempotencyKey?: string | null;
+  evidence?: MemoryEvidenceInput[];
 };
 
 function normalizeMemoryContent(content: string) {
@@ -156,11 +188,15 @@ export async function appendRevision(
     kind: row.kind,
     scope_type: row.scopeType,
     scope_key: row.scopeKey,
+    fact_key: row.factKey,
+    tags: row.tags,
     tier: row.tier,
     verification: row.verification,
     status: row.status,
     importance: row.importance,
     confidence: row.confidence,
+    valid_from: row.validFrom,
+    valid_to: row.validTo,
   };
   await db.insert(memoryRevisions).values({
     id: createResourceId("memories"),
@@ -170,6 +206,100 @@ export async function appendRevision(
     metadataSnapshot: snapshot,
     createdByType,
     createdByAgent: createdByAgent ?? null,
+    createdAt: new Date().toISOString(),
+  });
+}
+
+/**
+ * The single definition of "this memory is live and answerable right now".
+ *
+ * Kept in one place because three readers (recall, bootstrap, compile) must
+ * agree — a drift here means the same memory is visible in one surface and
+ * invisible in another. `asOf` lets a caller ask the same question about a past
+ * instant for time-travel reads.
+ */
+export function memoryLivenessCondition(asOf: string): SQL {
+  return and(
+    or(isNull(memoryItems.validFrom), lte(memoryItems.validFrom, asOf)),
+    or(isNull(memoryItems.validTo), sql`${memoryItems.validTo} > ${asOf}`),
+    // `expires_at` is a soft self-destruct for memories that are only useful for
+    // a while (a temporary workaround, a soon-obsolete dependency pin). It never
+    // changes `status`; an expired row simply stops being answered.
+    or(isNull(memoryItems.expiresAt), sql`${memoryItems.expiresAt} > ${asOf}`),
+  ) as SQL;
+}
+
+export async function appendMemoryEvent(
+  db: FlareMoDb,
+  userId: string,
+  memoryId: string,
+  eventType:
+    | "created"
+    | "confirmed"
+    | "locked"
+    | "unlocked"
+    | "challenged"
+    | "superseded"
+    | "archived"
+    | "restored",
+  actorType: "user" | "agent",
+  actorName?: string | null,
+  metadata?: Record<string, unknown>,
+) {
+  await db.insert(memoryEvents).values({
+    id: createResourceId("memories"),
+    userId,
+    memoryId,
+    eventType,
+    actorType,
+    actorName: actorName ?? null,
+    metadata: metadata ?? {},
+    createdAt: new Date().toISOString(),
+  });
+}
+
+export async function insertMemoryEvidence(
+  db: FlareMoDb,
+  userId: string,
+  memoryId: string,
+  evidence: MemoryEvidenceInput,
+) {
+  let excerptHash: string | null = null;
+  if (evidence.excerpt) {
+    const digest = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(evidence.excerpt),
+    );
+    excerptHash = Array.from(new Uint8Array(digest))
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("");
+  }
+
+  const sourceType = (evidence.sourceType ??
+    evidence.source_type ??
+    "manual") as MemoryEvidenceSourceType;
+  const sourceId =
+    evidence.sourceId ?? evidence.source_id ?? createResourceId("memories");
+  const sourceRevision =
+    evidence.sourceRevision ?? evidence.source_revision ?? null;
+  const relationType = (evidence.relationType ??
+    evidence.relation_type ??
+    "derived_from") as MemoryEvidenceRelationType;
+  const observedAt =
+    evidence.observedAt ?? evidence.observed_at ?? new Date().toISOString();
+
+  await db.insert(memoryEvidence).values({
+    id: createResourceId("memories"),
+    memoryId,
+    userId,
+    sourceType,
+    sourceId,
+    sourceRevision,
+    relationType,
+    observedAt,
+    excerpt: evidence.excerpt ?? null,
+    excerptHash,
+    metadata: evidence.metadata ?? {},
     createdAt: new Date().toISOString(),
   });
 }

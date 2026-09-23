@@ -211,6 +211,13 @@
       "when": 1789749182976,
       "tag": "0029_faithful_mandrill",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "6",
+      "when": 1789800000000,
+      "tag": "0030_memory_ledger_v2",
+      "breakpoints": true
     }
   ]
 }
