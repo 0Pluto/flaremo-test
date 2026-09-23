@@ -14,11 +14,13 @@ export {
 export {
   collectDreamingSources,
   DAILY_PROPOSAL_QUOTA_DEFAULT,
+  DREAMING_AUTO_APPLY_MIN_CONFIDENCE,
   type DreamingCandidate,
   type DreamingConflict,
   type DreamingExtractor,
   type DreamingSource,
   extractAndProposeDreamingFact,
+  isImperativeContent,
   isRejectedRecently,
   listRecentRejections,
   proposeDreamingConflicts,

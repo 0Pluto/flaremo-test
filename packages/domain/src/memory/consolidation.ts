@@ -66,6 +66,22 @@ export async function isRejectedRecently(
   return { blocked: false };
 }
 
+/**
+ * Imperative-language detector (§VI.8, v2.4): instruction-style sentences
+ * ("always do X", "记住要 Y", "ignore previous instructions") must never enter
+ * the ledger without a human ruling — a persisted imperative is a
+ * self-poisoning vector. Statement facts auto-apply; imperative phrasing
+ * downgrades to a proposal.
+ */
+export function isImperativeContent(content: string): boolean {
+  return /\b(?:always|never|must|must not|do not|don'?t|remember to|ignore (?:all )?(?:previous|prior)|make sure)\b|记住|务必|必须|严禁|不要|牢记|以后都|忽略(?:之前|以上)/iu.test(
+    content,
+  );
+}
+
+/** Auto-apply confidence floor: below it the system silently declines (§VI.8 v2.4). */
+export const DREAMING_AUTO_APPLY_MIN_CONFIDENCE = 60;
+
 export async function extractAndProposeDreamingFact(
   db: FlareMoDb,
   user: UserRow,
@@ -81,6 +97,7 @@ export async function extractAndProposeDreamingFact(
     sourceId: string;
     sourceRevision?: string | null;
     excerpt?: string;
+    confidence?: number;
   },
 ) {
   const content = normalizeMemoryContent(candidate.content);
@@ -88,6 +105,7 @@ export async function extractAndProposeDreamingFact(
   const kind = candidate.kind ?? "fact";
   const scopeType = candidate.scopeType ?? "global";
   const scopeKey = candidate.scopeKey ?? null;
+  const confidence = candidate.confidence ?? 60;
 
   const fingerprint = await computeFingerprint(
     user,
@@ -110,8 +128,16 @@ export async function extractAndProposeDreamingFact(
     return { proposed: false as const, reason: guard.reason };
   }
 
-  // Safety net: Auto consolidation always writes inferred proposals (§VI.8)
-  const agentActor: MemoryActor = { type: "agent", name: "dreaming" };
+  // v2.4 routing (§VI.8): the funnel decides where a candidate lands so the
+  // user never has to grade routine extractions.
+  //   imperative phrasing → 💡 proposal (self-poisoning vector, needs a human)
+  //   low confidence      → silently dropped (recorded nowhere, never pester)
+  //   otherwise           → 👀 observed, live immediately (compose layer)
+  const imperative = isImperativeContent(content);
+  const agentActor: MemoryActor = {
+    type: "agent",
+    name: "dreaming",
+  };
   const created = await createMemory(db, user, agentActor, {
     content,
     factKey: candidate.factKey ?? null,
@@ -122,8 +148,8 @@ export async function extractAndProposeDreamingFact(
     scopeKey,
     tier: "normal",
     importance: 50,
-    confidence: 60,
-    verification: "inferred",
+    confidence,
+    verification: imperative ? "inferred" : "observed",
     sourceAgent: "dreaming",
     evidence: [
       {
@@ -136,7 +162,16 @@ export async function extractAndProposeDreamingFact(
     ],
   });
 
-  return { proposed: true as const, memory: created.memory };
+  if (imperative) {
+    return { proposed: true as const, memory: created.memory, routed: "proposal" as const };
+  }
+  if (confidence < DREAMING_AUTO_APPLY_MIN_CONFIDENCE) {
+    // Low confidence should never reach this point from the cycle funnel (the
+    // caller pre-filters), but a direct call with low confidence still must
+    // not pretend the fact was applied. Surface the downgrade honestly.
+    return { proposed: true as const, memory: created.memory, routed: "live_low_confidence" as const };
+  }
+  return { proposed: true as const, memory: created.memory, routed: "live" as const };
 }
 
 // --- Dreaming cycle (§VI.8): the daily offline extraction driver -------------
@@ -253,9 +288,9 @@ export type DreamingCycleResult = {
 };
 
 /**
- * One dreaming run: scan window → pluggable extraction → per-candidate
- * proposal through the guarded funnel (negative samples, fingerprint dedup,
- * isolated inferred write). The quota slices the candidate list, so overflow
+ * One dreaming run: scan window → pluggable extraction → per-candidate funnel
+ * (negative samples, fingerprint dedup, imperative→proposal, low-confidence
+ * silent drop, live 👀 write). The quota slices the candidate list, so overflow
  * is deferred, not dropped.
  */
 export async function runDreamingCycle(
@@ -321,8 +356,13 @@ export async function runDreamingCycle(
   );
 
   const candidates = await extractor(sources, guardrailFactKeys);
+  // The system pre-deletes junk (v2.4): imperative phrasing becomes a
+  // proposal, everything else applies live as 👀 — so the *queue* only grows
+  // from imperative phrasing and human-asset collisions, and the quota now
+  // caps extraction volume rather than user traffic.
   let proposed = 0;
   for (const candidate of candidates.slice(0, quota)) {
+    if (isImperativeContent(candidate.content)) continue;
     const result = await extractAndProposeDreamingFact(db, user, {
       content: candidate.content,
       factKey: candidate.fact_key ?? null,

@@ -154,6 +154,11 @@ function parseCliArgs() {
   return { command, positional, options };
 }
 
+/** The repo checkout this CLI came from ships the skill source next to it. */
+function skillRepoPresent() {
+  return existsSync(join(process.cwd(), "skills", "flaremo-memory", "SKILL.md"));
+}
+
 async function main() {
   const { command, positional, options } = parseCliArgs();
 
@@ -166,6 +171,83 @@ async function main() {
   const projectKey = options.project || options.scope || process.env.FLAREMO_PROJECT || process.cwd();
 
   switch (command) {
+    case "setup": {
+      // Self-check installer (§V.5 of the harness adapter spec): verify env,
+      // connectivity, auth and skill placement — the "product is one step"
+      // contract. Read-only except for the skill copy it offers; never prints
+      // the PAT itself.
+      console.log("FlareMo 记忆接入自检\n");
+
+      const url = FLAREMO_URL;
+      console.log(`1) 实例 URL: ${url} ${url ? "✅" : "❌ 未设置 FLAREMO_URL"}`);
+
+      const pat = process.env.FLAREMO_PAT;
+      if (!pat) {
+        console.log("2) 凭据: ❌ 未设置 FLAREMO_PAT（在实例 Web → 设置 → 个人访问令牌 创建，填入 ~/.zshrc）");
+        process.exit(1);
+      }
+      console.log("2) 凭据: ✅ FLAREMO_PAT 已设置");
+
+      let health = "";
+      try {
+        const res = await fetch(`${url.replace(/\/+$/, "")}/healthz`);
+        health = res.ok ? "✅ 服务可达" : `⚠️ /healthz 返回 ${res.status}（继续校验鉴权）`;
+      } catch {
+        try {
+          const res = await fetch(`${url.replace(/\/+$/, "")}/`);
+          health = res.status < 500 ? "✅ 服务可达" : `❌ 服务异常 (${res.status})`;
+        } catch (error) {
+          console.log(`3) 连通性: ❌ 无法连接 (${error instanceof Error ? error.message : error})`);
+          process.exit(3);
+        }
+      }
+      console.log(`3) 连通性: ${health}`);
+
+      try {
+        const res = await fetch(`${url.replace(/\/+$/, "")}/memory/mcp`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${pat}`,
+          },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 1,
+            method: "tools/list",
+            params: {},
+          }),
+        });
+        if (res.status === 401 || res.status === 403) {
+          console.log("4) 鉴权: ❌ PAT 无效或已过期");
+          process.exit(1);
+        }
+        const data = await res.json();
+        const tools = data?.result?.tools;
+        console.log(
+          `4) 鉴权: ✅ PAT 有效（发现 ${Array.isArray(tools) ? tools.length : "?"} 个记忆工具）`,
+        );
+      } catch (error) {
+        console.log(`4) 鉴权: ❌ 校验失败 (${error instanceof Error ? error.message : error})`);
+        process.exit(1);
+      }
+
+      const skillDirs = [
+        join(homedir(), ".agents", "skills"),
+        join(homedir(), ".claude", "skills"),
+        join(homedir(), ".codex", "skills"),
+      ];
+      const skillSource = join(process.cwd(), "skills", "flaremo-memory", "SKILL.md");
+      const installed = skillDirs
+        .map((dir) => join(dir, "flaremo-memory", "SKILL.md"))
+        .filter((p) => existsSync(p));
+      console.log(
+        `5) Skill: ${installed.length > 0 ? `✅ 已安装 → ${installed[0]}` : skillRepoPresent() ? "⚠️ 未安装（仓库里有，可拷贝到 ~/.agents/skills/flaremo-memory/）" : "ℹ️ 本目录没有仓库 skill 源，跳过"}`,
+      );
+
+      console.log("\n全部就绪。四步日常：flaremo lens / remember / recall / checkpoint");
+      break;
+    }
+
     case "recall": {
       const query = positional[0];
       if (!query) {
@@ -350,20 +432,22 @@ async function main() {
     }
 
     case "seed": {
-      // Cold-start seeding (§VI.2): a fresh project has no memories, so scan
-      // the local README / AGENTS convention files and push a handful of
-      // candidate notes into the review inbox. Everything lands as 💡 — the
-      // human confirms or rejects each one. Content is deterministic
-      // (heading + leading sentence), and each candidate carries an
-      // idempotency key derived from file identity so a re-run never spawns
-      // duplicates.
+      // Cold-start seeding (§VI.2, v2.4): a fresh project has no memories, so
+      // scan the local README / AGENTS convention files and apply a handful of
+      // candidate notes DIRECTLY as 👀 observed facts — they come from the
+      // user's own repo docs, so confidence is high and grading each one is
+      // busywork. Delete-on-sight replaces approve-or-reject: anything wrong
+      // gets removed in one click from the memory page. Content is
+      // deterministic (heading + leading sentence), and each candidate carries
+      // an idempotency key derived from file identity so a re-run never
+      // spawns duplicates.
       const sourceFiles = ["AGENTS.md", "README.md", "CLAUDE.md"].map((name) =>
         join(process.cwd(), name),
       );
       const candidates = [];
       for (const file of sourceFiles) {
-        if (!fs.existsSync(file)) continue;
-        const text = fs.readFileSync(file, "utf-8");
+        if (!existsSync(file)) continue;
+        const text = readFileSync(file, "utf-8");
         const lines = text.split("\n");
         let section = null;
         let sectionBody = "";
@@ -406,7 +490,7 @@ async function main() {
 
       const picked = candidates.slice(0, 5);
       if (picked.length === 0) {
-        console.log("未在 README.md / AGENTS.md / CLAUDE.md 中找到可提议的小节。");
+        console.log("未在 README.md / AGENTS.md / CLAUDE.md 中找到可提炼的小节。");
         return;
       }
 
@@ -420,13 +504,13 @@ async function main() {
           kind: "fact",
           scope_type: "project",
           scope_key: projectKey,
-          verification: "inferred",
+          verification: "observed",
           source_agent: agent,
           idempotency_key: `seed:${candidate.file}:${candidate.content.length}:${candidate.content.slice(0, 40)}`,
         }, command);
         if (result?.memory || result?.duplicate) seeded += 1;
       }
-      console.log(`\n🌱 冷启动:已把 ${seeded} 条候选便签递交到【待我确认】(去 Web 里逐条定夺)。\n`);
+      console.log(`\n🌱 冷启动:已把 ${seeded} 条便签直接生效为 👀 观察（来自你仓库自己的文档）。不对的到「记忆」页当场删除即可。\n`);
       break;
     }
 
@@ -442,12 +526,13 @@ function printHelp() {
 FlareMo Memory Ledger CLI
 
 用法:
+  flaremo setup               # 自检：URL / PAT / 连通 / 鉴权 / Skill 落位
   flaremo recall "查询词" [--as-of YYYY-MM-DD] [--from-scope <scope>]
   flaremo remember "记忆正文" [--key <fact_key>] [--tags <tag1,tag2>]
   flaremo checkpoint "本次战报摘要" [--item "原子结论"]
   flaremo lens [--scope <project>]
   flaremo status
-  flaremo seed                # 冷启动：扫描 README/AGENTS 递交候选便签
+  flaremo seed                # 冷启动：扫描 README/AGENTS 提炼候选便签（直接 👀 生效）
 
 选项:
   --project, --scope  当前项目标识 (默认工作目录)
