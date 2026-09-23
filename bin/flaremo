@@ -1,0 +1,388 @@
+#!/usr/bin/env node
+
+/**
+ * FlareMo Memory Ledger CLI (v2)
+ *
+ * Lightweight, zero-daemon command-line interface for agents & humans.
+ * Exit code contract:
+ *   0: Success
+ *   1: Command or validation error
+ *   3: Memory service unreachable (offline fallback triggered)
+ */
+
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
+import { createHash } from "node:crypto";
+
+const FLAREMO_URL =
+  process.env.FLAREMO_URL ||
+  process.env.FLAREMO_DEV_URL ||
+  "http://127.0.0.1:8787";
+
+const FLAREMO_PAT = process.env.FLAREMO_PAT || "";
+const CACHE_DIR = join(homedir(), ".flaremo", "cache");
+
+function getAnchor() {
+  const cwd = process.cwd();
+  return createHash("sha256").update(cwd).digest("hex").slice(0, 16);
+}
+
+function getCachePath(anchor = getAnchor()) {
+  if (!existsSync(CACHE_DIR)) {
+    mkdirSync(CACHE_DIR, { recursive: true });
+  }
+  return join(CACHE_DIR, `${anchor}.md`);
+}
+
+async function callMcp(toolName, args, command = "") {
+  const url = `${FLAREMO_URL.replace(/\/+$/, "")}/memory/mcp`;
+  const headers = {
+    "Content-Type": "application/json",
+  };
+  if (FLAREMO_PAT) {
+    headers["Authorization"] = `Bearer ${FLAREMO_PAT}`;
+  }
+
+  const payload = {
+    jsonrpc: "2.0",
+    id: 1,
+    method: "tools/call",
+    params: {
+      name: toolName,
+      arguments: args,
+    },
+  };
+
+  let res;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    handleUnreachable(error, command);
+    return undefined;
+  }
+
+  if (res.status === 401 || res.status === 403) {
+    console.error(
+      `❌ 鉴权失败 (${res.status})：检查 FLAREMO_PAT 是否已设置且未过期。`,
+    );
+    process.exit(1);
+  }
+  if (!res.ok) {
+    const text = await res.text();
+    console.error(`FlareMo Error (${res.status}): ${text}`);
+    process.exit(1);
+  }
+
+  const data = await res.json();
+  if (data.error) {
+    console.error(`MCP Error (${data.error.code}): ${data.error.message}`);
+    process.exit(1);
+  }
+  const structured = data.result?.structuredContent ?? data.result;
+  // Tool failures arrive inside a successful JSON-RPC envelope. Without this
+  // check a denied write would print "saved" and exit 0.
+  if (data.result?.isError || structured?.error) {
+    const message = structured?.error?.message ?? "tool call failed";
+    console.error(`❌ ${message}`);
+    process.exit(1);
+  }
+  return structured;
+}
+
+/**
+ * `memory_recall` returns a list, and the MCP envelope normalizes a bare list
+ * into `{ result: [...] }` to keep every tool answer an object. Unwrap that
+ * shape so callers can treat recall like the array it conceptually is.
+ */
+function unwrapList(value) {
+  if (Array.isArray(value)) return value;
+  if (value && Array.isArray(value.result)) return value.result;
+  return [];
+}
+
+/**
+ * Exit codes are part of the agent contract (SKILL.md):
+ *   0 — served live from the ledger
+ *   0 + stderr `[离线模式]` — served from a local snapshot (the caller may
+ *       proceed, but must not claim it consulted the current ledger)
+ *   3 — no memory available at all: nothing live, nothing cached
+ *   1 — bad arguments, auth failure, or a rejected tool call
+ */
+function handleUnreachable(error, command = "") {
+  const isLensCommand = ["lens", "bootstrap", "status"].includes(command);
+  const cachePath = getCachePath();
+  if (isLensCommand && existsSync(cachePath)) {
+    const cached = readFileSync(cachePath, "utf-8");
+    console.warn("⚠️ [离线模式] 记忆服务不可达，已降级使用缓存快照\n");
+    console.log(cached);
+    process.exit(0);
+  }
+  console.error("❌ 错误：记忆服务不可达 (Service Unreachable)");
+  console.error(
+    `无法连接到 ${FLAREMO_URL}${isLensCommand ? "，且无本地缓存快照可用" : ""}。`,
+  );
+  process.exit(3);
+}
+
+function parseCliArgs() {
+  const args = process.argv.slice(2);
+  const command = args[0];
+  const options = {};
+  const positional = [];
+
+  for (let i = 1; i < args.length; i++) {
+    const arg = args[i];
+    if (arg.startsWith("--")) {
+      const key = arg.slice(2).replace(/-/g, "_");
+      const next = args[i + 1];
+      if (next && !next.startsWith("--")) {
+        options[key] = next;
+        i++;
+      } else {
+        options[key] = true;
+      }
+    } else {
+      positional.push(arg);
+    }
+  }
+
+  return { command, positional, options };
+}
+
+async function main() {
+  const { command, positional, options } = parseCliArgs();
+
+  if (!command || command === "help" || command === "--help" || command === "-h") {
+    printHelp();
+    process.exit(0);
+  }
+
+  const agent = options.agent || process.env.FLAREMO_AGENT || "cli";
+  const projectKey = options.project || options.scope || process.env.FLAREMO_PROJECT || process.cwd();
+
+  switch (command) {
+    case "recall": {
+      const query = positional[0];
+      if (!query) {
+        console.error("用法: flaremo recall <查询词> [--as-of YYYY-MM-DD] [--from-scope <scope>]");
+        process.exit(1);
+      }
+
+      const results = unwrapList(
+        await callMcp(
+          "memory_recall",
+          {
+            query,
+            agent,
+            project_key: projectKey,
+            from_scope: options.from_scope,
+            fact_key: options.key,
+            as_of: options.as_of,
+            include_inferred: Boolean(options.include_inferred),
+            limit: options.limit ? Number(options.limit) : 8,
+          },
+          command,
+        ),
+      );
+
+      if (results.length === 0) {
+        console.log("未找到匹配的记忆。");
+        return;
+      }
+
+      console.log(`\n🔍 召回结果 (${results.length} 条):\n`);
+      for (const item of results) {
+        const badge = item.verification === "locked" ? "📌 拍板" : item.verification === "confirmed" ? "✅ 确认" : item.verification === "observed" ? "👀 发现" : "💡 猜想";
+        const paths = (item.match_paths || [item.matched_by]).join(",");
+        console.log(`[${badge}] [命中: ${paths}] ${item.content}`);
+        if (item.fact_key) console.log(`   └─ 事实键: ${item.fact_key}`);
+        if (item.evidence && item.evidence.length > 0) {
+          console.log(`   └─ 依据: ${item.evidence[0].excerpt || item.evidence[0].source_type}`);
+        }
+      }
+      console.log();
+      break;
+    }
+
+    case "remember": {
+      const content = positional[0];
+      if (!content) {
+        console.error(
+          "用法: flaremo remember <记忆内容> [--key <fact_key>] [--tags <tag1,tag2>] [--scope-type project|global]",
+        );
+        process.exit(1);
+      }
+
+      const tags = options.tags
+        ? options.tags.split(",").map((s) => s.trim())
+        : [];
+      // Agents only ever write 👀 observed / 💡 inferred; promotion to ✅/📌 is a
+      // human act. `idempotency_key` makes a retried call return the first row
+      // instead of creating a twin.
+      const writeKey =
+        options.idempotency_key ||
+        process.env.FLAREMO_IDEMPOTENCY_KEY ||
+        undefined;
+      const result = await callMcp(
+        "memory_remember",
+        {
+          content,
+          fact_key: options.key || undefined,
+          tags,
+          type: options.type || "semantic",
+          kind: options.kind || "fact",
+          scope_type: options.scope_type || (projectKey ? "project" : "global"),
+          scope_key: projectKey || undefined,
+          verification: "observed",
+          source_agent: agent,
+          idempotency_key: writeKey,
+        },
+        command,
+      );
+
+      if (result?.duplicate) {
+        console.log(`ℹ️ 已存在完全相同的内容 (ID: ${result.memory?.id})`);
+      } else if (result?.memory) {
+        const v = result.memory.verification;
+        const msg =
+          v === "inferred"
+            ? "💡 已作为提案递交至审核箱 (需人类确认)"
+            : "✅ 记忆已保存";
+        console.log(`${msg} (ID: ${result.memory.id})`);
+      } else {
+        console.log("✅ 记忆已保存");
+      }
+      break;
+    }
+
+    case "checkpoint": {
+      const summary = positional[0];
+      if (!summary) {
+        console.error("用法: flaremo checkpoint <战报摘要> [--item <原子结论>]...");
+        process.exit(1);
+      }
+
+      const items = [];
+      if (options.item) {
+        const rawItems = Array.isArray(options.item) ? options.item : [options.item];
+        for (const it of rawItems) {
+          items.push({ content: it, type: "semantic", kind: "fact", importance: 60 });
+        }
+      } else {
+        items.push({ content: summary, type: "semantic", kind: "fact", importance: 50 });
+      }
+
+      const result = await callMcp("memory_checkpoint", {
+        agent,
+        project_key: projectKey,
+        scope_type: "project",
+        scope_key: projectKey,
+        summary,
+        items,
+      }, command);
+
+      console.log(`🎯 战报历程已记录 (ID: ${result.episode?.id || "ok"})`);
+      console.log(`   衍生原子结论: ${result.items?.length || 0} 条`);
+      break;
+    }
+
+    case "lens":
+    case "bootstrap": {
+      // `lens` asks the server for the actual projection — the same bytes an
+      // agent would receive — rather than re-rendering a client-side imitation.
+      // Re-implementing the format here would drift from compileCoreMemory and
+      // make "what does the agent see?" a guess again.
+      const compiled = await callMcp(
+        "memory_compile",
+        {
+          agent,
+          project_key: projectKey,
+          max_chars: options.max_chars ? Number(options.max_chars) : 6000,
+        },
+        command,
+      );
+
+      if (!compiled?.system_prompt_payload) {
+        console.log("当前项目无活跃随身锦囊。");
+        return;
+      }
+
+      console.log(compiled.system_prompt_payload);
+      console.log(
+        `\n--- 预算: ${compiled.character_count} 字符 / ≈${compiled.estimated_tokens} tokens`,
+      );
+      if (compiled.pinned_overflow) {
+        console.warn(
+          "⚠️ 铁律本身已超出预算：本次只带了铁律，其余全部让位。",
+        );
+      } else if (compiled.has_overflow) {
+        console.warn(
+          `⚠️ 另有 ${compiled.truncated_items?.length ?? 0} 条因预算被裁。`,
+        );
+      }
+
+      // Snapshot for the offline fallback (exit code 3 path).
+      try {
+        writeFileSync(getCachePath(), compiled.system_prompt_payload, "utf-8");
+      } catch {}
+      break;
+    }
+
+    case "status": {
+      const result = await callMcp("memory_bootstrap", {
+        agent,
+        project_key: projectKey,
+        max_items: 50,
+      }, command);
+      const items = result.items || [];
+      console.log(`\n📌 活跃便签 (${items.length} 条) - Context: ${projectKey}\n`);
+      for (const item of items) {
+        const badge = item.verification === "locked" ? "📌 我拍板的" : "✅ 我确认过";
+        console.log(`• [${badge}] ${item.content}`);
+      }
+      console.log();
+      break;
+    }
+
+    default:
+      console.error(`未知命令: ${command}`);
+      printHelp();
+      process.exit(1);
+  }
+}
+
+function printHelp() {
+  console.log(`
+FlareMo Memory Ledger CLI
+
+用法:
+  flaremo recall "查询词" [--as-of YYYY-MM-DD] [--from-scope <scope>]
+  flaremo remember "记忆正文" [--key <fact_key>] [--tags <tag1,tag2>]
+  flaremo checkpoint "本次战报摘要" [--item "原子结论"]
+  flaremo lens [--scope <project>]
+  flaremo status
+
+选项:
+  --project, --scope  当前项目标识 (默认工作目录)
+  --agent             调用 Agent 名称 (默认 'cli')
+  --as-of             时态穿梭：查询历史某天成立的事实
+  --from-scope        显式跨项目翻阅
+  --key               指定确定性事实键 (fact_key)
+  --tags              话题标签列表 (以逗号分隔)
+
+退出码:
+  0: 成功
+  1: 参数错误
+  3: 记忆服务不可达 (降级使用离线快照)
+`);
+}
+
+main().catch((err) => {
+  console.error("Fatal error:", err);
+  process.exit(1);
+});

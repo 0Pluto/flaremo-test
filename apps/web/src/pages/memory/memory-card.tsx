@@ -2,12 +2,14 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArchiveIcon,
   CheckIcon,
-  LockIcon,
-  LockOpenIcon,
+  CornerUpLeftIcon,
   MoreHorizontalIcon,
   NotebookPenIcon,
   PencilIcon,
+  PinIcon,
+  PinOffIcon,
   Trash2Icon,
+  XIcon,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -15,10 +17,12 @@ import {
   archiveMemory,
   confirmMemory,
   deleteMemory,
-  lockMemory,
   type Memory,
+  pinMemory,
   promoteMemoryToMemo,
-  unlockMemory,
+  resolveProposal,
+  restoreMemory,
+  unpinMemory,
 } from "@/api";
 import {
   AlertDialog,
@@ -63,7 +67,14 @@ export function MemoryCard({
   const [showRevisions, setShowRevisions] = useState(false);
 
   const confirmMutation = useMutation({
-    mutationFn: () => confirmMemory(stripResourceName(memory.id, "memories")),
+    mutationFn: () => {
+      if (memory.needs_review || memory.verification === "inferred") {
+        return resolveProposal(stripResourceName(memory.id, "memories"), {
+          action: "accept",
+        });
+      }
+      return confirmMemory(stripResourceName(memory.id, "memories"));
+    },
     onSuccess: () => {
       toast.success(t("toast.memoryConfirmed"));
       onMutated();
@@ -72,8 +83,22 @@ export function MemoryCard({
       toast.error(errorMessage(error, t("toast.memoryConfirmFailed"))),
   });
 
-  const lockMutation = useMutation({
-    mutationFn: () => lockMemory(stripResourceName(memory.id, "memories")),
+  const rejectMutation = useMutation({
+    mutationFn: () =>
+      resolveProposal(stripResourceName(memory.id, "memories"), {
+        action: "reject",
+        rejection_reason: "user_rejected_in_inbox",
+      }),
+    onSuccess: () => {
+      toast.success(t("toast.memoryRejected"));
+      onMutated();
+    },
+    onError: (error) =>
+      toast.error(errorMessage(error, t("toast.memoryRejectFailed"))),
+  });
+
+  const pinMutation = useMutation({
+    mutationFn: () => pinMemory(stripResourceName(memory.id, "memories")),
     onSuccess: () => {
       toast.success(t("toast.memoryLocked"));
       onMutated();
@@ -82,8 +107,8 @@ export function MemoryCard({
       toast.error(errorMessage(error, t("toast.memoryLockFailed"))),
   });
 
-  const unlockMutation = useMutation({
-    mutationFn: () => unlockMemory(stripResourceName(memory.id, "memories")),
+  const unpinMutation = useMutation({
+    mutationFn: () => unpinMemory(stripResourceName(memory.id, "memories")),
     onSuccess: () => {
       toast.success(t("toast.memoryUnlocked"));
       onMutated();
@@ -102,11 +127,19 @@ export function MemoryCard({
       toast.error(errorMessage(error, t("toast.memoryArchiveFailed"))),
   });
 
+  const restoreMutation = useMutation({
+    mutationFn: () => restoreMemory(stripResourceName(memory.id, "memories")),
+    onSuccess: () => {
+      toast.success(t("toast.memoryRestored"));
+      onMutated();
+    },
+    onError: (error) =>
+      toast.error(errorMessage(error, t("toast.memoryRestoreFailed"))),
+  });
+
   const promoteMutation = useMutation({
     mutationFn: () =>
       promoteMemoryToMemo(stripResourceName(memory.id, "memories")),
-    // A promoted memory produces a memo: the timeline and stats must refresh,
-    // otherwise the promoted note only appears after some unrelated action.
     onSuccess: () => {
       toast.success(t("toast.saved"));
       onMutated();
@@ -130,74 +163,180 @@ export function MemoryCard({
 
   const id = stripResourceName(memory.id, "memories");
 
+  // Authority Badge Label (Natural language dictionary §III)
+  const authorityBadge = (() => {
+    switch (memory.verification) {
+      case "locked":
+        return { label: t("memory.pinned"), variant: "default" as const };
+      case "confirmed":
+        return { label: t("memory.confirmedBadge"), variant: "brand" as const };
+      case "observed":
+        return {
+          label: t("memory.observedBadge"),
+          variant: "secondary" as const,
+        };
+      case "inferred":
+        return {
+          label: t("memory.inferredBadge"),
+          variant: "outline" as const,
+        };
+      default:
+        return { label: memory.verification, variant: "outline" as const };
+    }
+  })();
+
+  // Status Indicator
+  const statusIndicator = (() => {
+    if (memory.status === "superseded") {
+      return (
+        <span className="flex items-center gap-1 text-xs text-amber-500">
+          <span className="inline-block size-1.5 rounded-full bg-amber-500" />
+          {t("memory.status.supersededShort")}
+        </span>
+      );
+    }
+    if (memory.status === "archived") {
+      return (
+        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+          <span className="inline-block size-1.5 rounded-full bg-muted-foreground" />
+          {t("memory.status.archivedShort")}
+        </span>
+      );
+    }
+    return (
+      <span className="flex items-center gap-1 text-xs text-emerald-500">
+        <span className="inline-block size-1.5 rounded-full bg-emerald-500" />
+        {t("memory.status.current")}
+      </span>
+    );
+  })();
+
   return (
     <Card>
       <CardContent className="flex flex-col gap-3">
-        <p className="text-sm whitespace-pre-wrap">{memory.content}</p>
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-sm whitespace-pre-wrap">{memory.content}</p>
+          <div className="shrink-0">{statusIndicator}</div>
+        </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
+          <Badge variant={authorityBadge.variant}>{authorityBadge.label}</Badge>
+
+          {/* Non-hierarchical topic tags without '#' (§III) */}
+          {Array.isArray(memory.tags) &&
+            memory.tags.map((tag) => (
+              <Badge key={tag} variant="outline" className="text-xs">
+                {tag}
+              </Badge>
+            ))}
+
           <Badge variant="outline">{t(`memory.type.${memory.type}`)}</Badge>
           <Badge variant="outline">{t(`memory.kind.${memory.kind}`)}</Badge>
           <Badge variant="secondary">
             {t(`memory.scope.${memory.scope_type}`)}
           </Badge>
-          <Badge variant="brand">
-            {t(`memory.verification.${memory.verification}`)}
-          </Badge>
           {memory.tier === "core" && <Badge>{t("memory.tier.core")}</Badge>}
+
           {showSource && memory.source_agent && (
             <span className="text-xs text-muted-foreground">
               {t("memory.sourceAgent")}: {memory.source_agent}
             </span>
           )}
           {review && memory.review_reason && (
-            <span className="text-xs text-muted-foreground">
-              {memory.review_reason}
+            <span className="text-xs text-amber-500 font-medium">
+              {t("memory.pendingDecision")} ({memory.review_reason})
             </span>
           )}
         </div>
 
+        {/* Evidence preview line (§V.2) */}
+        {memory.evidence && memory.evidence.length > 0 && (
+          <div className="text-xs text-muted-foreground flex items-center gap-1 border-t pt-2">
+            <span>{t("memory.evidenceLabel")}:</span>
+            <span className="truncate max-w-[400px]">
+              {memory.evidence[0].excerpt ||
+                `${t("memory.evidenceFrom")} ${memory.evidence[0].source_type}`}
+            </span>
+          </div>
+        )}
+
         <div className="flex flex-wrap items-center gap-1.5">
-          {memory.verification !== "locked" &&
-            memory.verification !== "confirmed" && (
+          {review || memory.needs_review ? (
+            <>
+              <Button
+                size="sm"
+                variant="default"
+                onClick={() => confirmMutation.mutate()}
+                disabled={confirmMutation.isPending}
+              >
+                <CheckIcon data-icon="inline-start" />
+                {t("memory.acceptProposal")}
+              </Button>
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => confirmMutation.mutate()}
+                onClick={() => rejectMutation.mutate()}
+                disabled={rejectMutation.isPending}
               >
-                <CheckIcon data-icon="inline-start" />
-                {t("memory.confirm")}
+                <XIcon data-icon="inline-start" />
+                {t("memory.rejectProposal")}
               </Button>
-            )}
-          {memory.verification === "locked" ? (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => unlockMutation.mutate()}
-            >
-              <LockOpenIcon data-icon="inline-start" />
-              {t("memory.unlock")}
-            </Button>
+            </>
           ) : (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => lockMutation.mutate()}
-            >
-              <LockIcon data-icon="inline-start" />
-              {t("memory.lock")}
-            </Button>
+            <>
+              {memory.verification !== "locked" &&
+                memory.verification !== "confirmed" && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => confirmMutation.mutate()}
+                  >
+                    <CheckIcon data-icon="inline-start" />
+                    {t("memory.confirm")}
+                  </Button>
+                )}
+              {memory.verification === "locked" ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => unpinMutation.mutate()}
+                >
+                  <PinOffIcon data-icon="inline-start" />
+                  {t("memory.unpin")}
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => pinMutation.mutate()}
+                >
+                  <PinIcon data-icon="inline-start" />
+                  {t("memory.pin")}
+                </Button>
+              )}
+              {memory.status === "active" && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => archiveMutation.mutate()}
+                >
+                  <ArchiveIcon data-icon="inline-start" />
+                  {t("memory.archive")}
+                </Button>
+              )}
+              {memory.status === "archived" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => restoreMutation.mutate()}
+                >
+                  <CornerUpLeftIcon data-icon="inline-start" />
+                  {t("memory.restore")}
+                </Button>
+              )}
+            </>
           )}
-          {memory.status === "active" && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => archiveMutation.mutate()}
-            >
-              <ArchiveIcon data-icon="inline-start" />
-              {t("memory.archive")}
-            </Button>
-          )}
+
           <DropdownMenu>
             <DropdownMenuTrigger
               render={

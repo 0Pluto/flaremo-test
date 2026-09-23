@@ -28,6 +28,7 @@ import {
   purgeArticleRow,
   pushNotificationToUser,
   requeueStaleMemberRemovalJobs,
+  runMemoryLedgerMaintenance,
   SELF_HOST_UNLIMITED,
   type UserPlanLimits,
   updateMemberRemovalJob,
@@ -107,6 +108,11 @@ export async function runScheduledMaintenance(
     }
   }
   await dispatchMemosWebhookOutbox(db);
+  // Memory-ledger upkeep runs before the embedding outbox so the vector work it
+  // queues is drained by the same pass: stale conjectures retire, and rows whose
+  // validity window or expiry has passed leave the index instead of being ranked
+  // on every recall and filtered out afterwards.
+  await runMemoryLedgerMaintenance(db, new Date(scheduledTime));
   // SSE replay events have a one-week retention; the bounded chunk keeps the
   // daily sweep from one giant delete.
   const ssePruned = await pruneMemosSseEvents(

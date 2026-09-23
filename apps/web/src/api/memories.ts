@@ -121,3 +121,60 @@ export async function promoteMemoryToMemo(id: string) {
     { method: "POST" },
   );
 }
+
+export async function restoreMemory(id: string) {
+  return apiRequest<{ memory: Memory }>(
+    `/api/app/memory/${encodeURIComponent(id)}/restore`,
+    { method: "POST" },
+  );
+}
+
+export async function pinMemory(id: string) {
+  return apiRequest<{ memory: Memory }>(
+    `/api/app/memory/${encodeURIComponent(id)}/pin`,
+    { method: "POST" },
+  );
+}
+
+export async function unpinMemory(id: string) {
+  return apiRequest<{ memory: Memory }>(
+    `/api/app/memory/${encodeURIComponent(id)}/unpin`,
+    { method: "POST" },
+  );
+}
+
+export async function resolveProposal(
+  id: string,
+  input: {
+    action: "accept" | "reject" | "modify";
+    modified_content?: string;
+    rejection_reason?: string;
+  },
+) {
+  return apiRequest<{
+    resolved: boolean;
+    action: string;
+    memory: Memory;
+  }>(`/api/app/memory/proposals/${encodeURIComponent(id)}/resolve`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function getMemoryLineage(id: string) {
+  return apiRequest<{
+    lineage: {
+      current: Memory;
+      chain: Memory[];
+      revisions: MemoryRevision[];
+      evidence: unknown[];
+      events: unknown[];
+    };
+  }>(`/api/app/memory/${encodeURIComponent(id)}/lineage`);
+}
+
+export async function getMemoryEvidence(id: string) {
+  return apiRequest<{ evidence: unknown[] }>(
+    `/api/app/memory/${encodeURIComponent(id)}/evidence`,
+  );
+}

@@ -4,6 +4,9 @@
   "version": "0.20.1",
   "private": true,
   "type": "module",
+  "bin": {
+    "flaremo": "./bin/flaremo"
+  },
   "packageManager": "pnpm@11.7.0",
   "scripts": {
     "dev": "pnpm --filter @flaremo/web build && pnpm --filter @flaremo/worker dev",
