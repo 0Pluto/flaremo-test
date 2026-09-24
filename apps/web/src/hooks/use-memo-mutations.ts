@@ -23,8 +23,6 @@ import {
 } from "@/lib/memo-cache";
 import { createMemoWithAttachments } from "@/lib/memo-submission";
 
-export { viewToMemoState } from "@/lib/memo-cache";
-
 /**
  * All memo mutations (create, trash/restore/update/hard-delete, share, tag
  * rename/delete) plus the optimistic ["memos"] cache patching they share and

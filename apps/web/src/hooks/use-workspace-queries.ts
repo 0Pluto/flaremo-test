@@ -15,8 +15,8 @@ import {
   type Task,
 } from "@/api";
 import type { ExplorerView as ViewMode } from "@/components/flaremo-explorer";
-import { viewToMemoState } from "@/hooks/use-memo-mutations";
 import { todayKey } from "@/lib/calendar-date";
+import { viewToMemoState } from "@/lib/memo-cache";
 import { queryKeys } from "@/lib/query-keys";
 
 const PAGE_SIZE = 30;
@@ -177,20 +177,24 @@ export function useWorkspaceQueries({
     () => [todayKey(), -new Date().getTimezoneOffset()],
     [],
   );
-  const onThisDayQuery = useQuery({
-    queryKey: ["daily-review", today, tzOffset],
-    queryFn: () => getDailyReview(today, tzOffset),
-    staleTime: 60_000,
-    retry: false,
-  });
-  const showOnThisDayBanner =
+  // Gate the fetch on the same filters that gate the banner: a filtered
+  // timeline never renders it, so the request would be pure waste.
+  const onThisDayEnabled =
     view === "all" &&
     !dayFilter &&
     !searchQuery &&
     !activeTag &&
     !untagged &&
-    !isSemanticSearch &&
-    (onThisDayQuery.data?.memos.length ?? 0) > 0;
+    !isSemanticSearch;
+  const onThisDayQuery = useQuery({
+    queryKey: ["daily-review", today, tzOffset],
+    enabled: onThisDayEnabled,
+    queryFn: () => getDailyReview(today, tzOffset),
+    staleTime: 60_000,
+    retry: false,
+  });
+  const showOnThisDayBanner =
+    onThisDayEnabled && (onThisDayQuery.data?.memos.length ?? 0) > 0;
 
   const memos = useMemo(
     () => memosQuery.data?.pages.flatMap((page) => page.memos) ?? [],
