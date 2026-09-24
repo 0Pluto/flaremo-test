@@ -85,9 +85,9 @@ git clone --filter=blob:none --sparse https://github.com/realchendahuang/FlareMo
 
 | Harness | 挂载 | 更新 |
 | :--- | :--- | :--- |
-| ZCode | marketplace `directory` 源 → `~/.flaremo/src/harness`，安装 `flaremo-memory` | `flaremo update` 后刷新 marketplace |
+| ZCode | `~/.zcode/cli/config.json` 的 `plugins.dirs` 加入 `~/.flaremo/src/harness/zcode`（原地加载，见 §10.1） | `git pull` 即生效 |
 | Codex | `codex plugin marketplace add ~/.flaremo/src/harness` → `codex plugin add flaremo-memory`；人工在 `/hooks` 信任一次 | `codex plugin marketplace upgrade`；hook 定义变更需重新信任（Codex 按哈希记录，属安全设计，不绕过） |
-| Antigravity | 2.0 / IDE：软链 `~/.gemini/config/plugins/flaremo-memory` → 检出目录（`git pull` 即时生效）；CLI：`agy plugin install`（复制式） | CLI 侧由 `flaremo update` 重新 install |
+| Antigravity | 软链 `~/.gemini/config/plugins/flaremo-memory` → 检出目录；2.0 / IDE / CLI 三个表面都读这里（见 §10.2） | `git pull` 即生效 |
 
 ### 3.4 仓库布局
 
@@ -172,7 +172,7 @@ Antigravity 规则投影文件由核心生成在检出目录**之外**（`~/.gem
 
 | 来源 | 导入规则 | 之后 |
 | :--- | :--- | :--- |
-| ZCode `memories/projects/*/memory/*.md` | 跳过 `MEMORY.md` 索引；逐文件取 frontmatter：`type: user` → global 偏好，`project` → 项目域，`feedback`（用户纠正）→ 💡 提案待确认；正文作 evidence，`originSessionId` 留作来源；目录名 `<name>-<hash>` 按名称匹配项目键，匹配不到落 global 并打标签 | 关 `memoryEnabled` |
+| ZCode `memories/projects/*/memory/*.md` | 跳过 `MEMORY.md` 索引；逐文件取 frontmatter：`description` 作记忆正文，全文（本地脱敏、截断）作 evidence，`type` 作标签，`originSessionId` 留作来源；目录名 `<name>-<hash16>` 以 `sha256(工作区路径)` 精确还原项目键，还原不到落 global 并打标签 | 关 `memoryEnabled` |
 | Codex `MEMORY.md` + `memory_summary.md` | 按章节切分：User Profile / preferences → global；"What's in Memory" 按 `cwd` 分组 → 项目域；`raw_memories.md` 只作可检索 evidence，不入账本 | 关 `generate_memories` / `use_memories` |
 | Antigravity Knowledge Items | 本机为空，暂不实现解析（格式为 protobuf）；出现存量时再补 | 开关位置待实测 |
 
@@ -196,16 +196,43 @@ Antigravity 规则投影文件由核心生成在检出目录**之外**（`~/.gem
 | **P1** | `/events` 幂等端点 + 闲置提炼；L2 每轮定向；W2 纠错捕获；Codex PreCompact；Antigravity 规则投影；每周"自动生效了什么"报告 | 同一会话重复触发只入账一次；L2 注入均过阈值且不重复 |
 | **P2** | L3 触发索引（`applies_to` schema）；设备码登录；Pi / omp / DSH 适配 | 编辑命中路径时相关规矩零网络注入 |
 
-## 十、待实测清单（实现开工第一步）
+## 十、实测结论（2026-09-24）
 
-| # | 项 | 影响 |
-| :--- | :--- | :--- |
-| 1 | ZCode `directory` marketplace 的清单格式、安装是复制还是链接、hook stdin 字段（是否含 `transcript_path`）、Stop 能否阻止收工、`${ZCODE_PLUGIN_DIR}` 变量 | ZCode 插件接线与 W3 |
-| 2 | ZCode 命令白名单写法 | W1 免审批 |
-| 3 | Antigravity `invocationNum` 是否按每轮用户消息归零、`transcript.jsonl` 结构、CLI 是否也读 `~/.gemini/config/plugins/`、hook 是否在沙箱外执行、`command(...)` 放行 `flaremo` 的写法、Knowledge Items 开关 | L1/L2/W2 判定、安装与 W1 |
-| 4 | Codex 桌面端插件 hook 的信任流程、`additionalContextLimit` 默认值 | 安装体验、L1 预算 |
+### 10.1 ZCode（读引擎源码 `ZCode.app/Contents/Resources/glm/zcode.cjs`）
 
-实测结论回写本节与 §2.2，再动对应代码。
+- **本地目录直载**：`~/.zcode/cli/config.json` 的 `plugins.dirs: [路径]` 原地加载插件（不复制），`git pull` 即生效——**比 marketplace 更适合**，P0 用它。
+- **Hook 环境变量是 `ZCODE_PLUGIN_ROOT`**（另有 `ZCODE_PLUGIN_DATA` / `ZCODE_SESSION_ID` / `ZCODE_PROJECT_DIR`）。旧试点写的 `${ZCODE_PLUGIN_DIR}` 不存在，其 hook 实际从未跑通。
+- **stdin 字段**：Claude 风格（`session_id` / `hook_event_name` / `permission_mode` 等）；`transcript_path` 是**临时文件，只含当前这一条消息**，不是完整会话；Stop 带 `last_assistant_message` 与 `stop_hook_active`。
+- **Stop 可以阻止收工**：`decision: "block"` + `reason` → 续一轮（与 Claude Code 同语义）。
+- **原生记忆开关**：`~/.zcode/v2/setting.json` 的 `memoryEnabled: false` 会让运行时收到 `memory: { enabled: false }`，读写同时关闭。应用运行中可能回写该文件，安装器需提示在应用内确认或重启。
+- **项目目录名** = `<名>-` + `sha256(工作区绝对路径)` 前 16 位（`/Users/kim/code/fm` → `01c771b019d2d44e` 已验证）→ 搬家可精确还原项目。
+- 命令白名单写法未查清；本机为全自动权限模式，P0 不处理，`doctor` 提示。
+
+### 10.2 Antigravity（本机 `agy` 1.2.8 探针实测）
+
+- **CLI 也加载 `~/.gemini/config/plugins/`**：全局插件目录三个表面通用，**不需要 `agy plugin install`**。
+- **`invocationNum` 每条用户消息归零**（第二轮 `invocationNum: 0`、`initialNumSteps: 4`）→ `invocationNum === 0` 即"新一轮用户消息"。
+- **`injectSteps.ephemeralMessage` 模型可见**（探针暗号被正确复述）。
+- Hook 的工作目录是**插件目录**（不是工作区）；环境带 `ANTIGRAVITY_CONVERSATION_ID`；hook 内网络可达。无工作区时 `workspacePaths` 为空数组。
+- `transcriptPath` 实际指向 `transcript_full.jsonl`；行结构 `{step_index, source: USER_EXPLICIT | MODEL, type: USER_INPUT | PLANNER_RESPONSE | …, content, tool_calls, thinking}`，用户消息包在 `<USER_REQUEST>` 中。
+- Stop 的 `terminationReason` 实测值 `NO_TOOL_CALL`；`--sandbox` 下模型执行的 `curl` 访问实例返回 200。
+- Knowledge Items 开关仍未找到公开位置（本机无存量，暂不处理）。
+
+### 10.3 Codex（官方文档 + 本机 `codex-cli 0.155` 二进制）
+
+- `codex plugin marketplace add` 接受**本地路径**或 `owner/repo`（支持 `--sparse`）。
+- Hook 信任按定义哈希记录在 `config.toml` 的 `hooks.state.*.trusted_hash`，CLI 与桌面端共用；插件 hook 未信任前不会执行——安装器不代签，`doctor` 提示在 `codex` CLI 里 `/hooks` 信任一次。
+- Stop 必须输出 JSON；`SessionEnd` 超时默认 1 秒、上限 3 秒（只允许做本地标记）；`additionalContext` 超过 `additionalContextLimit` 会落盘改发预览。
+
+### 10.4 因实测而调整的设计
+
+1. **ZCode 改用 `plugins.dirs` 原地加载**，不走 marketplace。
+2. **Antigravity 直接软链全局插件目录**，CLI 不再单独 install。
+3. **Skill 不再复制**：ZCode / Codex 读 `~/.agents/skills`（安装器改为软链到检出目录）；Antigravity 插件内的 `skills/flaremo-memory` 是仓库内相对软链。§3.4 的"同步副本 + 一致性测试"改为"只允许软链、测试断言无副本"。
+4. **Hook 统一经 `~/.flaremo/bin/flaremo-hook` 包装脚本**（安装时写入 node 绝对路径），GUI 应用 PATH 精简也能跑。
+5. **W4 本地闲置结算**：Stop 在 ZCode / Codex / Antigravity 都是**每轮**触发，不能每轮 checkpoint。改为 Stop 只更新会话状态，由本地 outbox 冲刷时对"闲置 30 分钟或已结束"的会话结算一次 checkpoint；服务端 `/events` 仍在 P1。
+6. **项目身份 P0 用仓库根绝对路径**（`git rev-parse --show-toplevel`），不直接切换到 git remote——账本存量按绝对路径入键，切换需要服务端别名表，放 P1。
+7. **搬家内容一律 👀 直接生效**（与 v2.4 seed 同口径，不对的当场删），不再把 ZCode `feedback` 类送审核箱，避免一次性堆几十条待审。
 
 ## 十一、验收（v0.2 通用）
 

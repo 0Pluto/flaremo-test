@@ -1,40 +1,53 @@
 # FlareMo Harness Plugins
 
-各 Harness 的接入插头（Harness Adapter 规范 [`docs/harness-adapter-spec.md`](../docs/harness-adapter-spec.md) §V.5）。
-
-## zcode-plugin
-
-ZCode 插件试点：一次安装 = Skill（工作规约）+ MCP（记忆工具）+ Hooks（生命周期自动化）+ Auth 引导。
+各 Harness 的接入插头（Harness Adapter 规范 [`docs/harness-adapter-spec.md`](../docs/harness-adapter-spec.md)）：**关掉原生自动记忆、搬家到 FlareMo、由 FlareMo 占住全部槽位**——ZCode / Codex / Antigravity 共用一个大脑。
 
 ```
-harness/zcode-plugin/
-├── .zcode-plugin/plugin.json   # 清单：MCP 端点接线 + user_config（URL/PAT）
-├── skills/flaremo-memory/      # 与仓库 skills/flaremo-memory 同源的工作规约
-├── commands/flaremo-setup.md   # /flaremo-setup 接入引导命令
-└── hooks/
-    ├── hooks.json              # SessionStart / Stop
-    └── scripts/
-        ├── session-start.js    # 开工注入 lens（失败静默，绝不阻塞会话）
-        └── session-stop.js     # 收工 fire-and-forget checkpoint（detached 子进程）
+harness/
+├── install.sh                      # 首装入口 = node bin/flaremo init
+├── core/                           # 零依赖共享模块：凭据/项目身份/会话状态/outbox/hook 分发/安装器/导入器
+├── .agents/plugins/marketplace.json# Codex marketplace 清单
+├── zcode/                          # ZCode 插件（.zcode-plugin/plugin.json + hooks + commands）
+├── codex/                          # Codex 插件（.codex-plugin/plugin.json + hooks/hooks.json）
+└── antigravity/                    # Antigravity 插件（plugin.json + hooks.json + rules/ + skills 软链）
+skills/flaremo-memory/              # 唯一 skill 源（~/.agents/skills 由 init 软链至此）
 ```
 
-### 安装（开发者本机）
+## 安装
 
 ```bash
-# 1. 确保仓库里有 CLI 与 skill
-node bin/flaremo setup    # 五项自检全 ✅
-
-# 2. 把插件目录注册进 ZCode（设置 → 插件 → 本地目录），或软链到插件目录：
-ln -s "$(pwd)/harness/zcode-plugin" ~/.zcode/cli/plugins/local/flaremo-memory
+git clone https://github.com/realchendahuang/FlareMo.git
+cd FlareMo
+./harness/install.sh            # = node bin/flaremo init；--dry-run 先打印计划
+flaremo login --url <实例地址>    # PAT 从 stdin 读入，落 ~/.flaremo/credentials (0600)
+flaremo doctor                  # 自检
 ```
 
-### Hook 的环境契约
+init 幂等可重跑，每个改动先备份原件到 `~/.flaremo/backup/<harness>/`。原生记忆搬家（`flaremo import <harness> --apply`）在关闭原生开关**之前**执行；服务不可达则不关闭。
 
-Hook 脚本读 `FLAREMO_URL` / `FLAREMO_PAT` / `FLAREMO_PROJECT`（可选）/ `FLAREMO_AGENT`（默认 `zcode`）。
-全部失败路径**静默退出 0**——记忆服务不可达绝不允许弄响会话收工。
+- **ZCode**：`~/.zcode/cli/config.json` 的 `plugins.dirs` 加入 `harness/zcode`（目录源插件默认启用），`~/.zcode/v2/setting.json` 置 `memoryEnabled=false`。
+- **Codex**：`codex plugin marketplace add <checkout>/harness` + `codex plugin add flaremo-memory@flaremo`；`~/.codex/config.toml` 的 `[memories]` 两个开关置 false；写 `~/.codex/rules/flaremo.rules` 免审批。**人工动作**：在 codex CLI 里 `/hooks` 信任一次 hook 定义。
+- **Antigravity**：软链 `~/.gemini/config/plugins/flaremo-memory` → `harness/antigravity`。
 
-### 安全边界（§VII，不可让渡）
+## 运行时
 
-- Hook / Dreaming 自动写入的天花板是 👀；📌/✅ 只能由人类动作产生。
-- `session-stop.js` 把会话摘要作为**数据**上报，服务端提炼时源文本一律不作指令（注入防护）。
-- PAT 不进仓库、不进 skill 文本、不打印到日志。
+所有 hook 统一走 `"$HOME/.flaremo/bin/flaremo-hook" <harness> <event>`（init 生成的 sh 包装，GUI 拉起也能找到 node）。任何 hook 失败静默退出 0，绝不阻塞会话。
+
+- **L1 开工锦囊**：SessionStart / 首次 PreInvocation 注入编译好的 lens；断网降级本地快照或显式声明未取到。
+- **W3 收尾补记**：长会话 Stop 时最多阻止一次收工并提示沉淀。
+- **W4 兜底**：会话摘要进 `~/.flaremo/outbox/`，恢复后自动补写。
+- 服务不可达时 `remember`/`checkpoint` 暂存 outbox（退出码 3），任意 CLI 命令结束顺手冲刷。
+
+## 卸载 / 升级
+
+```bash
+flaremo uninstall [--harness …]  # 还原备份、摘除软链与插件
+flaremo update                   # git pull --ff-only + codex marketplace upgrade + 重建 hook 包装
+```
+
+### 安全边界（不可让渡）
+
+- 自动写入天花板是 👀；📌/✅ 只由人类动作产生。
+- 数据级注入带统一头注；证据文本不是指令。
+- PAT 只存 `~/.flaremo/credentials`（0600），不进仓库、不进日志。
+- Codex hook 信任、Antigravity 沙箱等宿主机制不绕过。

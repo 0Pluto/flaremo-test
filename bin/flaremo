@@ -10,88 +10,61 @@
  *   3: Memory service unreachable (offline fallback triggered)
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
-import { createHash } from "node:crypto";
+import { spawn } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 
-const FLAREMO_URL =
-  process.env.FLAREMO_URL ||
-  process.env.FLAREMO_DEV_URL ||
-  "http://127.0.0.1:8787";
+import { resolveCredentials, writeCredentialsFile } from "../harness/core/credentials.mjs";
+import { emptyOutput, handleHook } from "../harness/core/hooks.mjs";
+import { runImport } from "../harness/core/importer.mjs";
+import {
+  doctorCmd,
+  initCmd,
+  uninstallCmd,
+  updateCmd,
+} from "../harness/core/install.mjs";
+import { enqueueOutbox, flushOutbox } from "../harness/core/outbox.mjs";
+import { resolveProject } from "../harness/core/project.mjs";
+import { flaremoHome } from "../harness/core/paths.mjs";
+import {
+  readSnapshot,
+  recordLastWrite,
+  writeSnapshot,
+} from "../harness/core/state.mjs";
+import { request } from "../harness/core/transport.mjs";
 
-const FLAREMO_PAT = process.env.FLAREMO_PAT || "";
-const CACHE_DIR = join(homedir(), ".flaremo", "cache");
+const HOME = flaremoHome(process.env);
+const CRED = resolveCredentials(process.env, HOME);
+const FLAREMO_URL = CRED.url;
+const THIS_FILE = fileURLToPath(import.meta.url);
 
-function getAnchor() {
-  const cwd = process.cwd();
-  return createHash("sha256").update(cwd).digest("hex").slice(0, 16);
-}
+async function callMcp(toolName, args, command = "", { projectKey } = {}) {
+  const res = await request(toolName, args, { env: process.env, home: HOME });
 
-function getCachePath(anchor = getAnchor()) {
-  if (!existsSync(CACHE_DIR)) {
-    mkdirSync(CACHE_DIR, { recursive: true });
-  }
-  return join(CACHE_DIR, `${anchor}.md`);
-}
-
-async function callMcp(toolName, args, command = "") {
-  const url = `${FLAREMO_URL.replace(/\/+$/, "")}/memory/mcp`;
-  const headers = {
-    "Content-Type": "application/json",
-  };
-  if (FLAREMO_PAT) {
-    headers["Authorization"] = `Bearer ${FLAREMO_PAT}`;
-  }
-
-  const payload = {
-    jsonrpc: "2.0",
-    id: 1,
-    method: "tools/call",
-    params: {
-      name: toolName,
-      arguments: args,
-    },
-  };
-
-  let res;
-  try {
-    res = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(payload),
-    });
-  } catch (error) {
-    handleUnreachable(error, command);
+  if (res.unreachable) {
+    handleUnreachable(res.error, command, projectKey);
     return undefined;
   }
-
-  if (res.status === 401 || res.status === 403) {
+  if (res.auth) {
     console.error(
       `❌ 鉴权失败 (${res.status})：检查 FLAREMO_PAT 是否已设置且未过期。`,
     );
     process.exit(1);
   }
   if (!res.ok) {
-    const text = await res.text();
-    console.error(`FlareMo Error (${res.status}): ${text}`);
+    if (res.toolError) {
+      console.error(`❌ ${res.error}`);
+    } else {
+      console.error(
+        res.error?.startsWith("MCP ")
+          ? `FlareMo ${res.error}`
+          : `FlareMo Error (${res.status}): ${res.error ?? ""}`,
+      );
+    }
     process.exit(1);
   }
-
-  const data = await res.json();
-  if (data.error) {
-    console.error(`MCP Error (${data.error.code}): ${data.error.message}`);
-    process.exit(1);
-  }
-  const structured = data.result?.structuredContent ?? data.result;
-  // Tool failures arrive inside a successful JSON-RPC envelope. Without this
-  // check a denied write would print "saved" and exit 0.
-  if (data.result?.isError || structured?.error) {
-    const message = structured?.error?.message ?? "tool call failed";
-    console.error(`❌ ${message}`);
-    process.exit(1);
-  }
-  return structured;
+  return res.data;
 }
 
 /**
@@ -113,20 +86,57 @@ function unwrapList(value) {
  *   3 — no memory available at all: nothing live, nothing cached
  *   1 — bad arguments, auth failure, or a rejected tool call
  */
-function handleUnreachable(error, command = "") {
+function handleUnreachable(error, command = "", projectKey) {
   const isLensCommand = ["lens", "bootstrap", "status"].includes(command);
-  const cachePath = getCachePath();
-  if (isLensCommand && existsSync(cachePath)) {
-    const cached = readFileSync(cachePath, "utf-8");
-    console.warn("⚠️ [离线模式] 记忆服务不可达，已降级使用缓存快照\n");
-    console.log(cached);
-    process.exit(0);
+  if (isLensCommand) {
+    const cached = readSnapshot(HOME, projectKey ?? null);
+    if (cached) {
+      console.warn("⚠️ [离线模式] 记忆服务不可达，已降级使用缓存快照\n");
+      console.log(cached);
+      process.exit(0);
+    }
   }
   console.error("❌ 错误：记忆服务不可达 (Service Unreachable)");
   console.error(
     `无法连接到 ${FLAREMO_URL}${isLensCommand ? "，且无本地缓存快照可用" : ""}。`,
   );
   process.exit(3);
+}
+
+/**
+ * remember/checkpoint on unreachable: park the write in the local outbox so it
+ * is replayed automatically once the service comes back.
+ */
+function enqueueWriteOrExit(toolName, args) {
+  enqueueOutbox(HOME, {
+    id: `outbox:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 10)}`,
+    tool: toolName,
+    args,
+  });
+  console.warn("⚠️ 记忆服务不可达，已暂存本地，恢复后自动补写");
+  process.exit(3);
+}
+
+async function writeWithQueue(toolName, args, command, projectKey) {
+  const res = await request(toolName, args, { env: process.env, home: HOME });
+  if (res.unreachable) {
+    enqueueWriteOrExit(toolName, args, projectKey);
+    return undefined;
+  }
+  if (res.auth) {
+    console.error(
+      `❌ 鉴权失败 (${res.status})：检查 FLAREMO_PAT 是否已设置且未过期。`,
+    );
+    process.exit(1);
+  }
+  if (!res.ok) {
+    console.error(`❌ ${res.error ?? `HTTP ${res.status}`}`);
+    process.exit(1);
+  }
+  try {
+    recordLastWrite(HOME, projectKey);
+  } catch {}
+  return res.data;
 }
 
 function parseCliArgs() {
@@ -164,7 +174,110 @@ const all = (v) => (v === undefined ? [] : Array.isArray(v) ? v : [v]);
 
 /** The repo checkout this CLI came from ships the skill source next to it. */
 function skillRepoPresent() {
-  return existsSync(join(process.cwd(), "skills", "flaremo-memory", "SKILL.md"));
+  return existsSync(join(dirname(THIS_FILE), "..", "skills", "flaremo-memory", "SKILL.md"));
+}
+
+function readStdin(capMs = 2000) {
+  return new Promise((resolve) => {
+    let text = "";
+    let done = false;
+    const finish = () => {
+      if (!done) {
+        done = true;
+        resolve(text);
+      }
+    };
+    process.stdin.setEncoding("utf8");
+    process.stdin.on("data", (chunk) => (text += chunk));
+    process.stdin.on("end", finish);
+    setTimeout(finish, capMs).unref();
+    if (process.stdin.isTTY) finish();
+  });
+}
+
+function spawnDetachedFlush() {
+  try {
+    const child = spawn(process.execPath, [THIS_FILE, "outbox", "flush"], {
+      stdio: "ignore",
+      detached: true,
+      env: process.env,
+    });
+    child.on("error", () => {});
+    child.unref();
+  } catch {}
+}
+
+async function runHook(harness, event) {
+  const stdinText = await readStdin(2000);
+  let payload = {};
+  try {
+    const parsed = JSON.parse(stdinText);
+    if (parsed && typeof parsed === "object") payload = parsed;
+  } catch {
+    // Garbage stdin is fine — the handler tolerates an empty payload.
+  }
+
+  const hardCap = setTimeout(() => {
+    console.log(JSON.stringify(emptyOutput(harness, event)));
+    process.exit(0);
+  }, 4000);
+  hardCap.unref();
+
+  try {
+    const { output, spawnFlush } = await handleHook(harness, event, payload, {
+      env: process.env,
+      home: HOME,
+    });
+    console.log(JSON.stringify(output));
+    if (spawnFlush) spawnDetachedFlush();
+  } catch {
+    console.log(JSON.stringify(emptyOutput(harness, event)));
+  }
+  process.exit(0);
+}
+
+async function readPatFromStdin() {
+  if (!process.stdin.isTTY) {
+    const text = await readStdin(10_000);
+    return text.trim();
+  }
+  // TTY: prompt with echo off (raw mode, chars not echoed).
+  process.stderr.write("PAT: ");
+  return await new Promise((resolve) => {
+    let buf = "";
+    const onData = (chunk) => {
+      for (const ch of chunk.toString("utf8")) {
+        if (ch === "\n" || ch === "\r") {
+          cleanup();
+          process.stderr.write("\n");
+          resolve(buf.trim());
+          return;
+        }
+        if (ch === "\u007f" || ch === "\b") {
+          buf = buf.slice(0, -1);
+        } else if (ch === "\u0003") {
+          cleanup();
+          process.stderr.write("\n");
+          resolve("");
+          return;
+        } else {
+          buf += ch;
+        }
+      }
+    };
+    const cleanup = () => {
+      process.stdin.off("data", onData);
+      try {
+        process.stdin.setRawMode(false);
+      } catch {}
+      process.stdin.pause();
+    };
+    try {
+      process.stdin.setRawMode(true);
+    } catch {}
+    process.stdin.resume();
+    process.stdin.on("data", onData);
+  });
 }
 
 async function main() {
@@ -176,83 +289,113 @@ async function main() {
   }
 
   const agent = last(options.agent) || process.env.FLAREMO_AGENT || "cli";
-  const projectKey = last(options.project) || last(options.scope) || process.env.FLAREMO_PROJECT || process.cwd();
+  const projectKey =
+    last(options.project) ||
+    last(options.scope) ||
+    resolveProject(process.cwd(), process.env);
 
   switch (command) {
-    case "setup": {
-      // Self-check installer (§V.5 of the harness adapter spec): verify env,
-      // connectivity, auth and skill placement — the "product is one step"
-      // contract. Read-only except for the skill copy it offers; never prints
-      // the PAT itself.
-      console.log("FlareMo 记忆接入自检\n");
+    case "hook": {
+      const harness = positional[0];
+      const event = positional[1];
+      await runHook(harness, event);
+      return;
+    }
 
-      const url = FLAREMO_URL;
-      console.log(`1) 实例 URL: ${url} ${url ? "✅" : "❌ 未设置 FLAREMO_URL"}`);
-
-      const pat = process.env.FLAREMO_PAT;
-      if (!pat) {
-        console.log("2) 凭据: ❌ 未设置 FLAREMO_PAT（在实例 Web → 设置 → 个人访问令牌 创建，填入 ~/.zshrc）");
-        process.exit(1);
-      }
-      console.log("2) 凭据: ✅ FLAREMO_PAT 已设置");
-
-      let health = "";
-      try {
-        const res = await fetch(`${url.replace(/\/+$/, "")}/healthz`);
-        health = res.ok ? "✅ 服务可达" : `⚠️ /healthz 返回 ${res.status}（继续校验鉴权）`;
-      } catch {
-        try {
-          const res = await fetch(`${url.replace(/\/+$/, "")}/`);
-          health = res.status < 500 ? "✅ 服务可达" : `❌ 服务异常 (${res.status})`;
-        } catch (error) {
-          console.log(`3) 连通性: ❌ 无法连接 (${error instanceof Error ? error.message : error})`);
-          process.exit(3);
-        }
-      }
-      console.log(`3) 连通性: ${health}`);
-
-      try {
-        const res = await fetch(`${url.replace(/\/+$/, "")}/memory/mcp`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${pat}`,
-          },
-          body: JSON.stringify({
-            jsonrpc: "2.0",
-            id: 1,
-            method: "tools/list",
-            params: {},
-          }),
-        });
-        if (res.status === 401 || res.status === 403) {
-          console.log("4) 鉴权: ❌ PAT 无效或已过期");
+    case "login": {
+      const url = last(options.url) || CRED.url;
+      let pat;
+      if (options.from_env) {
+        pat = process.env.FLAREMO_PAT || "";
+        if (!pat) {
+          console.error("❌ --from-env 需要 FLAREMO_PAT 已设置在环境中");
           process.exit(1);
         }
-        const data = await res.json();
-        const tools = data?.result?.tools;
-        console.log(
-          `4) 鉴权: ✅ PAT 有效（发现 ${Array.isArray(tools) ? tools.length : "?"} 个记忆工具）`,
-        );
-      } catch (error) {
-        console.log(`4) 鉴权: ❌ 校验失败 (${error instanceof Error ? error.message : error})`);
+      } else {
+        pat = await readPatFromStdin();
+      }
+      if (!pat) {
+        console.error("❌ 未读到 PAT");
         process.exit(1);
       }
+      const path = writeCredentialsFile(HOME, { url, pat });
+      console.log(`✅ 凭据已写入 ${path}（0600）`);
+      break;
+    }
 
-      const skillDirs = [
-        join(homedir(), ".agents", "skills"),
-        join(homedir(), ".claude", "skills"),
-        join(homedir(), ".codex", "skills"),
-      ];
-      const skillSource = join(process.cwd(), "skills", "flaremo-memory", "SKILL.md");
-      const installed = skillDirs
-        .map((dir) => join(dir, "flaremo-memory", "SKILL.md"))
-        .filter((p) => existsSync(p));
-      console.log(
-        `5) Skill: ${installed.length > 0 ? `✅ 已安装 → ${installed[0]}` : skillRepoPresent() ? "⚠️ 未安装（仓库里有，可拷贝到 ~/.agents/skills/flaremo-memory/）" : "ℹ️ 本目录没有仓库 skill 源，跳过"}`,
-      );
+    case "init": {
+      const harnesses = last(options.harness)
+        ? String(last(options.harness)).split(",").map((s) => s.trim()).filter(Boolean)
+        : null;
+      await initCmd({ env: process.env, home: HOME, harnesses, dryRun: Boolean(options.dry_run) });
+      break;
+    }
 
-      console.log("\n全部就绪。四步日常：flaremo lens / remember / recall / checkpoint");
+    case "doctor":
+    case "setup": {
+      const problems = await doctorCmd({ env: process.env, home: HOME });
+      if (problems > 0) process.exit(1);
+      break;
+    }
+
+    case "uninstall": {
+      const harnesses = last(options.harness)
+        ? String(last(options.harness)).split(",").map((s) => s.trim()).filter(Boolean)
+        : null;
+      await uninstallCmd({ env: process.env, home: HOME, harnesses, dryRun: Boolean(options.dry_run) });
+      break;
+    }
+
+    case "update": {
+      await updateCmd({ env: process.env, home: HOME });
+      break;
+    }
+
+    case "import": {
+      const source = positional[0];
+      if (!["zcode", "codex"].includes(source)) {
+        console.error("用法: flaremo import <zcode|codex> [--apply]");
+        process.exit(1);
+      }
+      const apply = Boolean(options.apply);
+      const result = await runImport(source, {
+        apply,
+        env: process.env,
+        home: HOME,
+      });
+      console.log(`\n${source} 原生记忆：共 ${result.total} 条`);
+      for (const [project, count] of Object.entries(result.perProject)) {
+        console.log(`  ${project}: ${count} 条`);
+      }
+      if (result.samples.length) {
+        console.log(`\n样本（前 ${result.samples.length} 条）:`);
+        for (const s of result.samples) {
+          console.log(`  [${s.project}] ${s.content}`);
+        }
+      }
+      if (!apply) {
+        console.log(`\n（dry-run，未发送；加 --apply 实际入账）`);
+      } else {
+        console.log(
+          `\n已入账 ${result.sent} 条${result.skipped.length ? `，跳过 ${result.skipped.length} 条（服务端拒绝）` : ""}`,
+        );
+        for (const s of result.skipped.slice(0, 10)) {
+          console.log(`  跳过: ${s.label} — ${s.reason}`);
+        }
+        if (result.unreachable) process.exit(3);
+      }
+      break;
+    }
+
+    case "outbox": {
+      if (positional[0] !== "flush") {
+        console.error("用法: flaremo outbox flush");
+        process.exit(1);
+      }
+      const r = await flushOutbox(HOME, { env: process.env, budgetMs: 60_000 });
+      if (!options.quiet) {
+        console.log(`outbox: 已补写 ${r.sent}，保留 ${r.kept}，失败 ${r.failed}`);
+      }
       break;
     }
 
@@ -277,6 +420,7 @@ async function main() {
             limit: options.limit ? Number(last(options.limit)) : 8,
           },
           command,
+          { projectKey },
         ),
       );
 
@@ -319,7 +463,7 @@ async function main() {
         last(options.idempotency_key) ||
         process.env.FLAREMO_IDEMPOTENCY_KEY ||
         undefined;
-      const result = await callMcp(
+      const result = await writeWithQueue(
         "memory_remember",
         {
           content,
@@ -334,6 +478,7 @@ async function main() {
           idempotency_key: writeKey,
         },
         command,
+        projectKey,
       );
 
       if (result?.duplicate) {
@@ -368,14 +513,14 @@ async function main() {
         items.push({ content: summary, type: "semantic", kind: "fact", importance: 50 });
       }
 
-      const result = await callMcp("memory_checkpoint", {
+      const result = await writeWithQueue("memory_checkpoint", {
         agent,
         project_key: projectKey,
         scope_type: "project",
         scope_key: projectKey,
         summary,
         items,
-      }, command);
+      }, command, projectKey);
 
       console.log(`🎯 战报历程已记录 (ID: ${result.episode?.id || "ok"})`);
       console.log(`   衍生原子结论: ${result.items?.length || 0} 条`);
@@ -396,6 +541,7 @@ async function main() {
           max_chars: options.max_chars ? Number(last(options.max_chars)) : 6000,
         },
         command,
+        { projectKey },
       );
 
       if (!compiled?.system_prompt_payload) {
@@ -418,9 +564,7 @@ async function main() {
       }
 
       // Snapshot for the offline fallback (exit code 3 path).
-      try {
-        writeFileSync(getCachePath(), compiled.system_prompt_payload, "utf-8");
-      } catch {}
+      writeSnapshot(HOME, projectKey, compiled.system_prompt_payload);
       break;
     }
 
@@ -429,7 +573,7 @@ async function main() {
         agent,
         project_key: projectKey,
         max_items: 50,
-      }, command);
+      }, command, { projectKey });
       const items = result.items || [];
       console.log(`\n📌 活跃便签 (${items.length} 条) - Context: ${projectKey}\n`);
       for (const item of items) {
@@ -476,7 +620,7 @@ async function main() {
           if (sentence) {
             const slug = section
               .toLowerCase()
-              .replace(/[^a-z0-9\u4e00-\u9fff]+/g, "-")
+              .replace(/[^a-z0-9一-鿿]+/g, "-")
               .replace(/^-+|-+$/g, "")
               .slice(0, 40);
             candidates.push({
@@ -512,7 +656,7 @@ async function main() {
 
       let seeded = 0;
       for (const candidate of picked) {
-        const result = await callMcp("memory_remember", {
+        const result = await writeWithQueue("memory_remember", {
           content: candidate.content,
           fact_key: candidate.fact_key,
           tags: candidate.tags,
@@ -523,7 +667,7 @@ async function main() {
           verification: "observed",
           source_agent: agent,
           idempotency_key: `seed:${candidate.file}:${candidate.content.length}:${candidate.content.slice(0, 40)}`,
-        }, command);
+        }, command, projectKey);
         if (result?.memory || result?.duplicate) seeded += 1;
       }
       console.log(`\n🌱 冷启动:已把 ${seeded} 条便签直接生效为 👀 观察（来自你仓库自己的文档）。不对的到「记忆」页当场删除即可。\n`);
@@ -535,6 +679,14 @@ async function main() {
       printHelp();
       process.exit(1);
   }
+
+  // Best-effort outbox flush at the end of every normal command: bounded,
+  // silent, never in the way.
+  await flushOutbox(HOME, {
+    env: process.env,
+    budgetMs: 3000,
+    timeoutMs: 2500,
+  }).catch(() => {});
 }
 
 function printHelp() {
@@ -542,7 +694,6 @@ function printHelp() {
 FlareMo Memory Ledger CLI
 
 用法:
-  flaremo setup               # 自检：URL / PAT / 连通 / 鉴权 / Skill 落位
   flaremo recall "查询词" [--as-of YYYY-MM-DD] [--from-scope <scope>]
   flaremo remember "记忆正文" [--key <fact_key>] [--tags <tag1,tag2>]
   flaremo checkpoint "本次战报摘要" [--item "原子结论"]
@@ -550,8 +701,19 @@ FlareMo Memory Ledger CLI
   flaremo status
   flaremo seed                # 冷启动：扫描 README/AGENTS 提炼候选便签（直接 👀 生效）
 
+接入与维护:
+  flaremo login --url <实例地址>   # 写凭据到 ~/.flaremo/credentials（PAT 从 stdin/提示读入，不回显）
+  flaremo login --from-env         # 把当前 FLAREMO_URL/FLAREMO_PAT 落进凭据文件
+  flaremo init [--harness zcode,codex,antigravity] [--dry-run]
+  flaremo doctor                  # 自检：凭据/连通/鉴权/插件与原生记忆开关（setup 为旧名）
+  flaremo uninstall [--harness …] # 还原备份、摘除软链与插件
+  flaremo update                  # git pull --ff-only + 刷新 codex marketplace + 重建 hook 包装
+  flaremo import <zcode|codex> [--apply]   # 原生记忆搬家（默认 dry-run 只打印计数与样本）
+  flaremo outbox flush            # 冲刷本地待补写队列
+  flaremo hook <zcode|codex|antigravity> <event>   # Harness 生命周期钩子（读 stdin JSON）
+
 选项:
-  --project, --scope  当前项目标识 (默认工作目录)
+  --project, --scope  当前项目标识 (默认 FLAREMO_PROJECT → git 根 → 工作目录)
   --agent             调用 Agent 名称 (默认 'cli')
   --as-of             时态穿梭：查询历史某天成立的事实
   --from-scope        显式跨项目翻阅
@@ -561,7 +723,7 @@ FlareMo Memory Ledger CLI
 退出码:
   0: 成功
   1: 参数错误
-  3: 记忆服务不可达 (降级使用离线快照)
+  3: 记忆服务不可达 (已暂存本地或降级快照)
 `);
 }
 
