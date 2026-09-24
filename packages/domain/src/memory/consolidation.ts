@@ -98,6 +98,8 @@ export async function extractAndProposeDreamingFact(
     sourceRevision?: string | null;
     excerpt?: string;
     confidence?: number;
+    /** Always land in the review inbox (e.g. conflict-patrol findings must be ruled on before entering the projection). */
+    forceProposal?: boolean;
   },
 ) {
   const content = normalizeMemoryContent(candidate.content);
@@ -130,9 +132,9 @@ export async function extractAndProposeDreamingFact(
 
   // v2.4 routing (§VI.8): the funnel decides where a candidate lands so the
   // user never has to grade routine extractions.
-  //   imperative phrasing → 💡 proposal (self-poisoning vector, needs a human)
-  //   low confidence      → silently dropped (recorded nowhere, never pester)
-  //   otherwise           → 👀 observed, live immediately (compose layer)
+  //   imperative phrasing / forceProposal → 💡 proposal (needs a human ruling)
+  //   low confidence                      → created but flagged live_low_confidence
+  //   otherwise                           → 👀 observed, live immediately
   const imperative = isImperativeContent(content);
   const agentActor: MemoryActor = {
     type: "agent",
@@ -149,7 +151,8 @@ export async function extractAndProposeDreamingFact(
     tier: "normal",
     importance: 50,
     confidence,
-    verification: imperative ? "inferred" : "observed",
+    verification:
+      imperative || candidate.forceProposal ? "inferred" : "observed",
     sourceAgent: "dreaming",
     evidence: [
       {
@@ -162,16 +165,30 @@ export async function extractAndProposeDreamingFact(
     ],
   });
 
-  if (imperative) {
-    return { proposed: true as const, memory: created.memory, routed: "proposal" as const };
+  // Label the route by where the row actually landed — createMemory itself can
+  // downgrade to a proposal (human-asset key collision), not only the funnel.
+  if (created.memory.verification === "inferred") {
+    return {
+      proposed: true as const,
+      memory: created.memory,
+      routed: "proposal" as const,
+    };
   }
   if (confidence < DREAMING_AUTO_APPLY_MIN_CONFIDENCE) {
     // Low confidence should never reach this point from the cycle funnel (the
     // caller pre-filters), but a direct call with low confidence still must
     // not pretend the fact was applied. Surface the downgrade honestly.
-    return { proposed: true as const, memory: created.memory, routed: "live_low_confidence" as const };
+    return {
+      proposed: true as const,
+      memory: created.memory,
+      routed: "live_low_confidence" as const,
+    };
   }
-  return { proposed: true as const, memory: created.memory, routed: "live" as const };
+  return {
+    proposed: true as const,
+    memory: created.memory,
+    routed: "live" as const,
+  };
 }
 
 // --- Dreaming cycle (§VI.8): the daily offline extraction driver -------------
@@ -412,7 +429,11 @@ export async function proposeDreamingConflicts(
   const sampleSize = options.sampleSize ?? 30;
   const maxFindings = options.maxFindings ?? 3;
   const facts = await db
-    .select({ id: memoryItems.id, content: memoryItems.content })
+    .select({
+      id: memoryItems.id,
+      content: memoryItems.content,
+      factKey: memoryItems.factKey,
+    })
     .from(memoryItems)
     .where(
       and(
@@ -433,9 +454,12 @@ export async function proposeDreamingConflicts(
   for (const finding of findings) {
     const target = facts.find((fact) => fact.id === finding.memoryId);
     if (!target) continue;
+    // Findings are keyed to the fact they challenge so the acceptance flow
+    // supersedes it, and always land in the review inbox — a patrol finding is
+    // an accusation against a human-endorsed fact, not a fact itself.
     const result = await extractAndProposeDreamingFact(db, user, {
       content: `${finding.content}（与既有事实冲突，提请仲裁）`,
-      factKey: null,
+      factKey: target.factKey ?? null,
       tags: [],
       type: "semantic",
       kind: "fact",
@@ -444,6 +468,7 @@ export async function proposeDreamingConflicts(
       sourceType: "other",
       sourceId: target.id,
       excerpt: target.content,
+      forceProposal: true,
     });
     if (result.proposed) proposed += 1;
   }

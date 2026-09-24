@@ -21,12 +21,14 @@ import {
   DREAMING_AUTO_APPLY_MIN_CONFIDENCE,
   extractAndProposeDreamingFact,
   getLatestCompileArchive,
+  getMemory,
   hardDeleteMemory,
   insertMemoryEvidence,
   isImperativeContent,
   listMemoryReview,
   type MemoryActor,
   normalizeFactKey,
+  proposeDreamingConflicts,
   recallMemories,
   remainingProposalQuota,
   resolveProposal,
@@ -639,5 +641,58 @@ describe("Memory ledger follow-up fixes (audit batch)", () => {
       .from(memoryItems)
       .where(eq(memoryItems.id, fact.memory.id));
     expect(retired[0]?.status).toBe("superseded");
+  });
+
+  it("Conflict-patrol findings enter the inbox keyed to the challenged fact, and accepting one supersedes it", async () => {
+    const challenged = await createMemory(db, user, USER, {
+      content: "部署走 wrangler dev --local",
+      factKey: "deploy.mode",
+      type: "semantic",
+      kind: "fact",
+      scopeType: "project",
+      scopeKey: "FlareMo",
+      tier: "normal",
+      importance: 60,
+      confidence: 100,
+      verification: "confirmed",
+    });
+    // The patrol only runs on a sample of at least two human-endorsed facts.
+    await createMemory(db, user, USER, {
+      content: "测试统一用 vitest",
+      type: "semantic",
+      kind: "fact",
+      scopeType: "project",
+      scopeKey: "FlareMo",
+      tier: "normal",
+      importance: 50,
+      confidence: 100,
+      verification: "confirmed",
+    });
+
+    const proposed = await proposeDreamingConflicts(db, user, async () => [
+      {
+        memoryId: challenged.memory.id,
+        content: "部署已改为 remote 构建产物",
+        reason: "与现状矛盾",
+      },
+    ]);
+    expect(proposed).toBe(1);
+
+    // A patrol finding is an accusation, not a fact: it must await a ruling in
+    // the inbox (inferred), never land live as observed.
+    const inbox = await listMemoryReview(db, user);
+    const finding = inbox.find((row) => row.fact_key === "deploy.mode");
+    if (!finding) throw new Error("patrol finding missing from review inbox");
+    expect(finding.verification).toBe("inferred");
+
+    // Accepting the finding supersedes the challenged fact — that is why the
+    // finding must carry its key.
+    const resolution = await resolveProposal(db, user, USER, finding.id, {
+      action: "accept",
+    });
+    expect(resolution.memory.verification).toBe("confirmed");
+    const retired = await getMemory(db, user, challenged.memory.id);
+    expect(retired.status).toBe("superseded");
+    expect(retired.superseded_by_id).toBe(finding.id);
   });
 });

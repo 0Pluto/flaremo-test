@@ -477,4 +477,87 @@ describe("Memory Ledger v2 Architecture & Acceptance Tests", () => {
     expect(lineage.chain).toHaveLength(2);
     expect(lineage.events.length).toBeGreaterThan(0);
   });
+
+  it("Acceptance 10: Competing proposals on a challenged human fact all reach the inbox; accepting one retires the holder and leaves the other pending", async () => {
+    const humanFact = await createMemory(db, user, USER, {
+      content: "日志统一走 pino",
+      factKey: "logging.library",
+      type: "semantic",
+      kind: "decision",
+      scopeType: "project",
+      scopeKey: "FlareMo",
+      tier: "normal",
+      importance: 80,
+      confidence: 100,
+      verification: "confirmed",
+    });
+
+    // Two agents challenge the same key. Each must degrade into a proposal —
+    // picking the sibling proposal as the key holder would auto-supersede it
+    // and then die on the human fact's unique index (regression: key-slot
+    // lookups must exclude inferred rows).
+    const proposalA = await createMemory(db, user, AGENT, {
+      content: "日志改走 winston",
+      factKey: "logging.library",
+      type: "semantic",
+      kind: "decision",
+      scopeType: "project",
+      scopeKey: "FlareMo",
+      tier: "normal",
+      importance: 60,
+      confidence: 60,
+    });
+    const proposalB = await createMemory(db, user, AGENT, {
+      content: "日志改走 Axiom",
+      factKey: "logging.library",
+      type: "semantic",
+      kind: "decision",
+      scopeType: "project",
+      scopeKey: "FlareMo",
+      tier: "normal",
+      importance: 70,
+      confidence: 65,
+    });
+
+    expect(proposalA.memory.verification).toBe("inferred");
+    expect(proposalB.memory.verification).toBe("inferred");
+    expect(proposalB.memory.review_reason).toBe("supersede_proposal");
+
+    // B's contradicts relation must point at the human holder, not at A.
+    const relations = await db
+      .select()
+      .from(memoryRelations)
+      .where(eq(memoryRelations.memoryId, proposalB.memory.id));
+    expect(
+      relations.some(
+        (r) =>
+          r.relatedMemoryId === humanFact.memory.id && r.type === "contradicts",
+      ),
+    ).toBe(true);
+    expect(
+      relations.some((r) => r.relatedMemoryId === proposalA.memory.id),
+    ).toBe(false);
+
+    // Accepting B retires the human fact; A stays pending in the inbox.
+    const resolution = await resolveProposal(
+      db,
+      user,
+      USER,
+      proposalB.memory.id,
+      {
+        action: "accept",
+      },
+    );
+    expect(resolution.memory.verification).toBe("confirmed");
+
+    const humanFresh = await getMemory(db, user, humanFact.memory.id);
+    expect(humanFresh.status).toBe("superseded");
+    expect(humanFresh.superseded_by_id).toBe(proposalB.memory.id);
+
+    const pendingA = await getMemory(db, user, proposalA.memory.id);
+    expect(pendingA.status).toBe("active");
+    expect(pendingA.verification).toBe("inferred");
+    const inbox = await listMemoryReview(db, user);
+    expect(inbox.some((r) => r.id === proposalA.memory.id)).toBe(true);
+  });
 });

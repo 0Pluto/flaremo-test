@@ -1,7 +1,7 @@
 import type { UpdateMemoryInput } from "@flaremo/contracts";
 import type { FlareMoDb, MemoryItemRow, UserRow } from "@flaremo/db";
 import { memoryItems, memoryRelations } from "@flaremo/db";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 import { insertEmbeddingTask } from "../embedding-outbox";
 import { ConflictError, NotFoundError, ValidationError } from "../errors";
 import { createResourceId } from "../ids";
@@ -107,6 +107,11 @@ export async function createMemory(
 
   // Fact key & Supersession Matrix (Design §VI.4)
   if (factKey) {
+    // The key slot is defined by the partial unique index: only a non-inferred
+    // active row occupies it. Pending proposals under the same key must not be
+    // picked here — mistaking one for the holder would auto-supersede it and
+    // then collide with the real holder's unique index instead of producing a
+    // second proposal.
     const existingFact = await db
       .select()
       .from(memoryItems)
@@ -115,6 +120,7 @@ export async function createMemory(
           eq(memoryItems.userId, user.id),
           eq(memoryItems.factKey, factKey),
           eq(memoryItems.status, "active"),
+          ne(memoryItems.verification, "inferred"),
         ),
       )
       .get();
@@ -300,7 +306,9 @@ export async function createMemory(
       });
     }
   } else if (reviewReason === "supersede_proposal" && factKey) {
-    // When proposal is created against human asset, link relation as contradicts/proposed
+    // When proposal is created against human asset, link relation as contradicts/proposed.
+    // Same key-slot filter as above: only the non-inferred holder may be the
+    // challenged fact (otherwise the proposal could link back to itself).
     const existingFact = await db
       .select()
       .from(memoryItems)
@@ -309,6 +317,7 @@ export async function createMemory(
           eq(memoryItems.userId, user.id),
           eq(memoryItems.factKey, factKey),
           eq(memoryItems.status, "active"),
+          ne(memoryItems.verification, "inferred"),
         ),
       )
       .get();
@@ -384,6 +393,13 @@ export async function updateMemory(
     throw new NotFoundError(`Memory not found: ${id}`);
   }
 
+  // A user edit is an affirmation: it upgrades observed/inferred to confirmed,
+  // while a locked memory stays locked (§IV.2). Computed up front because the
+  // fact-key clash check below depends on whether this row will occupy the
+  // key slot after the edit.
+  const userAffirms =
+    actor.type === "user" && existing.verification !== "locked";
+
   const next = { ...existing };
   if (input.content !== undefined) {
     next.content = normalizeMemoryContent(input.content);
@@ -405,21 +421,27 @@ export async function updateMemory(
       // the same slot as `project.database` (§VI.3 key governance).
       const normalizedKey = normalizeFactKey(input.fact_key) || null;
       input.fact_key = normalizedKey;
-      // Check collision
-      const clash = normalizedKey
-        ? await db
-            .select()
-            .from(memoryItems)
-            .where(
-              and(
-                eq(memoryItems.userId, user.id),
-                eq(memoryItems.factKey, normalizedKey),
-                eq(memoryItems.status, "active"),
-                sql`${memoryItems.id} != ${id}`,
-              ),
-            )
-            .get()
-        : undefined;
+      // Check collision. Two subtleties: only a non-inferred active row can
+      // hold the slot (pending proposals are outside the unique index), and an
+      // inferred row being edited doesn't hold a slot yet — when the edit
+      // affirms it, the retirement below supersedes the current holder instead
+      // of erroring here.
+      const clash =
+        normalizedKey && existing.verification !== "inferred"
+          ? await db
+              .select()
+              .from(memoryItems)
+              .where(
+                and(
+                  eq(memoryItems.userId, user.id),
+                  eq(memoryItems.factKey, normalizedKey),
+                  eq(memoryItems.status, "active"),
+                  ne(memoryItems.verification, "inferred"),
+                  sql`${memoryItems.id} != ${id}`,
+                ),
+              )
+              .get()
+          : undefined;
       if (clash) {
         throw new ConflictError(
           "Another active memory already exists with this fact key.",
@@ -459,10 +481,6 @@ export async function updateMemory(
   }
 
   const now = new Date().toISOString();
-  // A user edit is an affirmation: it upgrades observed/inferred to confirmed,
-  // while a locked memory stays locked (§IV.2).
-  const userAffirms =
-    actor.type === "user" && existing.verification !== "locked";
   if (userAffirms) {
     next.verification = "confirmed";
     next.needsReview = false;
@@ -483,6 +501,10 @@ export async function updateMemory(
   // version under the same key in the same transaction — otherwise the update
   // collides with memory_items_user_fact_key_active_idx (§VI.4 matrix).
   if (userAffirms && existing.verification === "inferred" && next.factKey) {
+    // Only the non-inferred holder may be retired here — picking a pending
+    // proposal instead would let it vanish from the review inbox without a
+    // human ruling, and the promoted row would then collide with the real
+    // holder's unique index.
     const activeConflict = await db
       .select()
       .from(memoryItems)
@@ -491,6 +513,7 @@ export async function updateMemory(
           eq(memoryItems.userId, user.id),
           eq(memoryItems.factKey, next.factKey),
           eq(memoryItems.status, "active"),
+          ne(memoryItems.verification, "inferred"),
           sql`${memoryItems.id} != ${id}`,
         ),
       )

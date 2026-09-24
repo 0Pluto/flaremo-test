@@ -140,12 +140,15 @@ function parseCliArgs() {
     if (arg.startsWith("--")) {
       const key = arg.slice(2).replace(/-/g, "_");
       const next = args[i + 1];
-      if (next && !next.startsWith("--")) {
-        options[key] = next;
-        i++;
-      } else {
-        options[key] = true;
-      }
+      const value = next && !next.startsWith("--") ? (i++, next) : true;
+      // Repeatable flags (e.g. `checkpoint --item a --item b`) accumulate into
+      // an array instead of silently overwriting earlier values.
+      options[key] =
+        options[key] === undefined
+          ? value
+          : Array.isArray(options[key])
+            ? [...options[key], value]
+            : [options[key], value];
     } else {
       positional.push(arg);
     }
@@ -153,6 +156,11 @@ function parseCliArgs() {
 
   return { command, positional, options };
 }
+
+/** Scalar options: last occurrence wins when a flag is repeated. */
+const last = (v) => (Array.isArray(v) ? v[v.length - 1] : v);
+/** Repeatable options: every occurrence is kept. */
+const all = (v) => (v === undefined ? [] : Array.isArray(v) ? v : [v]);
 
 /** The repo checkout this CLI came from ships the skill source next to it. */
 function skillRepoPresent() {
@@ -167,8 +175,8 @@ async function main() {
     process.exit(0);
   }
 
-  const agent = options.agent || process.env.FLAREMO_AGENT || "cli";
-  const projectKey = options.project || options.scope || process.env.FLAREMO_PROJECT || process.cwd();
+  const agent = last(options.agent) || process.env.FLAREMO_AGENT || "cli";
+  const projectKey = last(options.project) || last(options.scope) || process.env.FLAREMO_PROJECT || process.cwd();
 
   switch (command) {
     case "setup": {
@@ -262,11 +270,11 @@ async function main() {
             query,
             agent,
             project_key: projectKey,
-            from_scope: options.from_scope,
-            fact_key: options.key,
-            as_of: options.as_of,
+            from_scope: last(options.from_scope),
+            fact_key: last(options.key),
+            as_of: last(options.as_of),
             include_inferred: Boolean(options.include_inferred),
-            limit: options.limit ? Number(options.limit) : 8,
+            limit: options.limit ? Number(last(options.limit)) : 8,
           },
           command,
         ),
@@ -300,25 +308,26 @@ async function main() {
         process.exit(1);
       }
 
-      const tags = options.tags
-        ? options.tags.split(",").map((s) => s.trim())
-        : [];
+      const tags = all(options.tags)
+        .flatMap((v) => String(v).split(","))
+        .map((s) => s.trim())
+        .filter(Boolean);
       // Agents only ever write 👀 observed / 💡 inferred; promotion to ✅/📌 is a
       // human act. `idempotency_key` makes a retried call return the first row
       // instead of creating a twin.
       const writeKey =
-        options.idempotency_key ||
+        last(options.idempotency_key) ||
         process.env.FLAREMO_IDEMPOTENCY_KEY ||
         undefined;
       const result = await callMcp(
         "memory_remember",
         {
           content,
-          fact_key: options.key || undefined,
+          fact_key: last(options.key) || undefined,
           tags,
-          type: options.type || "semantic",
-          kind: options.kind || "fact",
-          scope_type: options.scope_type || (projectKey ? "project" : "global"),
+          type: last(options.type) || "semantic",
+          kind: last(options.kind) || "fact",
+          scope_type: last(options.scope_type) || (projectKey ? "project" : "global"),
           scope_key: projectKey || undefined,
           verification: "observed",
           source_agent: agent,
@@ -350,8 +359,8 @@ async function main() {
       }
 
       const items = [];
-      if (options.item) {
-        const rawItems = Array.isArray(options.item) ? options.item : [options.item];
+      const rawItems = all(options.item).filter((v) => typeof v === "string");
+      if (rawItems.length > 0) {
         for (const it of rawItems) {
           items.push({ content: it, type: "semantic", kind: "fact", importance: 60 });
         }
@@ -384,7 +393,7 @@ async function main() {
         {
           agent,
           project_key: projectKey,
-          max_chars: options.max_chars ? Number(options.max_chars) : 6000,
+          max_chars: options.max_chars ? Number(last(options.max_chars)) : 6000,
         },
         command,
       );
@@ -424,7 +433,14 @@ async function main() {
       const items = result.items || [];
       console.log(`\n📌 活跃便签 (${items.length} 条) - Context: ${projectKey}\n`);
       for (const item of items) {
-        const badge = item.verification === "locked" ? "📌 我拍板的" : "✅ 我确认过";
+        const badge =
+          item.verification === "locked"
+            ? "📌 我拍板的"
+            : item.verification === "confirmed"
+              ? "✅ 我确认过"
+              : item.verification === "observed"
+                ? "👀 AI 发现"
+                : "💡 AI 猜想";
         console.log(`• [${badge}] ${item.content}`);
       }
       console.log();

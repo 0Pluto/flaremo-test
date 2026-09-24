@@ -13,7 +13,7 @@ import {
   memoryResourceLinks,
   memoryRevisions,
 } from "@flaremo/db";
-import { and, eq, or, sql } from "drizzle-orm";
+import { and, eq, ne, or, sql } from "drizzle-orm";
 import { insertEmbeddingTask } from "../embedding-outbox";
 import { ConflictError, ForbiddenError, ValidationError } from "../errors";
 import { createResourceId } from "../ids";
@@ -35,6 +35,22 @@ export type ForgetMemoryInput = {
 };
 
 /**
+ * A uniqueness violation on the fact-key slot is the storage layer reporting a
+ * lost race between the clash check and the write; translate it into a
+ * caller-usable conflict instead of leaking raw SQLite text (same contract
+ * write.ts upholds for create/update).
+ */
+function throwFactKeyConflict(error: unknown): never {
+  const message = error instanceof Error ? error.message : String(error);
+  if (message.includes("memory_items_user_fact_key_active_idx")) {
+    throw new ConflictError(
+      "Another active memory already exists with this fact key.",
+    );
+  }
+  throw error;
+}
+
+/**
  * The single definition of promoting a proposal into the fact-key slot.
  *
  * An inferred proposal never occupies the key (the partial unique index
@@ -52,6 +68,9 @@ async function retireActiveFactForKey(
   successorValidFrom: string | null,
   now: string,
 ) {
+  // Only the non-inferred holder occupies the key slot (the partial unique
+  // index excludes proposals) — a pending proposal must not be "retired"
+  // here, which would remove it from the review inbox without a ruling.
   const activeConflict = await db
     .select()
     .from(memoryItems)
@@ -60,6 +79,7 @@ async function retireActiveFactForKey(
         eq(memoryItems.userId, user.id),
         eq(memoryItems.factKey, factKey),
         eq(memoryItems.status, "active"),
+        ne(memoryItems.verification, "inferred"),
         sql`${memoryItems.id} != ${successorId}`,
       ),
     )
@@ -135,8 +155,16 @@ async function setVerification(
 
   // Retirement and promotion are one unit of work: a crash between them must
   // not leave the key with two live versions or with none.
+  try {
+    if (retired) {
+      await db.batch([retired.retireStatement, confirmStatement]);
+    } else {
+      await db.batch([confirmStatement]);
+    }
+  } catch (error) {
+    throwFactKeyConflict(error);
+  }
   if (retired) {
-    await db.batch([retired.retireStatement, confirmStatement]);
     if (retired.dropVector) {
       await insertEmbeddingTask(db, {
         userId: user.id,
@@ -165,8 +193,6 @@ async function setVerification(
       type: "supersedes",
       createdAt: now,
     });
-  } else {
-    await db.batch([confirmStatement]);
   }
 
   // Inferred proposals never enter the vector index at creation; the first
@@ -304,8 +330,10 @@ export async function restoreMemory(
     return memoryToDto(existing);
   }
 
-  // Double-active check (§IV.3): If item has fact_key, ensure no active conflict exists
-  if (existing.factKey) {
+  // Double-active check (§IV.3): If item has fact_key, ensure no active conflict exists.
+  // Only a restored non-inferred row can collide, and only with a non-inferred
+  // holder — pending proposals share the key freely under the partial index.
+  if (existing.factKey && existing.verification !== "inferred") {
     const activeConflict = await db
       .select()
       .from(memoryItems)
@@ -314,6 +342,7 @@ export async function restoreMemory(
           eq(memoryItems.userId, user.id),
           eq(memoryItems.factKey, existing.factKey),
           eq(memoryItems.status, "active"),
+          ne(memoryItems.verification, "inferred"),
           sql`${memoryItems.id} != ${id}`,
         ),
       )
@@ -331,15 +360,19 @@ export async function restoreMemory(
   // active-but-unreviewable: rejected/untouched proposals must stay awaiting
   // a human decision until someone confirms them.
   const restoredNeedsReview = existing.verification === "inferred";
-  await db
-    .update(memoryItems)
-    .set({
-      status: "active",
-      needsReview: restoredNeedsReview,
-      reviewReason: restoredNeedsReview ? "inferred" : null,
-      updatedAt: now,
-    })
-    .where(and(eq(memoryItems.id, id), eq(memoryItems.userId, user.id)));
+  try {
+    await db
+      .update(memoryItems)
+      .set({
+        status: "active",
+        needsReview: restoredNeedsReview,
+        reviewReason: restoredNeedsReview ? "inferred" : null,
+        updatedAt: now,
+      })
+      .where(and(eq(memoryItems.id, id), eq(memoryItems.userId, user.id)));
+  } catch (error) {
+    throwFactKeyConflict(error);
+  }
 
   await appendMemoryEvent(db, user.id, id, "restored", "user", null);
 
@@ -566,41 +599,93 @@ export async function resolveProposal(
   // Snapshot the proposal before its content is overwritten by the ruling.
   await appendRevision(db, user, proposal, "user");
 
-  // Supersede previous active fact if proposal has fact_key (§VI.4 matrix)
-  if (proposal.factKey) {
-    const existingActive = await db
-      .select()
-      .from(memoryItems)
-      .where(
-        and(
-          eq(memoryItems.userId, user.id),
-          eq(memoryItems.factKey, proposal.factKey),
-          eq(memoryItems.status, "active"),
-          sql`${memoryItems.id} != ${proposalId}`,
-        ),
-      )
-      .get();
+  // Supersede previous active fact if proposal has fact_key (§VI.4 matrix).
+  // Only the non-inferred holder may be retired — picking a sibling pending
+  // proposal would discard it without a ruling and then collide with the real
+  // holder's unique index below.
+  try {
+    if (proposal.factKey) {
+      const existingActive = await db
+        .select()
+        .from(memoryItems)
+        .where(
+          and(
+            eq(memoryItems.userId, user.id),
+            eq(memoryItems.factKey, proposal.factKey),
+            eq(memoryItems.status, "active"),
+            ne(memoryItems.verification, "inferred"),
+            sql`${memoryItems.id} != ${proposalId}`,
+          ),
+        )
+        .get();
 
-    if (existingActive) {
-      await appendRevision(db, user, existingActive, "user");
-      // valid_to = proposal.valid_from
-      const newValidFrom = proposal.validFrom ?? now;
+      if (existingActive) {
+        await appendRevision(db, user, existingActive, "user");
+        // valid_to = proposal.valid_from
+        const newValidFrom = proposal.validFrom ?? now;
 
-      // Retirement of the old version and confirmation of the new one are one
-      // transaction: a crash between the two must not leave the key with two
-      // live versions (or none). Same contract createMemory already upholds.
-      await db.batch([
-        db
-          .update(memoryItems)
-          .set({
-            status: "superseded",
-            supersededById: proposalId,
-            supersededAt: now,
-            validTo: newValidFrom,
-            updatedAt: now,
-          })
-          .where(eq(memoryItems.id, existingActive.id)),
-        db
+        // Retirement of the old version and confirmation of the new one are one
+        // transaction: a crash between the two must not leave the key with two
+        // live versions (or none). Same contract createMemory already upholds.
+        await db.batch([
+          db
+            .update(memoryItems)
+            .set({
+              status: "superseded",
+              supersededById: proposalId,
+              supersededAt: now,
+              validTo: newValidFrom,
+              updatedAt: now,
+            })
+            .where(eq(memoryItems.id, existingActive.id)),
+          db
+            .update(memoryItems)
+            .set({
+              content,
+              fingerprint,
+              verification: "confirmed",
+              needsReview: false,
+              reviewReason: null,
+              updatedAt: now,
+            })
+            .where(eq(memoryItems.id, proposalId)),
+        ]);
+
+        await appendMemoryEvent(
+          db,
+          user.id,
+          existingActive.id,
+          "superseded",
+          "user",
+          null,
+          { superseded_by_id: proposalId },
+        );
+
+        // Link supersedes relation
+        await db.insert(memoryRelations).values({
+          id: createResourceId("memories"),
+          userId: user.id,
+          memoryId: proposalId,
+          relatedMemoryId: existingActive.id,
+          type: "supersedes",
+          createdAt: now,
+        });
+
+        // The retired version stays searchable until its validity window has
+        // actually ended: a future-dated proposal keeps the current rule live
+        // until that date (§VI.4, §九.18). The maintenance sweep reclaims the
+        // vector once valid_to arrives.
+        if (newValidFrom <= now) {
+          await insertEmbeddingTask(db, {
+            userId: user.id,
+            resourceType: "memory",
+            resourceId: existingActive.id,
+            operation: "delete",
+            createdAt: now,
+          });
+        }
+      } else {
+        await db
           .update(memoryItems)
           .set({
             content,
@@ -610,43 +695,10 @@ export async function resolveProposal(
             reviewReason: null,
             updatedAt: now,
           })
-          .where(eq(memoryItems.id, proposalId)),
-      ]);
-
-      await appendMemoryEvent(
-        db,
-        user.id,
-        existingActive.id,
-        "superseded",
-        "user",
-        null,
-        { superseded_by_id: proposalId },
-      );
-
-      // Link supersedes relation
-      await db.insert(memoryRelations).values({
-        id: createResourceId("memories"),
-        userId: user.id,
-        memoryId: proposalId,
-        relatedMemoryId: existingActive.id,
-        type: "supersedes",
-        createdAt: now,
-      });
-
-      // The retired version stays searchable until its validity window has
-      // actually ended: a future-dated proposal keeps the current rule live
-      // until that date (§VI.4, §九.18). The maintenance sweep reclaims the
-      // vector once valid_to arrives.
-      if (newValidFrom <= now) {
-        await insertEmbeddingTask(db, {
-          userId: user.id,
-          resourceType: "memory",
-          resourceId: existingActive.id,
-          operation: "delete",
-          createdAt: now,
-        });
+          .where(eq(memoryItems.id, proposalId));
       }
     } else {
+      // Upgrade proposal to confirmed
       await db
         .update(memoryItems)
         .set({
@@ -659,19 +711,8 @@ export async function resolveProposal(
         })
         .where(eq(memoryItems.id, proposalId));
     }
-  } else {
-    // Upgrade proposal to confirmed
-    await db
-      .update(memoryItems)
-      .set({
-        content,
-        fingerprint,
-        verification: "confirmed",
-        needsReview: false,
-        reviewReason: null,
-        updatedAt: now,
-      })
-      .where(eq(memoryItems.id, proposalId));
+  } catch (error) {
+    throwFactKeyConflict(error);
   }
 
   await appendMemoryEvent(db, user.id, proposalId, "confirmed", "user", null);
@@ -704,7 +745,9 @@ export async function splitMemoryKey(
     throw new ForbiddenError("Only the user can split fact keys.");
   }
   const memory = await requireMemory(db, user, id);
-  if (newFactKey) {
+  // The clash check mirrors the partial unique index: an inferred proposal
+  // holds no slot, and only a non-inferred holder can block a new occupant.
+  if (newFactKey && memory.verification !== "inferred") {
     const clash = await db
       .select()
       .from(memoryItems)
@@ -713,6 +756,7 @@ export async function splitMemoryKey(
           eq(memoryItems.userId, user.id),
           eq(memoryItems.factKey, newFactKey),
           eq(memoryItems.status, "active"),
+          ne(memoryItems.verification, "inferred"),
           sql`${memoryItems.id} != ${id}`,
         ),
       )
@@ -726,13 +770,17 @@ export async function splitMemoryKey(
 
   const now = new Date().toISOString();
   await appendRevision(db, user, memory, "user");
-  await db
-    .update(memoryItems)
-    .set({
-      factKey: newFactKey,
-      updatedAt: now,
-    })
-    .where(eq(memoryItems.id, id));
+  try {
+    await db
+      .update(memoryItems)
+      .set({
+        factKey: newFactKey,
+        updatedAt: now,
+      })
+      .where(eq(memoryItems.id, id));
+  } catch (error) {
+    throwFactKeyConflict(error);
+  }
 
   return memoryToDto(await requireMemory(db, user, id));
 }
