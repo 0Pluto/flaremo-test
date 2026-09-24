@@ -1,4 +1,3 @@
-import { createDb } from "@flaremo/db";
 import {
   assertMemberQuota,
   claimOwnerBootstrap,
@@ -27,7 +26,7 @@ import {
   getRecoverySecret,
 } from "../auth";
 import { resolveCaptchaConfig, verifyCaptchaRequest } from "../captcha";
-import type { HonoBindings } from "../context";
+import { getFlareMoRuntime, type HonoBindings } from "../context";
 import {
   resolveEmailSendConfig,
   sendPasswordResetEmail,
@@ -55,7 +54,7 @@ const registerSchema = z.object({
 });
 
 authApi.get("/bootstrap/status", async (c) => {
-  const db = createDb(c.env.DB);
+  const db = getFlareMoRuntime(c.env).db;
   const status = await getAuthBootstrapStatus(db);
   let authConfigured = false;
   try {
@@ -76,7 +75,7 @@ authApi.get("/bootstrap/status", async (c) => {
 });
 
 authApi.get("/register/status", async (c) => {
-  const db = createDb(c.env.DB);
+  const db = getFlareMoRuntime(c.env).db;
   const status = await getAuthBootstrapStatus(db);
   const captcha = resolveCaptchaConfig(c.env);
   return c.json({
@@ -94,7 +93,7 @@ authApi.get("/register/status", async (c) => {
 authApi.post("/register", zValidator("json", registerSchema), async (c) => {
   const throttled = await rateLimitGuard(c, "register");
   if (throttled) return throttled;
-  const db = createDb(c.env.DB);
+  const db = getFlareMoRuntime(c.env).db;
   const status = await getAuthBootstrapStatus(db);
   if (status.state !== "complete") {
     return c.json(
@@ -193,7 +192,7 @@ authApi.get("/verify-email", async (c) => {
   if (!token) {
     return c.json({ error: { message: "Missing verification token." } }, 400);
   }
-  const db = createDb(c.env.DB);
+  const db = getFlareMoRuntime(c.env).db;
   const auth = createFlareMoAuth(c.env, db);
   const authUserId = await auth.consumeEmailVerificationToken(token);
   if (!authUserId) {
@@ -216,7 +215,7 @@ authApi.post(
   async (c) => {
     const throttled = await rateLimitGuard(c, "email");
     if (throttled) return throttled;
-    const db = createDb(c.env.DB);
+    const db = getFlareMoRuntime(c.env).db;
     if ((await resolveEmailSendConfig(c.env, db)).provider === "none") {
       return c.json(
         { error: { message: "Email verification is not enabled." } },
@@ -266,7 +265,7 @@ authApi.post(
   async (c) => {
     const throttled = await rateLimitGuard(c, "email");
     if (throttled) return throttled;
-    const db = createDb(c.env.DB);
+    const db = getFlareMoRuntime(c.env).db;
     if ((await resolveEmailSendConfig(c.env, db)).provider === "none") {
       return c.json(
         { error: { message: "Password reset email is not configured." } },
@@ -315,7 +314,7 @@ authApi.get("/verify-email-change", async (c) => {
   if (!token) {
     return c.json({ error: { message: "Missing verification token." } }, 400);
   }
-  const db = createDb(c.env.DB);
+  const db = getFlareMoRuntime(c.env).db;
   const auth = createFlareMoAuth(c.env, db);
   const change = await auth.consumeEmailChangeToken(token);
   if (!change) {
@@ -366,7 +365,7 @@ authApi.post("/bootstrap", zValidator("json", bootstrapSchema), async (c) => {
     );
   }
 
-  const db = createDb(c.env.DB);
+  const db = getFlareMoRuntime(c.env).db;
   let auth: ReturnType<typeof createFlareMoAuth>;
   try {
     auth = createFlareMoAuth(c.env, db, { allowBootstrapSignUp: true });
@@ -467,7 +466,7 @@ authApi.post(
       );
     }
 
-    const db = createDb(c.env.DB);
+    const db = getFlareMoRuntime(c.env).db;
     const authUserId = await getOwnerAuthUserId(db);
     if (!authUserId) {
       return c.json(
@@ -547,7 +546,7 @@ authApi.post("/recover-bootstrap", async (c) => {
     );
   }
 
-  const db = createDb(c.env.DB);
+  const db = getFlareMoRuntime(c.env).db;
   try {
     await reconcileOwnerBootstrap(db);
     console.log(

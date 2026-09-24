@@ -1,4 +1,3 @@
-import { createDb } from "@flaremo/db";
 import {
   ForbiddenError,
   getAuthBootstrapStatus,
@@ -118,7 +117,7 @@ export async function connectAuthRefresh(
 ) {
   try {
     if (c.req.raw.headers.get("cookie")) assertTrustedCookieMutation(c);
-    const db = createDb(c.env.DB);
+    const db = getFlareMoRuntime(c.env).db;
     const rotated = await rotateMemosRefreshToken({
       db,
       env: c.env,
@@ -216,7 +215,7 @@ export async function connectAuthSignUp(
       optionalString(body.nickname) ??
       username;
 
-    const db = createDb(c.env.DB);
+    const db = getFlareMoRuntime(c.env).db;
     const bootstrap = await getAuthBootstrapStatus(db);
     if (bootstrap.state !== "complete") {
       return connectErrorForTransport(
