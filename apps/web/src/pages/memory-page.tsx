@@ -1,13 +1,12 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircleIcon, InfoIcon, SearchIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { AlertCircleIcon, BrainIcon, SearchIcon } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
 import { listMemories, listMemoryReview } from "@/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { WorkspaceLayout } from "@/components/workspace/workspace-layout";
 import { useI18n } from "@/i18n";
 import { cn } from "@/lib/utils";
-import { MemoryColdStart } from "./memory/memory-cold-start";
 import { groupMemories } from "./memory/memory-filters";
 import { MemoryFormDialog } from "./memory/memory-form-dialog";
 import { MemoryLensDialog } from "./memory/memory-lens-dialog";
@@ -32,6 +31,8 @@ export function MemoryPage() {
   const [creating, setCreating] = useState(false);
   const [lensOpen, setLensOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const composerInputRef = useRef<HTMLInputElement>(null);
+  const mainRef = useRef<HTMLElement | null>(null);
 
   const listQuery = useQuery({
     queryKey: ["memories", "list"],
@@ -84,6 +85,7 @@ export function MemoryPage() {
 
   return (
     <WorkspaceLayout
+      mainRef={mainRef}
       header={({
         sidebarCollapsed,
         toggleSidebarCollapsed,
@@ -98,7 +100,10 @@ export function MemoryPage() {
           sidebarCollapsed={sidebarCollapsed}
           toggleSidebarCollapsed={toggleSidebarCollapsed}
           onOpenLens={() => setLensOpen(true)}
-          onNewMemory={() => setCreating(true)}
+          onNewMemory={() => {
+            mainRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+            composerInputRef.current?.focus();
+          }}
           isScrolled={isScrolled}
         />
       )}
@@ -107,14 +112,6 @@ export function MemoryPage() {
       }}
     >
       <div className="flex flex-col gap-3.5 pt-2">
-        {/* Top Info Banner */}
-        <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-muted/40 px-3.5 py-2.5 text-xs text-muted-foreground motion-safe:animate-rise">
-          <InfoIcon className="size-4 shrink-0 text-brand-500/80" />
-          <span className="min-w-0 flex-1 leading-relaxed">
-            {t("memory.bannerHint")}
-          </span>
-        </div>
-
         {/* Pending Review Alert Banner */}
         {reviewCount > 0 && (
           <div className="flex items-center justify-between gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2.5 text-xs text-amber-600 dark:text-amber-400 motion-safe:animate-rise">
@@ -136,7 +133,10 @@ export function MemoryPage() {
         )}
 
         {/* Quick Add Memory Box */}
-        <MemoryQuickComposer onCreated={invalidate} />
+        <MemoryQuickComposer
+          inputRef={composerInputRef}
+          onCreated={invalidate}
+        />
 
         {/* Search & Filter Pills */}
         <div className="flex flex-col gap-2 pt-1">
@@ -166,31 +166,39 @@ export function MemoryPage() {
               count={groups.core.length}
               onClick={() => setTab("core")}
             />
-            <FilterPill
-              active={tab === "observed"}
-              label={t("memory.filterObserved")}
-              count={observedMemories.length}
-              onClick={() => setTab("observed")}
-            />
-            <FilterPill
-              active={tab === "projects"}
-              label={t("memory.tab.projects")}
-              count={groups.projects.length}
-              onClick={() => setTab("projects")}
-            />
-            <FilterPill
-              active={tab === "review"}
-              label={t("memory.filterReview")}
-              count={reviewCount}
-              highlight={reviewCount > 0}
-              onClick={() => setTab("review")}
-            />
-            <FilterPill
-              active={tab === "archive"}
-              label={t("memory.tab.archive")}
-              count={groups.archive.length}
-              onClick={() => setTab("archive")}
-            />
+            {observedMemories.length > 0 && (
+              <FilterPill
+                active={tab === "observed"}
+                label={t("memory.filterObserved")}
+                count={observedMemories.length}
+                onClick={() => setTab("observed")}
+              />
+            )}
+            {groups.projects.length > 0 && (
+              <FilterPill
+                active={tab === "projects"}
+                label={t("memory.tab.projects")}
+                count={groups.projects.length}
+                onClick={() => setTab("projects")}
+              />
+            )}
+            {reviewCount > 0 && (
+              <FilterPill
+                active={tab === "review"}
+                label={t("memory.filterReview")}
+                count={reviewCount}
+                highlight={reviewCount > 0}
+                onClick={() => setTab("review")}
+              />
+            )}
+            {groups.archive.length > 0 && (
+              <FilterPill
+                active={tab === "archive"}
+                label={t("memory.tab.archive")}
+                count={groups.archive.length}
+                onClick={() => setTab("archive")}
+              />
+            )}
           </div>
         </div>
 
@@ -198,7 +206,15 @@ export function MemoryPage() {
         <div className="pt-1">
           {tab === "all" &&
             (memories.length === 0 && !listQuery.isLoading && !query ? (
-              <MemoryColdStart onCreated={invalidate} />
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/70 py-12 px-4 text-center motion-safe:animate-rise">
+                <BrainIcon className="size-8 text-muted-foreground/30" />
+                <p className="mt-3 font-medium text-sm text-foreground">
+                  {t("memory.emptyTitle")}
+                </p>
+                <p className="mt-1 max-w-xs text-xs text-muted-foreground">
+                  {t("memory.emptyDescription")}
+                </p>
+              </div>
             ) : (
               <MemoryList
                 hasError={listQuery.isError && !listQuery.data}

@@ -163,28 +163,6 @@ export function MemoryCard({
 
   const id = stripResourceName(memory.id, "memories");
 
-  // Authority Badge Label (Natural language dictionary §III)
-  const authorityBadge = (() => {
-    switch (memory.verification) {
-      case "locked":
-        return { label: t("memory.pinned"), variant: "default" as const };
-      case "confirmed":
-        return { label: t("memory.confirmedBadge"), variant: "brand" as const };
-      case "observed":
-        return {
-          label: t("memory.observedBadge"),
-          variant: "secondary" as const,
-        };
-      case "inferred":
-        return {
-          label: t("memory.inferredBadge"),
-          variant: "outline" as const,
-        };
-      default:
-        return { label: memory.verification, variant: "outline" as const };
-    }
-  })();
-
   // Status Indicator
   const statusIndicator = (() => {
     if (memory.status === "superseded") {
@@ -220,22 +198,43 @@ export function MemoryCard({
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
-          <Badge variant={authorityBadge.variant}>{authorityBadge.label}</Badge>
+          {memory.tier === "core" || memory.verification === "locked" ? (
+            <Badge variant="default" className="gap-1 text-xs font-normal">
+              <PinIcon className="size-3 fill-current" />
+              <span>{t("memory.pinned")}</span>
+            </Badge>
+          ) : memory.verification === "observed" ? (
+            <Badge variant="secondary" className="text-xs font-normal">
+              {t("memory.observedBadge")}
+            </Badge>
+          ) : memory.needs_review || memory.verification === "inferred" ? (
+            <Badge
+              variant="outline"
+              className="border-amber-500/40 text-amber-600 dark:text-amber-400 text-xs font-normal"
+            >
+              {t("memory.inferredBadge")}
+            </Badge>
+          ) : null}
 
-          {/* Non-hierarchical topic tags without '#' (§III) */}
+          {memory.scope_type === "project" && memory.scope_key && (
+            <Badge
+              variant="outline"
+              className="text-xs font-normal text-muted-foreground"
+            >
+              📁 {memory.scope_key}
+            </Badge>
+          )}
+
           {Array.isArray(memory.tags) &&
             memory.tags.map((tag) => (
-              <Badge key={tag} variant="outline" className="text-xs">
+              <Badge
+                key={tag}
+                variant="outline"
+                className="text-xs font-normal"
+              >
                 {tag}
               </Badge>
             ))}
-
-          <Badge variant="outline">{t(`memory.type.${memory.type}`)}</Badge>
-          <Badge variant="outline">{t(`memory.kind.${memory.kind}`)}</Badge>
-          <Badge variant="secondary">
-            {t(`memory.scope.${memory.scope_type}`)}
-          </Badge>
-          {memory.tier === "core" && <Badge>{t("memory.tier.core")}</Badge>}
 
           {showSource && memory.source_agent && (
             <span className="text-xs text-muted-foreground">

@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { CornerDownLeftIcon, PinIcon } from "lucide-react";
-import { type KeyboardEvent, useState } from "react";
+import { type KeyboardEvent, type RefObject, useState } from "react";
 import { toast } from "sonner";
 import { createMemory } from "@/api";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,13 @@ import { useI18n } from "@/i18n";
 import { errorMessage } from "@/lib/error";
 import { cn } from "@/lib/utils";
 
-export function MemoryQuickComposer({ onCreated }: { onCreated: () => void }) {
+export function MemoryQuickComposer({
+  onCreated,
+  inputRef,
+}: {
+  onCreated: () => void;
+  inputRef?: RefObject<HTMLInputElement | null>;
+}) {
   const { t } = useI18n();
   const [content, setContent] = useState("");
   const [pinned, setPinned] = useState(true);
@@ -53,6 +59,7 @@ export function MemoryQuickComposer({ onCreated }: { onCreated: () => void }) {
   return (
     <div className="relative flex items-center gap-1.5 rounded-xl border border-border/80 bg-card p-1.5 shadow-2xs motion-safe:transition-[border-color,box-shadow] motion-safe:duration-150 focus-within:border-brand-500/80 focus-within:ring-2 focus-within:ring-brand-500/15">
       <Input
+        ref={inputRef}
         value={content}
         onChange={(event) => setContent(event.target.value)}
         onKeyDown={handleKeyDown}
