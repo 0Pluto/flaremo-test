@@ -304,7 +304,12 @@ export async function runImport(
   if (!apply) return result;
 
   for (const item of items) {
-    const res = await requestImpl("memory_remember", item.args, { timeoutMs, env, home });
+    let res;
+    for (let attempt = 0; ; attempt += 1) {
+      res = await requestImpl("memory_remember", item.args, { timeoutMs, env, home });
+      if (!res.unreachable || attempt >= 3) break;
+      await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
+    }
     if (res.ok) {
       result.sent += 1;
     } else if (res.unreachable) {
