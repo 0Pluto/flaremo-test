@@ -249,7 +249,7 @@ export function createFlareMoApp(
     // Only browsers without a <link rel="icon"> hit this; redirect to the
     // custom favicon when one is configured, else to the bundled asset.
     try {
-      const branding = await getBranding(createDb(c.env.DB));
+      const branding = await getBranding(getFlareMoRuntime(c.env).db);
       if (branding.favicon) {
         return c.redirect(
           `/api/app/branding/favicon?v=${encodeURIComponent(branding.favicon.updated_at)}`,
@@ -362,6 +362,27 @@ function logBackgroundTaskFailure(task: string, error: unknown) {
 }
 
 /**
+ * The limits half of runScheduledMaintenance's options, resolved once per
+ * lifecycle event. Scheduled and queue handlers used to each spell the same
+ * three fields out inline.
+ */
+async function maintenanceOptions(
+  env: FlareMoEnv,
+  resolvedOptions: ResolvedFlareMoOptions,
+  hasCustomUserPlanLimits: boolean,
+) {
+  return {
+    limits: await resolvedOptions.resolvePlanLimits(env),
+    userLimits: hasCustomUserPlanLimits
+      ? null
+      : parseUserPlanLimits(env.FLAREMO_USER_LIMITS_JSON),
+    resolveUserLimits: hasCustomUserPlanLimits
+      ? (userId: string) => resolvedOptions.resolveUserPlanLimits(env, userId)
+      : undefined,
+  };
+}
+
+/**
  * Build the complete Worker lifecycle for an installation of FlareMo.
  *
  * `createFlareMoApp` intentionally only assembles HTTP routes so tests and
@@ -410,41 +431,41 @@ export function createFlareMoWorker(
       return response;
     },
     async scheduled(controller, env) {
-      await runScheduledMaintenance(env, controller.scheduledTime, {
-        limits: await resolvedOptions.resolvePlanLimits(env),
-        userLimits: hasCustomUserPlanLimits
-          ? null
-          : parseUserPlanLimits(env.FLAREMO_USER_LIMITS_JSON),
-        resolveUserLimits: hasCustomUserPlanLimits
-          ? (userId) => resolvedOptions.resolveUserPlanLimits(env, userId)
-          : undefined,
-      });
+      await runScheduledMaintenance(
+        env,
+        controller.scheduledTime,
+        await maintenanceOptions(env, resolvedOptions, hasCustomUserPlanLimits),
+      );
     },
     async queue(batch, env) {
-      // The queue shares the same idempotent executor as scheduled maintenance
-      // so retries cannot diverge from the daily recovery path.
+      // Two message shapes share the consumer: {jobId} (member removal) and
+      // {taskId} (data export). Both run through the same idempotent
+      // executor as scheduled maintenance so retries cannot diverge from
+      // the daily recovery path. A malformed body can never become valid on
+      // retry — drop it here so the batch ack removes the poison message
+      // instead of looping.
+      const removalJobIds: string[] = [];
+      const exportTaskIds: string[] = [];
+      for (const message of batch.messages) {
+        const body = message.body as { jobId?: unknown; taskId?: unknown };
+        if (typeof body?.jobId === "string" && body.jobId) {
+          removalJobIds.push(body.jobId);
+        } else if (typeof body?.taskId === "string" && body.taskId) {
+          exportTaskIds.push(body.taskId);
+        } else {
+          console.warn(
+            JSON.stringify({ message: "Discarded malformed queue message" }),
+          );
+        }
+      }
       await runScheduledMaintenance(env, Date.now(), {
-        limits: await resolvedOptions.resolvePlanLimits(env),
-        userLimits: hasCustomUserPlanLimits
-          ? null
-          : parseUserPlanLimits(env.FLAREMO_USER_LIMITS_JSON),
-        resolveUserLimits: hasCustomUserPlanLimits
-          ? (userId) => resolvedOptions.resolveUserPlanLimits(env, userId)
-          : undefined,
-        // A malformed body can never become valid on retry — drop it here so
-        // the batch ack removes the poison message instead of looping.
-        removalJobIds: batch.messages.flatMap((message) => {
-          const jobId = (message.body as { jobId?: unknown }).jobId;
-          if (typeof jobId !== "string" || !jobId) {
-            console.warn(
-              JSON.stringify({
-                message: "Discarded malformed member-removal queue message",
-              }),
-            );
-            return [];
-          }
-          return [jobId];
-        }),
+        ...(await maintenanceOptions(
+          env,
+          resolvedOptions,
+          hasCustomUserPlanLimits,
+        )),
+        removalJobIds,
+        exportTaskIds,
       });
       for (const message of batch.messages) message.ack();
     },

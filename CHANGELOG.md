@@ -2,6 +2,12 @@
 
 FlareMo 使用 SemVer。每个 release 都要写清楚升级影响、Cloudflare 资源变化和 Memos 兼容面变化。
 
+## Unreleased
+
+- 接线 `flaremo-data-export` Queue：绑定后 `POST /api/v1/export/tasks` 投递 `{taskId}` 并立即返回 queued，由 queue 消费端与 scheduled maintenance 共用的同一幂等 executor 执行导出；未绑定 Queue 的部署维持请求内执行不变。cron 兜底（stale 任务过期标记 + 过期产物清理）语义不变。
+- Memos 兼容面错误处理收口：`/api/v1` current REST 与 social 树的 `{code, message, details}` 错误信封合并为单份实现，`CompatValidationError` 与非法 JSON body 现在正确映射 400（此前会落 500）。
+- 依赖与配置卫生：`wrangler.jsonc.example` 的 `run_worker_first` 补齐 worker 渲染路径（/article、/share、feed、sitemap、favicon），与 `wrangler.json` 和 dev:hot 代理对齐。
+
 ## v0.20.1
 
 稳健性收口版本：修复工作区乐观更新的一处缓存键读取错位——乐观插入与乐观更新此前按错误的槽位解析时间线缓存键，主时间线的新记录只能等服务端失效后才出现，回收站/归档视图里的更新会把卡片短暂闪没；现在按真实键形（space/view/query/tag/untagged）逐槽读取并按可见性判定落位（私有记录不再被乐观插进团队时间线）。/calendar 日历页正式下线：任务管理收敛至 /projects（看板/截止日期/逾期提醒），逾期推送、通知铃、任务搜索、PWA 快捷方式全部改指 /projects，文案统一为「任务」；探索页只读小月历与逾期提醒保留；后端 `/api/app/calendar` 聚合端点保留（Memos 兼容面零变化）。地基清理：删除日历下线后的 8 语言死键（46 键/语言）、前端孤儿 `getCalendarView`、SPA 白名单死表项；README 与 PRD 的日历段落改写/补注记；长文件按职责再拆（worker 装配入口、import/export、管理端用户卡），函数体逐字搬移、消费方 import 零改动。稳健性：注册开关与集成凭证读取失败时留下错误日志（此前静默降级）；`pnpm release` 新增 tag 与全部 workspace 版本、`FLAREMO_API_VERSION` 的一致性断言，漏 bump 会在发版前置被拦截。无 API 变化、无数据变化。

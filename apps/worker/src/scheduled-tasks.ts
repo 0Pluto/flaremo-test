@@ -8,6 +8,7 @@ import {
   dispatchEmbeddingOutbox,
   dispatchMemosWebhookOutbox,
   expireStaleDataTasks,
+  failDataTask,
   failMemberRemovalJob,
   finalizeAttachmentCleanupForIds,
   finalizeFlaremoMemberRemoval,
@@ -37,6 +38,7 @@ import { and, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 import { cleanupFlaremoArtifacts } from "./artifact-cleanup";
 import { createEmbeddingProvider, createVectorIndex } from "./embedding";
 import type { FlareMoEnv } from "./env";
+import { runDataExportTask } from "./export-task";
 import { hardDeleteMemoWithAttachments } from "./memo-hard-delete";
 import { runMemoryConflictPatrol, runMemoryDreaming } from "./memory-dreaming";
 
@@ -74,6 +76,7 @@ export async function runScheduledMaintenance(
       userId: string,
     ) => Promise<UserPlanLimits | null> | UserPlanLimits | null;
     removalJobIds?: string[];
+    exportTaskIds?: string[];
   } = {},
 ): Promise<void> {
   const db = createDb(env.DB);
@@ -106,6 +109,24 @@ export async function runScheduledMaintenance(
       // Propagate the failure so Queue does not acknowledge the batch. The
       // platform can then apply its configured retry policy.
       if (options.removalJobIds) throw error;
+    }
+  }
+  // Queued data-export tasks (DATA_EXPORT_QUEUE messages) run through the
+  // same idempotent executor as the in-request path: only `queued` rows are
+  // claimed, so a redelivered or doubled message is a no-op.
+  for (const taskId of options.exportTaskIds ?? []) {
+    try {
+      await runDataExportTask(env, db, taskId);
+    } catch (error) {
+      await failDataTask(
+        db,
+        taskId,
+        "export_task_failed",
+        error instanceof Error ? error.message : "Export failed",
+      ).catch(() => undefined);
+      // Propagate the failure so Queue does not acknowledge the batch. The
+      // platform can then apply its configured retry policy.
+      if (options.exportTaskIds) throw error;
     }
   }
   await dispatchMemosWebhookOutbox(db);
