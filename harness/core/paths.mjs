@@ -28,6 +28,10 @@ export function geminiHome(env = process.env) {
   return env.GEMINI_HOME || join(homedir(), ".gemini");
 }
 
+export function piHome(env = process.env) {
+  return env.PI_HOME || join(homedir(), ".pi", "agent");
+}
+
 export function agentsHome(env = process.env) {
   return env.AGENTS_HOME || join(homedir(), ".agents");
 }

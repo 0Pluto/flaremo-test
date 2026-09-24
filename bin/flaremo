@@ -353,8 +353,8 @@ async function main() {
 
     case "import": {
       const source = positional[0];
-      if (!["zcode", "codex"].includes(source)) {
-        console.error("用法: flaremo import <zcode|codex> [--apply]");
+      if (!["zcode", "codex", "pi"].includes(source)) {
+        console.error("用法: flaremo import <zcode|codex|pi> [--apply]");
         process.exit(1);
       }
       const apply = Boolean(options.apply);
@@ -704,11 +704,11 @@ FlareMo Memory Ledger CLI
 接入与维护:
   flaremo login --url <实例地址>   # 写凭据到 ~/.flaremo/credentials（PAT 从 stdin/提示读入，不回显）
   flaremo login --from-env         # 把当前 FLAREMO_URL/FLAREMO_PAT 落进凭据文件
-  flaremo init [--harness zcode,codex,antigravity] [--dry-run]
+  flaremo init [--harness zcode,codex,antigravity,pi] [--dry-run]
   flaremo doctor                  # 自检：凭据/连通/鉴权/插件与原生记忆开关（setup 为旧名）
   flaremo uninstall [--harness …] # 还原备份、摘除软链与插件
   flaremo update                  # git pull --ff-only + 刷新 codex marketplace + 重建 hook 包装
-  flaremo import <zcode|codex> [--apply]   # 原生记忆搬家（默认 dry-run 只打印计数与样本）
+  flaremo import <zcode|codex|pi> [--apply]   # 原生记忆搬家（默认 dry-run 只打印计数与样本）
   flaremo outbox flush            # 冲刷本地待补写队列
   flaremo hook <zcode|codex|antigravity> <event>   # Harness 生命周期钩子（读 stdin JSON）
 

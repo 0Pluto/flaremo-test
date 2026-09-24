@@ -27,6 +27,7 @@ import {
   flaremoHome,
   geminiHome,
   hookWrapperPath,
+  piHome,
   zcodeHome,
 } from "./paths.mjs";
 import { resolveCredentials } from "./credentials.mjs";
@@ -213,6 +214,7 @@ export function detectHarnesses(env = process.env) {
   if (existsSync(zcodeHome(env))) found.push("zcode");
   if (existsSync(codexHome(env)) || resolveCodexBin(env)) found.push("codex");
   if (existsSync(join(geminiHome(env), "config"))) found.push("antigravity");
+  if (existsSync(piHome(env))) found.push("pi");
   return found;
 }
 
@@ -272,6 +274,7 @@ export async function initCmd({
     if (harness === "zcode") await initZcode({ env, home, checkout, dryRun, log });
     if (harness === "codex") await initCodex({ env, home, checkout, dryRun, log });
     if (harness === "antigravity") await initAntigravity({ env, home, checkout, dryRun, log });
+    if (harness === "pi") await initPi({ env, home, checkout, dryRun, log });
   }
 
   if (!dryRun) {
@@ -397,6 +400,45 @@ async function initAntigravity({ env, home, checkout, dryRun, log }) {
   );
 }
 
+async function initPi({ env, home, checkout, dryRun, log }) {
+  // The extension is a thin lifecycle shim; all memory semantics live in the
+  // shared CLI it shells out to.
+  ensureSymlink(
+    join(piHome(env), "extensions", "flaremo-memory.ts"),
+    join(checkout, "harness", "pi", "flaremo-memory.ts"),
+    { log, dryRun, home, backupTag: "pi" },
+  );
+
+  // 搬家 before 关闭原生记忆
+  const imported = await runImport("pi", { apply: !dryRun, env, home });
+  if (dryRun) {
+    log(`    将导入 pi-hermes 原生记忆 ${imported.total} 条（dry-run 未发送）`);
+  } else {
+    log(`    原生记忆导入: ${imported.sent}/${imported.total} 条已入账${imported.skipped.length ? `，跳过 ${imported.skipped.length}` : ""}`);
+  }
+  if (imported.unreachable) {
+    log(`    ⚠️ 记忆服务不可达，搬家未完成——暂不摘除 pi-hermes-memory`);
+    return;
+  }
+
+  const settingsPath = join(piHome(env), "settings.json");
+  const settings = readJsonFile(settingsPath);
+  const packages = settings?.packages;
+  if (!Array.isArray(packages) || !packages.includes("npm:pi-hermes-memory")) {
+    log(`    settings.json 中未启用 pi-hermes-memory`);
+  } else if (dryRun) {
+    log(`    将从 ${settingsPath} 的 packages 移除 npm:pi-hermes-memory`);
+  } else {
+    backupCopyOnce(home, "pi", settingsPath, "settings.json", log);
+    writeJsonAtomic(settingsPath, {
+      ...settings,
+      packages: packages.filter((p) => p !== "npm:pi-hermes-memory"),
+    });
+    log(`    settings.json → 已摘除 npm:pi-hermes-memory（数据文件保留在 ~/.pi/agent/pi-hermes-memory）`);
+  }
+  log(`    人工动作：在 pi 中运行 /reload（或重启会话）加载扩展`);
+}
+
 // --- doctor -------------------------------------------------------------------
 
 export async function doctorCmd({
@@ -485,6 +527,22 @@ export async function doctorCmd({
     agyOk = lstatSync(agyLink).isSymbolicLink() || lstatSync(agyLink).isDirectory();
   } catch {}
   log(`${n++}) Antigravity: ${existsSync(join(geminiHome(env), "config")) ? (agyOk ? "✅ 插件已挂载" : "⚠️ ~/.gemini/config/plugins/flaremo-memory 缺失") : "ℹ️ 未安装"}`);
+
+  // pi
+  const piLink = join(piHome(env), "extensions", "flaremo-memory.ts");
+  let piOk = false;
+  try {
+    piOk = lstatSync(piLink).isSymbolicLink() || lstatSync(piLink).isFile();
+  } catch {}
+  const piSettings = readJsonFile(join(piHome(env), "settings.json"));
+  const hermesOn = Array.isArray(piSettings?.packages) && piSettings.packages.includes("npm:pi-hermes-memory");
+  log(
+    `${n++}) Pi: ${existsSync(piHome(env)) ? (piOk ? "✅ 扩展已挂载" : "⚠️ ~/.pi/agent/extensions/flaremo-memory.ts 缺失") : "ℹ️ 未安装"}；pi-hermes-memory ${hermesOn ? "仍在启用" : "已摘除/未启用"}`,
+  );
+  if (existsSync(piHome(env))) {
+    if (!piOk) problems += 1;
+    if (hermesOn) log(`    提示：pi-hermes-memory 仍在启用，双记忆系统并存会互相污染`);
+  }
 
   // hook wrapper + PATH symlink
   const wrapperOk = existsSync(hookWrapperPath(home));
@@ -575,6 +633,19 @@ export async function uninstallCmd({
           log(`    已还原 ${link}`);
         }
       }
+    }
+    if (harness === "pi") {
+      const link = join(piHome(env), "extensions", "flaremo-memory.ts");
+      try {
+        if (lstatSync(link).isSymbolicLink()) {
+          if (dryRun) log(`    将移除软链 ${link}`);
+          else {
+            rmSync(link);
+            log(`    已移除 ${link}`);
+          }
+        }
+      } catch {}
+      restore("pi", "settings.json", join(piHome(env), "settings.json"));
     }
   }
 

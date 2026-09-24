@@ -9,7 +9,8 @@ harness/
 ├── .agents/plugins/marketplace.json# Codex marketplace 清单
 ├── zcode/                          # ZCode 插件（.zcode-plugin/plugin.json + hooks + commands）
 ├── codex/                          # Codex 插件（.codex-plugin/plugin.json + hooks/hooks.json）
-└── antigravity/                    # Antigravity 插件（plugin.json + hooks.json + rules/ + skills 软链）
+├── antigravity/                    # Antigravity 插件（plugin.json + hooks.json + rules/ + skills 软链）
+└── pi/                             # Pi 扩展（flaremo-memory.ts，进程内生命周期接线）
 skills/flaremo-memory/              # 唯一 skill 源（~/.agents/skills 由 init 软链至此）
 ```
 
@@ -28,6 +29,7 @@ init 幂等可重跑，每个改动先备份原件到 `~/.flaremo/backup/<harnes
 - **ZCode**：`~/.zcode/cli/config.json` 的 `plugins.dirs` 加入 `harness/zcode`（目录源插件默认启用），`~/.zcode/v2/setting.json` 置 `memoryEnabled=false`。
 - **Codex**：`codex plugin marketplace add <checkout>/harness` + `codex plugin add flaremo-memory@flaremo`；`~/.codex/config.toml` 的 `[memories]` 两个开关置 false；写 `~/.codex/rules/flaremo.rules` 免审批。**人工动作**：在 codex CLI 里 `/hooks` 信任一次 hook 定义。
 - **Antigravity**：软链 `~/.gemini/config/plugins/flaremo-memory` → `harness/antigravity`。
+- **Pi**：软链 `~/.pi/agent/extensions/flaremo-memory.ts` → `harness/pi/`；导入 pi-hermes-memory 的 MEMORY/USER/failures 与 projects-memory；成功后从 `~/.pi/agent/settings.json` 的 packages 摘除 `npm:pi-hermes-memory`。**人工动作**：pi 中 `/reload` 加载扩展。
 
 ## 运行时
 

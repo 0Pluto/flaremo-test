@@ -5,7 +5,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, relative } from "node:path";
-import { codexHome, zcodeHome } from "./paths.mjs";
+import { codexHome, piHome, zcodeHome } from "./paths.mjs";
 import { resolveProject, sha256 } from "./project.mjs";
 import { request as defaultRequest } from "./transport.mjs";
 
@@ -281,11 +281,108 @@ export function collectCodexMemories(env = process.env) {
   return items;
 }
 
+// --- pi (pi-hermes-memory) ----------------------------------------------------
+
+// pi-hermes entries are `§`-separated blocks, optionally carrying a trailing
+// `<!-- created=YYYY-MM-DD, last=YYYY-MM-DD, project64=<base64> -->` comment.
+function piEntries(text) {
+  return text
+    .split(/^§\s*$/m)
+    .map((chunk) => {
+      const meta = chunk.match(/<!--([\s\S]*?)-->/);
+      const created = meta?.[1].match(/created=([0-9-]+)/)?.[1];
+      const body = chunk.replace(/<!--[\s\S]*?-->/g, "").trim();
+      return { body, created };
+    })
+    .filter((e) => e.body.length > 0);
+}
+
+function piItem({ scopeKey, relpath, index, body, created, extraTags = [] }) {
+  const content = redact(body).slice(0, 4000);
+  return {
+    args: {
+      content,
+      idempotency_key: `import:pi:${sha256(`${relpath}#${index}\n${body}`).slice(0, 40)}`,
+      type: "semantic",
+      kind: "fact",
+      scope_type: scopeKey ? "project" : "global",
+      scope_key: scopeKey ?? undefined,
+      tags: ["imported", "pi", ...extraTags],
+      verification: "observed",
+      source_agent: "pi-import",
+      observed_at: created ?? undefined,
+      evidence: [
+        { source_type: "document", source_id: `pi:${relpath}#${index}`, excerpt: content.slice(0, 2000) },
+      ],
+    },
+    project: scopeKey ?? "global",
+    label: `${relpath}#${index}`,
+  };
+}
+
+export function collectPiMemories(env = process.env) {
+  const home = piHome(env);
+  const items = [];
+
+  // Global stores — only the live files; dotfile *.retired / *.recovery backups
+  // and the mnemon ARCHIVE stay on disk, out of the ledger.
+  const globalDir = join(home, "pi-hermes-memory");
+  for (const file of ["MEMORY.md", "USER.md", "failures.md"]) {
+    const abs = join(globalDir, file);
+    if (!existsSync(abs)) continue;
+    const text = readFileSync(abs, "utf-8");
+    piEntries(text).forEach((e, i) => {
+      items.push(
+        piItem({
+          scopeKey: null,
+          relpath: `pi-hermes-memory/${file}`,
+          index: i,
+          body: e.body,
+          created: e.created,
+          extraTags: [file === "USER.md" ? "user" : file === "failures.md" ? "failure" : "memory"],
+        }),
+      );
+    });
+  }
+
+  // Per-project stores: dir name is the workspace basename. Map back to
+  // ~/code/<name> when that directory exists; otherwise keep the entry global
+  // with a pi-project tag so the origin is still visible.
+  const projectsDir = join(home, "projects-memory");
+  let dirs = [];
+  try {
+    dirs = readdirSync(projectsDir, { withFileTypes: true });
+  } catch {}
+  for (const d of dirs) {
+    if (!d.isDirectory() || d.name.startsWith(".")) continue;
+    const abs = join(projectsDir, d.name, "MEMORY.md");
+    if (!existsSync(abs)) continue;
+    const candidate = join(env.HOME || homedir(), "code", d.name);
+    const scopeKey = existsSync(candidate) ? resolveProject(candidate, env) : null;
+    const text = readFileSync(abs, "utf-8");
+    piEntries(text).forEach((e, i) => {
+      items.push(
+        piItem({
+          scopeKey,
+          relpath: `projects-memory/${d.name}/MEMORY.md`,
+          index: i,
+          body: e.body,
+          created: e.created,
+          extraTags: scopeKey ? [] : [`pi-project:${d.name}`],
+        }),
+      );
+    });
+  }
+
+  return items;
+}
+
 // --- runner ------------------------------------------------------------------
 
 export function collectImports(harness, env = process.env) {
   if (harness === "zcode") return collectZcodeMemories(env);
   if (harness === "codex") return collectCodexMemories(env);
+  if (harness === "pi") return collectPiMemories(env);
   throw new Error(`unsupported import source: ${harness}`);
 }
 

@@ -9,7 +9,7 @@ import {
   parseZcodeFrontmatter,
   redact,
 } from "../../harness/core/importer.mjs";
-import { tmpHome } from "./helpers";
+import { tmpHome, writeFile } from "./helpers";
 
 interface ImportItem {
   label: string;
@@ -158,6 +158,60 @@ describe("codex import", () => {
     // Task-section bullets never imported
     expect(
       items.every((i: ImportItem) => !i.args.content.includes("skip me")),
+    ).toBe(true);
+  });
+});
+
+describe("pi import", () => {
+  it("splits §-separated entries and maps projects-memory dirs to ~/code paths", async () => {
+    const { collectPiMemories } = await import(
+      // @ts-expect-error plain-JS modules without types
+      "../../harness/core/importer.mjs"
+    );
+    const home = tmpHome();
+    const projDir = join(home, "code", "projA");
+    mkdirSync(projDir, { recursive: true });
+    const pi = join(home, "pi", "agent");
+    writeFile(
+      join(pi, "pi-hermes-memory", "MEMORY.md"),
+      `fact one <!-- created=2026-09-01, last=2026-09-03 -->\n§\nsecret token=hunter2 fact\n§\n`,
+    );
+    writeFile(
+      join(pi, "pi-hermes-memory", "failures.md"),
+      `[failure] lesson learned\n`,
+    );
+    writeFile(
+      join(pi, "pi-hermes-memory", ".MEMORY.md.retired-1"),
+      `retired must not import\n`,
+    );
+    writeFile(
+      join(pi, "projects-memory", "projA", "MEMORY.md"),
+      `proj fact\n§\nanother proj fact\n`,
+    );
+    writeFile(
+      join(pi, "projects-memory", "gone-proj", "MEMORY.md"),
+      `orphan fact\n`,
+    );
+
+    const env = { HOME: home, PI_HOME: pi };
+    const items = collectPiMemories(env) as ImportItem[];
+    // 2 MEMORY + 1 failures global; projA → project; gone-proj → global
+    expect(items.length).toBe(6);
+    const projects = items.filter((i) => i.args.scope_type === "project");
+    expect(projects.length).toBe(2);
+    expect(projects[0].args.scope_key).toBe(projDir);
+    const orphan = items.find((i) => i.args.content.includes("orphan fact"));
+    expect(orphan?.args.scope_type).toBe("global");
+    expect(orphan?.args.tags).toContain("pi-project:gone-proj");
+    const secret = items.find((i) =>
+      i.args.content.includes("[REDACTED_SECRET]"),
+    );
+    expect(secret).toBeTruthy();
+    expect(
+      items.every((i) => i.args.content.includes("retired") === false),
+    ).toBe(true);
+    expect(
+      items.every((i) => i.args.idempotency_key.startsWith("import:pi:")),
     ).toBe(true);
   });
 });
