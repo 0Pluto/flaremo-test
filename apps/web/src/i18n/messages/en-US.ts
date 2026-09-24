@@ -152,6 +152,7 @@ const messages = {
     "This space is read-only — you are a reader and can browse but not publish.",
   "space.expiredNotice":
     "Your reader access has expired. The team space is unavailable until it is renewed.",
+  "nav.allMemos": "All memos",
   "nav.dailyReview": "On this day",
   "nav.randomWalk": "Wander",
   "nav.memory": "Memory",
@@ -810,6 +811,27 @@ const messages = {
   "memory.title": "Memory",
   "memory.searchPlaceholder": "Search memories…",
   "memory.newMemory": "Add memory",
+  "memory.quickAddPlaceholder":
+    "📌 Set a new rule or preference for AI… (Enter to save)",
+  "memory.quickAddPinned": "Pin as iron rule",
+  "memory.bannerHint":
+    "AI distills long-term memory from your notes; manage your rules and habits here.",
+  "memory.bannerReviewAlert":
+    "You have {count} pending AI memories or conflicting proposals to review",
+  "memory.viewLens": "Prompt Lens",
+  "memory.lensTitle": "AI Memory Prompt Lens",
+  "memory.lensDescription":
+    "Below is the dynamically compiled memory context injected into Agent system prompts.",
+  "memory.filterAll": "All",
+  "memory.filterCore": "📌 Iron Rules",
+  "memory.filterObserved": "👀 AI Observed",
+  "memory.filterReview": "Needs Review",
+  "memory.coldStartTitle": "Quickly set your first rule:",
+  "memory.coldStart1":
+    "Get straight to the point, avoid pleasantries and filler",
+  "memory.coldStart2": "Prefer strict TypeScript types and functional patterns",
+  "memory.coldStart3":
+    "Distill lessons into memories after major architectural changes",
   "memory.tab.core": "Core",
   "memory.tab.projects": "Projects",
   "memory.tab.recent": "Recent",

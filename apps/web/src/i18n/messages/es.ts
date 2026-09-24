@@ -156,6 +156,7 @@ const messages = {
     "Este espacio es de solo lectura: eres lector y puedes navegar, no publicar.",
   "space.expiredNotice":
     "Tu acceso de lector ha caducado. El espacio de equipo no estará disponible hasta que lo renueves.",
+  "nav.allMemos": "Todas las notas",
   "nav.dailyReview": "Un día como hoy",
   "nav.randomWalk": "Paseo por la memoria",
   "nav.memory": "Memoria",
@@ -830,6 +831,27 @@ const messages = {
   "memory.title": "Memoria",
   "memory.searchPlaceholder": "Buscar memorias…",
   "memory.newMemory": "Agregar memoria",
+  "memory.quickAddPlaceholder":
+    "📌 Establecer una regla o preferencia para la IA… (Enter)",
+  "memory.quickAddPinned": "Fijar como regla estricta",
+  "memory.bannerHint":
+    "La IA destila memoria a largo plazo de tus notas; administra tus reglas y hábitos aquí.",
+  "memory.bannerReviewAlert":
+    "Tienes {count} propuestas o conflictos de la IA pendientes de revisión",
+  "memory.viewLens": "Ver notas del asistente",
+  "memory.lensTitle": "Lente de memoria para IA",
+  "memory.lensDescription":
+    "A continuación se muestra el contexto de memoria compilado dinámicamente inyectado en los prompts del sistema.",
+  "memory.filterAll": "Todo",
+  "memory.filterCore": "📌 Reglas de oro",
+  "memory.filterObserved": "👀 Descubierto por IA",
+  "memory.filterReview": "Pendiente",
+  "memory.coldStartTitle": "Establece rápidamente tu primera regla:",
+  "memory.coldStart1": "Ve directo al grano, evita rodeos y formalismos",
+  "memory.coldStart2":
+    "Priorizar tipos estrictos de TypeScript y patrones funcionales",
+  "memory.coldStart3":
+    "Destilar lecciones en la memoria tras cambios arquitectónicos importantes",
   "memory.tab.core": "Núcleo",
   "memory.tab.projects": "Proyectos",
   "memory.tab.recent": "Recientes",

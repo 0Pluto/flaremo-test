@@ -155,6 +155,7 @@ const messages = {
     "Cet espace est en lecture seule — vous êtes lecteur : consultation sans publication.",
   "space.expiredNotice":
     "Votre accès lecteur a expiré. L'espace d'équipe redeviendra accessible après renouvellement.",
+  "nav.allMemos": "Toutes les notes",
   "nav.dailyReview": "Ce jour-là",
   "nav.randomWalk": "Balade",
   "nav.memory": "Mémoire",
@@ -839,6 +840,28 @@ const messages = {
   "memory.title": "Mémoire",
   "memory.searchPlaceholder": "Rechercher des mémoires…",
   "memory.newMemory": "Ajouter une mémoire",
+  "memory.quickAddPlaceholder":
+    "📌 Définir une règle ou préférence pour l'IA… (Entrée)",
+  "memory.quickAddPinned": "Épingler comme règle stricte",
+  "memory.bannerHint":
+    "L'IA distille une mémoire à long terme de vos notes ; gérez vos règles et habitudes ici.",
+  "memory.bannerReviewAlert":
+    "{count} nouvelles propositions ou conflits de l'IA attendent votre décision",
+  "memory.viewLens": "Aperçu du prompt",
+  "memory.lensTitle": "Lentille de mémoire pour IA",
+  "memory.lensDescription":
+    "Voici le contexte de mémoire compilé dynamiquement et injecté dans les invites système des agents.",
+  "memory.filterAll": "Tout",
+  "memory.filterCore": "📌 Règles d'or",
+  "memory.filterObserved": "👀 Observé par l'IA",
+  "memory.filterReview": "À examiner",
+  "memory.coldStartTitle": "Définissez rapidement votre première règle :",
+  "memory.coldStart1":
+    "Allez droit au but, évitez les formules de politesse superflues",
+  "memory.coldStart2":
+    "Privilégier le typage strict TypeScript et les approches fonctionnelles",
+  "memory.coldStart3":
+    "Consigner les leçons dans la mémoire après tout changement architectural majeur",
   "memory.tab.core": "Cœur",
   "memory.tab.projects": "Projets",
   "memory.tab.recent": "Récentes",

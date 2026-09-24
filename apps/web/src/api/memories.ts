@@ -178,3 +178,21 @@ export async function getMemoryEvidence(id: string) {
     `/api/app/memory/${encodeURIComponent(id)}/evidence`,
   );
 }
+
+export async function compileMemory(
+  params: {
+    scope_type?: string;
+    scope_key?: string;
+    agent_id?: string;
+    format?: "markdown" | "json";
+  } = {},
+) {
+  const query = new URLSearchParams();
+  if (params.scope_type) query.set("scope_type", params.scope_type);
+  if (params.scope_key) query.set("scope_key", params.scope_key);
+  if (params.agent_id) query.set("agent_id", params.agent_id);
+  if (params.format) query.set("format", params.format);
+  return apiRequest<{ compiled: string }>(
+    `/api/app/memory/compile?${query.toString()}`,
+  );
+}

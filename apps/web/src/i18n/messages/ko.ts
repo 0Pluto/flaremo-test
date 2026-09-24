@@ -153,6 +153,7 @@ const messages = {
     "이 공간은 읽기 전용입니다. 열람은 가능하지만 게시할 수 없습니다.",
   "space.expiredNotice":
     "리더 기간이 만료되었습니다. 갱신하면 팀 스페이스에 다시 접근할 수 있습니다.",
+  "nav.allMemos": "모든 메모",
   "nav.dailyReview": "그날의 기억",
   "nav.randomWalk": "기억의 산책",
   "nav.memory": "메모리",
@@ -816,6 +817,25 @@ const messages = {
   "memory.title": "메모리",
   "memory.searchPlaceholder": "메모리 검색…",
   "memory.newMemory": "메모리 추가",
+  "memory.quickAddPlaceholder":
+    "📌 AI를 위한 새 규칙이나 선호 설정… (Enter로 저장)",
+  "memory.quickAddPinned": "철칙으로 고정",
+  "memory.bannerHint":
+    "AI가 일상 기록에서 장기 기억을 축적합니다. 여기서 규칙과 습관을 관리하세요.",
+  "memory.bannerReviewAlert":
+    "검토 대기 중인 AI 제안 또는 충돌 항목이 {count}개 있습니다",
+  "memory.viewLens": "프롬프트 렌즈",
+  "memory.lensTitle": "AI 메모리 프롬프트 렌즈",
+  "memory.lensDescription":
+    "아래는 에이전트 시스템 프롬프트에 동적으로 주입되는 메모리 컨텍스트입니다.",
+  "memory.filterAll": "전체",
+  "memory.filterCore": "📌 철칙",
+  "memory.filterObserved": "👀 AI 발견",
+  "memory.filterReview": "검토 필요",
+  "memory.coldStartTitle": "첫 번째 규칙을 빠르게 설정하세요:",
+  "memory.coldStart1": "서론을 줄이고 요점부터 바로 답변하기",
+  "memory.coldStart2": "엄격한 TypeScript 타입과 함수형 패턴 우선 사용",
+  "memory.coldStart3": "주요 아키텍처 변경 시 배운 점을 메모리로 축적하기",
   "memory.tab.core": "핵심",
   "memory.tab.projects": "프로젝트",
   "memory.tab.recent": "최근",

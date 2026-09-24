@@ -151,6 +151,7 @@ const messages = {
     "このスペースは閲覧専用です。閲覧はできますが投稿はできません。",
   "space.expiredNotice":
     "リーダー期間が終了しました。更新するとチームスペースに再度アクセスできます。",
+  "nav.allMemos": "すべてのメモ",
   "nav.dailyReview": "あの日の記録",
   "nav.randomWalk": "記憶の旅",
   "nav.memory": "メモリー",
@@ -820,6 +821,25 @@ const messages = {
   "memory.title": "メモリー",
   "memory.searchPlaceholder": "メモリーを検索…",
   "memory.newMemory": "メモリーを追加",
+  "memory.quickAddPlaceholder":
+    "📌 AIに新しいルールや習慣を設定… (Enterで保存)",
+  "memory.quickAddPinned": "絶対のルールとして固定",
+  "memory.bannerHint":
+    "AIは記録から長期記憶を蓄積します。ここでルールや習慣を管理できます。",
+  "memory.bannerReviewAlert":
+    "{count} 件のAIによる新しい提案または競合の確認待ちがあります",
+  "memory.viewLens": "カンペを見る",
+  "memory.lensTitle": "AIカンペ透視レンズ",
+  "memory.lensDescription":
+    "以下はエージェントのシステムプロンプトに動的に注入されるメモリーコンテキストです。",
+  "memory.filterAll": "すべて",
+  "memory.filterCore": "📌 鉄則",
+  "memory.filterObserved": "👀 AIの発見",
+  "memory.filterReview": "確認待ち",
+  "memory.coldStartTitle": "最初のルールを素早く設定：",
+  "memory.coldStart1": "前置きを省き、要点から簡潔に回答する",
+  "memory.coldStart2": "TypeScriptの厳格な型と関数型パターンを優先する",
+  "memory.coldStart3": "重大な設計変更があった際、学びを長期記憶として蓄積する",
   "memory.tab.core": "コア",
   "memory.tab.projects": "プロジェクト",
   "memory.tab.recent": "最近",

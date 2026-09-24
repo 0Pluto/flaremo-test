@@ -4,7 +4,6 @@ import { CalendarDaysIcon, PlusIcon } from "lucide-react";
 import { useMemo } from "react";
 import { getDailyReview, listMemos, type Memo } from "@/api";
 import { MemoSnapshotCard } from "@/components/memo-snapshot-card";
-import { SubpageHeader } from "@/components/subpage-header";
 import { Button } from "@/components/ui/button";
 import {
   Empty,
@@ -15,6 +14,8 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
+import { WorkspaceLayout } from "@/components/workspace/workspace-layout";
+import { WorkspacePageHeader } from "@/components/workspace/workspace-page-header";
 import { type TranslationKey, type TranslationParams, useI18n } from "@/i18n";
 import { todayKey } from "@/lib/calendar-date";
 
@@ -50,10 +51,28 @@ export function DailyReviewPage() {
   const isInitialLoading = reviewQuery.isLoading;
 
   return (
-    <div className="min-h-svh bg-background px-4 py-5 sm:py-8">
-      <main className="mx-auto flex w-full max-w-[640px] flex-col gap-4">
-        <SubpageHeader title={t("nav.dailyReview")} />
-
+    <WorkspaceLayout
+      header={({
+        sidebarCollapsed,
+        toggleSidebarCollapsed,
+        mobileSheetOpen,
+        setMobileSheetOpen,
+        explorer,
+      }) => (
+        <WorkspacePageHeader
+          explorer={explorer}
+          icon={
+            <CalendarDaysIcon className="size-4 shrink-0 text-brand-600 dark:text-brand-400" />
+          }
+          mobileSheetOpen={mobileSheetOpen}
+          setMobileSheetOpen={setMobileSheetOpen}
+          sidebarCollapsed={sidebarCollapsed}
+          title={t("nav.dailyReview")}
+          toggleSidebarCollapsed={toggleSidebarCollapsed}
+        />
+      )}
+    >
+      <div className="flex flex-col gap-4 py-2">
         {isInitialLoading && (
           <div className="flex flex-col gap-3">
             <Skeleton className="h-6 w-32" />
@@ -128,8 +147,8 @@ export function DailyReviewPage() {
             ))}
           </section>
         ))}
-      </main>
-    </div>
+      </div>
+    </WorkspaceLayout>
   );
 }
 

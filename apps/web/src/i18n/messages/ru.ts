@@ -154,6 +154,7 @@ const messages = {
     "Это пространство только для чтения — вы читатель и можете просматривать, но не публиковать.",
   "space.expiredNotice":
     "Срок доступа читателя истёк. Пространство команды станет доступным после продления.",
+  "nav.allMemos": "Все заметки",
   "nav.dailyReview": "В этот день",
   "nav.randomWalk": "Прогулка по памяти",
   "nav.memory": "Память",
@@ -822,6 +823,27 @@ const messages = {
   "memory.title": "Память",
   "memory.searchPlaceholder": "Поиск по памятям…",
   "memory.newMemory": "Добавить память",
+  "memory.quickAddPlaceholder":
+    "📌 Установить правило или предпочтение для ИИ… (Enter)",
+  "memory.quickAddPinned": "Закрепить как строгое правило",
+  "memory.bannerHint":
+    "ИИ извлекает долговременную память из заметок; управляйте правилами и привычками здесь.",
+  "memory.bannerReviewAlert":
+    "Ожидает решения: {count} предложений или конфликтов от ИИ",
+  "memory.viewLens": "Шпаргалка ИИ",
+  "memory.lensTitle": "Линза памяти ИИ",
+  "memory.lensDescription":
+    "Ниже приведен динамически скомпилированный контекст памяти, внедряемый в системные промпты агентов.",
+  "memory.filterAll": "Все",
+  "memory.filterCore": "📌 Правила",
+  "memory.filterObserved": "👀 Наблюдения ИИ",
+  "memory.filterReview": "На рассмотрении",
+  "memory.coldStartTitle": "Быстро задайте первое правило:",
+  "memory.coldStart1": "Отвечать сразу по существу, без лишних предисловий",
+  "memory.coldStart2":
+    "Предпочитать строгую типизацию TypeScript и функциональный стиль",
+  "memory.coldStart3":
+    "Сохранять выводы в памяти после крупных архитектурных изменений",
   "memory.tab.core": "Ядро",
   "memory.tab.projects": "Проекты",
   "memory.tab.recent": "Недавние",

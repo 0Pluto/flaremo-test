@@ -8,6 +8,7 @@ import {
   FolderKanbanIcon,
   FootprintsIcon,
   HashIcon,
+  LayoutGridIcon,
   MicIcon,
   PencilIcon,
   Trash2Icon,
@@ -134,6 +135,26 @@ export const FlareMoExplorer = memo(function FlareMoExplorer({
         aria-label={t("sidebar.navigation")}
         className="mt-2 flex flex-col gap-1 border-t border-border/60 pt-2.5"
       >
+        <Link
+          activeOptions={{ exact: true }}
+          activeProps={{
+            className: "!bg-accent !text-accent-foreground font-medium",
+          }}
+          className="flex h-9 items-center gap-3 rounded-lg px-2.5 text-muted-foreground motion-safe:transition-[background-color,color,transform] motion-safe:duration-150 hover:bg-muted hover:text-foreground motion-safe:hover:translate-x-0.5"
+          onClick={onNavigate}
+          search={{
+            view: undefined,
+            space: undefined,
+            q: undefined,
+            tag: undefined,
+            untagged: undefined,
+            compose: undefined,
+          }}
+          to="/"
+        >
+          <LayoutGridIcon className="size-4 shrink-0" />
+          <span className="min-w-0 flex-1 truncate">{t("nav.allMemos")}</span>
+        </Link>
         <Link
           activeProps={{
             className: "!bg-accent !text-accent-foreground font-medium",

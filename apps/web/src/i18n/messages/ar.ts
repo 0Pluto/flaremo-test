@@ -150,6 +150,7 @@ const messages = {
     "هذه المساحة للقراءة فقط — أنت قارئ ويمكنك التصفح دون النشر.",
   "space.expiredNotice":
     "انتهت صلاحية قارئك. مساحة الفريق غير متاحة حتى التجديد.",
+  "nav.allMemos": "كل الملاحظات",
   "nav.dailyReview": "في مثل هذا اليوم",
   "nav.randomWalk": "تجوال في الذاكرة",
   "nav.memory": "الذاكرة",
@@ -793,6 +794,25 @@ const messages = {
   "memory.title": "الذاكرة",
   "memory.searchPlaceholder": "ابحث في الذاكرات…",
   "memory.newMemory": "إضافة ذاكرة",
+  "memory.quickAddPlaceholder":
+    "📌 ضع قاعدة أو تفضيلًا جديدًا للذكاء الاصطناعي… (Enter)",
+  "memory.quickAddPinned": "تثبيت كقاعدة صارمة",
+  "memory.bannerHint":
+    "يقوم الذكاء الاصطناعي باستخلاص الذاكرة طويلة المدى من ملاحظاتك؛ أدر قواعدك وعاداتك هنا.",
+  "memory.bannerReviewAlert": "هناك {count} مقترح أو تعارض جديد بحاجة لمراجعتك",
+  "memory.viewLens": "معاينة التلقين",
+  "memory.lensTitle": "عدسة ذاكرة الذكاء الاصطناعي",
+  "memory.lensDescription":
+    "فيما يلي سياق الذاكرة المترجم ديناميكيًا والمُدرج في تلقينات نظام الوكلاء.",
+  "memory.filterAll": "الكل",
+  "memory.filterCore": "📌 القواعد الصارمة",
+  "memory.filterObserved": "👀 ملاحظات الذكاء الاصطناعي",
+  "memory.filterReview": "قيد المراجعة",
+  "memory.coldStartTitle": "حدد قاعدتك الأولى بسرعة:",
+  "memory.coldStart1": "ادخل في صلب الموضوع مباشرة وتجنب المجاملات الزائدة",
+  "memory.coldStart2": "تفضيل أنواع TypeScript الصارمة والأنماط الوظيفية",
+  "memory.coldStart3":
+    "استخلاص الدروس وتخزينها في الذاكرة بعد أي تغييرات معمارية كبرى",
   "memory.tab.core": "الأساسي",
   "memory.tab.projects": "المشاريع",
   "memory.tab.recent": "الأحدث",

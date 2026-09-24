@@ -1,31 +1,37 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { PlusIcon, SearchIcon } from "lucide-react";
+import { AlertCircleIcon, InfoIcon, SearchIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { listMemories, listMemoryReview } from "@/api";
-import { SubpageHeader } from "@/components/subpage-header";
 import { Button } from "@/components/ui/button";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { WorkspaceLayout } from "@/components/workspace/workspace-layout";
 import { useI18n } from "@/i18n";
+import { cn } from "@/lib/utils";
+import { MemoryColdStart } from "./memory/memory-cold-start";
 import { groupMemories } from "./memory/memory-filters";
 import { MemoryFormDialog } from "./memory/memory-form-dialog";
+import { MemoryLensDialog } from "./memory/memory-lens-dialog";
 import { MemoryList } from "./memory/memory-list";
+import { MemoryQuickComposer } from "./memory/memory-quick-composer";
+import { MemoryWorkspaceHeader } from "./memory/memory-workspace-header";
 import { ProjectGroups } from "./memory/project-groups";
 
-type MemoryTab = "core" | "projects" | "recent" | "review" | "archive";
+type FilterTab =
+  | "all"
+  | "core"
+  | "observed"
+  | "projects"
+  | "review"
+  | "archive";
 
 export function MemoryPage() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<MemoryTab>("core");
+  const [tab, setTab] = useState<FilterTab>("all");
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
+  const [lensOpen, setLensOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   const listQuery = useQuery({
     queryKey: ["memories", "list"],
@@ -52,55 +58,160 @@ export function MemoryPage() {
 
   const groups = useMemo(() => groupMemories(filtered), [filtered]);
 
+  const reviewMemories = useMemo(
+    () => reviewQuery.data?.memories ?? [],
+    [reviewQuery.data],
+  );
+
+  const observedMemories = useMemo(
+    () =>
+      filtered.filter(
+        (m) => m.verification === "observed" && m.status === "active",
+      ),
+    [filtered],
+  );
+
+  const activeMemories = useMemo(
+    () => filtered.filter((m) => m.status === "active"),
+    [filtered],
+  );
+
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ["memories"] });
   };
 
-  return (
-    <div className="min-h-svh bg-background px-4 py-5 sm:py-8">
-      <main className="mx-auto flex w-full max-w-[720px] flex-col gap-4">
-        <SubpageHeader
-          actions={
-            <Button size="sm" onClick={() => setCreating(true)}>
-              <PlusIcon data-icon="inline-start" />
-              {t("memory.newMemory")}
-            </Button>
-          }
-          title={t("memory.title")}
-        />
+  const reviewCount = reviewMemories.length;
 
-        <div className="relative">
-          <SearchIcon
-            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-            data-icon="inline-start"
-          />
-          <Input
-            className="pl-9"
-            placeholder={t("memory.searchPlaceholder")}
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
+  return (
+    <WorkspaceLayout
+      header={({
+        sidebarCollapsed,
+        toggleSidebarCollapsed,
+        mobileSheetOpen,
+        setMobileSheetOpen,
+        explorer,
+      }) => (
+        <MemoryWorkspaceHeader
+          explorer={explorer}
+          mobileSheetOpen={mobileSheetOpen}
+          setMobileSheetOpen={setMobileSheetOpen}
+          sidebarCollapsed={sidebarCollapsed}
+          toggleSidebarCollapsed={toggleSidebarCollapsed}
+          onOpenLens={() => setLensOpen(true)}
+          onNewMemory={() => setCreating(true)}
+          isScrolled={isScrolled}
+        />
+      )}
+      onScroll={(event) => {
+        setIsScrolled(event.currentTarget.scrollTop > 4);
+      }}
+    >
+      <div className="flex flex-col gap-3.5 pt-2">
+        {/* Top Info Banner */}
+        <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-muted/40 px-3.5 py-2.5 text-xs text-muted-foreground motion-safe:animate-rise">
+          <InfoIcon className="size-4 shrink-0 text-brand-500/80" />
+          <span className="min-w-0 flex-1 leading-relaxed">
+            {t("memory.bannerHint")}
+          </span>
         </div>
 
-        <Tabs value={tab} onValueChange={(value) => setTab(value as MemoryTab)}>
-          <TabsList className="w-full">
-            <TabsTrigger value="core">{t("memory.tab.core")}</TabsTrigger>
-            <TabsTrigger value="projects">
-              {t("memory.tab.projects")}
-            </TabsTrigger>
-            <TabsTrigger value="recent">{t("memory.tab.recent")}</TabsTrigger>
-            <TabsTrigger value="review">
-              {t("memory.tab.review")}
-              {reviewQuery.data && reviewQuery.data.memories.length > 0 && (
-                <span className="ml-1 text-xs text-muted-foreground tabular-nums">
-                  {reviewQuery.data.memories.length}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="archive">{t("memory.tab.archive")}</TabsTrigger>
-          </TabsList>
+        {/* Pending Review Alert Banner */}
+        {reviewCount > 0 && (
+          <div className="flex items-center justify-between gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2.5 text-xs text-amber-600 dark:text-amber-400 motion-safe:animate-rise">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <AlertCircleIcon className="size-4 shrink-0 text-amber-500" />
+              <span className="truncate font-medium">
+                {t("memory.bannerReviewAlert", { count: reviewCount })}
+              </span>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setTab("review")}
+              className="h-7 border-amber-500/30 bg-card px-2.5 text-xs text-amber-600 hover:bg-amber-500/15 dark:text-amber-400"
+            >
+              {t("memory.filterReview")}
+            </Button>
+          </div>
+        )}
 
-          <TabsContent value="core" className="mt-3">
+        {/* Quick Add Memory Box */}
+        <MemoryQuickComposer onCreated={invalidate} />
+
+        {/* Search & Filter Pills */}
+        <div className="flex flex-col gap-2 pt-1">
+          <div className="relative">
+            <SearchIcon
+              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+              data-icon="inline-start"
+            />
+            <Input
+              className="h-9 pl-9 text-xs"
+              placeholder={t("memory.searchPlaceholder")}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+            <FilterPill
+              active={tab === "all"}
+              label={t("memory.filterAll")}
+              count={activeMemories.length}
+              onClick={() => setTab("all")}
+            />
+            <FilterPill
+              active={tab === "core"}
+              label={t("memory.filterCore")}
+              count={groups.core.length}
+              onClick={() => setTab("core")}
+            />
+            <FilterPill
+              active={tab === "observed"}
+              label={t("memory.filterObserved")}
+              count={observedMemories.length}
+              onClick={() => setTab("observed")}
+            />
+            <FilterPill
+              active={tab === "projects"}
+              label={t("memory.tab.projects")}
+              count={groups.projects.length}
+              onClick={() => setTab("projects")}
+            />
+            <FilterPill
+              active={tab === "review"}
+              label={t("memory.filterReview")}
+              count={reviewCount}
+              highlight={reviewCount > 0}
+              onClick={() => setTab("review")}
+            />
+            <FilterPill
+              active={tab === "archive"}
+              label={t("memory.tab.archive")}
+              count={groups.archive.length}
+              onClick={() => setTab("archive")}
+            />
+          </div>
+        </div>
+
+        {/* Main Content Area */}
+        <div className="pt-1">
+          {tab === "all" &&
+            (memories.length === 0 && !listQuery.isLoading && !query ? (
+              <MemoryColdStart onCreated={invalidate} />
+            ) : (
+              <MemoryList
+                hasError={listQuery.isError && !listQuery.data}
+                isRetrying={listQuery.isRefetching}
+                loading={listQuery.isLoading}
+                memories={activeMemories}
+                onMutated={invalidate}
+                onRetry={() => void listQuery.refetch()}
+                showSource
+              />
+            ))}
+
+          {tab === "core" && (
             <MemoryList
               hasError={listQuery.isError && !listQuery.data}
               isRetrying={listQuery.isRefetching}
@@ -109,49 +220,36 @@ export function MemoryPage() {
               onMutated={invalidate}
               onRetry={() => void listQuery.refetch()}
             />
-          </TabsContent>
-          <TabsContent value="projects" className="mt-3">
-            <ProjectGroups memories={groups.projects} onMutated={invalidate} />
-          </TabsContent>
-          <TabsContent value="recent" className="mt-3">
+          )}
+
+          {tab === "observed" && (
             <MemoryList
               hasError={listQuery.isError && !listQuery.data}
               isRetrying={listQuery.isRefetching}
               loading={listQuery.isLoading}
-              memories={groups.recent}
+              memories={observedMemories}
               onMutated={invalidate}
               onRetry={() => void listQuery.refetch()}
               showSource
             />
-          </TabsContent>
-          <TabsContent value="review" className="mt-3">
-            {reviewQuery.isError ? (
-              <Empty className="min-h-56 border">
-                <EmptyHeader>
-                  <EmptyTitle>{t("list.errorTitle")}</EmptyTitle>
-                  <EmptyDescription>
-                    {t("list.errorDescription")}
-                  </EmptyDescription>
-                </EmptyHeader>
-                <Button
-                  className="mt-2"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => void reviewQuery.refetch()}
-                >
-                  {t("common.retry")}
-                </Button>
-              </Empty>
-            ) : (
-              <MemoryList
-                memories={reviewQuery.data?.memories ?? []}
-                loading={reviewQuery.isLoading}
-                onMutated={invalidate}
-                review
-              />
-            )}
-          </TabsContent>
-          <TabsContent value="archive" className="mt-3">
+          )}
+
+          {tab === "projects" && (
+            <ProjectGroups memories={groups.projects} onMutated={invalidate} />
+          )}
+
+          {tab === "review" && (
+            <MemoryList
+              memories={reviewMemories}
+              loading={reviewQuery.isLoading}
+              hasError={reviewQuery.isError}
+              onMutated={invalidate}
+              onRetry={() => void reviewQuery.refetch()}
+              review
+            />
+          )}
+
+          {tab === "archive" && (
             <MemoryList
               emptyTitle={t("memory.archiveEmpty")}
               hasError={listQuery.isError && !listQuery.data}
@@ -161,15 +259,59 @@ export function MemoryPage() {
               onMutated={invalidate}
               onRetry={() => void listQuery.refetch()}
             />
-          </TabsContent>
-        </Tabs>
+          )}
+        </div>
+      </div>
 
-        <MemoryFormDialog
-          open={creating}
-          onOpenChange={setCreating}
-          onSaved={invalidate}
-        />
-      </main>
-    </div>
+      <MemoryFormDialog
+        open={creating}
+        onOpenChange={setCreating}
+        onSaved={invalidate}
+      />
+
+      <MemoryLensDialog open={lensOpen} onOpenChange={setLensOpen} />
+    </WorkspaceLayout>
+  );
+}
+
+function FilterPill({
+  active,
+  label,
+  count,
+  highlight = false,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  count?: number;
+  highlight?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "inline-flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium motion-safe:transition-all active:scale-[0.98]",
+        active
+          ? "bg-foreground text-background shadow-2xs"
+          : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground",
+        highlight &&
+          !active &&
+          "border border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10",
+      )}
+    >
+      <span>{label}</span>
+      {count !== undefined && count > 0 && (
+        <span
+          className={cn(
+            "text-[10px] tabular-nums",
+            active ? "text-background/80" : "text-muted-foreground",
+          )}
+        >
+          {count}
+        </span>
+      )}
+    </button>
   );
 }
