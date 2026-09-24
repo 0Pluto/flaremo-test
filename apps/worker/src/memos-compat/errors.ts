@@ -43,6 +43,15 @@ export function isDomainError(error: unknown): error is DomainError {
 }
 
 /**
+ * Narrow an unknown input to a plain object record (not `null`, not an
+ * array). The compat surfaces each re-declared this guard locally; keep the
+ * single copy next to the other shared classifiers.
+ */
+export function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
  * Status carried by a Better Auth HTTP rejection: 4xx keeps its own message,
  * everything else is not a controlled error.
  */

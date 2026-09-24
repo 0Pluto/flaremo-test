@@ -6,7 +6,7 @@ import {
   getRequestContext,
   type HonoBindings,
 } from "../../context";
-import { currentJsonError } from "./errors";
+import { currentJsonError } from "../../memos-compat/current-errors";
 import { hydrateSocialMemos, memoToCurrentDto } from "./hydrate";
 import {
   type MemoCommentPage,
