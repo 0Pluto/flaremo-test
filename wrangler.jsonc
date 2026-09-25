@@ -38,7 +38,8 @@
   "r2_buckets": [
     {
       "binding": "ATTACHMENTS",
-      "bucket_name": "flaremo-attachments-test","preview_bucket_name-test": "flaremo-attachments-test"
+      "bucket_name": "flaremo-attachments-test",
+      "preview_bucket_name-test": "flaremo-attachments-test"
     }
   ],
   "queues": {
@@ -92,6 +93,7 @@
     "FLAREMO_DEPLOY_REPOSITORY": "0Pluto/flaremo-test",
     "FLAREMO_SINGLE_USER_EMAIL": "ly.workmail@qq.com",
     "FLAREMO_SINGLE_USER_NAME": "lazy",
+    "FLAREMO_TRASH_RETENTION_DAYS": "90",
     "FLAREMO_PUBLIC_URL": "https://flaremoo.kuomo.site/",
     "FLAREMO_TRUSTED_ORIGINS": "https://flaremoo.kuomo.site/",
     "FLAREMO_EMBEDDING_PROVIDER": "workers-ai",

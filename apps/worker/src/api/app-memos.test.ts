@@ -381,6 +381,75 @@ describe("FlareMo app memos API", () => {
     expect(deletedMemo.memo.payload.tags).not.toContain("知识/工作/项目a");
   });
 
+  it("re-extracts tags from content when an edit adds or removes #tags", async () => {
+    // Regression: the persisted payload always carries a tags array stamped at
+    // creation (possibly []), so an edit that only sends {content} must not
+    // reuse it — otherwise `#tag` added later never reaches memo_tags.
+    const memo = await createMemo<{ id: string; name: string }>(
+      "initial content without tags",
+    );
+
+    await json(
+      await fetchApp(
+        `http://flaremo.test/api/app/memos/${encodeURIComponent(memo.id)}`,
+        {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            content: "initial content without tags, now with #随笔",
+            visibility: "private",
+          }),
+        },
+      ),
+    );
+
+    const afterAdd = await json<TagHierarchyResponse>(
+      await fetchApp("http://flaremo.test/api/app/tags"),
+    );
+    expect(afterAdd.tags).toEqual([{ name: "随笔", count: 1, children: [] }]);
+    const taggedMemo = await json<MemoContextResponse>(
+      await fetchApp(`http://flaremo.test/api/app/memos/${memo.id}`),
+    );
+    expect(taggedMemo.memo.payload.tags).toEqual(["随笔"]);
+
+    // Removing the token from content removes the tag as well.
+    await json(
+      await fetchApp(
+        `http://flaremo.test/api/app/memos/${encodeURIComponent(memo.id)}`,
+        {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            content: "back to plain content",
+            visibility: "private",
+          }),
+        },
+      ),
+    );
+    const afterRemove = await json<TagHierarchyResponse>(
+      await fetchApp("http://flaremo.test/api/app/tags"),
+    );
+    expect(afterRemove.tags).toEqual([]);
+
+    // An explicit payload in the patch still pins tags to the client value.
+    await json(
+      await fetchApp(
+        `http://flaremo.test/api/app/memos/${encodeURIComponent(memo.id)}`,
+        {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            payload: { tags: ["手工标签"] },
+          }),
+        },
+      ),
+    );
+    const pinned = await json<MemoContextResponse>(
+      await fetchApp(`http://flaremo.test/api/app/memos/${memo.id}`),
+    );
+    expect(pinned.memo.payload.tags).toEqual(["手工标签"]);
+  });
+
   it("creates relations, shares, and export/import bundles", async () => {
     const first = await createMemo("first");
     const second = await createMemo("second");

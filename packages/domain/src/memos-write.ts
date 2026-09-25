@@ -199,8 +199,18 @@ export async function updateMemo(
   if (input.payload !== undefined && nextClientId) {
     nextPayload.client_id = nextClientId;
   }
+  // Tags follow the content by default: a patch without payload (the web
+  // editor sends only {content, visibility}) re-extracts them from the new
+  // content. Only an explicit payload in this request can pin them — the
+  // persisted payload always carries a tags array stamped at creation, so
+  // consulting nextPayload.tags here would freeze tags at their create-time
+  // value and silently drop `#tag` edits.
   const tags = metadataChanged
-    ? normalizeMemoTags(nextPayload.tags ?? extractTags(nextContent))
+    ? normalizeMemoTags(
+        input.payload !== undefined
+          ? (nextPayload.tags ?? extractTags(nextContent))
+          : extractTags(nextContent),
+      )
     : [];
   if (metadataChanged) {
     nextPayload.tags = tags;
