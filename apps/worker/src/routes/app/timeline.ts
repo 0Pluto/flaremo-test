@@ -1,5 +1,6 @@
 import {
   calendarViewQuerySchema,
+  dailyActivityQuerySchema,
   hourlyActivityQuerySchema,
   semanticMemoSearchQuerySchema,
 } from "@flaremo/contracts";
@@ -9,6 +10,7 @@ import {
   canGovernMemo,
   estimateTokenCount,
   getCalendarView,
+  getDailyActivity,
   getFlaremoUserNames,
   getHourlyActivity,
   getSemanticSearchMemos,
@@ -34,6 +36,19 @@ export function registerTimelineRoutes(app: Hono<HonoBindings>) {
       try {
         const { db, user } = await getRequestContext(c);
         return c.json(await getHourlyActivity(db, user, c.req.valid("query")));
+      } catch (error) {
+        return jsonError(c, error);
+      }
+    },
+  );
+
+  app.get(
+    "/stats/daily",
+    zValidator("query", dailyActivityQuerySchema),
+    async (c) => {
+      try {
+        const { db, user } = await getRequestContext(c);
+        return c.json(await getDailyActivity(db, user, c.req.valid("query")));
       } catch (error) {
         return jsonError(c, error);
       }

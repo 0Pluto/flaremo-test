@@ -219,6 +219,51 @@ describe("FlareMo calendar API", () => {
     expect(unauthenticated.status).toBe(401);
   });
 
+  it("returns per-day counts for an arbitrary range, beyond the 84-day stats window", async () => {
+    await json(
+      await fetchApp("http://flaremo.test/api/app/memos", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ content: "一条按天统计测试笔记" }),
+      }),
+    );
+
+    const tz = new Date().getTimezoneOffset();
+    const localToday = new Date(Date.now() - tz * 60_000)
+      .toISOString()
+      .slice(0, 10);
+    // A range starting years in the past exercises what the fixed 84-day
+    // /api/app/stats activity window can never cover (e.g. imported history).
+    const res = await fetchApp(
+      `http://flaremo.test/api/app/stats/daily?from=2019-01-01&to=${localToday}&tz=${tz}`,
+    );
+    expect(res.status).toBe(200);
+    const data = await json<{
+      days: Array<{ date: string; count: number }>;
+    }>(res);
+    expect(data.days[0]?.date).toBe("2019-01-01");
+    expect(data.days.at(-1)?.date).toBe(localToday);
+    const todayEntry = data.days.find((d) => d.date === localToday);
+    expect(todayEntry?.count).toBeGreaterThanOrEqual(1);
+
+    const reversed = await fetchApp(
+      "http://flaremo.test/api/app/stats/daily?from=2026-10-01&to=2026-09-01",
+    );
+    expect(reversed.status).toBe(400);
+
+    const oversized = await fetchApp(
+      "http://flaremo.test/api/app/stats/daily?from=2018-01-01&to=2019-12-31",
+    );
+    expect(oversized.status).toBe(400);
+
+    const unauthenticated = await fetchApp(
+      `http://flaremo.test/api/app/stats/daily?from=2019-01-01&to=${localToday}`,
+      undefined,
+      { authenticated: false },
+    );
+    expect(unauthenticated.status).toBe(401);
+  });
+
   it("rejects invalid ranges and unauthenticated access", async () => {
     const reversed = await fetchApp(
       "http://flaremo.test/api/app/calendar?from=2026-10-01&to=2026-09-01",

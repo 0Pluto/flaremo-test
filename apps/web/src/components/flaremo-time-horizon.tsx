@@ -14,7 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { memo, useMemo, useState } from "react";
-import { getHourlyActivity, listMemos } from "@/api";
+import { getDailyActivity, getHourlyActivity, listMemos } from "@/api";
 import { useI18n } from "@/i18n";
 import {
   addMonths,
@@ -116,6 +116,31 @@ export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
     staleTime: 60_000,
     enabled: tab === "month",
   });
+
+  // Month view day counts: summed from the same hourly payload so historical
+  // months (beyond stats.activity's 84-day window) render correctly too.
+  const monthCountMap = useMemo(() => {
+    const hours = monthHourlyQuery.data?.hours;
+    if (!hours) return notesCountMap;
+    const map = new Map<string, number>();
+    for (const h of hours) {
+      map.set(h.date, (map.get(h.date) ?? 0) + h.count);
+    }
+    return map;
+  }, [monthHourlyQuery.data, notesCountMap]);
+
+  // Year view day counts: /api/app/stats only covers the last 84 days, so the
+  // navigated year is fetched from the range-based daily endpoint.
+  const yearFrom = `${currentYear}-01-01`;
+  const yearTo = `${currentYear}-12-31`;
+  const yearDailyQuery = useQuery({
+    queryKey: ["stats-daily-year", yearFrom, yearTo, tz],
+    queryFn: ({ signal }) =>
+      getDailyActivity({ from: yearFrom, to: yearTo }, tz, signal),
+    staleTime: 60_000,
+    enabled: tab === "year",
+  });
+  const yearActivity = yearDailyQuery.data?.days ?? stats.activity;
 
   // Week range calculations (7 days x 24 hours)
   const weekDays = useMemo(
@@ -319,7 +344,7 @@ export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
           {/* YEAR VIEW: 365 Days across 12 Month Dot Clusters */}
           {tab === "year" && (
             <YearHorizonPureView
-              activity={stats.activity}
+              activity={yearActivity}
               displayMode={displayMode}
               today={today}
               weekStart={weekStart}
@@ -338,7 +363,7 @@ export const FlareMoTimeHorizon = memo(function FlareMoTimeHorizon({
               isLoading={monthHourlyQuery.isLoading}
               locale={locale}
               monthKey={currentMonthKey}
-              notesCountMap={notesCountMap}
+              notesCountMap={monthCountMap}
               selectedDay={selectedDay}
               today={today}
               weekStart={weekStart}

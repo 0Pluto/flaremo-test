@@ -1,4 +1,8 @@
-import type { CalendarView, HourlyActivityResponse } from "@flaremo/contracts";
+import type {
+  CalendarView,
+  DailyActivityResponse,
+  HourlyActivityResponse,
+} from "@flaremo/contracts";
 import type { FlareMoDb, UserRow } from "@flaremo/db";
 import { memos, tasks } from "@flaremo/db";
 import { and, asc, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
@@ -181,4 +185,64 @@ export async function getHourlyActivity(
   return {
     hours: result,
   };
+}
+
+/**
+ * Returns the number of memos created on each local calendar day in an
+ * arbitrary `[from, to]` range. Every day in the range is present; empty days
+ * have count 0.
+ *
+ * This backs the Year/Month heatmap views, which navigate far beyond the
+ * fixed 84-day window that `getMemoStats().activity` covers. Timezone
+ * handling mirrors getHourlyActivity.
+ */
+export async function getDailyActivity(
+  db: FlareMoDb,
+  user: UserRow,
+  query: { from: string; to: string; tz?: number },
+): Promise<DailyActivityResponse> {
+  const { from, to } = query;
+  const offsetMinutes = -(query.tz ?? 0);
+  const boundShift = (query.tz ?? 0) * 60_000;
+  // Inclusive local-day bounds converted to UTC instants.
+  const startUtc = new Date(
+    new Date(`${from}T00:00:00Z`).getTime() + boundShift,
+  );
+  const endUtc = new Date(
+    new Date(`${to}T00:00:00Z`).getTime() + 24 * 60 * 60 * 1000 + boundShift,
+  );
+
+  const rows = await db
+    .select({
+      date: sql<string>`substr(datetime(${memos.createdAt}, ${`${offsetMinutes} minutes`}), 1, 10)`,
+      count: sql<number>`count(*)`.mapWith(Number),
+    })
+    .from(memos)
+    .where(
+      and(
+        eq(memos.userId, user.id),
+        inArray(memos.status, ["normal", "archived"]),
+        gte(memos.createdAt, startUtc.toISOString()),
+        lt(memos.createdAt, endUtc.toISOString()),
+      ),
+    )
+    .groupBy(
+      sql`substr(datetime(${memos.createdAt}, ${`${offsetMinutes} minutes`}), 1, 10)`,
+    );
+
+  const countByDate = new Map<string, number>();
+  for (const r of rows) {
+    countByDate.set(r.date, r.count);
+  }
+
+  const days: Array<{ date: string; count: number }> = [];
+  const cur = new Date(`${from}T12:00:00Z`);
+  const end = new Date(`${to}T12:00:00Z`);
+  while (cur.getTime() <= end.getTime()) {
+    const dStr = cur.toISOString().slice(0, 10);
+    days.push({ date: dStr, count: countByDate.get(dStr) ?? 0 });
+    cur.setUTCDate(cur.getUTCDate() + 1);
+  }
+
+  return { days };
 }

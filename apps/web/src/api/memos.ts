@@ -1,4 +1,5 @@
 import type {
+  DailyActivityResponse,
   DailyReviewResponse,
   DeleteTagResponse,
   HourlyActivityResponse,
@@ -111,6 +112,27 @@ export async function getHourlyActivity(
   if (params.to) query.set("to", params.to);
   return apiRequest<HourlyActivityResponse>(
     `/api/app/stats/hourly?${query.toString()}`,
+    { signal },
+  );
+}
+
+/**
+ * Returns per-day memo counts for an arbitrary local date range [from, to].
+ * Backs the Year/Month heatmap views, which navigate beyond the fixed 84-day
+ * window of /api/app/stats activity.
+ */
+export async function getDailyActivity(
+  params: { from: string; to: string },
+  tz: number,
+  signal?: AbortSignal,
+) {
+  const query = new URLSearchParams({
+    from: params.from,
+    to: params.to,
+    tz: String(tz),
+  });
+  return apiRequest<DailyActivityResponse>(
+    `/api/app/stats/daily?${query.toString()}`,
     { signal },
   );
 }

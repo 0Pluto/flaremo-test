@@ -16,7 +16,12 @@ export function extractTags(content: string) {
 export function formatMemoTime(value: string, locale?: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
+  // Year only when it differs from the current one: "9月20日 20:43" stays
+  // compact for this year, while imported history (e.g. Weibo from 2019)
+  // reads "2019年9月20日 20:43" instead of masquerading as recent.
+  const sameYear = date.getFullYear() === new Date().getFullYear();
   return new Intl.DateTimeFormat(locale, {
+    ...(sameYear ? {} : { year: "numeric" as const }),
     month: "short",
     day: "numeric",
     hour: "2-digit",

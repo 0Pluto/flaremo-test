@@ -94,3 +94,41 @@ export type HourlyActivityQuery = z.infer<typeof hourlyActivityQuerySchema>;
 export type HourlyActivityResponse = z.infer<
   typeof hourlyActivityResponseSchema
 >;
+
+// ---------------------------------------------------------------------------
+// Daily activity: one count per local calendar day for an arbitrary range.
+// Used by the Year and Month heatmap views, which navigate far beyond the
+// fixed 84-day window of /api/app/stats activity.
+// ---------------------------------------------------------------------------
+export const dailyActivityQuerySchema = z
+  .object({
+    from: dateKey,
+    to: dateKey,
+    // Client UTC offset in minutes (Date#getTimezoneOffset, e.g. -480 for UTC+8).
+    tz: z.coerce.number().int().min(-840).max(840).default(0),
+  })
+  .refine(
+    ({ from, to }) =>
+      new Date(`${from}T00:00:00Z`).getTime() <=
+      new Date(`${to}T00:00:00Z`).getTime(),
+    "`from` must not be after `to`.",
+  )
+  .refine(({ from, to }) => {
+    const span =
+      (new Date(`${to}T00:00:00Z`).getTime() -
+        new Date(`${from}T00:00:00Z`).getTime()) /
+      (24 * 60 * 60 * 1000);
+    return span <= 400;
+  }, "Daily activity range is limited to 401 days.");
+
+export const dailyActivityResponseSchema = z.object({
+  days: z.array(
+    z.object({
+      date: z.string(),
+      count: z.number().int().nonnegative(),
+    }),
+  ),
+});
+
+export type DailyActivityQuery = z.infer<typeof dailyActivityQuerySchema>;
+export type DailyActivityResponse = z.infer<typeof dailyActivityResponseSchema>;
