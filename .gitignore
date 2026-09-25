@@ -1,4 +1,5 @@
 /Temp/
+/migration/
 node_modules/
 dist/
 .wrangler/
