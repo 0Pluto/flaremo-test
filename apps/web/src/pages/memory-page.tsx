@@ -1,5 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircleIcon, BrainIcon } from "lucide-react";
+import {
+  AlertCircleIcon,
+  BrainIcon,
+  EyeIcon,
+  FolderIcon,
+  PinIcon,
+} from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { listMemories, listMemoryReview } from "@/api";
 import { Button } from "@/components/ui/button";
@@ -174,6 +180,9 @@ export function MemoryPage() {
               active={tab === "core"}
               label={t("memory.filterCore")}
               count={groups.core.length}
+              icon={
+                <PinIcon className="size-3 text-brand-500 fill-brand-500/20" />
+              }
               onClick={() => {
                 setTab("core");
                 setSelectedProject(null);
@@ -184,6 +193,7 @@ export function MemoryPage() {
                 active={tab === "observed"}
                 label={t("memory.filterObserved")}
                 count={observedMemories.length}
+                icon={<EyeIcon className="size-3" />}
                 onClick={() => {
                   setTab("observed");
                   setSelectedProject(null);
@@ -195,6 +205,7 @@ export function MemoryPage() {
                 active={tab === "projects"}
                 label={t("memory.tab.projects")}
                 count={groups.projects.length}
+                icon={<FolderIcon className="size-3" />}
                 onClick={() => setTab("projects")}
               />
             )}

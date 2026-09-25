@@ -199,8 +199,9 @@ export function ProjectGroups({
 
           {project.latestRule && (
             <div className="rounded-lg bg-muted/40 p-2.5 text-xs text-muted-foreground leading-relaxed border border-border/40">
-              <span className="font-medium text-foreground/80 mr-1.5">
-                📌 规则:
+              <span className="inline-flex items-center gap-1 font-medium text-foreground/80 mr-1.5">
+                <PinIcon className="size-3 fill-current text-brand-500 shrink-0" />
+                <span>规则:</span>
               </span>
               <span className="line-clamp-2">{project.latestRule.content}</span>
             </div>
