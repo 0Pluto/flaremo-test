@@ -1,4 +1,10 @@
-import { BrainIcon, EyeIcon, PanelLeftOpenIcon, PlusIcon } from "lucide-react";
+import {
+  BrainIcon,
+  EyeIcon,
+  PanelLeftOpenIcon,
+  SearchIcon,
+  XIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { WorkspaceSidebarContent } from "@/components/workspace/workspace-sidebar";
 import { WorkspaceMobileSidebar } from "@/components/workspace/workspace-sidebar";
@@ -11,8 +17,9 @@ export function MemoryWorkspaceHeader({
   setMobileSheetOpen,
   sidebarCollapsed,
   toggleSidebarCollapsed,
+  query,
+  onQueryChange,
   onOpenLens,
-  onNewMemory,
   isScrolled = false,
 }: {
   explorer: WorkspaceSidebarContent;
@@ -20,8 +27,9 @@ export function MemoryWorkspaceHeader({
   setMobileSheetOpen: (open: boolean) => void;
   sidebarCollapsed: boolean;
   toggleSidebarCollapsed: () => void;
+  query: string;
+  onQueryChange: (q: string) => void;
   onOpenLens: () => void;
-  onNewMemory: () => void;
   isScrolled?: boolean;
 }) {
   const { t } = useI18n();
@@ -73,23 +81,36 @@ export function MemoryWorkspaceHeader({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
+          <div className="group flex h-8.5 w-36 sm:w-52 md:w-60 items-center rounded-lg border border-border/60 bg-muted/40 px-2.5 text-xs text-muted-foreground transition-all hover:border-border hover:bg-accent/60 hover:text-foreground shadow-2xs focus-within:border-brand-500/80 focus-within:ring-2 focus-within:ring-brand-500/15 focus-within:bg-background">
+            <SearchIcon className="size-3.5 shrink-0 text-muted-foreground group-focus-within:text-foreground" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => onQueryChange(e.target.value)}
+              placeholder={t("memory.searchPlaceholder")}
+              className="ml-2 w-full bg-transparent text-xs text-foreground placeholder:text-muted-foreground outline-hidden"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => onQueryChange("")}
+                className="ml-1 rounded p-0.5 hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
+                title={t("search.clear")}
+              >
+                <XIcon className="size-3" />
+              </button>
+            )}
+          </div>
+
           <Button
-            size="sm"
-            variant="outline"
-            className="h-8 gap-1.5 px-2.5 text-xs text-muted-foreground hover:text-foreground"
+            size="icon-sm"
+            variant="ghost"
+            className="text-muted-foreground hover:text-foreground"
             onClick={onOpenLens}
+            title={t("memory.viewLens")}
           >
-            <EyeIcon className="size-3.5" data-icon="inline-start" />
-            <span className="hidden sm:inline">{t("memory.viewLens")}</span>
-          </Button>
-          <Button
-            size="sm"
-            className="h-8 gap-1.5 px-3 text-xs"
-            onClick={onNewMemory}
-          >
-            <PlusIcon className="size-3.5" data-icon="inline-start" />
-            <span>{t("memory.newMemory")}</span>
+            <EyeIcon className="size-4" />
           </Button>
         </div>
       </div>

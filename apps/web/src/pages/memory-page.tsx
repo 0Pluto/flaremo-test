@@ -1,9 +1,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircleIcon, BrainIcon, SearchIcon } from "lucide-react";
+import { AlertCircleIcon, BrainIcon } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { listMemories, listMemoryReview } from "@/api";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { WorkspaceLayout } from "@/components/workspace/workspace-layout";
 import { useI18n } from "@/i18n";
 import { cn } from "@/lib/utils";
@@ -31,7 +30,7 @@ export function MemoryPage() {
   const [creating, setCreating] = useState(false);
   const [lensOpen, setLensOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const composerInputRef = useRef<HTMLInputElement>(null);
+  const composerInputRef = useRef<HTMLTextAreaElement>(null);
   const mainRef = useRef<HTMLElement | null>(null);
 
   const listQuery = useQuery({
@@ -99,11 +98,9 @@ export function MemoryPage() {
           setMobileSheetOpen={setMobileSheetOpen}
           sidebarCollapsed={sidebarCollapsed}
           toggleSidebarCollapsed={toggleSidebarCollapsed}
+          query={query}
+          onQueryChange={setQuery}
           onOpenLens={() => setLensOpen(true)}
-          onNewMemory={() => {
-            mainRef.current?.scrollTo({ top: 0, behavior: "smooth" });
-            composerInputRef.current?.focus();
-          }}
           isScrolled={isScrolled}
         />
       )}
@@ -138,68 +135,53 @@ export function MemoryPage() {
           onCreated={invalidate}
         />
 
-        {/* Search & Filter Pills */}
-        <div className="flex flex-col gap-2 pt-1">
-          <div className="relative">
-            <SearchIcon
-              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-              data-icon="inline-start"
-            />
-            <Input
-              className="h-9 pl-9 text-xs"
-              placeholder={t("memory.searchPlaceholder")}
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+        {/* Filter Pills */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+          <FilterPill
+            active={tab === "all"}
+            label={t("memory.filterAll")}
+            count={activeMemories.length}
+            onClick={() => setTab("all")}
+          />
+          <FilterPill
+            active={tab === "core"}
+            label={t("memory.filterCore")}
+            count={groups.core.length}
+            onClick={() => setTab("core")}
+          />
+          {observedMemories.length > 0 && (
             <FilterPill
-              active={tab === "all"}
-              label={t("memory.filterAll")}
-              count={activeMemories.length}
-              onClick={() => setTab("all")}
+              active={tab === "observed"}
+              label={t("memory.filterObserved")}
+              count={observedMemories.length}
+              onClick={() => setTab("observed")}
             />
+          )}
+          {groups.projects.length > 0 && (
             <FilterPill
-              active={tab === "core"}
-              label={t("memory.filterCore")}
-              count={groups.core.length}
-              onClick={() => setTab("core")}
+              active={tab === "projects"}
+              label={t("memory.tab.projects")}
+              count={groups.projects.length}
+              onClick={() => setTab("projects")}
             />
-            {observedMemories.length > 0 && (
-              <FilterPill
-                active={tab === "observed"}
-                label={t("memory.filterObserved")}
-                count={observedMemories.length}
-                onClick={() => setTab("observed")}
-              />
-            )}
-            {groups.projects.length > 0 && (
-              <FilterPill
-                active={tab === "projects"}
-                label={t("memory.tab.projects")}
-                count={groups.projects.length}
-                onClick={() => setTab("projects")}
-              />
-            )}
-            {reviewCount > 0 && (
-              <FilterPill
-                active={tab === "review"}
-                label={t("memory.filterReview")}
-                count={reviewCount}
-                highlight={reviewCount > 0}
-                onClick={() => setTab("review")}
-              />
-            )}
-            {groups.archive.length > 0 && (
-              <FilterPill
-                active={tab === "archive"}
-                label={t("memory.tab.archive")}
-                count={groups.archive.length}
-                onClick={() => setTab("archive")}
-              />
-            )}
-          </div>
+          )}
+          {reviewCount > 0 && (
+            <FilterPill
+              active={tab === "review"}
+              label={t("memory.filterReview")}
+              count={reviewCount}
+              highlight={reviewCount > 0}
+              onClick={() => setTab("review")}
+            />
+          )}
+          {groups.archive.length > 0 && (
+            <FilterPill
+              active={tab === "archive"}
+              label={t("memory.tab.archive")}
+              count={groups.archive.length}
+              onClick={() => setTab("archive")}
+            />
+          )}
         </div>
 
         {/* Main Content Area */}
