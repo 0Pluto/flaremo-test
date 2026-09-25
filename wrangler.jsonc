@@ -38,28 +38,28 @@
   "r2_buckets": [
     {
       "binding": "ATTACHMENTS",
-      "bucket_name": "flaremo-attachments","preview_bucket_name": "flaremo-attachments"
+      "bucket_name": "flaremo-attachments-test","preview_bucket_name-test": "flaremo-attachments-test"
     }
   ],
   "queues": {
     "producers": [
       {
         "binding": "MEMBER_REMOVAL_QUEUE",
-        "queue": "flaremo-member-removal"
+        "queue": "flaremo-member-removal-test"
       },
       {
         "binding": "DATA_EXPORT_QUEUE",
-        "queue": "flaremo-data-export"
+        "queue": "flaremo-data-export-test"
       }
     ],
     "consumers": [
       {
-        "queue": "flaremo-member-removal",
+        "queue": "flaremo-member-removal-test",
         "max_batch_size": 10,
         "max_retries": 5
       },
       {
-        "queue": "flaremo-data-export",
+        "queue": "flaremo-data-export-test",
         "max_batch_size": 5,
         "max_retries": 5
       }
@@ -68,11 +68,11 @@
   "vectorize": [
     {
       "binding": "VECTORIZE_MEMOS",
-      "index_name": "flaremo-memos"
+      "index_name": "flaremo-memos-test"
     },
     {
       "binding": "VECTORIZE_MEMORIES",
-      "index_name": "flaremo-memories"
+      "index_name": "flaremo-memories-test"
     }
   ],
   "ai": {
