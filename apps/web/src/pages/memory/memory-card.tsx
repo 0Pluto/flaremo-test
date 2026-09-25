@@ -47,6 +47,7 @@ import { useI18n } from "@/i18n";
 import { errorMessage } from "@/lib/error";
 import { formatMemoRelativeTime, formatMemoTime } from "@/lib/memo";
 import { cn, stripResourceName } from "@/lib/utils";
+import { formatProjectName } from "./memory-filters";
 import { MemoryFormDialog } from "./memory-form-dialog";
 import { MemoryRevisions } from "./memory-revisions";
 
@@ -54,11 +55,13 @@ export function MemoryCard({
   memory,
   showSource,
   review,
+  onSelectProject,
   onMutated,
 }: {
   memory: Memory;
   showSource: boolean;
   review: boolean;
+  onSelectProject?: (projectKey: string) => void;
   onMutated: () => void;
 }) {
   const { locale, t } = useI18n();
@@ -184,9 +187,16 @@ export function MemoryCard({
           </span>
 
           {memory.scope_type === "project" && memory.scope_key && (
-            <span className="truncate max-w-[200px]">
-              📁 {memory.scope_key}
-            </span>
+            <button
+              type="button"
+              onClick={() => {
+                if (memory.scope_key) onSelectProject?.(memory.scope_key);
+              }}
+              className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer truncate max-w-[180px]"
+              title={memory.scope_key}
+            >
+              <span>📁 {formatProjectName(memory.scope_key)}</span>
+            </button>
           )}
 
           {showSource && memory.source_agent && (
@@ -229,7 +239,7 @@ export function MemoryCard({
               render={
                 <Button
                   aria-label={t("common.actions")}
-                  className="opacity-100 motion-safe:transition-opacity md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+                  className="opacity-70 hover:opacity-100 group-hover:opacity-100 transition-opacity"
                   size="icon-sm"
                   variant="ghost"
                 >

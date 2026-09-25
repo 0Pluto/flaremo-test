@@ -6,26 +6,38 @@ import {
   PinIcon,
   SparklesIcon,
 } from "lucide-react";
-import { type KeyboardEvent, type RefObject, useState } from "react";
+import { type KeyboardEvent, type RefObject, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { createMemory, type Memory } from "@/api";
 import { useI18n } from "@/i18n";
 import { errorMessage } from "@/lib/error";
 import { cn } from "@/lib/utils";
+import { formatProjectName } from "./memory-filters";
 
 export function MemoryQuickComposer({
   onCreated,
   inputRef,
+  defaultScopeKey,
 }: {
   onCreated: () => void;
   inputRef?: RefObject<HTMLTextAreaElement | null>;
+  defaultScopeKey?: string | null;
 }) {
   const { t } = useI18n();
   const [content, setContent] = useState("");
   const [isCore, setIsCore] = useState(true);
-  const [scopeType, setScopeType] = useState<Memory["scope_type"]>("global");
-  const [scopeKey, setScopeKey] = useState("");
+  const [scopeType, setScopeType] = useState<Memory["scope_type"]>(() =>
+    defaultScopeKey ? "project" : "global",
+  );
+  const [scopeKey, setScopeKey] = useState(() => defaultScopeKey || "");
   const [isFocused, setIsFocused] = useState(false);
+
+  useEffect(() => {
+    if (defaultScopeKey) {
+      setScopeType("project");
+      setScopeKey(defaultScopeKey);
+    }
+  }, [defaultScopeKey]);
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -65,6 +77,12 @@ export function MemoryQuickComposer({
     }
   };
 
+  const placeholder = defaultScopeKey
+    ? `给 ${formatProjectName(defaultScopeKey)} 立一条规则或习惯…`
+    : isCore
+      ? "给 AI 立一条规则或习惯…"
+      : "记下一条偏好或认知…";
+
   return (
     <form
       className="group relative flex w-full flex-col rounded-xl border border-border bg-card shadow-xs motion-safe:animate-rise motion-safe:transition-[border-color,box-shadow] motion-safe:duration-200 focus-within:border-brand-400/60 focus-within:shadow-md focus-within:ring-2 focus-within:ring-brand-400/25"
@@ -83,7 +101,7 @@ export function MemoryQuickComposer({
         onBlur={() => {
           if (!content.trim()) setIsFocused(false);
         }}
-        placeholder={t("memory.quickAddPlaceholder")}
+        placeholder={placeholder}
         disabled={createMutation.isPending}
         className="w-full resize-none bg-transparent px-3.5 pt-3 pb-2 text-sm placeholder:text-muted-foreground/60 focus:outline-hidden leading-relaxed"
       />
@@ -105,7 +123,7 @@ export function MemoryQuickComposer({
             {isCore ? (
               <>
                 <PinIcon className="size-3.5 fill-current" />
-                <span>{t("memory.filterCore")}</span>
+                <span>铁律</span>
               </>
             ) : (
               <>

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { WorkspaceLayout } from "@/components/workspace/workspace-layout";
 import { useI18n } from "@/i18n";
 import { cn } from "@/lib/utils";
-import { groupMemories } from "./memory/memory-filters";
+import { formatProjectName, groupMemories } from "./memory/memory-filters";
 import { MemoryFormDialog } from "./memory/memory-form-dialog";
 import { MemoryLensDialog } from "./memory/memory-lens-dialog";
 import { MemoryList } from "./memory/memory-list";
@@ -26,6 +26,7 @@ export function MemoryPage() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<FilterTab>("all");
+  const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
   const [lensOpen, setLensOpen] = useState(false);
@@ -57,6 +58,26 @@ export function MemoryPage() {
   }, [memories, query]);
 
   const groups = useMemo(() => groupMemories(filtered), [filtered]);
+
+  const projectCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const m of groups.projects) {
+      const key = m.scope_key ?? m.scope_type;
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+    return [...counts.entries()]
+      .map(([key, count]) => ({
+        key,
+        displayName: formatProjectName(key),
+        count,
+      }))
+      .sort((a, b) => b.count - a.count);
+  }, [groups.projects]);
+
+  const handleSelectProject = (projectKey: string | null) => {
+    setSelectedProject(projectKey);
+    setTab("projects");
+  };
 
   const reviewMemories = useMemo(
     () => reviewQuery.data?.memories ?? [],
@@ -132,55 +153,113 @@ export function MemoryPage() {
         {/* Quick Add Memory Box */}
         <MemoryQuickComposer
           inputRef={composerInputRef}
+          defaultScopeKey={tab === "projects" ? selectedProject : null}
           onCreated={invalidate}
         />
 
         {/* Filter Pills */}
-        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-          <FilterPill
-            active={tab === "all"}
-            label={t("memory.filterAll")}
-            count={activeMemories.length}
-            onClick={() => setTab("all")}
-          />
-          <FilterPill
-            active={tab === "core"}
-            label={t("memory.filterCore")}
-            count={groups.core.length}
-            onClick={() => setTab("core")}
-          />
-          {observedMemories.length > 0 && (
+        <div className="flex flex-col gap-2 pt-0.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             <FilterPill
-              active={tab === "observed"}
-              label={t("memory.filterObserved")}
-              count={observedMemories.length}
-              onClick={() => setTab("observed")}
+              active={tab === "all"}
+              label={t("memory.filterAll")}
+              count={activeMemories.length}
+              onClick={() => {
+                setTab("all");
+                setSelectedProject(null);
+              }}
             />
-          )}
-          {groups.projects.length > 0 && (
             <FilterPill
-              active={tab === "projects"}
-              label={t("memory.tab.projects")}
-              count={groups.projects.length}
-              onClick={() => setTab("projects")}
+              active={tab === "core"}
+              label={t("memory.filterCore")}
+              count={groups.core.length}
+              onClick={() => {
+                setTab("core");
+                setSelectedProject(null);
+              }}
             />
-          )}
-          {reviewCount > 0 && (
-            <FilterPill
-              active={tab === "review"}
-              label={t("memory.filterReview")}
-              count={reviewCount}
-              highlight={reviewCount > 0}
-              onClick={() => setTab("review")}
-            />
-          )}
-          {groups.archive.length > 0 && (
-            <FilterPill
-              active={tab === "archive"}
-              label={t("memory.tab.archive")}
-              count={groups.archive.length}
-              onClick={() => setTab("archive")}
-            />
+            {observedMemories.length > 0 && (
+              <FilterPill
+                active={tab === "observed"}
+                label={t("memory.filterObserved")}
+                count={observedMemories.length}
+                onClick={() => {
+                  setTab("observed");
+                  setSelectedProject(null);
+                }}
+              />
+            )}
+            {groups.projects.length > 0 && (
+              <FilterPill
+                active={tab === "projects"}
+                label={t("memory.tab.projects")}
+                count={groups.projects.length}
+                onClick={() => setTab("projects")}
+              />
+            )}
+            {reviewCount > 0 && (
+              <FilterPill
+                active={tab === "review"}
+                label={t("memory.filterReview")}
+                count={reviewCount}
+                highlight={reviewCount > 0}
+                onClick={() => {
+                  setTab("review");
+                  setSelectedProject(null);
+                }}
+              />
+            )}
+            {groups.archive.length > 0 && (
+              <FilterPill
+                active={tab === "archive"}
+                label={t("memory.tab.archive")}
+                count={groups.archive.length}
+                onClick={() => {
+                  setTab("archive");
+                  setSelectedProject(null);
+                }}
+              />
+            )}
+          </div>
+
+          {/* Project Sub-pills (when projects tab is active) */}
+          {tab === "projects" && projectCounts.length > 0 && (
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar text-xs">
+              <button
+                type="button"
+                onClick={() => setSelectedProject(null)}
+                className={cn(
+                  "inline-flex h-6 items-center gap-1 rounded-md px-2 text-[11px] font-medium border transition-colors shrink-0 cursor-pointer",
+                  !selectedProject
+                    ? "border-primary bg-primary text-primary-foreground shadow-2xs"
+                    : "border-border/60 bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+              >
+                <span>全部项目</span>
+                <span className="tabular-nums opacity-70">
+                  ({groups.projects.length})
+                </span>
+              </button>
+
+              {projectCounts.map((p) => (
+                <button
+                  key={p.key}
+                  type="button"
+                  onClick={() => setSelectedProject(p.key)}
+                  className={cn(
+                    "inline-flex h-6 items-center gap-1 rounded-md px-2 text-[11px] font-medium border transition-colors shrink-0 cursor-pointer",
+                    selectedProject === p.key
+                      ? "border-primary bg-primary text-primary-foreground shadow-2xs"
+                      : "border-border/60 bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
+                >
+                  <span className="truncate max-w-[140px]">
+                    {p.displayName}
+                  </span>
+                  <span className="tabular-nums opacity-70">({p.count})</span>
+                </button>
+              ))}
+            </div>
           )}
         </div>
 
@@ -205,6 +284,7 @@ export function MemoryPage() {
                 memories={activeMemories}
                 onMutated={invalidate}
                 onRetry={() => void listQuery.refetch()}
+                onSelectProject={handleSelectProject}
                 showSource
               />
             ))}
@@ -217,6 +297,7 @@ export function MemoryPage() {
               memories={groups.core}
               onMutated={invalidate}
               onRetry={() => void listQuery.refetch()}
+              onSelectProject={handleSelectProject}
             />
           )}
 
@@ -228,12 +309,18 @@ export function MemoryPage() {
               memories={observedMemories}
               onMutated={invalidate}
               onRetry={() => void listQuery.refetch()}
+              onSelectProject={handleSelectProject}
               showSource
             />
           )}
 
           {tab === "projects" && (
-            <ProjectGroups memories={groups.projects} onMutated={invalidate} />
+            <ProjectGroups
+              memories={groups.projects}
+              selectedProject={selectedProject}
+              onSelectProject={setSelectedProject}
+              onMutated={invalidate}
+            />
           )}
 
           {tab === "review" && (
@@ -243,6 +330,7 @@ export function MemoryPage() {
               hasError={reviewQuery.isError}
               onMutated={invalidate}
               onRetry={() => void reviewQuery.refetch()}
+              onSelectProject={handleSelectProject}
               review
             />
           )}
@@ -256,6 +344,7 @@ export function MemoryPage() {
               memories={groups.archive}
               onMutated={invalidate}
               onRetry={() => void listQuery.refetch()}
+              onSelectProject={handleSelectProject}
             />
           )}
         </div>

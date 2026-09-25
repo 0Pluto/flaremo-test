@@ -16,4 +16,16 @@ export function groupMemories(filtered: Memory[]) {
   return { core, projects, recent, archive };
 }
 
+/** Formats a project scope key (filesystem path or git URL) into a clean display name. */
+export function formatProjectName(scopeKey?: string | null): string {
+  if (!scopeKey) return "项目";
+  if (scopeKey.startsWith("github:")) {
+    const repo = scopeKey.slice(7);
+    return repo.split("/").pop() || repo;
+  }
+  const normalized = scopeKey.replace(/[\\/]+$/, "");
+  const last = normalized.split(/[\\/]/).pop();
+  return last || scopeKey;
+}
+
 export { formatTimestamp };
